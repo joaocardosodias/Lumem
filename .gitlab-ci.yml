@@ -1,0 +1,19 @@
+image: node:lts
+
+stages:
+  - deploy
+
+pages:
+  stage: deploy
+  script:
+    - cd docs
+    - npm ci
+    - npm run build
+    - cd ..
+    - rm -rf public
+    - mv docs/dist public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
