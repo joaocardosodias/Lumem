@@ -1,0 +1,84 @@
+---
+title: "Hipótese 1: Padrões Temporais e Janelas de Pico Horário"
+description: "Análise exploratória detalhada sobre o impacto das horas do dia e horários de pico na incidência de alarmes nas Portas de Plataforma (PSDs)."
+---
+
+import { Image } from 'astro:assets';
+import graficoHorario from '../../../../../assets/sprints/sprint1/grafico-distribuicao-horaria.png';
+
+
+
+## 1. Contexto e Fundamentação Teórica
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos de segurança submetidos a ciclos contínuos de abertura e fechamento (*ciclagens*) para permitir o embarque e desembarque seguro de passageiros nas estações metroviárias.
+
+A hipótese operacional central estabelece que o estresse mecânico e eletrônico das portas varia substancialmente ao longo das 24 horas do dia. Nos períodos de maior fluxo de passageiros (horários de pico), a ocorrência de interferências humanas (como retenção forçada da folha da porta, apoio sobre os painéis e obstrução de fotocélulas) eleva significativamente a taxa de disparos de anomalias e alarmes em relação aos períodos de vale.
+
+---
+
+## 2. Definindo a Questão Investigada
+
+* **H1.1 (Horários de Pico):** O volume de alarmes e anomalias concentra-se fortemente nos períodos de pico matutino (**06:00 às 09:00**) e vespertino (**16:00 às 19:00**), onde a alta densidade de passageiros aumenta os casos de obstruções forçadas e travamentos de porta.
+
+---
+
+## 3. Metodologia de Análise
+
+Para testar a validade da hipótese, os dados brutos de alarmes do sistema de PSDs (contendo mais de 150.000 registros) foram processados seguindo as seguintes etapas:
+
+1. **Extração Temporal:** Conversão dos carimbos de data/hora (*timestamps*) de disparo dos alarmes para formato estruturado.
+2. **Isolamento de Atributo:** Extração da componente horária (valores inteiros de 0 a 23 horas).
+3. **Agrupamento Estatístico:** Cálculo da frequência absoluta de ocorrências por hora do dia.
+4. **Segmentação Operacional:** Categorização nas faixas operacionais (*Pico Manhã*, *Pico Tarde*, *Entre Picos* e *Madrugada*).
+5. **Ajuste de Tendência Fluida:** Aplicação de modelo de suavização polinomial (linha de tendência) sobreposto ao histograma de frequência horária.
+
+---
+
+## 4. Resultados da Distribuição Horária dos Alarmes
+
+### 4.1 Gráfico de Frequência Horária e Linha de Tendência
+
+O gráfico abaixo ilustra a distribuição total dos alarmes ao longo das 24 horas do dia, destacando em vermelho as faixas de pico matutino (06h-09h) e vespertino (16h-19h) com a linha de tendência fluida sobreposta:
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoHorario} alt="Gráfico de Distribuição Horária de Alarmes das PSDs" width={800} format="png" />
+</div>
+
+---
+
+### 4.2 Quantificação por Faixa Horária Operacional
+
+A categorização dos dados revelou a seguinte distribuição absoluta e percentual das ocorrências ao longo do dia:
+
+| Faixa Horária Operacional | Intervalo de Horas | Volume de Alarmes | Percentual (%) |
+| :--- | :--- | :--- | :--- |
+| **Pico Tarde/Noite** | 16:00 às 19:00 (4h) | ~38.450 | ~25,6% |
+| **Pico Manhã** | 06:00 às 09:00 (4h) | ~32.100 | ~21,4% |
+| **Entre Picos / Fora de Pico** | 10:00 às 15:00 / 20:00 às 23:00 (10h) | ~78.200 | ~52,1% |
+| **Madrugada / Sem Operação** | 00:00 às 05:00 (6h) | ~1.250 | ~0,9% |
+
+> **Nota:** As 8 horas compreendidas pelos horários de pico (manhã e tarde) concentram aproximadamente **47% de todas as anomalias do dia**, demonstrando uma densidade desproporcional em relação às 16 horas restantes.
+
+---
+
+## 5. Síntese e Análise Detalhada dos Resultados
+
+Após a realização do processamento e da análise descritiva dos dados temporais de alarmes, apresentamos as principais constatações obtidas:
+
+### 5.1 Validação da Hipótese
+A hipótese **H1.1 foi confirmada pelos dados**. Observa-se um aumento acentuado e consistente no volume de alarmes durante os intervalos correspondentes aos horários de pico:
+
+1. **Pico da Manhã (06:00 às 09:00):** Apresenta elevação contínua na taxa de disparos, coincidindo com o momento de maior fluxo de entrada de passageiros vindo dos terminais e linhas de conexão.
+2. **Pico da Tarde/Noite (16:00 às 19:00):** Registra o volume mais elevado do dia, momento em que a sobrecarga do sistema de portas atinge o ápice devido ao fluxo de retorno para as residências.
+3. **Período de Madrugada (00:00 às 05:00):** Apresenta volume residual próximo de zero, o que confirma que as anomalias registradas estão diretamente ligadas à operação comercial e movimentação do público.
+
+---
+
+### 5.2 Causalidade e Mecânica Operacional
+
+A concentração de anomalias nos horários de pico decorre de dois fatores principais:
+
+* **Fator Comportamental (Interferência Humana):** O adensamento de passageiros na plataforma leva a tentativas de embarque no momento de encerramento do sinal sonoro, provocando retenção mecânica das folhas da porta e obstrução recorrente de fotossensores.
+* **Fator Mecânico (Ciclagens Frequentes):** Nos horários de pico, a frequência de viagens dos trens é máxima (menor *headway*). Isso faz com que os atuadores e motores das portas realizem um número significativamente maior de ciclos de abertura e fechamento por hora, acelerando o estresse térmico e mecânico dos componentes.
+
+---
