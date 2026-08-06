@@ -1,6 +1,6 @@
 ---
-title: "Hipótese 1: Padrões Temporais e Concentração de Anomalias Sustentadas "
-description: "Análise exploratória avançada focando na identificação e comportamento temporal das anomalias de longa duração (> 10s) que sinalizam degradação real das Portas de Plataforma."
+title: "Hipótese 1: Padrões Temporais e Concentração de Anomalias Críticas (> 30s)"
+description: "Análise exploratória avançada com o limiar de severidade de 30 segundos, identificando o comportamento temporal das anomalias críticas nas Portas de Plataforma."
 ---
 
 import { Image } from 'astro:assets';
@@ -10,72 +10,73 @@ import graficoHorario from '../../../../../assets/sprints/sprint1/grafico-distri
 
 ## 1. Contexto Teórico e Problematização
 
-As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos submetidos a ciclagens intensas para o embarque e desembarque de passageiros nas estações metroviárias.
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos de segurança submetidos a ciclos contínuos de abertura e fechamento (*ciclagens*) para permitir o embarque e desembarque seguro de passageiros nas estações metroviárias.
 
-Ao analisar o histórico de alarmes operacionais, é fundamental descartar obstruções triviais do dia a dia (eventos de 1 a 10 segundos resolvidos automaticamente) e **focar a atenção analítica exclusivamente nas Anomalias Sustentadas (eventos com tempo de normalização $>$ 10 segundos)**.
+Para elevar o rigor da análise preditiva e eliminar qualquer ruído de obstruções operacionais rápidas (eventos curtos de até 30 segundos resolvidos automaticamente ou por ciclo simples de recuo), a análise adota o limiar de severidade focado em Anomalias Críticas (eventos com tempo de normalização maior que 30 segundos).
 
-Anomalias que demoram mais de 10 segundos para normalizar indicam travamentos persistentes, perda de torque do atuador/motor, emperramento mecânico dos trilhos ou necessidade de reinicialização da porta pelo operador.
+Anomalias cujo tempo de normalização excede 30 segundos representam episódios em que a porta ficou paralisada por meio minuto ou mais, indicando perda efetiva de torque do atuador, desarmamento de segurança, falha de comunicação lógica ou necessidade de intervenção do operador de trem/plataforma.
 
 ---
 
 ## 2. Definindo a Questão Investigada
 
-* **H1.1 (Concentração de Anomalias Sustentadas nos Picos):** As anomalias de longa duração (> 10s), que possuem potencial real de causar paralisação ou sinalizar degradação de componentes, concentram-se fortemente nos períodos de alta demanda operacional (pico matutino das **06:00 às 09:00** e vespertino das **16:00 às 19:00**) devido ao superaquecimento de motores e ciclagens aceleradas.
+* **H1.1 (Concentração de Anomalias Críticas nos Picos - Limiar 30s):** As anomalias de severidade elevada (maior que 30s), que possuem impacto direto na operação comercial e na integridade dos ativos, concentram-se fortemente nos períodos de maior demanda de transporte (pico matutino das **06:00 às 09:00** e vespertino das **16:00 às 19:00**) devido ao superaquecimento de motores e ciclagens aceleradas.
 
 ---
 
 ## 3. Metodologia de Análise
 
-Para isolar os eventos de real impacto técnico e descartar ruídos rotineiros, os dados brutos de alarmes foram processados segundo a seguinte metodologia:
+Para isolar os eventos de real impacto técnico e aplicar o limiar de 30 segundos, a metodologia seguiu as seguintes etapas:
 
-1. **Parser de Normalização:** Conversão dos tempos de normalização em segundos numéricos.
-2. **Filtragem de Severidade:** Exclusão de alarmes triviais (< 10s) e retenção exclusiva das **Anomalias Sustentadas (> 10s)**.
+1. **Parser de Tempo:** Conversão dos tempos de normalização em segundos numéricos.
+2. **Filtragem de Severidade (Limiar 30s):** Exclusão de alarmes operacionais curtos (menores ou iguais a 30s) e retenção exclusiva das Anomalias Críticas (maiores que 30s).
 3. **Análise de Frequência Horária:** Agrupamento das ocorrências pelas 24 horas do dia (00h às 23h).
-4. **Destaque Visual de Pico:** Exibição das barras em cor vermelha nos horários de pico (06h-09h e 16h-19h) e azul nas demais horas operacionais.
+4. **Visualização por Cores:** Exibição das barras em vermelho nos horários de pico (06h-09h e 16h-19h) e em azul nos horários fora de pico.
 
 ---
 
-## 4. Resultados da Distribuição Horária das Anomalias Sustentadas
+## 4. Resultados da Distribuição Horária das Anomalias Críticas (> 30s)
 
-### 4.1 Gráfico de Frequência Horária das Anomalias Sustentadas (> 10s)
+### 4.1 Gráfico de Frequência Horária das Anomalias Críticas (> 30s)
 
-O gráfico abaixo ilustra a distribuição horária das ocorrências que excederam 10 segundos de normalização, destacando em vermelho as barras das faixas de pico (06h-09h e 16h-19h) e em azul os horários de vale:
+O gráfico abaixo ilustra a distribuição horária das 78.645 ocorrências que excederam 30 segundos de normalização, destacando em vermelho as barras das faixas de pico (06h-09h e 16h-19h):
 
 <div style="margin: 2rem 0; text-align: center;">
-  <Image src={graficoHorario} alt="Gráfico da Distribuição Horária de Anomalias Sustentadas (> 10s)" width={800} format="png" />
+  <Image src={graficoHorario} alt="Gráfico da Distribuição Horária de Anomalias Críticas (> 30s)" width={800} format="png" />
 </div>
 
 ---
 
-### 4.2 Quantificação das Anomalias Sustentadas por Faixa Horária
+### 4.2 Quantificação das Anomalias Críticas (> 30s) por Faixa Horária
 
-A segmentação dos dados revelou que **50,9% de todas as anomalias duradouras do dia ocorrem concentradas nas 8 horas de pico**:
+A segmentação dos dados revelou que 50,83% de todas as anomalias críticas (maiores que 30s) do dia ocorrem concentradas nas 8 horas de pico:
 
-| Faixa Horária Operacional | Intervalo de Horas | Qtd Anomalias Sustentadas (> 10s) | Percentual (%) |
+| Faixa Horária Operacional | Intervalo de Horas | Qtd Anomalias Críticas (> 30s) | Percentual (%) |
 | :--- | :--- | :--- | :--- |
-| **Pico Tarde/Noite** | 16:00 às 19:00 (4h) | ~22.200 | ~27,6% |
-| **Pico Manhã** | 06:00 às 09:00 (4h) | ~17.200 | ~21,4% |
-| **Entre Picos / Vale** | 10:00-15:00 / 20:00-23:00 (10h) | ~40.300 | ~50,1% |
-| **Madrugada / Sem Operação** | 00:00 às 05:00 (6h) | ~760 | ~0,9% |
+| **Pico Tarde/Noite** | 16:00 às 19:00 (4h) | 22.806 | 29,00% |
+| **Pico Manhã** | 06:00 às 09:00 (4h) | 17.167 | 21,83% |
+| **Entre Picos / Vale** | 10:00-15:00 / 20:00-23:00 (10h) | 30.955 | 39,36% |
+| **Madrugada / Sem Operação** | 00:00 às 05:00 (6h) | 7.717 | 9,81% |
 
 ---
 
 ## 5. Síntese e Análise Detalhada dos Resultados
 
-### 5.1 Validação da Hipótese
-A hipótese **H1.1 foi confirmada**. O volume de anomalias de longa duração (> 10s) eleva-se substancialmente durante os horários de pico operacional:
+### 5.1 Validação do Limiar de 30 Segundos
+A aplicação do limiar de 30 segundos comprova a solidez da hipótese e traz métricas estatísticas expressivas:
 
-1. **Pico da Tarde/Noite (16:00 às 19:00):** Concentra a maior densidade de anomalias graves (~27,6%), momento em que o acúmulo de horas de operação contínua e as altas temperaturas de funcionamento dos motores fragilizam os mecanismos.
-2. **Pico da Manhã (06:00 às 09:00):** Responde por ~21,4% das anomalias duradouras, impulsionadas pela retomada da carga operacional e aceleração do intervalo entre trens.
-3. **Madrugada (00:00 às 05:00):** Apresenta volume insignificante (~0,9%), comprovando que as anomalias graves estão atreladas ao estresse de operação contínua.
+1. **Volumetria Relevante:** Das 150.003 ocorrências de alarmes no histórico, 78.645 registros (52,43%) ultrapassaram 30 segundos de normalização, confirmando que mais da metade da base é composta por anomalias de severidade técnica consistente.
+2. **Concentração nos Horários de Pico:** Exatamente 50,83% de todas as anomalias críticas (> 30s) ocorrem concentradas nas 8 horas de pico (29,00% no Pico da Tarde/Noite e 21,83% no Pico da Manhã).
+3. **Pico da Tarde como Ponto Crítico:** O intervalo das 16:00 às 19:00 registra a maior concentração isolada do dia (22.806 ocorrências graves), momento de máxima carga mecânica acumulada.
 
 ---
 
-### 5.2 Mecânica das Anomalias de Longa Duração
+### 5.2 Mecânica Operacional e Física do Equipamento
 
-Eventos com normalização superior a 10 segundos representam degradação mecânica/elétrica efetiva:
+As anomalias críticas que permanecem ativas por mais de 30 segundos refletem a degradação mecânica e elétrica do sistema de portas sob alta demanda. A permanência do estado de falha por esse intervalo é explicada pelos seguintes fatores físicos e de controle:
 
-* **Perda de Torque do Atuador:** O motor da porta não consegue exercer força suficiente para vencer a resistência do trilho nos primeiros segundos de movimento.
-* **Aquecimento e Sobrecarga:** O ciclo intensivo de acionamentos nos picos eleva a temperatura dos módulos de controle e chicotes elétricos.
-* **Falha de Recuo Automático:** O sistema falha ao tentar efetuar a abertura automática simples, exigindo ciclos repetidos de recuperação do comando ou atenção do operador.
+1. **Perda de Torque do Atuador e Estresse Térmico:** Nos horários de pico, a alta frequência de trens exige que o motor de passo e a correia de transmissão operem no limite de sua capacidade térmica. O acúmulo de calor aumenta a resistência interna dos enrolamentos elétricos, resultando em perda momentânea de torque mecânico para movimentar as folhas da porta contra o atrito das calhas superiores e inferiores.
+3. **Emperramento Mecânico por Sujeira e Desgaste de Roletes:** O acúmulo de poeira metálica e sujeira nos trilhos guia, somado ao desgaste gradual dos roletes de sustentação, aumenta o coeficiente de atrito estático. Durante os picos, com o aumento da temperatura ambiente e da umidade na plataforma, o atrito se intensifica, exigindo mais tempo para a normalização do sinal de travado e selado.
+
+---
 
