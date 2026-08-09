@@ -1,0 +1,31 @@
+---
+title: "Hipótese 3: Movimentação de Passageiros e Volume de Alarmes por Estação"
+description: "Análise exploratória sobre se estações com maior movimentação de passageiros apresentam mais alarmes de obstrução nas Portas de Plataforma (PSDs)."
+---
+
+import { Image } from 'astro:assets';
+import graficoAlarmesEstacao from '../../../../../assets/sprints/sprint1/grafico-alarmes-por-estacao.png';
+
+
+
+## 1. Contexto e Fundamentação Teórica
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos submetidos a ciclos contínuos de abertura e fechamento para permitir o embarque e desembarque de passageiros.
+
+A hipótese central determina que o desgaste mecânico das portas está ligado ao volume de pessoas que passam por elas; estações com maior movimentação de passageiros deveriam mostrar mais interferências humanas e consequentemente, mais alarmes.
+
+---
+
+## 2. Definindo a Questão Investigada
+
+* **H3.1 (Movimentação vs. Alarmes):** Estações com maior movimentação de passageiros apresentam uma taxa mais alta de alarmes de obstrução (`OBS`), normalizada por porta e por dia ativo.
+
+---
+
+## 3. Metodologia de Análise
+
+A base de dados de alarmes do sistema de PSDs não contém nenhuma medida direta de movimentação de passageiros (catraca, ciclagens de porta, ocupação de trem). Por isso a análise foi feita de forma onde :
+
+1. **Caracterização dos dados:** antes de comparar estações, foi verificado se a base é de fato comparável entre elas, completude do carimbo de tempo, uniformidade da instrumentação e consistência do tempo de normalização.
+2. **Proxy de movimentação:** Porque não havia uma medida direta para quantidade de pessoas, foi construido um proxy ordinal (Alta/Média/Baixa) a partir do papel estrutural de cada estação na rede (integração com outras linhas/terminais, densidade do entorno).
+3. **Teste:** comparar a taxa de alarmes `OBS`, pois foi o único tipo de alarme reportado de forma consistente entre todas as estações, por porta e por dia ativo, contra o nível do proxy, usando correlação de Spearman.
