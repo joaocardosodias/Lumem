@@ -18,34 +18,25 @@ Para evitar ruído analítico, o estudo exclui os alarmes classificados como `OB
 
 ## 2. Definindo a Questão Investigada
 
-* **H4.1 (Aumento de alarmes antes da manutenção):** o volume de alarmes não-OBS aumenta no intervalo imediatamente anterior à ordem de manutenção corretiva, em comparação ao intervalo equivalente posterior à intervenção.
+* **H4.1 (Aumento de alarmes antes da manutenção):** o volume de alarmes aumenta no intervalo imediatamente anterior à ordem de manutenção corretiva, em comparação ao intervalo equivalente posterior à intervenção.
 
 ---
 
 ## 3. Metodologia de Análise
 
-Uma primeira versão desta análise comparava o volume de alarmes de **todo o sistema de PSD** contra a data de cada ordem de manutenção, sem considerar em qual estação a falha realmente ocorreu. Essa abordagem mistura o comportamento de portas que nada têm a ver com a ordem analisada e dilui qualquer sinal real de degradação local — por isso a metodologia foi refeita do zero.
+Uma primeira versão desta análise comparava o volume de alarmes de **todo o sistema de PSD** contra a data de cada ordem de manutenção, sem considerar em qual estação a falha realmente ocorreu. Essa abordagem mistura o comportamento de portas que nada têm a ver com a ordem analisada e dilui qualquer sinal real de degradação local, por isso a metodologia foi refeita do zero.
 
-A investigação foi conduzida a partir de duas bases:
+A investigação foi conduzida a partir de duas bases: as **ordens de manutenção corretiva (ZM01)**, que registram cada ocorrência de falha com data/hora de início da avaria e o local de instalação da porta afetada, e o **histórico de alarmes do sistema de PSD**, que traz estação, porta, tipo de alarme e horário de cada evento.
 
-1. **Ordens de manutenção corretiva (ZM01):** registro de ocorrências de falha, com data/hora de início da avaria e o local de instalação da porta afetada.
-2. **Alarmes do sistema de PSD:** histórico de alarmes operacionais, com estação, porta, tipo de alarme e horário do evento.
+O primeiro passo foi construir o timestamp da falha, concatenando `Início avaria` e `Hora início avaria` para cada ordem. A partir desse instante, o código da estação é extraído do campo `Local de Instalação` (por exemplo, `SP04-6-PSD-BUT-P1S1` resulta na estação `BUT`) e usado para filtrar **apenas os alarmes da mesma estação** da ordem, a mudança central em relação à primeira versão da análise. Sobre esse recorte, aplicam-se três filtros de qualidade: exclusão de todos os registros com `Alarme = OBS` (o ruído comportamental descrito acima); remoção de ordens com estação e timestamp de início idênticos, para não contar o mesmo evento de falha duas vezes no teste estatístico; e descarte de qualquer ordem cuja janela de comparação (antes e depois) não esteja totalmente contida no período coberto pela base de alarmes daquela estação, evitando subcontagem artificial nas bordas do dataset.
 
-A metodologia final adotada:
-
-1. **Timestamp da falha:** concatenação de data e hora de início da avaria (`Início avaria` + `Hora início avaria`).
-2. **Pareamento por estação:** o código da estação é extraído do campo `Local de Instalação` (ex.: `SP04-6-PSD-BUT-P1S1` → estação `BUT`) e usado para filtrar **apenas os alarmes da mesma estação** da ordem — não mais o sistema inteiro.
-3. **Filtragem de ruído:** exclusão de todos os registros com `Alarme = OBS`.
-4. **Deduplicação:** remoção de ordens com estação e timestamp de início idênticos, para não contar o mesmo evento de falha mais de uma vez no teste estatístico.
-5. **Cobertura de dados:** cada ordem só entra na comparação se a janela avaliada (antes e depois) estiver totalmente contida no período coberto pela base de alarmes daquela estação, evitando subcontagem artificial nas bordas do dataset.
-6. **Múltiplas janelas:** comparação em janelas de **1, 3, 7 e 14 dias**, para checar se um eventual efeito é imediato, de curto prazo ou persistente.
-7. **Teste estatístico pareado:** cada ordem gera um par (alarmes antes, alarmes depois) da mesma unidade — por isso o teste apropriado é o **Wilcoxon signed-rank (pareado)**, complementado por um **teste binomial** sobre a proporção de ordens em que "antes" supera "depois".
+Com o par "alarmes antes" / "alarmes depois" definido para cada ordem, a comparação é repetida em quatro janelas temporais (**1, 3, 7 e 14 dias**) para verificar se um eventual efeito é imediato, de curto prazo ou persistente. Como as duas medidas de cada par vêm da mesma unidade (a mesma ordem, a mesma porta), o teste estatístico apropriado é o **Wilcoxon signed-rank (pareado)**, complementado por um **teste binomial** sobre a proporção de ordens em que "antes" supera "depois".
 
 ---
 
 ## 4. Achado Crítico: Cobertura Desigual de Alarmes por Estação
 
-Antes de comparar antes/depois, foi feita uma checagem de cobertura: cruzando estação × tipo de alarme, verificou-se que **apenas a estação `BUT` possui alarmes técnicos (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`, `STS`) registrados na base atual**. As demais cinco estações monitoradas (`FAL`, `FRA`, `FRE`, `HIG`, `LUZ`) só têm eventos `OBS` — que já são removidos pela própria definição da hipótese.
+Antes de comparar antes/depois, foi feita uma checagem de cobertura: cruzando estação × tipo de alarme, verificou-se que **apenas a estação `BUT` possui alarmes técnicos (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`, `STS`) registrados na base atual**. As demais cinco estações monitoradas (`FAL`, `FRA`, `FRE`, `HIG`, `LUZ`) só têm eventos `OBS`, que já são removidos pela própria definição da hipótese.
 
 Isso significa que, fora de `BUT`, contar "alarmes não-OBS" resultaria sempre em zero, o que enviesaria qualquer comparação agregada. Por isso, **a análise a seguir é restrita às 765 ordens corretivas da estação `BUT`**, e essa limitação é retomada na conclusão.
 
@@ -72,7 +63,7 @@ O gráfico abaixo compara visualmente a mediana de alarmes antes e depois da man
 
 ### 5.2 Distribuição completa (janela de 14 dias)
 
-As medianas e médias escondem a forma da distribuição. O boxplot a seguir mostra a dispersão completa de alarmes por ordem na janela de 14 dias — a única em que a diferença se mostrou estatisticamente significativa (Wilcoxon p ≈ 0,001; teste binomial p ≈ 0,008):
+As medianas e médias escondem a forma da distribuição. O boxplot a seguir mostra a dispersão completa de alarmes por ordem na janela de 14 dias, a única em que a diferença se mostrou estatisticamente significativa (Wilcoxon p ≈ 0,001; teste binomial p ≈ 0,008):
 
 <div style="margin: 2rem 0; text-align: center;">
   <Image src={graficoBoxplot} alt="Boxplot da distribuição de alarmes por ordem, antes e depois da manutenção, na janela de 14 dias" width={700} format="png" />
@@ -100,33 +91,24 @@ Para entender por que o volume "depois" supera o "antes" na janela de 14 dias, o
 
 ## 6. Síntese e Análise Detalhada dos Resultados
 
-### 6.1 A hipótese H4.1 não se sustenta estatisticamente
+Diferentemente da formulação original, os dados **não confirmam** que o volume de alarmes relevantes cresce antes da manutenção corretiva:
 
-Diferentemente da leitura inicial (baseada em uma comparação agregada de todo o sistema, sem pareamento por estação), os dados **não confirmam** que o volume de alarmes relevantes cresce antes da manutenção corretiva:
+1. **Janelas de 1, 3 e 7 dias:** a diferença entre "antes" e "depois" não é estatisticamente significativa, e a proporção de ordens com mais alarmes antes fica sempre abaixo de 50%.
+2. **Janela de 14 dias:** há uma diferença estatisticamente significativa, mas na **direção oposta** à esperada, já que 55,4% das ordens registram mais alarmes *depois* da manutenção do que antes.
 
-1. **Janelas de 1, 3 e 7 dias:** a diferença entre "antes" e "depois" não é estatisticamente significativa (p > 0,05), e a proporção de ordens com mais alarmes antes fica sempre abaixo de 50%.
-2. **Janela de 14 dias:** há diferença estatisticamente significativa (Wilcoxon p ≈ 0,001; binomial p ≈ 0,008) — mas na **direção oposta** à esperada: 55,4% das ordens registram mais alarmes *depois* da manutenção do que antes.
-3. Em nenhuma das quatro janelas testadas há evidência de que os alarmes se intensificam antes da falha.
+Dessa forma, chegamos a conclusão que nenhuma das 4 janelas testadas evidenciam essa hipótese. 
+Mas afinal, surge uma dúvida ao analisar os dados, por que o volume para STS é menor depois?
 
-### 6.2 Por que o volume pode ser maior depois?
+A quebra por tipo de alarme mostra um padrão consistente na janela de 14 dias: os seis tipos de alarme associados a falhas funcionais da porta (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`) aumentam entre 16% e 20% depois da manutenção, enquanto o alarme de status (`STS`) permanece praticamente estável (-1,4%).
 
-A quebra por tipo de alarme revela um padrão consistente: os seis tipos associados a falhas funcionais da porta (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`) aumentam entre **16% e 20%** depois da manutenção, enquanto o alarme de status (`STS`) permanece praticamente estável (-1,4%).
+Isso sugere duas leituras possíveis. Uma delas, é que a manutenção foi realizada de forma incompleta. A manutenção corretiva resolve o sintoma emergencial, mas não elimina a causa raiz, e a porta volta a gerar alarmes funcionais em volume igual ou maior nas semanas seguintes. Outra hipótese é que logo após o reparo, a porta volta a operar em plena carga (após período possivelmente degradado ou parcialmente isolado antes da ordem), o que pode elevar temporariamente a contagem de eventos.
 
-Duas leituras são possíveis, não mutuamente excludentes:
+### 6.1 Limitações da análise
 
-* **Reparo incompleto ou paliativo:** a manutenção corretiva resolve o sintoma emergencial, mas não elimina a causa raiz, e a porta volta a gerar alarmes funcionais em volume igual ou maior nas semanas seguintes.
-* **Efeito de retomada de operação:** logo após o reparo, a porta volta a operar em plena carga, o que pode elevar temporariamente a contagem de eventos em comparação a um período pré-falha possivelmente já degradado ou parcialmente isolado.
-
-### 6.3 Limitações da análise
-
-* **Cobertura de dados desigual:** apenas a estação `BUT` possui alarmes técnicos (não-OBS) na base atual; as demais cinco estações só registram `OBS`. A conclusão vale para `BUT` e não pode ser generalizada sem uma base de alarmes mais completa.
-* **Granularidade por estação, não por porta:** o pareamento foi feito por estação, não pela porta/PDM específica que motivou a ordem — `BUT` tem várias portas, e alarmes de uma porta vizinha podem estar sendo contados para a ordem de outra.
-* **Ponto de corte:** o "antes/depois" é calculado a partir do início da avaria, não do fechamento da ordem. Como 98% das ordens de `BUT` são resolvidas em menos de 24h, o impacto é limitado, mas alarmes gerados durante o próprio reparo (testes do técnico) podem inflar levemente a contagem "depois" nas janelas mais curtas.
-
----
+Depois de analisar as tabelas, percebemos uma limitação técnica relevante nos dados disponibilizados inicialmente pelo parceiro, onde apenas a estação `BUT` possui alarmes técnicos (não-OBS) registrados na base atual; as demais cinco estações só registram `OBS`. A conclusão acima vale para a estação **Butantã** e não pode ser generalizada às demais estações sem uma base de alarmes mais completa.
 
 ## 7. Conclusão
 
-A hipótese de que **alarmes relevantes se intensificam antes de uma manutenção corretiva não encontrou suporte estatístico** nos dados da estação `BUT` — a única com cobertura de alarmes técnicos suficiente para o teste. Em três das quatro janelas avaliadas o resultado é estatisticamente nulo, e na janela mais longa (14 dias) o padrão observado é o **inverso**: alarmes funcionais aumentam depois da intervenção.
+A hipótese de que **alarmes relevantes se intensificam antes de uma manutenção corretiva não encontrou suporte estatístico** nos dados da estação `BUT`, a única com cobertura de alarmes técnicos suficiente para o teste. Em três das quatro janelas avaliadas o resultado é estatisticamente nulo, e na janela mais longa (14 dias) o padrão observado é o **inverso**: alarmes funcionais aumentam depois da intervenção.
 
-Esse achado contradiz a leitura inicial e aponta para uma questão diferente e mais acionável: verificar se as ordens corretivas de `BUT` estão de fato eliminando a causa raiz das falhas ou apenas normalizando o sintoma temporariamente. Como próximos passos, recomenda-se cruzar este resultado com os campos `Causa` e `Ação` das ordens e, quando a cobertura de alarmes técnicos for expandida às demais estações, repetir esta mesma metodologia pareada por estação — idealmente também por porta.
+Esse achado é relevante para a squad: contradiz a leitura inicial (baseada em uma comparação agregada e não pareada por estação) e aponta para uma questão diferente e mais acionável, se as ordens corretivas de `BUT` estão de fato eliminando a causa raiz das falhas ou apenas normalizando o sintoma temporariamente. Recomenda-se, como próximo passo, cruzar esse resultado com o campo `Causa`/`Ação` das ordens e, quando a cobertura de alarmes técnicos for expandida às demais estações, repetir esta mesma metodologia pareada por estação (e idealmente por porta).
