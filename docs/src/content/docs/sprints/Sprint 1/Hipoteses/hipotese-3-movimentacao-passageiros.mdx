@@ -29,3 +29,56 @@ A base de dados de alarmes do sistema de PSDs não contém nenhuma medida direta
 1. **Caracterização dos dados:** antes de comparar estações, foi verificado se a base é de fato comparável entre elas, completude do carimbo de tempo, uniformidade da instrumentação e consistência do tempo de normalização.
 2. **Proxy de movimentação:** Porque não havia uma medida direta para quantidade de pessoas, foi construido um proxy ordinal (Alta/Média/Baixa) a partir do papel estrutural de cada estação na rede (integração com outras linhas/terminais, densidade do entorno).
 3. **Teste:** comparar a taxa de alarmes `OBS`, pois foi o único tipo de alarme reportado de forma consistente entre todas as estações, por porta e por dia ativo, contra o nível do proxy, usando correlação de Spearman.
+
+---
+
+## 4. Resultados
+
+### 4.1 Achado nº 1 — falta de marca de tempo
+
+Mais ou menos 25% dos registros não tem horário de alarme, apesar de o horário de normalização estar completo. Isso é provavelmente perda de exportação, não ausência do evento. A perda é desigual entre estações, Oscar Freire perde 90% dos registros e Faria Lima 65%, enquanto Fradique Coutinho e Luz perdem menos de 6%. Comparar volumes brutos nesse contexto mediria qualidade de exportação, não movimentação.
+
+### 4.2 Achado nº 2 — instrumentação diferente entre estações
+
+O cruzamento entre estação e tipo de alarme mostra que apenas Butantã informa todos os tipos de alarme monitorados pelo sistema. Isso limita a comparação entre estações ao alarme `OBS` (obstrução), o único tipo registrado de forma consistente em todas elas.
+
+### 4.3 Critério de recorte, o `OBS` mistura dois fenômenos
+
+A duração entre o disparo e a normalização do alarme `OBS` foi explorada, onde **34% dos registros duram até 30 segundos** e **57% duram mais de um dia**. Os eventos curtos são considerados como obstrução momentânea (ex.: uma mochila na porta); os longos são um ponto travado em alarme, o que de fato mostra ser uma falha acionável. Por isso, o teste considera apenas alarmes `OBS` com duração acima de 30 segundos.
+
+### 4.4 Proxy de movimentação
+
+Na ausência de uma medida direta de movimentação, as estações foram classificadas por proxy ordinal:
+
+| Nível | Critério | Estações da amostra |
+|---|---|---|
+| **3 — Alta** | Integração com outra linha de metrô/CPTM ou terminal de ônibus | Luz, Butantã |
+| **2 — Média** | Sem integração, porém em polo empresarial de alta densidade | Faria Lima |
+| **1 — Baixa** | Estação de bairro, sem integração modal | Fradique Coutinho, Oscar Freire, Higienópolis-Mackenzie |
+
+### 4.5 Teste — alarmes de obstrução por porta e por dia ativo
+
+Restringindo ao alarme `OBS` com duração acima de 30 segundos e normalizando por 48 portas e por dia efetivamente ativo, obtém-se a métrica que a hipótese prevê crescente com a movimentação:
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoAlarmesEstacao} alt="Gráfico de Alarmes de Obstrução Acionáveis por Porta e por Dia Ativo, por Estação" width={800} format="png" />
+</div>
+
+A correlação de Spearman entre o nível do proxy de movimentação e a taxa de alarmes acionáveis é **rho = +0,062 (p = 0,908)**, estatisticamente não significativa. O ranking observado (Fradique Coutinho > Butantã > Faria Lima > Higienópolis-Mackenzie > Luz > Oscar Freire) não acompanha o proxy, Fradique Coutinho, classificada como baixa movimentação, lidera a taxa de alarmes, enquanto Luz, classificada como alta movimentação, aparece entre as mais baixas.
+
+---
+
+## 5. Síntese e Análise Detalhada dos Resultados
+
+### 5.1 Validação da Hipótese
+
+A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha o proxy de movimentação de passageiros (que foi usado para tentar descobrir o numero de pessoas).
+
+### 5.2 Limitações que restringem a conclusão
+
+* **Ausência de medida direta de movimentação:** o proxy ordena as estações de forma defensável (papel estrutural na rede), mas não é uma medição, não quantifica a distância entre os níveis nem varia ao longo do dia. Uma fonte contínua, como o peso do vagão por estação, seria uma forma mais direta e precisa do volume de embarque/desembarque.
+* **Perda de dados desigual:** a ausência de marca de tempo e o recorte de eventos curtos afetam as estações em proporções diferentes, o que reduz a confiança em comparações diretas de volume bruto.
+* **Amostra pequena:** a correlação foi calculada sobre apenas 6 estações, o que limita o poder estatístico do teste.
+
+
+---
