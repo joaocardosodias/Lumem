@@ -66,17 +66,21 @@ Restringindo ao alarme `OBS` com duração acima de 30 segundos e normalizando p
 
 A correlação de Spearman entre o nível do proxy de movimentação e a taxa de alarmes acionáveis é **rho = +0,062 (p = 0,908)**, estatisticamente não significativa. O ranking observado (Fradique Coutinho > Butantã > Faria Lima > Higienópolis-Mackenzie > Luz > Oscar Freire) não acompanha o proxy, Fradique Coutinho, classificada como baixa movimentação, lidera a taxa de alarmes, enquanto Luz, classificada como alta movimentação, aparece entre as mais baixas.
 
+### 4.6 Verificação com dados reais de catraca
+
+Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha 4 (entrada + saída por estação e por dia), o que permitiu trocar o proxy por uma medida real da movimentação. Porém o resultado não mudou, com **rho = +0,314 (p = 0,544)**, ainda sem significância estatística. A estação Fradique Coutinho constinua sendo o outlier que quebra a relação (movimentação moderada, maior taxa de alarmes). A coluna de catraca da Luz conta só as catracas da própria estação. Quem troca com a Linha 1 usa um corredor de integração pago à parte, então a movimentação real ali é maior do que esses números sugerem. Iss sugere que essas medidas também são imperfeitas, mas não mudam a conclusão.
+
 ---
 
 ## 5. Síntese e Análise Detalhada dos Resultados
 
 ### 5.1 Validação da Hipótese
 
-A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha o proxy de movimentação de passageiros (que foi usado para tentar descobrir o numero de pessoas).
+A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros — nem pelo proxy ordinal, nem pelos dados reais de catraca (rho = +0,314, p = 0,544).
 
 ### 5.2 Limitações que restringem a conclusão
 
-* **Ausência de medida direta de movimentação:** o proxy ordena as estações de forma defensável (papel estrutural na rede), mas não é uma medição, não quantifica a distância entre os níveis nem varia ao longo do dia. Uma fonte contínua, como o peso do vagão por estação, seria uma forma mais direta e precisa do volume de embarque/desembarque.
+* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só os torniquetes da própria estação — na Luz, isso deixa de fora quem troca de linha pelo corredor de integração pago, subestimando a movimentação real ali.
 * **Perda de dados desigual:** a ausência de marca de tempo e o recorte de eventos curtos afetam as estações em proporções diferentes, o que reduz a confiança em comparações diretas de volume bruto.
 * **Amostra pequena:** a correlação foi calculada sobre apenas 6 estações, o que limita o poder estatístico do teste.
 
