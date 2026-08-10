@@ -5,6 +5,7 @@ description: "Análise exploratória sobre se estações com maior movimentaçã
 
 import { Image } from 'astro:assets';
 import graficoAlarmesEstacao from '../../../../../assets/sprints/sprint1/grafico-alarmes-por-estacao.png';
+import graficoMovimentacaoReal from '../../../../../assets/sprints/sprint1/grafico-movimentacao-real-vs-alarmes.png';
 
 
 
@@ -12,7 +13,7 @@ import graficoAlarmesEstacao from '../../../../../assets/sprints/sprint1/grafico
 
 As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos submetidos a ciclos contínuos de abertura e fechamento para permitir o embarque e desembarque de passageiros.
 
-A hipótese central determina que o desgaste mecânico das portas está ligado ao volume de pessoas que passam por elas; estações com maior movimentação de passageiros deveriam mostrar mais interferências humanas e consequentemente, mais alarmes.
+A hipótese central fala que o desgaste mecânico das portas está ligado ao volume de pessoas que passam por elas; estações com maior movimentação de passageiros deveriam mostrar mais interferências humanas e consequentemente, mais alarmes.
 
 ---
 
@@ -24,10 +25,10 @@ A hipótese central determina que o desgaste mecânico das portas está ligado a
 
 ## 3. Metodologia de Análise
 
-A base de dados de alarmes do sistema de PSDs não contém nenhuma medida direta de movimentação de passageiros (catraca, ciclagens de porta, ocupação de trem). Por isso a análise foi feita de forma onde :
+A base de dados de alarmes do sistema de PSDs não tinha nenhuma medida direta de movimentação de passageiros. Por isso a análise foi feita de forma onde :
 
-1. **Caracterização dos dados:** antes de comparar estações, foi verificado se a base é de fato comparável entre elas, completude do carimbo de tempo, uniformidade da instrumentação e consistência do tempo de normalização.
-2. **Proxy de movimentação:** Porque não havia uma medida direta para quantidade de pessoas, foi construido um proxy ordinal (Alta/Média/Baixa) a partir do papel estrutural de cada estação na rede (integração com outras linhas/terminais, densidade do entorno).
+1. **Caracterização dos dados:** antes de comparar estações, foi verificado se a base é de fato comparável, olhando marcadores de tempo, uniformidade da instrumentação e consistência do tempo de normalização.
+2. **Proxy de movimentação:** Porque não havia uma medida direta para quantidade de pessoas, foi construido um proxy ordinal (Alta/Média/Baixa), construido a partir do papel estrutural de cada estação na rede (integração com outras linhas/terminais, densidade do entorno).
 3. **Teste:** comparar a taxa de alarmes `OBS`, pois foi o único tipo de alarme reportado de forma consistente entre todas as estações, por porta e por dia ativo, contra o nível do proxy, usando correlação de Spearman.
 
 ---
@@ -44,11 +45,11 @@ O cruzamento entre estação e tipo de alarme mostra que apenas Butantã informa
 
 ### 4.3 Critério de recorte, o `OBS` mistura dois fenômenos
 
-A duração entre o disparo e a normalização do alarme `OBS` foi explorada, onde **34% dos registros duram até 30 segundos** e **57% duram mais de um dia**. Os eventos curtos são considerados como obstrução momentânea (ex.: uma mochila na porta); os longos são um ponto travado em alarme, o que de fato mostra ser uma falha acionável. Por isso, o teste considera apenas alarmes `OBS` com duração acima de 30 segundos.
+A duração entre o disparo e a normalização do alarme `OBS` foi explorada, onde*34% dos registros duram até 30 segundos e 57% duram mais de um dia. Os eventos curtos são considerados como obstrução momentânea (ex.: uma mochila na porta); os longos são um ponto travado em alarme, o que de fato mostra ser uma falha acionável. Por isso, o teste considera apenas alarmes `OBS` com duração acima de 30 segundos.
 
 ### 4.4 Proxy de movimentação
 
-Na ausência de uma medida direta de movimentação, as estações foram classificadas por proxy ordinal:
+Porque não havia uma medida direta de movimentação, as estações foram classificadas por proxy ordinal:
 
 | Nível | Critério | Estações da amostra |
 |---|---|---|
@@ -58,17 +59,21 @@ Na ausência de uma medida direta de movimentação, as estações foram classif
 
 ### 4.5 Teste — alarmes de obstrução por porta e por dia ativo
 
-Restringindo ao alarme `OBS` com duração acima de 30 segundos e normalizando por 48 portas e por dia efetivamente ativo, obtém-se a métrica que a hipótese prevê crescente com a movimentação:
+Limitando ao alarme `OBS` com duração acima de 30 segundos e normalizando por 48 portas e por dia efetivamente ativo, foi obtida a métrica que a hipótese prevê crescente com a movimentação:
 
 <div style="margin: 2rem 0; text-align: center;">
   <Image src={graficoAlarmesEstacao} alt="Gráfico de Alarmes de Obstrução Acionáveis por Porta e por Dia Ativo, por Estação" width={800} format="png" />
 </div>
 
-A correlação de Spearman entre o nível do proxy de movimentação e a taxa de alarmes acionáveis é **rho = +0,062 (p = 0,908)**, estatisticamente não significativa. O ranking observado (Fradique Coutinho > Butantã > Faria Lima > Higienópolis-Mackenzie > Luz > Oscar Freire) não acompanha o proxy, Fradique Coutinho, classificada como baixa movimentação, lidera a taxa de alarmes, enquanto Luz, classificada como alta movimentação, aparece entre as mais baixas.
+A correlação de Spearman entre o nível do proxy de movimentação e a taxa de alarmes acionáveis é rho = +0,062 (p = 0,908), estatisticamente não significativa. O ranking observado (Fradique Coutinho > Butantã > Faria Lima > Higienópolis-Mackenzie > Luz > Oscar Freire) não acompanha o proxy, Fradique Coutinho, classificada como baixa movimentação, lidera a taxa de alarmes, enquanto Luz, classificada como alta movimentação, aparece entre as mais baixas.
 
 ### 4.6 Verificação com dados reais de catraca
 
-Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha 4 (entrada + saída por estação e por dia), o que permitiu trocar o proxy por uma medida real da movimentação. Porém o resultado não mudou, com **rho = +0,314 (p = 0,544)**, ainda sem significância estatística. A estação Fradique Coutinho constinua sendo o outlier que quebra a relação (movimentação moderada, maior taxa de alarmes). A coluna de catraca da Luz conta só as catracas da própria estação. Quem troca com a Linha 1 usa um corredor de integração pago à parte, então a movimentação real ali é maior do que esses números sugerem. Iss sugere que essas medidas também são imperfeitas, mas não mudam a conclusão.
+Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha 4 (entrada + saída por estação e por dia), o que permitiu trocar o proxy por uma medida real da movimentação. Porém o resultado não mudou, com rho = +0,314 (p = 0,544), ainda sem significância estatística. A estação Fradique Coutinho constinua sendo o outlier que quebra a relação (movimentação moderada, maior taxa de alarmes). A coluna de catraca da Luz conta só as catracas da própria estação. Quem troca com a Linha 1 usa um corredor de integração pago à parte, então a movimentação real ali é maior do que esses números sugerem. Isso sugere que essas medidas também são imperfeitas, mas não mudam a conclusão.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoMovimentacaoReal} alt="Gráfico de dispersão entre movimentação real de catraca e taxa de alarmes de obstrução, por estação" width={700} format="png" />
+</div>
 
 ---
 
@@ -76,11 +81,11 @@ Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha
 
 ### 5.1 Validação da Hipótese
 
-A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros — nem pelo proxy ordinal, nem pelos dados reais de catraca (rho = +0,314, p = 0,544).
+A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros, nem pelo proxy ordinal, nem pelos dados reais de catraca.
 
 ### 5.2 Limitações que restringem a conclusão
 
-* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só os torniquetes da própria estação — na Luz, isso deixa de fora quem troca de linha pelo corredor de integração pago, subestimando a movimentação real ali.
+* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só as catracas da própria estação na Luz, isso deixa de fora quem troca de linha pelo corredor de integração pago, reduzindo a movimentação real ali.
 * **Perda de dados desigual:** a ausência de marca de tempo e o recorte de eventos curtos afetam as estações em proporções diferentes, o que reduz a confiança em comparações diretas de volume bruto.
 * **Amostra pequena:** a correlação foi calculada sobre apenas 6 estações, o que limita o poder estatístico do teste.
 
