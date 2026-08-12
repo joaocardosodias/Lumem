@@ -6,6 +6,7 @@ description: "Análise exploratória sobre se estações com maior movimentaçã
 import { Image } from 'astro:assets';
 import graficoAlarmesEstacao from '../../../../../assets/sprints/sprint1/grafico-alarmes-por-estacao.png';
 import graficoMovimentacaoReal from '../../../../../assets/sprints/sprint1/grafico-movimentacao-real-vs-alarmes.png';
+import graficoBaseAmpliada from '../../../../../assets/sprints/sprint1/grafico-movimentacao-base-ampliada.png';
 
 
 
@@ -75,19 +76,27 @@ Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha
   <Image src={graficoMovimentacaoReal} alt="Gráfico de dispersão entre movimentação real de catraca e taxa de alarmes de obstrução, por estação" width={700} format="png" />
 </div>
 
+### 4.7 Ampliação da base de alarmes (Histórico 2023-2026)
+
+Foi enviada uma segunda tabela de alarmes (`Histórico de alarmes 23-26.xlsx`), de toda a Linha 4. Ela foi juntada com a base original e removendo duplicatas, o volume de OBS das 6 estações originais não mudou muito, parece ser os mesmos registros, só reexportados. A prinicpal diferença é a cobertura, onde a base unida traz 5 estações novas (Pinheiros, Paulista, República, São Paulo-Morumbi e Vila Sônia), onde 3 têm catraca própria no arquivo de movimentação (Pinheiros, Paulista, Vila Sônia).
+
+Com quase o dobro de estações (9), o resultado continuou praticamente igual, na verdade pareceu mais fraco. Com rho = -0,067 (p = 0,865), Pinheiros entra como um segundo outlier no mesmo sentido de Fradique Coutinho (movimentação baixa/média, taxa de alarme alta), enquanto Vila Sônia é o oposto (a maior movimentação da amostra, mas taxa baixa). Morumbi não tinha nenhum alarme `OBS` na base, o que parece ser mais um caso de instrumentação inconsistente entre estações, igual ao achado nº 2. Por ultimo República ficou de fora do teste porque a planilha de catraca só tem o corredor de integração com a Linha 3 ali, não as catracas da própria estação.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoBaseAmpliada} alt="Gráfico de dispersão entre movimentação real de catraca e taxa de alarmes de obstrução, base ampliada com 9 estações" width={700} format="png" />
+</div>
+
 ---
 
 ## 5. Síntese e Análise Detalhada dos Resultados
 
 ### 5.1 Validação da Hipótese
 
-A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos realmente acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros, nem pelo proxy ordinal, nem pelos dados reais de catraca.
+A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros, nem pelo proxy ordinal, nem pelos dados reais de catraca, nem depois de ampliar a base de 6 para 9 estações.
 
 ### 5.2 Limitações que restringem a conclusão
 
-* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só as catracas da própria estação na Luz, isso deixa de fora quem troca de linha pelo corredor de integração pago, reduzindo a movimentação real ali.
+* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só as catracas da própria estação. Na Luz isso deixa de fora quem troca de linha pelo corredor de integração pago, reduzindo a movimentação real ali; na República, nem existe coluna própria, só a de integração.
 * **Perda de dados desigual:** a ausência de marca de tempo e o recorte de eventos curtos afetam as estações em proporções diferentes, o que reduz a confiança em comparações diretas de volume bruto.
-* **Amostra pequena:** a correlação foi calculada sobre apenas 6 estações, o que limita o poder estatístico do teste.
-
 
 ---
