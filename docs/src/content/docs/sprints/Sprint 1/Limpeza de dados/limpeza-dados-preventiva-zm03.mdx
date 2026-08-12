@@ -1,0 +1,95 @@
+---
+title: "Pipeline de Limpeza — Ordens Preventivas ZM03"
+description: "Documentação do pipeline de higienização e tratamento da base de ordens de manutenção preventiva (ZM03) das Portas de Plataforma (PSDs)."
+---
+
+import { Image } from 'astro:assets';
+import graficoDuracao from '../../../../../assets/sprints/sprint1/grafico-zm03-duracao.png';
+import graficoFunil from '../../../../../assets/sprints/sprint1/grafico-zm03-funil.png';
+
+## 1. Contexto e Objetivos
+
+Este documento descreve o pipeline de tratamento executado no notebook `eda/cleaning/limpeza_dados_preventiva_zm03.ipynb`, responsável pela limpeza da base de ordens de manutenção preventiva `ZM03` do sistema de Portas de Plataforma (PSDs), disponibilizada em `Ordens do SAP -Preventivas (ZM03).XLSX`.
+
+---
+
+## 2. Colunas Sem Nenhuma Informação
+
+Das 590 ordens lidas, `Nº endereço` e `Prioridade` não têm nenhum input neles. Diferente dos alarmes (onde os nulos apareciam linha a linha), aqui o problema é na coluna inteira. Elas não carregam informação nenhuma, então foram removidas.
+
+---
+
+## 3. Padronização Temporal
+
+`Data-base` e `Hora` vêm em colunas separadas e foram combinadas num único `datetime` para calcular a duração de cada ordem. Foi achado no processo: 2 ordens têm horário programado `24:00:00`, que o Excel/pandas não representa como `datetime.time` (o máximo é `23:59:59`), grava como `timedelta` de 1 dia, exigindo tratamento explícito na conversão.
+
+---
+
+## 4. Decomposição de `Centro de trabalho` e `Local de instalação`
+
+A base não vem com uma coluna "Estação" pronta, ela foi deduzida de dois campos:
+
+| Sigla | Estação |
+| :---: | :--- |
+| **`BUT`** | Butantã |
+| **`PIN`** | Pinheiros |
+| **`FAL`** | Faria Lima |
+| **`PTA`** | Paulista |
+| **`HIG`** | Higienópolis-Mackenzie |
+| **`REP`** | República |
+| **`LUZ`** | Luz |
+| **`FRA`** | Fradique Coutinho |
+| **`FRE`** | Oscar Freire |
+| **`VSO`** | Vila Sônia |
+| **`MBI`** | São Paulo-Morumbi |
+
+* `Centro de trabalho`, no padrão `SP04I<EST>` (ex.: `SP04IBUT` → Butantã);
+* `Local de instalação`, no padrão `SP04-6-PSD-<EST>` (ex.: `SP04-6-PSD-BUT` → Butantã).
+
+Na maioria das ordens os dois campos concordam. Mas em 120 das 590 linhas eles apontam para coisas diferentes, por dois motivos:
+
+1. **`IENC01`** (em `Centro de trabalho`) não é uma estação, é um centro de trabalho genérico ("encarregado") usado em ordens de várias estações diferentes. Nesses casos, só o `Local de instalação` diz qual é a estação de verdade.
+2. **`SP04IPVS`** (em `Centro de trabalho`) também não corresponde a nenhuma das 11 estações. O texto da ordem (`PORTAS PLATAFORMA - PVS`, às vezes `PRED PORTAS PLATAF` — prédio) mostra que é uma classificação genérica de manutenção, sem estação específica.
+
+Por isso a estação final é resolvida em cascata, tenta `Local de instalação` primeiro (mais específico); se não achar, cai para `Centro de trabalho`; e se nenhum dos dois resolver para uma das 11 estações conhecidas, a ordem vira `GERAL`, mantida na base, só sinalizada, para quem for analisar por estação saber filtrar (**107 ordens, 18% do total**).
+
+---
+
+## 5. Inconsistências Temporais e Outliers
+
+* **17 ordens com duração negativa**, o horário de fim registrado é anterior ao de início, elas foram removidas.
+* **1 ordem com duração acima de 30 dias**, também foi removida.
+* **3 ordens `ORDEM INDEVIDA`**, marcadas literalmente assim pelo próprio SAP. Removidas.
+* **13 ordens com status contendo `CANC`** (canceladas) foram mantidas, mas sinalizadas numa coluna nova `cancelada`, já que são registros legítimos que não representam manutenção de fato executada.
+
+---
+
+## 6. Redução de dimensionalidade do Pipeline
+
+| Etapa | Registros Mantidos | Porcentagem |
+| :--- | :---: | :---: |
+| **1. Bruto** | 590 | 100,0% |
+| **2. Após Colunas 100% Nulas** | 590 | 100,0% |
+| **3. Base Limpa Final** | **569** | **96,4%** |
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={graficoFunil} alt="Gráfico de afunilamento de volumetria do pipeline de limpeza" width={700} format="png" />
+</div>
+
+---
+
+## 7. Conclusão e Exportação
+
+O dataset final sanitizado de **569 ordens** foi exportado para:
+`data/Preventiva/preventiva_zm03_limpa.csv`
+
+---
+
+## Resumo
+
+* Base com **590 ordens** em uma planilha (a segunda no repositório é idêntica, não foi usada).
+* **2 colunas** removidas por não terem nenhum valor preenchido: `Nº endereço` e `Prioridade`.
+* **2 ordens** com horário `24:00:00` precisaram de tratamento especial na conversão de data/hora.
+* Estação de cada ordem identificada via `Local de instalação`/`Centro de trabalho`;*107 ordens (18%) não resolvem para nenhuma das 11 estações e ficam marcadas como `GERAL` (mantidas, não descartadas).
+* **21 ordens removidas** por inconsistência: 17 com duração negativa, 1 com duração acima de 30 dias, 3 marcadas como `ORDEM INDEVIDA` pelo SAP.
+* **13 ordens canceladas** (status `CANC`) mantidas na base, sinalizadas numa coluna `cancelada`.
