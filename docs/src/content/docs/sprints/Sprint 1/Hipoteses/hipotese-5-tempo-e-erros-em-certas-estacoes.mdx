@@ -1,0 +1,232 @@
+---
+title: "Hipótese 5: Correlação com Tempo de Normalização e Estações"
+description: "Análise exploratória detalhada passando por procura de uma faixa de tempo sendo relacionada a um problema específico e chegando à uma correlação que tem estações que deixam um alarme por mais tempo que outras estações."
+---
+
+import { Image } from 'astro:assets';
+import graficoObsEstacao from '../../../../../assets/sprints/sprint1/grafico-alarmes-mensais-por-estacao.png';
+
+
+## 1. Contexto e Fundamentação Teórica
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são sistemas eletromecânicos responsáveis por controlar e proteger o acesso entre a plataforma e a via ferroviária. Durante sua operação, diferentes tipos de alarmes são registrados pelo sistema de supervisão, permitindo acompanhar eventos relacionados ao funcionamento das portas, sensores, travas, comunicação e possíveis interferências durante os ciclos de abertura e fechamento.
+
+Entre esses registros, o código `OBS` foi identificado como correspondente a eventos de **obstrução**. Cada ocorrência possui um horário de disparo e, quando disponível, um horário de normalização, permitindo calcular quanto tempo o alarme permaneceu ativo no sistema.
+
+O notebook foi inicialmente desenvolvido para investigar se o **tempo de normalização** poderia ser utilizado como indicador de falha. Durante essa exploração, foram testadas hipóteses relacionadas à existência de um limite temporal entre obstruções e falhas e à existência de tempos característicos para determinados defeitos.
+
+Essas primeiras hipóteses não apresentaram evidências suficientes para utilização operacional. Entretanto, durante a análise surgiu um comportamento relevante: a proporção de alarmes que permaneciam ativos por longos períodos variava consideravelmente entre as estações.
+
+A partir dessa observação, a investigação passou a analisar se a **localização da ocorrência, representada pela estação, estava associada à persistência dos alarmes PSD**, especialmente para o mesmo tipo de evento.
+
+---
+
+## 2. Definindo a Questão Investigada
+
+A hipótese final foi formulada buscando controlar o tipo de alarme e verificar exclusivamente o efeito da estação sobre seu comportamento temporal.
+
+* **H1.1 - Persistência dos Alarmes por Estação:** A probabilidade de um alarme de obstrução (`OBS`) permanecer ativo por mais de **24 horas** varia significativamente entre as estações.
+
+A escolha de utilizar somente o código `OBS` teve como objetivo evitar que a diferença observada fosse causada simplesmente pela presença de tipos distintos de alarmes em cada estação.
+
+Dessa forma, a análise passou a comparar **o mesmo tipo de ocorrência em diferentes locais**, permitindo avaliar de maneira mais adequada o possível efeito da estação.
+
+---
+
+## 3. Metodologia de Análise
+
+A análise utilizou como principal fonte a base de alarmes do sistema PSD, originalmente composta por **150.003 registros**.
+
+Antes do teste da hipótese, os dados passaram pelas seguintes etapas de preparação e validação:
+
+1. **Validação Temporal:** O tempo de normalização foi calculado pela diferença entre `Horário da Normalizacao` e `Horário do Alarme`. O resultado foi comparado com a coluna textual original `Tempo de Normalização`, apresentando aproximadamente **99,52% de concordância dentro de 1 segundo** nos registros comparáveis.
+
+2. **Seleção dos Registros Temporais:** Dos 150.003 alarmes originais, **112.751 possuíam informações suficientes para calcular o tempo de normalização** e puderam participar das análises temporais.
+
+3. **Padronização da Localização:** Foram identificadas estação, plataforma e porta a partir das colunas existentes e das TAGs dos alarmes. Dois padrões diferentes de TAG foram tratados, permitindo obter localização física válida para **150.000 dos 150.003 registros**.
+
+4. **Conversão da Duração:** O tempo de normalização foi convertido para horas, permitindo comparar a duração dos eventos de forma padronizada.
+
+5. **Criação do Indicador de Persistência:** Cada alarme foi classificado de acordo com sua duração:
+
+   * até 24 horas;
+   * acima de 24 horas.
+
+6. **Análise por Estação:** Foi calculada a proporção de alarmes acima de 24 horas em cada estação.
+
+7. **Controle pelo Tipo de Alarme:** Para evitar que diferentes códigos de alarme explicassem as diferenças entre as estações, a análise principal foi repetida utilizando somente eventos classificados como `OBS`.
+
+8. **Teste Estatístico de Independência:** Foi aplicado o teste qui-quadrado para verificar se estação e persistência acima de 24 horas eram estatisticamente associadas.
+
+9. **Tamanho do Efeito:** Foi calculado o **V de Cramér** para avaliar a intensidade da associação encontrada.
+
+10. **Risco Relativo:** Para cada estação, foi calculado o risco relativo de um alarme `OBS` ultrapassar 24 horas em comparação com o conjunto das demais estações.
+
+11. **Análise Temporal Mensal:** A proporção de `OBS` acima de 24 horas também foi observada ao longo dos meses, com o gráfico limitado até **novembro de 2025**, buscando verificar se o comportamento estava concentrado em um período específico ou se aparecia de forma recorrente.
+
+---
+
+## 4. Resultados da Persistência dos Alarmes
+
+### 4.1 Distribuição Geral dos Alarmes por Estação
+
+Antes de controlar o tipo de alarme, foram considerados todos os registros PSD com duração calculável.
+
+A proporção de alarmes cuja normalização ultrapassou 24 horas apresentou diferenças expressivas entre as estações:
+
+| Estação | Alarmes acima de 24h (%) |
+| :------ | -----------------------: |
+| **FRA** |               **85,76%** |
+| **BUT** |               **75,51%** |
+| **FAL** |               **47,14%** |
+| **HIG** |               **29,67%** |
+| **LUZ** |               **17,87%** |
+| **FRE** |                **0,00%** |
+
+O teste qui-quadrado aplicado nessa primeira comparação apresentou resultado estatisticamente significativo, indicando que a distribuição dos alarmes acima de 24 horas não era uniforme entre as estações.
+
+Entretanto, ainda existia a possibilidade de que essa diferença fosse consequência da composição dos tipos de alarme presentes em cada local.
+
+---
+
+### 4.2 Controle pelo Tipo de Alarme `OBS`
+
+Para controlar esse possível efeito, foram selecionados exclusivamente os alarmes `OBS`, permitindo comparar o mesmo tipo de evento entre as estações.
+
+A distribuição encontrada foi:
+
+| Estação | Até 24h | Acima de 24h | Percentual acima de 24h |
+| :------ | ------: | -----------: | ----------------------: |
+| **FRA** |   3.904 |       23.509 |              **85,76%** |
+| **BUT** |   3.053 |       12.263 |              **80,07%** |
+| **FAL** |   3.189 |        2.844 |              **47,14%** |
+| **HIG** |  13.488 |        5.690 |              **29,67%** |
+| **LUZ** |  11.258 |        2.449 |              **17,87%** |
+| **FRE** |     835 |            0 |               **0,00%** |
+
+Mesmo considerando exclusivamente alarmes de obstrução, as diferenças permaneceram muito expressivas.
+
+FRA e BUT apresentaram as maiores proporções de eventos persistentes, enquanto HIG, LUZ e principalmente FRE apresentaram comportamentos bastante diferentes.
+
+---
+
+### 4.3 Validação Estatística
+
+O teste qui-quadrado realizado apenas com os alarmes `OBS` apresentou:
+
+* **Qui-quadrado:** 28.276,944;
+* **Graus de liberdade:** 5;
+* **p-valor:** < 0,001.
+
+O resultado indica evidência estatística suficiente para rejeitar a hipótese de independência entre estação e permanência do alarme acima de 24 horas.
+
+Esse resultado indica uma **associação forte** entre a estação e a persistência temporal dos alarmes `OBS`.
+
+---
+
+### 4.4 Risco Relativo por Estação
+
+Também foi calculado o risco relativo de um alarme `OBS` permanecer ativo por mais de 24 horas em cada estação, utilizando como comparação o conjunto das demais estações.
+
+| Estação | Percentual acima de 24h | Risco Relativo |
+| :------ | ----------------------: | -------------: |
+| **FRA** |                  85,76% |       **2,03** |
+| **BUT** |                  80,07% |       **1,56** |
+| **FAL** |                  47,14% |           0,82 |
+| **HIG** |                  29,67% |           0,46 |
+| **LUZ** |                  17,87% |           0,28 |
+| **FRE** |                   0,00% |           0,00 |
+
+Em FRA, um alarme `OBS` apresentou aproximadamente **2,03 vezes o risco de permanecer acima de 24 horas** quando comparado aos eventos registrados nas demais estações.
+
+Em BUT, esse risco foi aproximadamente **1,56 vez maior**.
+
+Esses resultados reforçam o comportamento diferenciado observado principalmente nessas duas estações.
+
+---
+
+### 4.5 Evolução Mensal
+
+Também foi analisada a proporção mensal de alarmes `OBS` acima de 24 horas por estação, considerando o período disponível até **novembro de 2025**.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoObsEstacao} alt="Persistência mensal dos alarmes OBS acima de 24 horas por estação" width={800} format="png" />
+</div>
+
+Essa visualização permite verificar se as diferenças encontradas são recorrentes ao longo do período analisado ou se estão concentradas em meses específicos.
+
+---
+
+## 5. Síntese e Análise Detalhada dos Resultados
+
+### 5.1 Evolução das Hipóteses
+
+A hipótese final não foi a primeira investigada no notebook. Ela surgiu a partir dos resultados e limitações encontrados durante a análise exploratória.
+
+A primeira hipótese buscava verificar se existia um **tempo de normalização capaz de separar obstruções de falhas associadas à manutenção**.
+
+Após relacionar os alarmes com registros de manutenção SAP e testar diferentes limites, o melhor ponto encontrado foi aproximadamente **20 segundos**. Apesar de apresentar sensibilidade de 96,8%, sua precisão foi de apenas **2,5%**, com Balanced Accuracy de 0,664, AUC ROC de 0,669 e Average Precision de 0,023.
+
+Isso demonstrou que tempos maiores não eram suficientes para identificar uma falha de maneira confiável. Portanto, essa hipótese foi considerada **não sustentada**.
+
+---
+
+### 5.2 Investigação de Tempos Característicos por Defeito
+
+Uma segunda hipótese avaliou se determinados defeitos poderiam possuir um **tempo característico de normalização**.
+
+Inicialmente foram encontrados padrões aparentemente muito concentrados para alguns defeitos. Entretanto, verificou-se que dezenas ou centenas de alarmes poderiam estar relacionados à mesma ocorrência de manutenção.
+
+Por exemplo, 44 registros associados a `CORREIA DE TRAÇÃO DANIFICADA` representavam apenas 2 manutenções independentes.
+
+Esse comportamento produzia um problema de **pseudorrepetição**, fazendo uma única manutenção aparecer várias vezes como se fossem eventos independentes.
+
+A unidade de análise foi então corrigida para **uma manutenção por observação**. Após essa correção, as concentrações temporais perderam força e nenhum defeito apresentou uma assinatura temporal suficientemente estável.
+
+Assim, a segunda hipótese também foi considerada **não sustentada de maneira robusta**.
+
+---
+
+### 5.3 Surgimento da Hipótese por Estação
+
+Durante a investigação dos defeitos, foi observado que determinados comportamentos estavam fortemente concentrados em estações específicas.
+
+Isso levou a análise a mudar de perspectiva: em vez de buscar apenas **quanto tempo** um evento demorava para normalizar, passou-se a investigar **onde os eventos persistentes estavam ocorrendo**.
+
+A análise por estação revelou diferenças expressivas na proporção de alarmes superiores a 24 horas.
+
+Ainda assim, foi considerada uma possível explicação alternativa: algumas estações poderiam apresentar diferentes tipos de alarmes.
+
+Para eliminar esse efeito, a análise foi restringida aos alarmes `OBS`.
+
+Mesmo após esse controle, FRA e BUT continuaram apresentando taxas muito superiores às demais estações.
+
+O teste qui-quadrado e o V de Cramér confirmaram que essa diferença era estatisticamente significativa e possuía forte intensidade.
+
+Dessa forma, a hipótese de que **a persistência dos alarmes `OBS` varia de acordo com a estação foi sustentada pelos dados**.
+
+---
+
+### 5.4 Considerações sobre a Interpretação dos Resultados
+
+É importante destacar que o indicador analisado representa o **tempo até a normalização do alarme registrado no sistema PSD**.
+
+Portanto, um alarme que permanece ativo por mais de 24 horas não significa necessariamente que uma falha física permaneceu sem reparo durante todo esse período.
+
+O comportamento pode estar relacionado a diferentes fatores, como:
+
+* Persistência física da condição que originou o alarme;
+* Procedimentos operacionais de normalização;
+* Lógica de reset do sistema;
+* Problemas de comunicação;
+* Configuração do supervisório;
+* Características específicas dos equipamentos instalados;
+* Procedimentos locais de operação ou manutenção.
+
+Dessa forma, os resultados não permitem afirmar diretamente que determinada estação “demora mais para realizar reparos”.
+
+O que pode ser afirmado a partir dos dados é que:
+
+> **Alarmes de obstrução (`OBS`) registrados em FRA e BUT possuem uma probabilidade significativamente maior de permanecer sem normalização por mais de 24 horas quando comparados aos mesmos alarmes registrados nas demais estações.**
+
+Esse resultado identifica FRA e BUT como pontos prioritários para uma investigação operacional mais aprofundada, buscando compreender quais fatores locais podem explicar a persistência observada.
