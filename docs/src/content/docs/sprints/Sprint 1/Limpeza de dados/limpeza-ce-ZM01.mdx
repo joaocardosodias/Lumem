@@ -1,0 +1,276 @@
+---
+title: "Limpeza de dados: manutenção corretiva emergencial ZM01"
+description: "Documentação do diagnóstico, padronização, validação e tratamento da base de ordens de manutenção corretiva emergencial ZM01."
+---
+
+## 1. Objetivo
+
+Esta etapa teve como objetivo preparar a base de **manutenção corretiva emergencial ZM01** para análises posteriores, integração com outras fontes de dados e construção de atributos (*feature engineering*).
+
+A limpeza foi conduzida com os seguintes princípios:
+
+- preservar o arquivo original;
+- manter identificadores e informações potencialmente úteis para integrações;
+- não imputar valores sem respaldo em uma regra de negócio;
+- remover somente duplicatas comprovadamente idênticas;
+- documentar as exclusões realizadas;
+- preservar os registros classificados como outliers em uma tabela de auditoria;
+- garantir que todo o processo possa ser reproduzido pelo notebook de limpeza.
+
+O código completo está disponível no notebook `eda/hipoteses/cleaning/limpeza-dados-ZM01-organizado.ipynb`.
+
+---
+
+## 2. Fonte dos dados
+
+Foi utilizada a planilha:
+
+```text
+data/Corretiva Emergencial/Ordens do SAP - Corretiva emergencial (ZM01).XLSX
+```
+
+A aba utilizada foi `Corretivas`. Uma segunda extração ZM01 existente no diretório apresentou a mesma estrutura, a mesma quantidade de registros e sobreposição completa das ordens. Por esse motivo, as planilhas não foram concatenadas, evitando a duplicação integral da base.
+
+### 2.1 Diagnóstico inicial
+
+| Métrica | Resultado |
+| :--- | ---: |
+| Registros | 10.647 |
+| Colunas | 28 |
+| Ordens preenchidas | 10.645 |
+| Ordens distintas preenchidas | 10.574 |
+| Registros sem ordem | 2 |
+| Repetições excedentes de ordem | 71 |
+| Repetições excedentes de nota | 71 |
+| Duplicatas exatas | 1 |
+
+As repetições de `ordem` não foram interpretadas automaticamente como duplicatas. A análise mostrou **67 ordens distintas repetidas**, envolvendo 138 linhas. Em 66 dessas ordens havia divergência em pelo menos um campo, principalmente em `causa` e `acao`.
+
+---
+
+## 3. Padronização estrutural
+
+### 3.1 Nomes das colunas
+
+Os nomes foram convertidos para letras minúsculas, sem acentos e no padrão `snake_case`. Caracteres especiais e sequências de espaços foram substituídos por `_`.
+
+Exemplos:
+
+| Nome original | Nome padronizado |
+| :--- | :--- |
+| `Ordem` | `ordem` |
+| `Início avaria` | `inicio_avaria` |
+| `Local de Instalação` | `local_de_instalacao` |
+| `Comentários Classificação Engenharia` | `comentarios_classificacao_engenharia` |
+
+### 3.2 Identificadores
+
+As colunas `nota` e `ordem` foram convertidas para texto. Essa decisão evita que identificadores sejam tratados como grandezas numéricas e impede a manutenção do sufixo decimal gerado na importação, como `53954586.0`.
+
+Também foi criada a coluna `linha_origem`, correspondente ao número da linha na planilha original. Essa coluna permite rastrear cada registro até sua fonte mesmo após filtros e redefinições do índice.
+
+---
+
+## 4. Tratamento de datas e horários
+
+As datas foram convertidas considerando duas representações possíveis:
+
+1. datas já reconhecidas pelo `pandas` ou escritas como texto no padrão dia/mês/ano;
+2. números seriais de data utilizados internamente pelo Excel.
+
+As horas também foram tratadas em três formatos possíveis:
+
+- objetos do tipo `time`;
+- frações de um dia do Excel;
+- textos no formato de horário.
+
+Após a conversão, data e hora foram combinadas nas seguintes colunas:
+
+| Coluna criada | Composição |
+| :--- | :--- |
+| `inicio_avaria_datetime` | Início da avaria + hora de início |
+| `fim_avaria_datetime` | Fim da avaria + hora de fim |
+| `analise_datetime` | Data da análise + hora da análise |
+| `encerramento_datetime` | Data de encerramento + hora de encerramento |
+
+Não foram encontrados casos em que o fim da avaria ou o encerramento fossem anteriores ao início. Os 326 registros sem fim de avaria foram mantidos sem imputação.
+
+A duração foi calculada em horas:
+
+```python
+duracao_avaria_horas = (
+    fim_avaria_datetime - inicio_avaria_datetime
+).total_seconds() / 3600
+```
+
+---
+
+## 5. Limpeza de campos textuais
+
+Os campos textuais passaram pelas seguintes transformações:
+
+- conversão para o tipo textual anulável do `pandas`;
+- remoção de espaços nas extremidades;
+- substituição de espaços não separáveis (`\u00a0`);
+- redução de espaços e tabulações repetidas;
+- conversão de strings vazias para `pd.NA`;
+- conversão para letras maiúsculas somente nos campos categóricos.
+
+Os textos descritivos, como `descricao`, `texto_longo_da_ordem` e `comentarios_classificacao_engenharia`, tiveram sua capitalização preservada. Não foram realizadas correções ortográficas nem agrupamentos automáticos de categorias, pois isso poderia alterar o conteúdo operacional registrado no SAP.
+
+---
+
+## 6. Indicadores booleanos
+
+As colunas `indisponivel`, `falha` e `analisada` utilizavam `X` para representar uma marcação positiva. Foram criadas versões booleanas:
+
+| Coluna original | Coluna criada | Regra |
+| :--- | :--- | :--- |
+| `indisponivel` | `indisponivel_flag` | `X` = `True`; vazio = `False` |
+| `falha` | `falha_flag` | `X` = `True`; vazio = `False` |
+| `analisada` | `analisada_flag` | `X` = `True`; vazio = `False` |
+
+Na preparação da base final, as colunas originais foram removidas e as versões booleanas foram mantidas.
+
+Foi verificado que `analisada_flag` e `data_analise` não são equivalentes: existiam registros marcados como analisados sem uma data de análise preenchida, além de registros com data e sem a marcação. Por isso, nenhuma das informações foi inferida a partir da outra.
+
+---
+
+## 7. Valores ausentes
+
+Os principais valores ausentes observados antes das remoções foram:
+
+| Campo | Ausentes | Percentual |
+| :--- | ---: | ---: |
+| `iqm` | 10.647 | 100,00% |
+| `falha` | 7.207 | 67,69% |
+| `data_analise` | 5.822 | 54,68% |
+| `indisponivel` | 3.630 | 34,09% |
+| `comentarios_classificacao_engenharia` | 2.843 | 26,70% |
+| `causa` | 1.045 | 9,81% |
+| `acao` | 991 | 9,31% |
+| `defeito` | 986 | 9,26% |
+| `objeto` | 982 | 9,22% |
+| `fim_da_avaria` | 326 | 3,06% |
+| `texto_longo_da_ordem` | 62 | 0,58% |
+
+A coluna `iqm` foi removida por estar completamente vazia. As demais ausências foram preservadas, pois poderiam representar situações diferentes, como informação não registrada, item não aplicável, ordem incompleta ou ausência de classificação técnica.
+
+Não foi utilizada imputação por média, mediana, moda ou texto genérico. Essa decisão evita a criação de informações artificiais e mantém a distinção entre ausência e categoria conhecida.
+
+---
+
+## 8. Duplicidades
+
+Foi adotada a seguinte regra:
+
+- **duplicata exata:** registros iguais em todas as colunas originais relevantes; somente a ocorrência excedente foi removida;
+- **ordem repetida com divergências:** registros mantidos, pois continham diferenças em campos técnicos;
+- **ordem ausente:** registro mantido quando possuía nota e demais informações úteis.
+
+Como resultado, foi removida **1 linha exatamente duplicada**. As ordens repetidas com conteúdo divergente foram preservadas e sinalizadas por `ordem_repetida_flag`.
+
+Também foram criadas as flags:
+
+| Flag | Significado |
+| :--- | :--- |
+| `ordem_ausente_flag` | O registro não possui número de ordem |
+| `ordem_repetida_flag` | A ordem aparece em mais de um registro da base final |
+
+---
+
+## 9. Tratamento de outliers de duração
+
+A distribuição de `duracao_avaria_horas` apresentou forte assimetria:
+
+| Estatística | Duração |
+| :--- | ---: |
+| Mediana | 0,65 hora |
+| Percentil 90 | 2,02 horas |
+| Percentil 95 | 4,17 horas |
+| Percentil 99 | 25,00 horas |
+| Máximo observado | 7.167,98 horas |
+
+Foi adotado como limiar o **percentil 99**, equivalente a 25 horas. Registros com duração superior a esse valor foram classificados como outliers.
+
+Essa classificação é estatística: uma duração superior a 25 horas é incomum na base, mas não necessariamente representa erro operacional. Conforme a decisão adotada para esta versão da limpeza:
+
+- 103 registros acima de 25 horas foram removidos da tabela principal;
+- os 103 registros foram preservados integralmente na aba `Outliers_removidos`;
+- durações ausentes não foram classificadas como outliers e permaneceram na base;
+- nenhum valor foi limitado ou substituído artificialmente.
+
+O notebook contém visualizações da distribuição das durações, da evolução temporal, do limite do percentil 99 e dos 20 maiores outliers. Isso permite reavaliar futuramente o critério sem perda dos registros originais.
+
+---
+
+## 10. Preparação da base final
+
+As colunas separadas de data e hora e suas conversões intermediárias foram removidas após a criação dos campos `datetime`. As colunas originais de indicadores também foram retiradas após a validação das versões booleanas.
+
+A base final contém **27 colunas**, organizadas nos seguintes grupos:
+
+1. rastreabilidade e identificadores;
+2. descrição e localização do ativo;
+3. datas, horários e duração;
+4. indicadores booleanos;
+5. status da ordem;
+6. classificação técnica de sintoma, objeto, defeito, causa e ação;
+7. textos descritivos.
+
+---
+
+## 11. Balanço da limpeza
+
+| Etapa | Registros |
+| :--- | ---: |
+| Base original | 10.647 |
+| Duplicata exata removida | -1 |
+| Outliers de duração separados | -103 |
+| **Base final** | **10.543** |
+
+O balanço foi validado automaticamente:
+
+```text
+10.647 = 10.543 + 103 + 1
+```
+
+Após as remoções, foram confirmadas as seguintes condições:
+
+- nenhuma duplicata exata restante;
+- nenhuma duração negativa;
+- nenhuma duração acima de 25 horas na tabela principal;
+- nenhuma nota ausente;
+- nenhuma coluna com nome duplicado;
+- identificadores `nota` e `ordem` armazenados como texto;
+- início da avaria preenchido em todos os registros finais.
+
+---
+
+## 12. Arquivo gerado
+
+O resultado foi exportado sem sobrescrever a planilha original:
+
+```text
+data/Corretiva Emergencial/processados/ZM01_limpa.xlsx
+```
+
+O arquivo contém quatro abas:
+
+| Aba | Conteúdo |
+| :--- | :--- |
+| `ZM01_limpa` | Base principal após limpeza |
+| `Outliers_removidos` | Registros retirados pelo critério de duração |
+| `Qualidade_ausencias` | Quantidade e percentual de ausências por coluna |
+| `Decisoes_limpeza` | Registro das principais regras e decisões aplicadas |
+
+---
+
+## 13. Ressalvas para uso futuro
+
+- A exclusão dos outliers foi baseada em um critério estatístico e deve ser reavaliada de acordo com o objetivo de cada análise.
+- Ordens repetidas não devem ser deduplicadas apenas pelo número da ordem, pois podem conter classificações técnicas divergentes.
+- Valores ausentes nos campos de catálogo não devem ser interpretados automaticamente como ausência de falha ou de atuação.
+- `linha_origem` deve ser preservada durante integrações para permitir auditoria do registro.
+- A granularidade da base permanece próxima de uma ocorrência registrada no SAP, não necessariamente uma linha única por ordem.
+- Integrações futuras devem priorizar chaves como `ordem`, `nota`, `local_de_instalacao` e os campos temporais, respeitando a possibilidade de relações de um-para-muitos.
