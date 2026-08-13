@@ -1,84 +1,80 @@
 ---
-title: "Hipótese 1: Padrões Temporais e Janelas de Pico Horário"
-description: "Análise exploratória detalhada sobre o impacto das horas do dia e horários de pico na incidência de alarmes nas Portas de Plataforma (PSDs)."
+title: "Hipótese 1: Padrões Temporais e Concentração de Anomalias Críticas (> 30s)"
+description: "Análise exploratória avançada com o limiar de severidade de 30 segundos incorporando a base consolidada e desduplicada das duas tabelas de alarmes disponibilizadas."
 ---
 
 import { Image } from 'astro:assets';
 import graficoHorario from '../../../../../assets/sprints/sprint1/grafico-distribuicao-horaria.png';
 
 
-
-## 1. Contexto e Fundamentação Teórica
+## 1. Contexto Teórico e Problematização
 
 As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos de segurança submetidos a ciclos contínuos de abertura e fechamento (*ciclagens*) para permitir o embarque e desembarque seguro de passageiros nas estações metroviárias.
 
-A hipótese operacional central estabelece que o estresse mecânico e eletrônico das portas varia substancialmente ao longo das 24 horas do dia. Nos períodos de maior fluxo de passageiros (horários de pico), a ocorrência de interferências humanas (como retenção forçada da folha da porta, apoio sobre os painéis e obstrução de fotocélulas) eleva significativamente a taxa de disparos de anomalias e alarmes em relação aos períodos de vale.
+Para elevar o rigor da análise preditiva e eliminar qualquer ruído de obstruções operacionais rápidas (eventos curtos de até 30 segundos resolvidos automaticamente ou por ciclo simples de recuo), a análise adota o limiar de severidade focado em Anomalias Críticas (eventos com tempo de normalização maior que 30 segundos).
+
 
 ---
 
 ## 2. Definindo a Questão Investigada
 
-* **H1.1 (Horários de Pico):** O volume de alarmes e anomalias concentra-se fortemente nos períodos de pico matutino (**06:00 às 09:00**) e vespertino (**16:00 às 19:00**), onde a alta densidade de passageiros aumenta os casos de obstruções forçadas e travamentos de porta.
+* **H1.1 (Concentração de Anomalias Críticas nos Picos - Limiar 30s):** As anomalias de severidade elevada (maior que 30s), que possuem impacto direto na operação comercial e na integridade dos ativos, concentram-se fortemente nos períodos de maior demanda de transporte (pico matutino das **06:00 às 09:00** e vespertino das **16:00 às 19:00**) devido ao superaquecimento de motores e ciclagens aceleradas.
 
 ---
 
 ## 3. Metodologia de Análise
 
-Para testar a validade da hipótese, os dados brutos de alarmes do sistema de PSDs (contendo mais de 150.000 registros) foram processados seguindo as seguintes etapas:
+Para isolar os eventos de real impacto técnico e aplicar o limiar de 30 segundos na base unificada de alarmes, a metodologia seguiu as seguintes etapas:
 
-1. **Extração Temporal:** Conversão dos carimbos de data/hora (*timestamps*) de disparo dos alarmes para formato estruturado.
-2. **Isolamento de Atributo:** Extração da componente horária (valores inteiros de 0 a 23 horas).
-3. **Agrupamento Estatístico:** Cálculo da frequência absoluta de ocorrências por hora do dia.
-4. **Segmentação Operacional:** Categorização nas faixas operacionais (*Pico Manhã*, *Pico Tarde*, *Entre Picos* e *Madrugada*).
-5. **Ajuste de Tendência Fluida:** Aplicação de modelo de suavização polinomial (linha de tendência) sobreposto ao histograma de frequência horária.
+1. **Unificação e Desduplicação de Dados:** Combinação dos arquivos `Alarmes do sistema de PSD.xlsx` e `Histórico de alarmes 23-26.xlsx`, removendo registros duplicados para garantir a exatidão das métricas.
+2. **Parser de Tempo:** Conversão dos tempos de normalização em segundos numéricos.
+3. **Filtragem de Severidade (Limiar 30s):** Exclusão de alarmes operacionais curtos (menores ou iguais a 30s) e retenção exclusiva das Anomalias Críticas (maiores que 30s).
+4. **Análise de Frequência Horária:** Agrupamento das ocorrências pelas 24 horas do dia (00h às 23h).
+5. **Visualização por Cores:** Exibição das barras em vermelho nos horários de pico (06h-09h e 16h-19h) e em azul nos horários fora de pico.
 
 ---
 
-## 4. Resultados da Distribuição Horária dos Alarmes
+## 4. Resultados da Distribuição Horária das Anomalias Críticas
 
-### 4.1 Gráfico de Frequência Horária e Linha de Tendência
+#### 4.1 Gráfico de Frequência Horária das Anomalias Críticas 
 
-O gráfico abaixo ilustra a distribuição total dos alarmes ao longo das 24 horas do dia, destacando em vermelho as faixas de pico matutino (06h-09h) e vespertino (16h-19h) com a linha de tendência fluida sobreposta:
+O gráfico abaixo ilustra a distribuição horária das 668.987 ocorrências críticas que excederam 30 segundos de normalização na base consolidada desduplicada, destacando em vermelho as barras das faixas de pico (06h-09h e 16h-19h):
 
 <div style="margin: 2rem 0; text-align: center;">
-  <Image src={graficoHorario} alt="Gráfico de Distribuição Horária de Alarmes das PSDs" width={800} format="png" />
+  <Image src={graficoHorario} alt="Gráfico da Distribuição Horária de Anomalias Críticas (> 30s) Base Consolidada" width={800} format="png" />
 </div>
 
 ---
 
-### 4.2 Quantificação por Faixa Horária Operacional
+### 4.2 Quantificação das Anomalias Críticas (> 30s) por Faixa Horária
 
-A categorização dos dados revelou a seguinte distribuição absoluta e percentual das ocorrências ao longo do dia:
+A segmentação dos dados da base unificada desduplicada revelou que **51,47% de todas as anomalias críticas (maiores que 30s) ocorrem concentradas nas 8 horas de pico**:
 
-| Faixa Horária Operacional | Intervalo de Horas | Volume de Alarmes | Percentual (%) |
+| Faixa Horária Operacional | Intervalo de Horas | Qtd Anomalias Críticas (> 30s) | Percentual (%) |
 | :--- | :--- | :--- | :--- |
-| **Pico Tarde/Noite** | 16:00 às 19:00 (4h) | ~38.450 | ~25,6% |
-| **Pico Manhã** | 06:00 às 09:00 (4h) | ~32.100 | ~21,4% |
-| **Entre Picos / Fora de Pico** | 10:00 às 15:00 / 20:00 às 23:00 (10h) | ~78.200 | ~52,1% |
-| **Madrugada / Sem Operação** | 00:00 às 05:00 (6h) | ~1.250 | ~0,9% |
-
-> **Nota:** As 8 horas compreendidas pelos horários de pico (manhã e tarde) concentram aproximadamente **47% de todas as anomalias do dia**, demonstrando uma densidade desproporcional em relação às 16 horas restantes.
+| **Pico Tarde/Noite** | 16:00 às 19:00 (4h) | 196.538 | 29,38% |
+| **Pico Manhã** | 06:00 às 09:00 (4h) | 147.758 | 22,09% |
+| **Entre Picos / Vale** | 10:00-15:00 / 20:00-23:00 (10h) | 234.813 | 35,10% |
+| **Madrugada / Sem Operação** | 00:00 às 05:00 (6h) | 89.878 | 13,43% |
 
 ---
 
 ## 5. Síntese e Análise Detalhada dos Resultados
 
-Após a realização do processamento e da análise descritiva dos dados temporais de alarmes, apresentamos as principais constatações obtidas:
+### 5.1 Validação do Limiar de 30 Segundos na Base Consolidada
+A unificação e desduplicação das duas tabelas de alarmes (`Alarmes do sistema de PSD.xlsx` e `Histórico de alarmes 23-26.xlsx`) resultaram em **952.269 registros únicos de alarmes**, oferecendo máxima confiabilidade estatística:
 
-### 5.1 Validação da Hipótese
-A hipótese **H1.1 foi confirmada pelos dados**. Observa-se um aumento acentuado e consistente no volume de alarmes durante os intervalos correspondentes aos horários de pico:
-
-1. **Pico da Manhã (06:00 às 09:00):** Apresenta elevação contínua na taxa de disparos, coincidindo com o momento de maior fluxo de entrada de passageiros vindo dos terminais e linhas de conexão.
-2. **Pico da Tarde/Noite (16:00 às 19:00):** Registra o volume mais elevado do dia, momento em que a sobrecarga do sistema de portas atinge o ápice devido ao fluxo de retorno para as residências.
-3. **Período de Madrugada (00:00 às 05:00):** Apresenta volume residual próximo de zero, o que confirma que as anomalias registradas estão diretamente ligadas à operação comercial e movimentação do público.
+1. **Volumetria Relevante:** Do total de 952.269 registros únicos, 668.987 ocorrências (70,25%) ultrapassaram 30 segundos de normalização, demonstrando uma base histórica extremamente robusta de anomalias duradouras.
+2. **Concentração nos Horários de Pico:** Exatamente 51,47% de todas as anomalias críticas (> 30s) ocorrem concentradas nas 8 horas de pico (29,38% no Pico da Tarde/Noite e 22,09% no Pico da Manhã).
+3. **Pico da Tarde como Ponto Crítico:** O intervalo das 16:00 às 19:00 acumula 196.538 ocorrências graves desduplicadas no histórico unificado.
 
 ---
 
-### 5.2 Causalidade e Mecânica Operacional
+### 5.2 Mecânica Operacional e Física do Equipamento
 
-A concentração de anomalias nos horários de pico decorre de dois fatores principais:
+As anomalias críticas que permanecem ativas por mais de 30 segundos refletem a degradação mecânica e elétrica do sistema de portas sob alta demanda. A permanência do estado de falha por esse intervalo é explicada pelos seguintes fatores físicos e de controle:
 
-* **Fator Comportamental (Interferência Humana):** O adensamento de passageiros na plataforma leva a tentativas de embarque no momento de encerramento do sinal sonoro, provocando retenção mecânica das folhas da porta e obstrução recorrente de fotossensores.
-* **Fator Mecânico (Ciclagens Frequentes):** Nos horários de pico, a frequência de viagens dos trens é máxima (menor *headway*). Isso faz com que os atuadores e motores das portas realizem um número significativamente maior de ciclos de abertura e fechamento por hora, acelerando o estresse térmico e mecânico dos componentes.
+1. **Perda de Torque do Atuador e Estresse Térmico:** Nos horários de pico, a alta frequência de trens exige que o motor de passo e a correia de transmissão operem no limite de sua capacidade térmica. O acúmulo de calor aumenta a resistência interna dos enrolamentos elétricos, resultando em perda momentânea de torque mecânico para movimentar as folhas da porta contra o atrito das calhas superiores e inferiores.
+2. **Intervenção e Procedimento do Operador:** Quando a porta falha em completar o ciclo automático de fechamento após três tentativas contínuas de recuo (algoritmo interno do CLP), a lógica de segurança trava a porta na posição aberta por motivo de proteção. A normalização passa a depender da atuação manual do operador de plataforma ou de trem, que precisa inspecionar o trilho, desobstruir o canal e resetar a chave de laço no painel de comando local, processo que consome naturalmente mais de 30 segundos.
+3. **Emperramento Mecânico por Sujeira e Desgaste de Roletes:** O acúmulo de poeira metálica e sujeira nos trilhos guia, somado ao desgaste gradual dos roletes de sustentação, aumenta o coeficiente de atrito estático. Durante os picos, com o aumento da temperatura ambiente e da umidade na plataforma, o atrito se intensifica, exigindo mais tempo para a normalização do sinal de travado e selado.
 
----
