@@ -1,82 +1,90 @@
 ---
 title: "Seleção e Justificativa de Features Candidatas para Modelos Preditivos"
-description: "Mapeamento estruturado das variáveis e atributos com alto potencial preditivo para o modelo de IA, fundamentados nos achados empíricos das hipóteses de EDA."
+description: "Catálogo prático de atributos operacionais, de desgaste e de série temporal selecionados como candidatos principais para os modelos de IA."
 ---
 
 # Seleção e Justificativa de Features Candidatas para Modelos Preditivos
 
-## 1. Contexto e Visão Geral
+## 1. Contexto e Estratégia de Modelagem
 
-A partir das análises exploratórias de dados (EDA) conduzidas nas Hipóteses 1 a 7, identificamos os padrões comportamentais, operacionais e mecânicos que precedem e acompanham as falhas nas Portas de Plataforma (PSDs). 
+Para prever falhas operacionais e degradação nas Portas de Plataforma (PSDs), o modelo de Inteligência Artificial precisa ser alimentado com variáveis que reflitam o **histórico recente de estresse do equipamento**, a **recorrência de intervenções técnicas** e os **padrões de uso da linha**.
 
-O objetivo deste documento é apresentar o catálogo completo das **features (recursos) candidatas potenciais** para alimentarem o modelo preditivo de manutenção preventiva/preditiva de IA. Cada feature é justificada com base nas evidências estatísticas e físicas extraídas das hipóteses investigadas.
+Em vez de focar apenas em agrupamentos teóricos, selecionamos um conjunto prático e robusto de **features (recursos) preditivas**, organizadas em 4 pilares fundamentais:
+1. **Atributos de Série Temporal e Frequência de Alarmes (Janelas Móveis)**
+2. **Atributos de Histórico de Manutenção (SAP / Intervenções)**
+3. **Atributos de Desgaste Mecânico Acumulado**
+4. **Atributos Contextuais Operacionais (Calendário e Demanda)**
 
 ---
 
-## 2. Matriz de Mapeamento: Hipóteses vs. Features Candidatas
+## 2. Catálogo das Melhores Features Candidatas
 
-A tabela abaixo resume a correspondência entre as hipóteses testadas no projeto e os atributos numéricos/categóricos derivados para o modelo:
+A tabela abaixo apresenta os atributos com maior potencial de ganho preditivo para os algoritmos de Machine Learning (XGBoost, Random Forest, Redes Neurais):
 
-| Origem (Hipótese) | Nome da Feature Candidata | Tipo de Dado | Descrição do Atributo |
+| Categoria | Nome da Feature | Tipo de Dado | Descrição Prática do Atributo |
 | :--- | :--- | :---: | :--- |
-| **Hipótese 1** (Horários de Pico) | `flag_horario_pico` | Binário | Indica se o registro ocorre nos intervalos de maior demanda (06h-09h ou 16h-19h). |
-| **Hipótese 1** (Manutenção do Ativo) | `qtd_anomalias_criticas_30s_24h` | Numérico | Soma de anomalias com tempo de normalização > 30s nas últimas 24h para a mesma porta. |
-| **Hipótese 1** (Estresse Contínuo) | `media_movel_tempo_normalizacao_6h` | Numérico | Média móvel ponderada do tempo de normalização (em segundos) nas últimas 6h. |
-| **Hipótese 2** (Variação Semanal) | `dia_semana_operacional` | Categórico | Dia da semana (0 a 6), capturando a queda de 30% a 40% de ocorrências aos finais de semana. |
-| **Hipótese 2** (Perfil de Uso) | `flag_fim_de_semana` | Binário | Indicador de operação de fim de semana (Sábado/Domingo). |
-| **Hipótese 3** (Fluxo de Estação) | `vol_passageiros_estacao_hora` | Numérico | Volume real de validações de catraca na estação e hora correspondentes. |
-| **Hipótese 3** (Intensidade por Estação) | `estacao_sigla` | Categórico | Sigla da estação (`FRA`, `BUT`, `PIN`, `HIG`, etc.), ponderando o tempo de vida do ativo. |
-| **Hipótese 4** (Padrão Pré-Corretiva) | `vol_alarmes_acumulados_14d` | Numérico | Volume acumulado de alarmes genéricos nos 14 dias anteriores à janela atual. |
-| **Hipótese 4** (Variação de Frequência) | `delta_frequencia_alarmes_7d` | Numérico | Taxa de variação no volume de alarmes em relação à semana anterior (indicador de rampa). |
-| **Hipótese 6** (Posição da Porta) | `posicao_porta_plataforma` | Categórico | Classificação da porta na plataforma (`Centro` vs. `Extremidade`). |
-| **Hipótese 6** (Identificação Física) | `porta_numero` | Numérico | Número ordinal da porta (1 a 24), capturando o desgaste concentrado em portas centrais. |
-| **Hipótese 7** (Modos de Falha SAP) | `grupo_causa_provavel` | Categórico | Categoria da causa raiz histórica derivada de ordens corretivas ZM01/ZM02. |
-| **Hipótese 7** (Degradação de Componentes) | `grupo_defeito_mecanico` | Categórico | Agrupamento de defeitos (ex: atuador, sensor de trava `LSD`, desgaste de rolete). |
+| **Frequência Recente** | `qtd_alarmes_ultimas_24h` | Numérico | Contagem total de alarmes registrados na porta nas últimas 24 horas. |
+| **Frequência Recente** | `qtd_alarmes_ultimas_1h` | Numérico | Contagem de alarmes na última hora (indicador de pico de falhas iminente). |
+| **Frequência Recente** | `qtd_alarmes_criticos_30s_24h` | Numérico | Contagem de alarmes com tempo de normalização > 30s no último dia. |
+| **Histórico SAP** | `dias_desde_ultima_corretiva` | Numérico | Quantidade de dias decorridos desde a última manutenção corretiva (ZM01/ZM02). |
+| **Histórico SAP** | `dias_desde_ultima_preventiva` | Numérico | Quantidade de dias decorridos desde a última manutenção preventiva (ZM03). |
+| **Histórico SAP** | `qtd_corretivas_ultimos_30d` | Numérico | Total de ordens de manutenção corretiva executadas na porta nos últimos 30 dias. |
+| **Desgaste Mecânico** | `tempo_acumulado_parada_7d` | Numérico | Soma total em segundos que a porta permaneceu fora de serviço nos últimos 7 dias. |
+| **Desgaste Mecânico** | `taxa_reabertura_excedida_24h` | Numérico | Frequência de alarmes do tipo `RCE` (Contagem de Reaberturas Excedida) nas últimas 24h. |
+| **Desgaste Mecânico** | `max_tempo_normalizacao_6h` | Numérico | Maior tempo de parada/retenção individual registrado na porta nas últimas 6h. |
+| **Contexto Line** | `hora_do_dia` | Numérico | Hora atual (0 a 23), capturando o comportamento das janelas de operação. |
+| **Contexto Line** | `dia_da_semana` | Categórico | Dia da semana (Segunda a Domingo). |
+| **Contexto Line** | `estacao_cod` | Categórico | Código identificador da estação metroviária (`BUT`, `PIN`, `FRA`, etc.). |
+| **Contexto Line** | `porta_posicao_plataforma` | Categórico | Número ou localização física da porta na plataforma (1 a 24). |
 
 ---
 
-## 3. Justificativa Detalhada por Atributo Preditivo
+## 3. Justificativa Detalhada dos Atributos Preditivos
 
-### 3.1 Features de Temporalidade e Ciclo Operacional (Hipóteses 1 e 2)
+### 3.1 Indicadores de Frequência de Alarmes em Janelas Móveis
 
-1. **`flag_horario_pico` e `qtd_anomalias_criticas_30s_24h`:**
-   - **Justificativa Empírica:** A análise da Hipótese 1 comprovou que mais de 50,8% de todas as anomalias graves (> 30s) ocorrem concentradas nas 8 horas de pico (06h-09h e 16h-19h). O acúmulo de solicitações eleva a temperatura dos motores de passo e provoca perda de torque nos atuadores.
-   - **Papel no Modelo:** Permite ao algoritmo ponderar o estresse operacional iminente quando a porta entra nas faixas de alta exigência.
+1. **`qtd_alarmes_ultimas_24h` e `qtd_alarmes_ultimas_1h`:**
+   - **Justificativa:** Portas que estão prestes a apresentar um travamento definitivo costumam emitir um volume crescente de pequenas interrupções na janela recente. A `qtd_alarmes_ultimas_1h` funciona como um gatilho de alerta de curto prazo, enquanto a `qtd_alarmes_ultimas_24h` mede o nível de instabilidade acumulada do dia.
 
-2. **`dia_semana_operacional` e `flag_fim_de_semana`:**
-   - **Justificativa Empírica:** A Hipótese 2 revelou uma queda acentuada de 30% a 40% no volume de alarmes durante os sábados e domingos em comparação com os dias úteis (Segunda a Sexta), refletindo a variação no intervalo de trens (*headway*).
-   - **Papel no Modelo:** Evita falsos alarmes de anomalia durante o final de semana, quando a frequência natural de alertas reduz drasticamente.
+2. **`qtd_alarmes_criticos_30s_24h`:**
+   - **Justificativa:** Alarmes com duração superior a 30 segundos não representam simples retenções triviais de passageiros, mas sim dificuldades reais de encaixe mecânico, perda de torque de motor ou reinicializações manuais pelo operador.
 
 ---
 
-### 3.2 Features de Infraestrutura e Demanda de Passageiros (Hipóteses 3 e 6)
+### 3.2 Indicadores de Histórico de Manutenção (Integração com SAP)
 
-3. **`vol_passageiros_estacao_hora` e `estacao_sigla`:**
-   - **Justificativa Empírica:** A Hipótese 3 demonstrou correlação direta entre o fluxo de embarque/desembarque e o volume de alarmes de obstrução (`OBS`). Adicionalmente, estações mais antigas como Faria Lima (`FRA`) e Butantã (`BUT`) registram volumes desproporcionalmente maiores devido à idade do ativo (14+ anos de ciclagens).
-   - **Papel no Modelo:** Fornece baseline de estresse físico por localização e idade do equipamento.
+3. **`dias_desde_ultima_corretiva`:**
+   - **Justificativa:** Mede o ciclo de vida operacional do ativo após uma intervenção emergencial. Logo após uma corretiva, a porta costuma operar de forma estável; conforme os dias avançam, a probabilidade de um novo evento de falha tende a aumentar por desgaste ou necessidade de reajuste.
 
-4. **`posicao_porta_plataforma` e `porta_numero`:**
-   - **Justificativa Empírica:** A Hipótese 6 comprovou estatisticamente que as portas localizadas no centro da plataforma (portas 7 a 18) acumulam maior número de retenções de passageiros e ciclagens de atuador em comparação com as extremidades (portas 1 a 6 e 19 a 24).
-   - **Papel no Modelo:** Permite ao modelo aplicar coeficientes de desgaste diferenciados conforme a posição da porta na composição do trem.
+4. **`dias_desde_ultima_preventiva`:**
+   - **Justificativa:** A manutenção preventiva (lubrificação de trilhos, ajuste de tensão de correias, troca de roletes) reduz o atrito mecânico. Quanto maior o tempo decorrido desde a última preventiva, maior o estrito atrito operacional acumulado.
 
----
-
-### 3.3 Features de Antecedência e Tendência de Falha (Hipóteses 4 e 7)
-
-5. **`vol_alarmes_acumulados_14d` e `delta_frequencia_alarmes_7d`:**
-   - **Justificativa Empírica:** A Hipótese 4 constatou que a frequência diária de alarmes sofre uma elevação gradual nas 2 semanas que antecedem a abertura de uma ordem de manutenção corretiva (ZM01/ZM02), caindo abruptamente após a intervenção técnica.
-   - **Papel no Modelo:** Atua como o principal indicador da rampa de degradação ("pré-falha"), sinalizando a necessidade de manutenção preditiva antes da quebra total.
-
-6. **`grupo_causa_provavel` e `grupo_defeito_mecanico`:**
-   - **Justificativa Empírica:** A Hipótese 7 agrupou o texto livre de causas e defeitos das ordens do SAP, identificando que falhas mecânicas nos roletes, atuadores de trava (`LSD`) e desregulagem de chaves de presença correspondem a mais de 70% dos reparos de campo.
-   - **Papel no Modelo:** Permite a classificação do tipo de falha provável, auxiliando no diagnóstico prescritivo das equipes de manutenção.
+5. **`qtd_corretivas_ultimos_30d`:**
+   - **Justificativa:** Identifica equipamentos "reincidentes" ou "crônicos". Portas que demandaram múltiplas ordens ZM01/ZM02 no último mês indicam problemas estruturais que não foram resolvidos na primeira intervenção.
 
 ---
 
-## 4. Próximos Passos para a Engenharia de Features
+### 3.3 Indicadores de Desgaste Mecânico e Esforço
 
-Com o catálogo de features candidatas definido, os próximos passos do projeto englobam:
+6. **`tempo_acumulado_parada_7d` e `max_tempo_normalizacao_6h`:**
+   - **Justificativa:** A soma total do tempo de normalização nas últimas semanas reflete a carga total de indisponibilidade à qual o mecanismo esteve submetido. Picos de tempo de retenção na janela de 6 horas sinalizam travamentos severos prévios.
 
-1. **Construção da Tabela Mestra (Feature Store):** Realizar a agregação temporal e o cruzamento relacional entre as bases sanitizadas de alarmes, ordens do SAP e validações de catraca.
-2. **Tratamento de Colinearidade:** Avaliar a matriz de correlação entre as features derivadas (ex: `vol_passageiros_estacao_hora` vs `flag_horario_pico`) para evitar multicolinearidade nos algoritmos.
-3. **Escalonamento Final:** Aplicar técnicas de padronização (`StandardScaler` ou `RobustScaler`) sobre a Tabela Mestra unificada antes da fase de treinamento dos modelos de Machine Learning.
+7. **`taxa_reabertura_excedida_24h`:**
+   - **Justificativa:** O alarme do tipo `RCE` (*Contagem de Reabertura Excedida*) sinaliza que o motor tentou fechar a porta repetidas vezes sem conseguir selar o laço de segurança, sendo um indicador direto de emperramento mecânico do trilho.
+
+---
+
+### 3.4 Atributos Contextuais e de Localização
+
+8. **`estacao_cod` e `porta_posicao_plataforma`:**
+   - **Justificativa:** A localização física influencia diretamente a carga de trabalho do equipamento. Estações com maior histórico de ciclagens e portas localizadas na região central da plataforma (onde há maior concentração de passageiros) sofrem maior estresse diário do que as portas das extremidades.
+
+9. **`hora_do_dia` e `dia_da_semana`:**
+   - **Justificativa:** Capturam o regime operacional da ferrovia (horários de pico matutino/vespertino e redução do *headway* aos finais de semana), ajustando a expectativa do modelo conforme o volume natural de circulação de trens.
+
+---
+
+## 4. Próximos Passos para Treinamento do Modelo
+
+1. **Geração de Janelas Deslizantes (*Rolling Windows*):** Criar os scripts em Python que calculam as métricas móveis (`qtd_alarmes_ultimas_24h`, `dias_desde_ultima_corretiva`) na base temporal unificada.
+2. **Avaliação de Importância de Recursos (*Feature Importance*):** Utilizar algoritmos baseados em árvores (ex: Random Forest / SHAP values) para mensurar o poder preditivo individual de cada recurso e selecionar o conjunto ótimo final.
