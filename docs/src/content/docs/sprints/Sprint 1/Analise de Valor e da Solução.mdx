@@ -1,0 +1,89 @@
+---
+title: "Analise de Valor e da Solução"
+description: "Análise exploratória avançada focando na identificação e comportamento temporal das anomalias de longa duração (> 10s) que sinalizam degradação real das Portas de Plataforma."
+---
+
+import { Image } from 'astro:assets';
+import CanvaEmpresa from '../../../../assets/sprints/sprint1/Empresa.png';
+import Noticia from '../../../../assets/sprints/sprint1/noticia.avif'
+import Logo from '../../../../assets/sprints/sprint1/logo.png'
+import Background from '../../../../assets/sprints/sprint1/background_title.png'
+
+
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Quem é a Motiva?</h2>
+</div>
+
+&ensp; A Motiva é a maior empresa de infraestrutura de mobilidade do Brasil, responsável pela gestão e operação de milhares de quilômetros de rodovias, sistemas de transporte urbano sobre trilhos e aeroportos. 
+
+&ensp; Historicamente, o setor de concessões e infraestrutura de transporte opera sob um modelo de Gestão Reativa de Ocorrências e Inspeções: a concessionária depende de rondas físicas contínuas e acionamento de agentes terceirizados apenas após a ocorrência de incidentes, acidentes, obstruções na via ou falhas na infraestrutura.
+
+&ensp; Este projeto propõe uma virada de chave para a empresa: sair de uma empresa que funciona quase que 100% de forma analógica, para, transicionar para o modelo digital e automatizar processos que eram realizados de forma totalmente manual.
+
+### 1.1. Motiva X Inteli
+
+&ensp; Com esse objetivo, a Motiva firmou uma parceria com o Inteli para solucionar um gargalo operacional de difícil rastreamento: a manutenção das PSDs (Platform Screen Doors), as portas de plataforma instaladas nas Linhas 4-Amarela e 5-Lilás do Metrô de São Paulo.
+
+&ensp; O foco do projeto é implementar um modelo de manutenção preditiva capaz de antecipar exatamente quando e qual componente apresentará falha. Dessa forma, a Motiva visa reduzir o alto volume de manutenções corretivas emergenciais entre as revisões preventivas, evitando atrasos, paralisações na operação e impactos diretos no fluxo diário de passageiros.
+
+### 1.2. O caso que parou o Brasil.
+
+&ensp; Em 06/05/2025, um passageiro chamado Lourivaldo Ferreira Silva morreu após ficar preso entre as portas do trem e da plataforma na estação Campo Limpo, na Linha 5-Lilás da ViaMobilidade, tinha 35 anos e faria aniversário no próximo domingo, 11 de maio, Dia das Mães.
+
+&ensp; Apesar de não ter sido um erro dos sensores da porta, o passageiro ficou em um ponto cego entre as portas, onde faltavam sensores para identificar se há passageiros entre as portas.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={Noticia} alt="Notícia passageiro Linha 5" width={800} format="png" />
+</div>
+
+&ensp; Como resposta a esse problema, a Motiva (que na época se chamava Via Mobilidade) anunciou a instalação de sensores de movimento no vão entre a plataforma e o trem em suas estações, evitando que o trem parta caso haja qualquer objeto ou pessoa presa naquele espaço.
+
+&ensp; Mesmo que não tenha sido um erro na manutenção dos sensores, essa nova exigência por segurança reforçou a urgência em manter todo o sistema de portas de plataforma operando com máxima confiabilidade. A união entre novas tecnologias de detecção e a manutenção preditiva busca eliminar ao máximo as falhas operacionais, garantindo que imprevistos sejam antecipados e que a segurança do passageiro seja sempre prioridade absoluta.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Solução</h2>
+</div>
+
+&ensp; Para transformar o modelo de gestão e elevar a confiabilidade das Portas de Plataforma (PSDs) ao nível exigido pela operação, a nossa equipe decidiu desenvolver o **Lumem**.
+
+<div style="display: flex; flex-direction: row; margin: 2rem 0; text-align: center; width: 100%; justify-content: center">
+  <Image src={Logo} alt="Canva Proposta de Valor Empresa" width={400} format="png" />
+</div>
+
+&ensp; A solução consiste em uma Plataforma de Manutenção Preditiva Inteligente baseada em Machine Learning e Análise de Dados para identificar quando as portas vão quebrar e, se possível com os dados que disponibilizaram para nós, encontrar qual será o defeito.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top:40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Proposta de Valor</h2>
+</div>
+
+&ensp; Com o Lumem definido como a nossa solução, o próximo passo foi entender de forma prática como essa tecnologia se traduz em valor real para a operação da Motiva. Para isso, estruturamos a nossa Proposta de Valor, conectando as necessidades e dores do sistema de metrô aos benefícios diretos que a nossa plataforma entrega no dia a dia.
+
+&ensp; O Canva Proposta de Valor é uma ferramenta visual desenvolvida para garantir o "encaixe" entre o que o seu produto oferece e o que o seu cliente realmente precisa. Ele se
+
+Por isso, ele é dividido em duas áreas principais:
+- **Empresa**: Focada em identificar a realidade atual da empresa. Dividida em três áreas, Tarefas que foca no que o Cliente está tentando realizar; Dores, tudo que atrapalha o desenvolvimento das tarefas da empresa e gera custos e traz riscos à operação; e Ganhos, que é os resultados positivos e benefícios que o cliente busca.
+- **Solução**: Busca responder diretamente às necessidades da empresa. Dividida em três áreas, Produtos e Serviços que foca no que é entregue pela tecnologia; Aliviadores de Dores, tudo que elimina ou reduz os gargalos, custos e riscos da operação; e Criadores de Ganhos, que é os resultados positivos e benefícios gerados pelo produto.
+
+### 3.1. Empresa
+
+#### 3.1.1. Dores
+#### 3.1.2. Ganhos
+#### 3.1.3. Tarefas 
+
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={CanvaEmpresa} alt="Canva Proposta de Valor Empresa" width={800} format="png" />
+</div>
+
+### 2.2. Solução
+
+## Referências
+
+- https://g1.globo.com/sp/sao-paulo/noticia/2025/05/06/passageiro-morto-apos-ficar-preso-entre-portas-do-metro-tinha-dois-filhos-e-faria-aniversario-neste-domingo.ghtml
+
+- https://www.motiva.com.br/
