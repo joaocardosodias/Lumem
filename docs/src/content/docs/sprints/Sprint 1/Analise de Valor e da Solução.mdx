@@ -69,9 +69,51 @@ Por isso, ele é dividido em duas áreas principais:
 - **Empresa**: Focada em identificar a realidade atual da empresa. Dividida em três áreas, Tarefas que foca no que o Cliente está tentando realizar; Dores, tudo que atrapalha o desenvolvimento das tarefas da empresa e gera custos e traz riscos à operação; e Ganhos, que é os resultados positivos e benefícios que o cliente busca.
 - **Solução**: Busca responder diretamente às necessidades da empresa. Dividida em três áreas, Produtos e Serviços que foca no que é entregue pela tecnologia; Aliviadores de Dores, tudo que elimina ou reduz os gargalos, custos e riscos da operação; e Criadores de Ganhos, que é os resultados positivos e benefícios gerados pelo produto.
 
-### 3.1. Empresa
+### 3.1. Solução
 
-#### 3.1.1. Dores
+#### 3.1.1. Produtos e Serviços
+
+- **Sistema de análise preditiva de falhas:** A solução utiliza os dados históricos provenientes dos alarmes das Portas de Plataforma e dos registros de manutenção para identificar padrões de comportamento associados a falhas, recorrências e condições anormais. A proposta é transformar dados operacionais já existentes em informações úteis para apoiar as equipes de manutenção, permitindo avaliar quais equipamentos, portas ou estações apresentam sinais que merecem maior atenção. O sistema não busca determinar com exatidão o momento de uma falha, mas fornecer evidências que contribuam para uma atuação mais antecipada e orientada por risco.
+
+- **Dashboard de monitoramento dos alarmes:** O dashboard centraliza os principais indicadores relacionados ao comportamento dos alarmes e das manutenções em uma interface visual de fácil interpretação. Por meio dele, as equipes podem acompanhar informações como quantidade de ocorrências, duração dos alarmes, tempo de normalização, recorrência de eventos, distribuição por estação e comportamento ao longo do tempo. A visualização desses indicadores facilita a identificação de padrões que poderiam passar despercebidos em análises manuais e permite comparar diferentes locais, períodos e equipamentos.
+
+- **Integração dos dados de alarmes e manutenção:** A solução propõe a consolidação dos registros de alarmes do sistema PSD com as informações provenientes das ordens de manutenção SAP. Essa integração permite relacionar eventos operacionais registrados pelas portas com intervenções realizadas posteriormente, incluindo informações como defeito, causa, localização e período da manutenção. Dessa maneira, os dados deixam de ser analisados de forma isolada e passam a compor uma visão mais completa do histórico operacional de cada equipamento.
+
+- **Indicadores para apoio à manutenção:** A partir dos dados integrados, são produzidas métricas capazes de auxiliar as equipes na priorização de inspeções e intervenções. Esses indicadores podem evidenciar, por exemplo, estações com maior concentração de alarmes persistentes, portas com recorrência elevada de ocorrências ou determinados comportamentos que se repetem ao longo do tempo. O objetivo é fornecer uma base quantitativa para apoiar a tomada de decisão e tornar o planejamento da manutenção mais direcionado.
+
+---
+
+#### 3.1.2. Analgésicos
+
+- **Redução da análise manual dos dados:** Atualmente, a análise de grandes volumes de registros pode exigir consultas manuais, cruzamentos entre diferentes bases e uso extensivo de planilhas. A solução reduz esse esforço ao automatizar etapas de tratamento, consolidação e organização das informações. Isso diminui o tempo necessário para localizar ocorrências relevantes, reduz a possibilidade de erros durante o processamento manual e permite que a equipe concentre seus esforços na interpretação dos resultados e na tomada de decisão.
+
+- **Apoio ao diagnóstico de falhas:** A dificuldade de compreender a origem de uma ocorrência pode ser reduzida ao disponibilizar, em conjunto, o histórico de alarmes, defeitos registrados, intervenções realizadas e comportamento temporal dos equipamentos. Essa visão integrada ajuda a equipe técnica a investigar uma ocorrência com mais contexto, possibilitando identificar padrões recorrentes e relacionar eventos semelhantes que ocorreram anteriormente. A solução atua, portanto, como uma ferramenta de suporte ao diagnóstico, e não como substituta da avaliação técnica realizada pelos profissionais de manutenção.
+
+- **Priorização de equipamentos e estações críticas:** Nem todos os alarmes possuem a mesma relevância operacional. A solução permite identificar equipamentos ou estações que apresentam maior frequência de ocorrências, alarmes persistentes ou padrões significativamente diferentes das demais localidades. Essas informações podem ser utilizadas para definir prioridades de inspeção e investigação, direcionando a equipe para pontos que apresentam maior concentração de comportamentos anormais e evitando que os recursos sejam distribuídos de maneira uniforme quando existem locais que demandam maior atenção.
+
+- **Redução de substituições prematuras ou tardias:** A decisão de substituir componentes sem informações suficientes pode resultar tanto na retirada de peças ainda utilizáveis quanto na manutenção de componentes até que apresentem falhas. A solução fornece históricos e indicadores de comportamento que podem apoiar essa decisão com informações adicionais sobre recorrência de alarmes, anormalidades e intervenções anteriores. Com isso, a equipe passa a dispor de mais evidências para avaliar a necessidade de manutenção ou substituição, reduzindo a dependência exclusiva de periodicidade fixa ou percepção individual.
+
+- **Antecipação de situações de maior risco operacional:** A presença de eventos recorrentes ou alarmes que permanecem ativos por longos períodos pode indicar condições que merecem investigação. A solução permite identificar esses comportamentos e destacá-los para acompanhamento das equipes responsáveis. Dessa forma, situações potencialmente problemáticas podem ser analisadas antes que evoluam para ocorrências com maior impacto operacional, contribuindo para reduzir paradas inesperadas e apoiar ações preventivas.
+
+---
+
+#### 3.1.3. Criadores de Ganhos
+
+- **Aumento da disponibilidade operacional:** Ao fornecer maior visibilidade sobre comportamentos anormais, recorrências e locais com maior concentração de alarmes, a solução auxilia a equipe a identificar pontos que necessitam de atenção antes que gerem impactos maiores na operação. Uma manutenção mais direcionada pode reduzir o tempo de indisponibilidade dos equipamentos e contribuir para a continuidade do funcionamento das portas durante o período de operação comercial.
+
+- **Redução dos custos de manutenção:** O uso de indicadores e dados históricos permite melhorar a alocação de recursos de manutenção, incluindo mão de obra, peças e tempo de inspeção. Ao direcionar esforços para equipamentos que apresentam maior evidência de comportamento anormal, a organização pode reduzir intervenções desnecessárias e diminuir a necessidade de ações emergenciais. Além disso, o melhor planejamento das atividades pode contribuir para uma utilização mais eficiente dos recursos disponíveis.
+
+- **Maior previsibilidade da manutenção:** A análise histórica dos alarmes e das intervenções possibilita reconhecer tendências, recorrências e mudanças de comportamento ao longo do tempo. Embora os dados analisados não permitam determinar com precisão o momento exato de uma futura falha, eles podem oferecer indícios que ajudem a identificar equipamentos ou locais com maior necessidade de acompanhamento. Isso permite que a manutenção passe de uma atuação predominantemente reativa para uma abordagem mais planejada e orientada por evidências.
+
+- **Aumento da segurança operacional:** Falhas e comportamentos anormais nas portas de plataforma podem afetar diretamente a operação das estações e a interação dos passageiros com o sistema. Ao destacar situações persistentes ou recorrentes, a solução ajuda as equipes a identificar condições que merecem investigação prioritária. Essa capacidade de direcionar atenção para eventos potencialmente mais críticos contribui para uma atuação preventiva e para a redução de condições que possam representar risco à operação ou aos passageiros.
+
+- **Tomada de decisão orientada por dados:** A integração de informações provenientes de diferentes sistemas cria uma visão mais completa do comportamento dos equipamentos. Em vez de depender apenas de experiências individuais, observações pontuais ou consultas isoladas, as equipes passam a contar com métricas e visualizações que permitem comparar períodos, estações, portas e tipos de ocorrência. Isso fortalece o processo de tomada de decisão, tornando as escolhas de manutenção mais justificáveis, rastreáveis e fundamentadas em evidências operacionais.
+
+- **Maior confiabilidade operacional:**Ao identificar padrões que antecedem falhas, o modelo pode ajudar a reduzir a ocorrência de problemas inesperados nas portas, contribuindo para uma operação mais estável e previsível ao longo do tempo.
+
+### 3.2. Empresa
+
+#### 3.2.1. Dores
 
 - **Substituição prematura ou tardia de peças:** Trocar peças ainda úteis durante a preventiva por cautela ou mantê-las até quebrarem totalmente.
 - **Risco à segurança dos passageiros:** Falhas de portas geram transtorno na plataforma, riscos de acidentes e insatisfação pública com o serviço.
@@ -79,14 +121,14 @@ Por isso, ele é dividido em duas áreas principais:
 - **Falta de precisão no diagnóstico:** Dificuldade em identificar exatamente qual componente da porta irá falhar.
 - **Paradas não planejadas:** Quebras de portas em horário de pico causam atrasos na linha, efeito cascata no sistema e aplicação de multas operacionais.
 
-#### 3.1.2. Ganhos
+#### 3.2.2. Ganhos
 
 - **Aumento da disponibilidade da frota:** Redução drástica do tempo de trem parado em oficina por falhas de portas que poderiam ter sido corrigidas antecipadamente.
 - **Redução nos custos de manutenção:** Aumento da vida útil das peças, redução do uso de peças sob emergência e otimização das horas de trabalho da equipe.
 - **Aumento da segurança operacional:** Redução do risco de acidentes com portas em movimento.
 - **Previsibilidade das falhas:** Capacidade de antecipar em dias ou semanas qual porta quebrará.
 
-#### 3.1.3. Tarefas 
+#### 3.2.3. Tarefas 
 
 - **Executar a manutenção preventiva e corretiva:** Substituir componentes desgastados e reparar falhas ativas nas oficinas e pátios de manutenção.
 - **Atender chamados de emergência durante a operação:** Agir rapidamente para liberar composições retidas nas estações devido a travamentos de portas.
