@@ -1,2 +1,3 @@
-.venv
-eda/hipoteses/.ipynb_checkpoints
+./venv
+venv
+/venv
