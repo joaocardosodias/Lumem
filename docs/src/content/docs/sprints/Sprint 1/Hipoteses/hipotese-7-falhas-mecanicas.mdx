@@ -7,10 +7,12 @@ import { Image } from 'astro:assets';
 import graficoGrupos from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-grupos-causas-defeitos.png';
 import graficoClassificacao from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-classificacao-falhas.png';
 import graficoSensibilidade from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-sensibilidade-tipos.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-
-
-## 1. Contexto e Fundamentação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Fundamentação</h2>
+</div>
 
 As Portas de Plataforma (PSDs - *Platform Screen Doors*) são sistemas eletromecânicos compostos por sensores, travas, atuadores, motores, correias, controladores e elementos de comunicação. A operação contínua desses componentes pode gerar diferentes modos de falha, como desgaste, desajuste, travamento, perda de comunicação e falhas elétricas.
 
@@ -18,7 +20,10 @@ A investigação da Hipótese 7 busca compreender se os problemas físicos e mec
 
 ---
 
-## 2. Definindo a Questão Investigada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
 
 * **H7.1 (Predominância Mecânica):** Mais de **50% das ordens de manutenção corretiva** estão associadas a falhas mecânicas de componentes.
 * **H7.2 (Agrupamentos Recorrentes):** As causas e os defeitos registrados podem ser organizados em grupos interpretáveis, revelando os mecanismos e modos de falha mais incidentes.
@@ -32,7 +37,10 @@ As ordens preventivas ZM03 foram excluídas do teste porque não representam nec
 
 ---
 
-## 3. Metodologia de Análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
 
 A investigação foi conduzida de forma incremental e rastreável:
 
@@ -61,7 +69,10 @@ As bases originais foram preservadas. Os registros sem causa ou defeito não for
 
 ---
 
-## 4. Agrupamento de Causas e Defeitos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Agrupamento de Causas e Defeitos</h2>
+</div>
 
 Como os campos estruturados já apresentavam um vocabulário relativamente controlado, foram utilizadas regras de domínio explícitas em vez de um algoritmo de clusterização opaco. Essa escolha permite auditar exatamente por que cada causa ou defeito pertence a determinado grupo.
 
@@ -102,7 +113,10 @@ Os resultados mostram que desgaste, vibração, fixação e desajustes possuem p
 
 ---
 
-## 5. Cruzamento das Evidências
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Cruzamento das Evidências</h2>
+</div>
 
 A classificação mecânica não foi atribuída diretamente a todo registro que continha a palavra `avaria`. Esse termo foi mantido como indeterminado por poder representar tanto um componente mecânico quanto um dispositivo eletrônico.
 
@@ -132,7 +146,10 @@ Preservar 1.733 casos conflitantes e 1.415 indeterminados evita que registros am
 
 ---
 
-## 6. Teste da Hipótese e Análise de Sensibilidade
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Teste da Hipótese e Análise de Sensibilidade</h2>
+</div>
 
 No cenário conservador, somente as três categorias iniciadas por `Mecânica` foram contadas como falhas mecânicas. Todas as demais ordens permaneceram no denominador.
 
@@ -159,7 +176,10 @@ O percentual supera o limiar de 50% nas duas modalidades. Portanto, o resultado 
 
 ---
 
-## 7. Síntese e Validação da Hipótese
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Síntese e Validação da Hipótese</h2>
+</div>
 
 ### 7.1 Validação da Hipótese H7.1
 
@@ -179,7 +199,10 @@ A hipótese de agrupamentos recorrentes também foi sustentada. As categorias es
 
 ---
 
-## 8. Limitações da Investigação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Limitações da Investigação</h2>
+</div>
 
 1. **Regras de domínio ainda não homologadas:** os agrupamentos devem ser revisados pela engenharia de manutenção.
 2. **Diagnósticos conflitantes:** 1.733 ordens apresentam divergência entre causa e defeito.
@@ -191,7 +214,10 @@ A hipótese de agrupamentos recorrentes também foi sustentada. As categorias es
 
 ---
 
-## 9. Recomendações para Manutenção Preditiva
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Recomendações para Manutenção Preditiva</h2>
+</div>
 
 * Validar a taxonomia de causas e defeitos com especialistas do domínio;
 * Revisar amostras das ordens conflitantes, indeterminadas e repetidas;

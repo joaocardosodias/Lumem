@@ -28,6 +28,8 @@ export default defineConfig({
 						{
 							label: 'Sprint 1',
 							items: [
+								{ label: 'Análise de Valor e da Solução', slug: 'sprints/sprint-1/analise-de-valor-e-da-solução' },
+								{ label: 'Alinhamento ODS', slug: 'sprints/sprint-1/alinhamento-ods' },
 								{
 									label: 'Hipóteses',
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }],

@@ -8,15 +8,21 @@ import graficoFunil from '../../../../../assets/sprints/sprint1/limpeza-de-dados
 import graficoOutliers from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-comparativo-outliers.png';
 import graficoEstacoes from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-estacoes-limpas.png';
 import graficoTipos from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-tipos-alarmes.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-
-## 1. Contexto e Objetivos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivos</h2>
+</div>
 
 O sucesso da modelagem preditiva depende da qualidade e integridade dos dados brutos. Este documento descreve o pipeline de engenharia de dados executado no notebook `eda/cleaning/limpeza_dados_alarmes.ipynb`, responsável por unificar e higienizar os históricos de alarmes (`Alarmes do sistema de PSD.xlsx` e `Histórico de alarmes 23-26.xlsx`).
 
 ---
 
-## 2. Dicionário de Estações Metroviárias
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Dicionário de Estações Metroviárias</h2>
+</div>
 
 Durante o parsing das TAGs de alarmes, foram identificadas **11 siglas técnicas oficiais** da Linha 4-Amarela:
 
@@ -36,7 +42,10 @@ Durante o parsing das TAGs de alarmes, foram identificadas **11 siglas técnicas
 
 ---
 
-## 3. Etapas do Pipeline de Limpeza
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Etapas do Pipeline de Limpeza</h2>
+</div>
 
 ### 3.1 Unificação e Desduplicação
 A base bruta concatenada somou **1.189.874 registros**. Foram eliminadas **237.605 linhas duplicadas (19,97%)** resultantes de sobreposição de exportações.
@@ -73,7 +82,10 @@ Após a limpeza, os alarmes limpos foram categorizados por tipo de evento, desta
 
 ---
 
-## 4. Afunilamento de Volumetria do Pipeline
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Afunilamento de Volumetria do Pipeline</h2>
+</div>
 
 A evolução da volumetria ao longo do pipeline é demonstrada na tabela e gráfico abaixo:
 
@@ -90,7 +102,10 @@ A evolução da volumetria ao longo do pipeline é demonstrada na tabela e gráf
 
 ---
 
-## 5. Conclusão e Exportação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Conclusão e Exportação</h2>
+</div>
 
 O dataset final sanitizado de **742.506 registros únicos** foi exportado para:
 `data/Alarmes/alarmes_trata_limpos_consolidado.csv`

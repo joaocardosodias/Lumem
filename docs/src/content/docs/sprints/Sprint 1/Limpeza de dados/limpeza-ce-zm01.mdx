@@ -2,8 +2,13 @@
 title: "Limpeza de Dados: Ordens Corretivas Emergenciais (ZM01)"
 description: "Documentação do diagnóstico, padronização, validação e tratamento da base de ordens de manutenção corretiva emergencial ZM01."
 ---
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-## 1. Objetivo
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
 
 Esta etapa teve como objetivo preparar a base de **manutenção corretiva emergencial ZM01** para análises posteriores, integração com outras fontes de dados e construção de atributos (*feature engineering*).
 
@@ -21,7 +26,10 @@ O código completo está disponível no notebook `eda/hipoteses/cleaning/limpeza
 
 ---
 
-## 2. Fonte dos dados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Fonte dos dados</h2>
+</div>
 
 Foi utilizada a planilha:
 
@@ -48,7 +56,10 @@ As repetições de `ordem` não foram interpretadas automaticamente como duplica
 
 ---
 
-## 3. Padronização estrutural
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Padronização estrutural</h2>
+</div>
 
 ### 3.1 Nomes das colunas
 
@@ -71,7 +82,10 @@ Também foi criada a coluna `linha_origem`, correspondente ao número da linha n
 
 ---
 
-## 4. Tratamento de datas e horários
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Tratamento de datas e horários</h2>
+</div>
 
 As datas foram convertidas considerando duas representações possíveis:
 
@@ -105,7 +119,10 @@ duracao_avaria_horas = (
 
 ---
 
-## 5. Limpeza de campos textuais
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Limpeza de campos textuais</h2>
+</div>
 
 Os campos textuais passaram pelas seguintes transformações:
 
@@ -120,7 +137,10 @@ Os textos descritivos, como `descricao`, `texto_longo_da_ordem` e `comentarios_c
 
 ---
 
-## 6. Indicadores booleanos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Indicadores booleanos</h2>
+</div>
 
 As colunas `indisponivel`, `falha` e `analisada` utilizavam `X` para representar uma marcação positiva. Foram criadas versões booleanas:
 
@@ -136,7 +156,10 @@ Foi verificado que `analisada_flag` e `data_analise` não são equivalentes: exi
 
 ---
 
-## 7. Valores ausentes
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Valores ausentes</h2>
+</div>
 
 Os principais valores ausentes observados antes das remoções foram:
 
@@ -160,7 +183,10 @@ Não foi utilizada imputação por média, mediana, moda ou texto genérico. Ess
 
 ---
 
-## 8. Duplicidades
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Duplicidades</h2>
+</div>
 
 Foi adotada a seguinte regra:
 
@@ -179,7 +205,10 @@ Também foram criadas as flags:
 
 ---
 
-## 9. Tratamento de outliers de duração
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Tratamento de outliers de duração</h2>
+</div>
 
 A distribuição de `duracao_avaria_horas` apresentou forte assimetria:
 
@@ -204,7 +233,10 @@ O notebook contém visualizações da distribuição das durações, da evoluç�
 
 ---
 
-## 10. Preparação da base final
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">10. Preparação da base final</h2>
+</div>
 
 As colunas separadas de data e hora e suas conversões intermediárias foram removidas após a criação dos campos `datetime`. As colunas originais de indicadores também foram retiradas após a validação das versões booleanas.
 
@@ -220,7 +252,10 @@ A base final contém **27 colunas**, organizadas nos seguintes grupos:
 
 ---
 
-## 11. Balanço da limpeza
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">11. Balanço da limpeza</h2>
+</div>
 
 | Etapa | Registros |
 | :--- | ---: |
@@ -247,7 +282,10 @@ Após as remoções, foram confirmadas as seguintes condições:
 
 ---
 
-## 12. Arquivo gerado
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">12. Arquivo gerado</h2>
+</div>
 
 O resultado foi exportado sem sobrescrever a planilha original:
 
@@ -266,7 +304,10 @@ O arquivo contém quatro abas:
 
 ---
 
-## 13. Ressalvas para uso futuro
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">13. Ressalvas para uso futuro</h2>
+</div>
 
 - A exclusão dos outliers foi baseada em um critério estatístico e deve ser reavaliada de acordo com o objetivo de cada análise.
 - Ordens repetidas não devem ser deduplicadas apenas pelo número da ordem, pois podem conter classificações técnicas divergentes.

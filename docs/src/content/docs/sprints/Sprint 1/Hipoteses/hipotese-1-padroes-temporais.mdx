@@ -5,24 +5,31 @@ description: "Análise exploratória avançada com o limiar de severidade de 30 
 
 import { Image } from 'astro:assets';
 import graficoHorario from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-1/grafico-distribuicao-horaria.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-
-## 1. Contexto Teórico e Problematização
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto Teórico e Problematização</h2>
+</div>
 
 As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos de segurança submetidos a ciclos contínuos de abertura e fechamento (*ciclagens*) para permitir o embarque e desembarque seguro de passageiros nas estações metroviárias.
 
 Para elevar o rigor da análise preditiva e eliminar qualquer ruído de obstruções operacionais rápidas (eventos curtos de até 30 segundos resolvidos automaticamente ou por ciclo simples de recuo), a análise adota o limiar de severidade focado em Anomalias Críticas (eventos com tempo de normalização maior que 30 segundos).
 
 
----
-
-## 2. Definindo a Questão Investigada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
 
 * **H1.1 (Concentração de Anomalias Críticas nos Picos - Limiar 30s):** As anomalias de severidade elevada (maior que 30s), que possuem impacto direto na operação comercial e na integridade dos ativos, concentram-se fortemente nos períodos de maior demanda de transporte (pico matutino das **06:00 às 09:00** e vespertino das **16:00 às 19:00**) devido ao superaquecimento de motores e ciclagens aceleradas.
 
 ---
 
-## 3. Metodologia de Análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
 
 Para isolar os eventos de real impacto técnico e aplicar o limiar de 30 segundos na base unificada de alarmes, a metodologia seguiu as seguintes etapas:
 
@@ -34,7 +41,10 @@ Para isolar os eventos de real impacto técnico e aplicar o limiar de 30 segundo
 
 ---
 
-## 4. Resultados da Distribuição Horária das Anomalias Críticas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados da Distribuição Horária das Anomalias Críticas</h2>
+</div>
 
 #### 4.1 Gráfico de Frequência Horária das Anomalias Críticas 
 
@@ -59,7 +69,10 @@ A segmentação dos dados da base unificada desduplicada revelou que **51,47% de
 
 ---
 
-## 5. Síntese e Análise Detalhada dos Resultados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
 
 ### 5.1 Validação do Limiar de 30 Segundos na Base Consolidada
 A unificação e desduplicação das duas tabelas de alarmes (`Alarmes do sistema de PSD.xlsx` e `Histórico de alarmes 23-26.xlsx`) resultaram em **952.269 registros únicos de alarmes**, oferecendo máxima confiabilidade estatística:

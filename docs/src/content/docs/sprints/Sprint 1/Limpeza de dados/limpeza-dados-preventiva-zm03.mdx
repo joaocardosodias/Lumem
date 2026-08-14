@@ -6,26 +6,39 @@ description: "Documentação do pipeline de higienização e tratamento da base 
 import { Image } from 'astro:assets';
 import graficoDuracao from '../../../../../assets/sprints/sprint1/limpeza-de-dados/zm03/grafico-zm03-duracao.png';
 import graficoFunil from '../../../../../assets/sprints/sprint1/limpeza-de-dados/zm03/grafico-zm03-funil.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-## 1. Contexto e Objetivos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivos</h2>
+</div>
 
 Este documento descreve o pipeline de tratamento executado no notebook `eda/cleaning/limpeza_dados_preventiva_zm03.ipynb`, responsável pela limpeza da base de ordens de manutenção preventiva `ZM03` do sistema de Portas de Plataforma (PSDs), disponibilizada em `Ordens do SAP -Preventivas (ZM03).XLSX`.
 
 ---
 
-## 2. Colunas Sem Nenhuma Informação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Colunas Sem Nenhuma Informação</h2>
+</div>
 
 Das 590 ordens lidas, `Nº endereço` e `Prioridade` não têm nenhum input neles. Diferente dos alarmes (onde os nulos apareciam linha a linha), aqui o problema é na coluna inteira. Elas não carregam informação nenhuma, então foram removidas.
 
 ---
 
-## 3. Padronização Temporal
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Padronização Temporal</h2>
+</div>
 
 `Data-base` e `Hora` vêm em colunas separadas e foram combinadas num único `datetime` para calcular a duração de cada ordem. Foi achado no processo: 2 ordens têm horário programado `24:00:00`, que o Excel/pandas não representa como `datetime.time` (o máximo é `23:59:59`), grava como `timedelta` de 1 dia, exigindo tratamento explícito na conversão.
 
 ---
 
-## 4. Decomposição de `Centro de trabalho` e `Local de instalação`
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Decomposição de `Centro de trabalho` e `Local de instalação`</h2>
+</div>
 
 A base não vem com uma coluna "Estação" pronta, ela foi deduzida de dois campos:
 
@@ -55,7 +68,10 @@ Por isso a estação final é resolvida em cascata, tenta `Local de instalação
 
 ---
 
-## 5. Inconsistências Temporais e Outliers
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Inconsistências Temporais e Outliers</h2>
+</div>
 
 * **17 ordens com duração negativa**, o horário de fim registrado é anterior ao de início, elas foram removidas.
 * **1 ordem com duração acima de 30 dias**, também foi removida.
@@ -64,7 +80,10 @@ Por isso a estação final é resolvida em cascata, tenta `Local de instalação
 
 ---
 
-## 6. Redução de dimensionalidade do Pipeline
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Redução de dimensionalidade do Pipeline</h2>
+</div>
 
 | Etapa | Registros Mantidos | Porcentagem |
 | :--- | :---: | :---: |
@@ -78,7 +97,10 @@ Por isso a estação final é resolvida em cascata, tenta `Local de instalação
 
 ---
 
-## 7. Conclusão e Exportação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Conclusão e Exportação</h2>
+</div>
 
 O dataset final sanitizado de **569 ordens** foi exportado para:
 `data/Preventiva/preventiva_zm03_limpa.csv`
