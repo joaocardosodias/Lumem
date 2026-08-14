@@ -9,7 +9,8 @@ export default defineConfig({
 	},
 	integrations: [
 		starlight({
-		title: 'Documentação',
+			title: 'Documentação',
+			tableOfContents: false,
 			logo: {
 				light: './src/assets/logo.png',
 				dark: './src/assets/logo-white.png',
@@ -23,7 +24,41 @@ export default defineConfig({
 				{ label: 'Solução', slug: 'readme' },
 				{
 					label: 'Sprints',
-					items: [{ autogenerate: { directory: 'sprints' } }],
+					items: [
+						{
+							label: 'Sprint 1',
+							items: [
+								{
+									label: 'Hipóteses',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }],
+								},
+								{
+									label: 'Limpeza de dados',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }],
+								},
+								{
+									label: 'Features Candidatas',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Features Candidatas' } }],
+								},
+							],
+						},
+						{
+							label: 'Sprint 2',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 2' } }],
+						},
+						{
+							label: 'Sprint 3',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 3' } }],
+						},
+						{
+							label: 'Sprint 4',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 4' } }],
+						},
+						{
+							label: 'Sprint 5',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }],
+						},
+					],
 				},
 			],
 		}),
