@@ -28,8 +28,10 @@ export default defineConfig({
 						{
 							label: 'Sprint 1',
 							items: [
+								{ label: 'Visão Geral da Sprint 1', slug: 'sprints/sprint-1' },
 								{ label: 'Análise de Valor e da Solução', slug: 'sprints/sprint-1/analise-de-valor-e-da-solução' },
 								{ label: 'Alinhamento ODS', slug: 'sprints/sprint-1/alinhamento-ods' },
+								{ label: 'Personas', slug: 'sprints/sprint-1/personas' },
 								{
 									label: 'Hipóteses',
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }],
@@ -38,14 +40,7 @@ export default defineConfig({
 									label: 'Limpeza de dados',
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }],
 								},
-								{
-									label: 'Features Candidatas',
-									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Features Candidatas' } }],
-								},
-								{
-									label: 'Personas',
-									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Personas' } }],
-								},
+								{ label: 'Features Candidatas', slug: 'sprints/sprint-1/features-candidatas' },
 							],
 						},
 						{

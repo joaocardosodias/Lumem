@@ -5,7 +5,13 @@ description: "Catálogo fundamentado com evidências empíricas e dados quantita
 
 
 
-## 1. Contexto e Estratégia de Seleção
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Estratégia de Seleção</h2>
+</div>
 
 Para construir um modelo preditivo de inteligência artificial de alto desempenho e confiabilidade industrial, a seleção de atributos (*Feature Selection*) deve basear-se estritamente em **evidências estatísticas, métricas quantitativas e princípios de física de manutenção**.
 
@@ -13,7 +19,10 @@ Nesta etapa, reavaliamos os achados empíricos das análises exploratórias (Hip
 
 ---
 
-## 2. Reavaliação Crítica: Features Descartadas com Base em Dados Empíricos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Reavaliação Crítica: Features Descartadas com Base em Dados Empíricos</h2>
+</div>
 
 Com base nos testes de dados das hipóteses, os seguintes atributos foram **descartados de forma fundamentada** para evitar ruído, viés e sobreajuste (*overfitting*) no modelo preditivo:
 
@@ -25,7 +34,10 @@ Com base nos testes de dados das hipóteses, os seguintes atributos foram **desc
 
 ---
 
-## 3. Catálogo das Melhores Features Candidatas e suas Justificativas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Catálogo das Melhores Features Candidatas e suas Justificativas</h2>
+</div>
 
 A tabela abaixo apresenta os atributos preditivos selecionados, acompanhados de suas evidências empíricas e fundamentação física:
 
@@ -44,7 +56,10 @@ A tabela abaixo apresenta os atributos preditivos selecionados, acompanhados de 
 
 ---
 
-## 4. Estrutura e Ingestão no Modelo: Tabela Mestra (Feature Matrix)
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Estrutura e Ingestão no Modelo: Tabela Mestra (Feature Matrix)</h2>
+</div>
 
 Para alimentar os algoritmos de Machine Learning (como XGBoost, Random Forest ou Redes Neurais), os registros brutos de alarmes não são inseridos diretamente. Em vez disso, constrói-se uma **Tabela Mestra de Treinamento (*Feature Matrix*)**, onde cada linha representa o estado de uma porta em uma janela de tempo específica, conforme ilustrado no modelo conceitual abaixo:
 
