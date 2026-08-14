@@ -1,0 +1,79 @@
+---
+title: "Hipótese 2: Padrões Diários e Intensidade Operacional"
+description: "Análise comparativa dos alarmes entre os dias de maior operação (segunda a sábado) e os domingos."
+---
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto Teórico e Problematização</h2>
+</div>
+
+O desgaste nos sistemas de Portas de Plataforma (PSDs) pode acompanhar a variação de intensidade do quadro de horários da linha. De segunda a sábado, o sistema opera sob regime de maior oferta, com menor intervalo entre trens, maior frequência de ciclos de abertura/fechamento e fluxo contínuo de passageiros.
+
+A premissa a ser investigada é se a maior exigência operacional de segunda a sábado sobrecarrega os subsistemas de travamento e controle de porta. Em contrapartida, avalia-se se a redução do volume de passageiros e da oferta de trens aos domingos resulta em uma diminuição proporcional nos registros de falhas e disparos de alertas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
+
+* **H2.1 - Dia Operacional (Segunda a Sábado vs. Domingo):** Investiga-se se existe diferença estatisticamente significativa no volume médio diário de alarmes registrados entre a semana operacional (segunda-feira a sábado) e o domingo, buscando verificar a correlação entre a intensidade da operação comercial e a taxa de anomalias no sistema.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
+
+Para testar a validade da hipótese, os dados brutos de alarmes do sistema de Portas de Plataforma (PSDs) passam por um pipeline de tratamento. A abordagem garante que apenas eventos operacionais relevantes sejam computados e que a comparação entre os períodos ocorra de forma estatisticamente justa.
+
+### 3.1. Tratamento e Limpeza dos Dados
+
+A primeira etapa consiste em purificar a base bruta, descartando registros incompletos, inconsistências de sistema e ruídos operacionais que possam distorcer a análise.
+1. **Tratamento de Inconsistências Temporais:** Exclusão de registros que apresentem ausência de data/hora na coluna *Horário do Alarme*.
+2. **Saneamento e Validação do Tempo de Normalização:** Filtro na coluna *Tempo de Normalização* para eliminar entradas corrompidas (como dias, ::).
+3. **Filtragem de Ruídos Operacionais (> 30s):** Conversão do tempo de normalização para segundos e descarte de alarmes com tempo de resolução igual ou inferior a 30 segundos. Ocorrências resolvidas em janelas extremamente curtas provavelmente correspondem a oscilações elétricas momentâneas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados da Distribuição Diária das Anomalias Críticas (> 30s)</h2>
+</div>
+
+Após o saneamento, 1.152.622 registros possuíam um formato válido de tempo de normalização. Com a aplicação da filtragem de ruídos operacionais, a análise considerou 835.232 alarmes, distribuídas em 844 dias: 725 dias de segunda a sábado e 119 domingos.
+
+### 4.1 Quantificação por Tipo de Dia
+
+| Tipo de dia | Média diária de anomalias críticas | Mediana diária | Desvio padrão | Dias analisados |
+| :--- | ---: | ---: | ---: | ---: |
+| **Segunda a Sábado** | 1.040,22 | 631 | 1.455,51 | 725 |
+| **Domingo** | 681,30 | 357 | 1.061,00 | 119 |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
+
+### 5.1 Validação da Hipótese
+
+Os dados confirmam a hipótese. De segunda-feira a sábado, a média foi de **1.040,22 anomalias críticas por dia**, contra **681,30 aos domingos**. Isso corresponde a um volume médio **52,7% maior** nos dias de maior operação. Visto pela outra direção, o domingo apresentou uma redução de **34,5%** em relação à média de segunda a sábado.
+
+A mediana reforça essa tendência: são 631 anomalias críticas por dia de segunda a sábado, frente a 357 aos domingos. Como a mediana é menos sensível a dias com volumes excepcionalmente altos, esse resultado indica que a diferença observada não depende apenas de ocorrências atípicas.
+
+### 5.2 Interpretação do Impacto Operacional
+
+A maior frequência de trens de segunda a sábado aumenta o número de ciclos de abertura e fechamento das portas. Esse uso contínuo pode elevar a fadiga eletromecânica, o aquecimento dos atuadores e a exposição a interferências provocadas pelo fluxo mais intenso de passageiros, contribuindo para um número maior de anomalias críticas.
+
+Nos domingos, a menor oferta de trens e a redução do fluxo de passageiros diminuem a carga física e operacional sobre os componentes. A queda observada na média diária de alarmes é consistente com esse regime de operação reduzida.
+
+### 5.3 Implicações para a Manutenção Preditiva
+
+O tipo de dia deve ser incorporado aos modelos preditivos como uma variável temporal relevante. A distinção entre domingo e segunda a sábado — ou, idealmente, entre cada dia da semana — permite que o modelo diferencie variações esperadas pela intensidade de operação de sinais que possam indicar degradação real do equipamento.

@@ -1,0 +1,318 @@
+---
+title: "Limpeza de Dados: Ordens Corretivas Programadas (ZM02)"
+description: "Documentação do diagnóstico, tratamento, validação e exportação da base de ordens de manutenção corretiva programada ZM02."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
+
+Este documento descreve o pipeline de limpeza da base de **manutenção corretiva programada ZM02** das Portas de Plataforma (*Platform Screen Doors* — PSDs). O tratamento prepara os registros para integração com outras fontes e para etapas posteriores de análise e *feature engineering*.
+
+O pipeline foi construído com os seguintes princípios:
+
+- preservar os arquivos originais;
+- evitar a concatenação de extrações sobrepostas;
+- manter identificadores como texto;
+- não imputar informações sem uma regra de negócio;
+- distinguir ordens repetidas de duplicatas exatas;
+- sinalizar valores atípicos sem excluir ocorrências plausíveis;
+- manter rastreabilidade por meio da linha da planilha original;
+- registrar decisões e métricas de qualidade junto à base processada.
+
+O código executável está disponível em:
+
+```text
+eda/cleaning/limpeza-dados-ZM02-organizado.ipynb
+```
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Fontes utilizadas</h2>
+</div>
+
+Foram avaliadas duas extrações:
+
+```text
+data/Corretiva Programada/Ordens do SAP -Corretiva programada (ZM02).XLSX
+data/Corretiva Programada/Ordens do SAP -Corretiva programada (ZM02)- 2.XLSX
+```
+
+As duas planilhas possuem a mesma aba (`Sheet1`), 1.163 linhas, 28 colunas, os mesmos cabeçalhos e exatamente o mesmo conteúdo. Por isso, somente a primeira extração foi utilizada. As planilhas não foram concatenadas, evitando a duplicação integral dos registros.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Diagnóstico inicial</h2>
+</div>
+
+### 3.1 Dimensão e identificadores
+
+| Métrica | Resultado |
+| :--- | ---: |
+| Registros | 1.163 |
+| Colunas | 28 |
+| Notas ausentes | 0 |
+| Notas distintas | 1.158 |
+| Repetições excedentes de nota | 5 |
+| Ordens ausentes | 5 |
+| Ordens distintas preenchidas | 1.153 |
+| Repetições excedentes de ordem | 5 |
+| Duplicatas exatas | 0 |
+
+Os cinco registros sem ordem possuem nota, descrição e localização do ativo. Por isso, foram mantidos na base.
+
+### 3.2 Valores ausentes
+
+| Coluna | Ausentes | Percentual |
+| :--- | ---: | ---: |
+| `IQM` | 1.163 | 100,00% |
+| `Falha` | 1.163 | 100,00% |
+| `Indisponível` | 1.162 | 99,91% |
+| `Analisada` | 1.162 | 99,91% |
+| `Comentários Classificação Engenharia` | 1.162 | 99,91% |
+| `Data Análise` | 1.162 | 99,91% |
+| `Ação` | 43 | 3,70% |
+| `Causa` | 42 | 3,61% |
+| `Fim da avaria` | 39 | 3,35% |
+| `Defeito` | 39 | 3,35% |
+| `Objeto` | 39 | 3,35% |
+| `Encerram.por Data` | 7 | 0,60% |
+| `Texto Longo da Ordem` | 7 | 0,60% |
+| `Status do Sistema da Ordem` | 5 | 0,43% |
+| `Status do Usuário da Ordem` | 5 | 0,43% |
+| `Ordem` | 5 | 0,43% |
+
+As colunas `Falha` e `IQM` foram removidas por não possuírem nenhum valor. As demais ausências foram avaliadas conforme o significado e a utilidade de cada campo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Padronização estrutural</h2>
+</div>
+
+Os nomes foram convertidos para letras minúsculas, sem acentos e no padrão `snake_case`. Espaços e caracteres especiais foram substituídos por `_`.
+
+| Nome original | Nome padronizado |
+| :--- | :--- |
+| `Tipo de Nota` | `tipo_de_nota` |
+| `Local de Instalação` | `local_de_instalacao` |
+| `Início avaria` | `inicio_avaria` |
+| `Encerram.por Data` | `encerram_por_data` |
+
+As colunas `nota` e `ordem` foram convertidas para texto, evitando que identificadores fossem tratados como medidas numéricas ou exibidos com o sufixo `.0`.
+
+A coluna `linha_origem` foi criada com o número correspondente à linha da planilha original, permitindo rastrear os registros após reorganizações e filtros.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Tratamento temporal</h2>
+</div>
+
+### 5.1 Datas e horários
+
+O conversor de datas aceita valores já reconhecidos pelo `pandas`, textos no padrão dia/mês/ano e números seriais do Excel. O conversor de horários trata objetos `time`, frações de um dia do Excel e textos representando horários.
+
+Nenhuma data ou hora preenchida se tornou inválida durante a conversão.
+
+### 5.2 Campos combinados
+
+| Coluna criada | Significado |
+| :--- | :--- |
+| `inicio_avaria_datetime` | Data e hora de início |
+| `fim_avaria_datetime` | Data e hora de fim |
+| `analise_datetime` | Data e hora de análise |
+| `encerramento_datetime` | Data e hora de encerramento |
+
+Não existem casos de fim ou encerramento anteriores ao início. Os 39 registros sem fim de avaria foram mantidos; nessas linhas, o fim e a duração permanecem ausentes.
+
+### 5.3 Duração
+
+A duração foi calculada em horas:
+
+```python
+duracao_avaria_horas = (
+    fim_avaria_datetime - inicio_avaria_datetime
+).total_seconds() / 3600
+```
+
+Na ZM02, esse intervalo pode incluir espera por planejamento, materiais ou janela de execução e não deve ser interpretado automaticamente como tempo contínuo de reparo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Limpeza textual</h2>
+</div>
+
+Os campos textuais passaram pelas seguintes transformações:
+
+- conversão para o tipo textual anulável do `pandas`;
+- remoção de espaços nas extremidades;
+- substituição de espaços não separáveis;
+- redução de espaços e tabulações repetidas;
+- conversão de strings vazias para `pd.NA`;
+- uso de letras maiúsculas nos campos categóricos.
+
+Os textos narrativos, como `descricao` e `texto_longo_da_ordem`, tiveram sua capitalização preservada. Não foram realizadas correções ortográficas ou associações automáticas entre valores semelhantes, pois isso poderia modificar classificações técnicas do SAP.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Indicadores booleanos</h2>
+</div>
+
+As marcações `X` foram convertidas para indicadores booleanos:
+
+| Campo original | Campo final | Regra |
+| :--- | :--- | :--- |
+| `indisponivel` | `indisponivel_flag` | `X` = `True`; vazio = `False` |
+| `analisada` | `analisada_flag` | `X` = `True`; vazio = `False` |
+
+Cada coluna original possuía somente uma marcação `X`. As flags foram mantidas porque não possuem valores ausentes, preservam a informação existente e favorecem compatibilidade com a base ZM01. As versões originais foram removidas da tabela final por serem redundantes.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Colunas altamente esparsas</h2>
+</div>
+
+Ausência superior a 99% não foi utilizada como regra automática de descarte. Cada campo foi avaliado conforme sua informação remanescente.
+
+Na tabela final:
+
+- `comentarios_classificacao_engenharia` foi removida por possuir apenas um valor preenchido;
+- `data_analise` e `analise_datetime` foram removidas pelo mesmo motivo;
+- `indisponivel` e `analisada` foram removidas após a criação das flags;
+- `indisponivel_flag` e `analisada_flag` foram preservadas;
+- `objeto`, `defeito`, `causa` e `acao` foram mantidos sem imputação.
+
+Os arquivos originais e o DataFrame intermediário preservam todos os valores antes da redução final.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Duplicidades</h2>
+</div>
+
+As cinco notas repetidas estão associadas às mesmas cinco ordens repetidas, formando dez linhas envolvidas. Nenhuma linha é uma duplicata exata.
+
+| Ordem | Campos divergentes |
+| :--- | :--- |
+| `52279352` | `causa`, `acao` |
+| `52335058` | `causa` |
+| `52584827` | `causa`, `acao` |
+| `53639844` | `objeto`, `defeito` |
+| `53714669` | `objeto` |
+
+Todas as linhas foram mantidas. Foram criadas as flags:
+
+| Flag | Significado |
+| :--- | :--- |
+| `ordem_ausente_flag` | Registro sem número de ordem |
+| `ordem_repetida_flag` | Ordem presente em mais de uma linha |
+| `nota_repetida_flag` | Nota presente em mais de uma linha |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">10. Durações extremas e iguais a zero</h2>
+</div>
+
+| Estatística | Duração em horas |
+| :--- | ---: |
+| Primeiro quartil (Q1) | 8,19 |
+| Mediana | 76,08 |
+| Terceiro quartil (Q3) | 359,13 |
+| Limite superior pelo IQR | 885,53 |
+| Percentil 90 | 1.338,90 |
+| Percentil 95 | 2.160,16 |
+| Percentil 99 | 6.104,71 |
+| Percentil 99,9 | 12.741,83 |
+| Máximo | 15.107,33 |
+
+O critério IQR classificaria 161 registros como atípicos, aproximadamente 14% das durações conhecidas, sendo excessivamente agressivo para uma base de manutenção programada.
+
+O percentil 99 foi adotado somente para sinalização:
+
+- 12 registros acima de 6.104,71 horas receberam `duracao_extrema_flag`;
+- todos permaneceram na base principal;
+- uma tabela específica foi criada para auditoria;
+- nenhum valor foi limitado ou substituído.
+
+Também foram encontrados cinco registros com duração igual a zero. Eles foram mantidos e sinalizados em `duracao_zero_flag`, pois podem representar encerramento imediato, baixa precisão temporal ou preenchimento padrão do SAP.
+
+O notebook organizado contém visualizações da distribuição original, da distribuição em escala logarítmica e das 20 maiores durações.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">11. Estrutura e validação final</h2>
+</div>
+
+Após a remoção de colunas vazias, temporárias, redundantes e altamente esparsas, a base final possui **27 colunas**.
+
+| Verificação | Resultado |
+| :--- | ---: |
+| Linhas originais | 1.163 |
+| Linhas finais | 1.163 |
+| Colunas finais | 27 |
+| Duplicatas exatas | 0 |
+| Notas ausentes | 0 |
+| Ordens ausentes preservadas | 5 |
+| Durações negativas | 0 |
+| Durações extremas sinalizadas | 12 |
+| Durações zero sinalizadas | 5 |
+| Nomes de colunas duplicados | 0 |
+
+As validações automatizadas confirmaram ainda que `nota` e `ordem` estão armazenadas como texto, o início está presente em todos os registros e nenhuma linha foi perdida durante o pipeline.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">12. Exportação</h2>
+</div>
+
+O arquivo processado foi salvo em:
+
+```text
+data/Corretiva Programada/processados/ZM02_limpa.xlsx
+```
+
+| Aba | Conteúdo |
+| :--- | :--- |
+| `ZM02_limpa` | Base principal com os 1.163 registros |
+| `Duracoes_extremas` | 12 registros acima do percentil 99, também mantidos na base principal |
+| `Duracoes_zero` | 5 registros com duração igual a zero, também mantidos na base principal |
+| `Qualidade_ausencias` | Quantidade e percentual de ausências por coluna final |
+| `Decisoes_limpeza` | Registro das regras e decisões aplicadas |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">13. Ressalvas para integração e análise</h2>
+</div>
+
+- `duracao_avaria_horas` pode incluir espera por planejamento e não representa necessariamente o tempo efetivo do reparo.
+- Ordens e notas repetidas não devem ser deduplicadas somente pela chave, pois carregam classificações técnicas distintas.
+- Registros sem ordem podem ser relacionados por nota, localização e tempo, conforme a finalidade da análise.
+- As flags de durações extremas e zero devem ser consideradas em análises estatísticas e modelos.
+- Ausências em `objeto`, `defeito`, `causa` e `acao` representam informação não registrada, não necessariamente ausência real do fenômeno.
+- `linha_origem` deve ser preservada para auditoria e rastreamento até a planilha fonte.

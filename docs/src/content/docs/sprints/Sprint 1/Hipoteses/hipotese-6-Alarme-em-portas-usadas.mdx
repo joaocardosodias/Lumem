@@ -1,0 +1,211 @@
+---
+title: "Hipótese 6: Associação entre a Posição das Portas e a Ocorrência de Alarmes"
+description: "Análise exploratória da associação entre a posição das portas de plataforma e a ocorrência de alarmes, comparando centro e extremidades."
+---
+
+import { Image } from 'astro:assets';
+import rankingPortas from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-6/ranking-portas.png';
+import distribuicaoPosicao from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-6/distribuicao-centro-extremidades.png';
+import diferencaEstacaoVia from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-6/diferenca-estacao-via.png';
+import comparacaoTipos from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-6/comparacao-tipos-alarme.png';
+import perfilPosicoes from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-6/perfil-posicoes-portas.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Fundamentação Teórica</h2>
+</div>
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos de segurança submetidos continuamente à movimentação de passageiros e aos ciclos de abertura e fechamento dos trens. Embora cada lado da estação possua 24 posições de porta, a utilização dessas posições pode não ser uniforme.
+
+Portas próximas a escadas, escadas rolantes, elevadores e acessos à plataforma tendem a receber maior concentração de passageiros. Essa exposição pode aumentar a ocorrência de obstáculos durante o movimento das folhas e contribuir para o desgaste de componentes mecânicos, sensores e sistemas de acionamento.
+
+A base analisada não contém medições de fluxo de passageiros nem a localização dos acessos. Por isso, a posição da porta foi utilizada como uma **aproximação operacional de uso**, sem assumir que posição e utilização sejam equivalentes ou que uma eventual associação represente causalidade.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
+
+* **H6.1 (Centro versus Extremidades):** As portas localizadas no centro de cada lado da estação apresentam maior frequência de alarmes e defeitos do que aquelas localizadas nas extremidades, possivelmente por serem mais utilizadas pelos passageiros.
+
+Para permitir uma comparação com grupos do mesmo tamanho, as posições foram classificadas da seguinte forma:
+
+| Grupo | Posições de Porta | Quantidade por Lado/Via |
+| :--- | :--- | ---: |
+| **Centro** | `07` a `18` | 12 |
+| **Extremidades** | `01` a `06` e `19` a `24` | 12 |
+
+> **Importante:** essa divisão é uma aproximação. O centro geométrico da sequência de portas não identifica necessariamente as posições de maior fluxo em todas as estações.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
+
+Para testar a hipótese, os registros da planilha de alarmes do sistema de PSDs foram processados seguindo as seguintes etapas:
+
+1. **Limpeza da Exportação:** Remoção de três linhas de rodapé sem identificação de estação, porta e alarme.
+2. **Padronização dos Dados:** Conversão dos campos de porta, estação, TAG e data/hora para tipos adequados à análise.
+3. **Cálculo de Duração:** Cálculo do intervalo entre o disparo e a normalização de cada alarme.
+4. **Tratamento de Obstáculos:** Manutenção apenas dos alarmes `OBS` com duração superior a 60 segundos. Registros `OBS` com duração igual ou inferior a 60 segundos, ausente ou inválida foram removidos.
+5. **Seleção das Portas:** Extração de estação, via, componente e número da porta a partir da TAG, mantendo apenas registros associados diretamente às portas `PDM`.
+6. **Identificação Física:** Construção de um identificador único no formato `ESTAÇÃO_VIA_PDMXX`.
+7. **Comparação Descritiva:** Cálculo do total, média, mediana, dispersão e distribuição de ocorrências por porta e posição.
+8. **Comparação Pareada:** Comparação da média do centro com a média das extremidades dentro de cada combinação estação-via, acompanhada de teste de permutação pareado exato.
+9. **Análise de Sensibilidade:** Separação de `OBS` dos demais alarmes e verificação adicional agrupando os dois lados de cada estação.
+
+### 3.1 Redução da Base após os Filtros
+
+| Etapa | Registros |
+| :--- | ---: |
+| Base importada | 150.003 |
+| Após remoção do rodapé | 150.000 |
+| `OBS` mantidos com duração superior a 60 segundos | 54.424 |
+| `OBS` removidos com duração igual ou inferior a 60 segundos | 28.058 |
+| `OBS` removidos sem duração registrada | 28.638 |
+| Demais alarmes preservados | 38.880 |
+| Após o filtro de duração | 93.304 |
+| Registros `MDU/STS` removidos | 12.822 |
+| **Ocorrências PDM utilizadas na análise** | **80.482** |
+
+O recorte final contém **6 estações**, **12 combinações estação-via** e **257 portas observadas**. O universo teórico dessas seis estações possui 288 posições (`6 × 2 × 24`), mas as 31 posições ausentes não foram tratadas como zero, pois a exportação informa que parte dos dados pode ter sido omitida.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados da Análise por Posição da Porta</h2>
+</div>
+
+### 4.1 Portas com Mais Ocorrências
+
+O ranking evidencia forte concentração dos maiores volumes na via 1 da estação Butantã (`BUT_V1`). A porta `BUT_V1_PDM07` apresentou o maior número de ocorrências válidas, seguida por `BUT_V1_PDM10`.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={rankingPortas} alt="Ranking das 20 portas com mais ocorrências válidas de alarme" width={900} format="png" />
+</div>
+
+| Posição no Ranking | Porta Física | Grupo | Ocorrências | Tipos de Alarme |
+| ---: | :--- | :--- | ---: | ---: |
+| 1 | `BUT_V1_PDM07` | Centro | 2.935 | 7 |
+| 2 | `BUT_V1_PDM10` | Centro | 2.777 | 7 |
+| 3 | `BUT_V1_PDM05` | Extremidades | 2.508 | 7 |
+| 4 | `BUT_V1_PDM09` | Centro | 2.502 | 7 |
+| 5 | `BUT_V1_PDM08` | Centro | 2.466 | 7 |
+| 6 | `BUT_V1_PDM06` | Extremidades | 2.463 | 7 |
+
+> A concentração do ranking em `BUT_V1` indica que diferenças entre estações e vias são relevantes. Por isso, o ranking isolado não é suficiente para atribuir o resultado à posição da porta.
+
+---
+
+### 4.2 Comparação Agregada entre Centro e Extremidades
+
+| Posição | Portas Observadas | Total de Ocorrências | Média por Porta | Mediana | Desvio-Padrão | Máximo |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Centro** | 130 | 41.058 | 315,83 | 161 | 512,78 | 2.935 |
+| **Extremidades** | 127 | 39.424 | 310,43 | 154 | 509,49 | 2.508 |
+
+A média do centro foi **1,74% maior** que a média das extremidades. Entretanto, a diferença entre as medianas foi de apenas 7 ocorrências e os dois grupos apresentaram elevada dispersão, com poucas portas concentrando milhares de registros.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={distribuicaoPosicao} alt="Distribuição das ocorrências por porta no centro e nas extremidades" width={800} format="png" />
+</div>
+
+> O eixo vertical está em escala logarítmica para permitir a visualização simultânea de portas com poucos registros e das portas com milhares de ocorrências.
+
+---
+
+### 4.3 Comparação dentro de Cada Estação e Via
+
+Para reduzir a influência das diferenças de volume entre estações, o centro e as extremidades foram comparados dentro de cada uma das 12 combinações estação-via.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={diferencaEstacaoVia} alt="Diferença entre a média do centro e das extremidades em cada estação e via" width={850} format="png" />
+</div>
+
+O centro apresentou média maior em **11 dos 12 lados/vias**. A única diferença negativa ocorreu em `FRE_V2`: a média foi de 8,17 ocorrências no centro e 25,17 nas extremidades, produzindo o saldo `8,17 − 25,17 = −17,00`.
+
+| Indicador Pareado por Estação-Via | Resultado |
+| :--- | ---: |
+| Pares analisados | 12 |
+| Centro com média maior | 11 |
+| Extremidades com média maior | 1 |
+| Diferença média por porta | +8,8304 |
+| Diferença mediana por porta | +8,5545 |
+| *p*-valor exato bilateral | 0,0356 |
+
+O teste por estação-via detecta diferença ao nível de 5%, mas esse resultado deve ser interpretado como **exploratório**: os dois lados da mesma estação podem compartilhar fluxo, operação e infraestrutura, não sendo necessariamente independentes. Em uma verificação conservadora que primeiro agrega os dois lados de cada estação, o teste passa a utilizar 6 pares e resulta em ***p* = 0,0938**, deixando de atingir o nível de 5%.
+
+---
+
+### 4.4 Resultado por Tipo de Alarme
+
+O alarme `OBS`, já limitado às durações superiores a 60 segundos, representa **67,62%** das ocorrências PDM utilizadas. Portanto, o resultado geral é fortemente influenciado pelos obstáculos.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={comparacaoTipos} alt="Média de ocorrências por porta para cada tipo de alarme no centro e nas extremidades" width={850} format="png" />
+</div>
+
+| Alarme | Total | Média Centro | Média Extremidades | Diferença do Centro |
+| :--- | ---: | ---: | ---: | ---: |
+| `OBS` | 54.424 | 215,06 | 208,39 | **+3,20%** |
+| `FO` | 4.617 | 19,62 | 16,28 | **+20,52%** |
+| `LSD` | 4.606 | 17,29 | 18,57 | −6,87% |
+| `FC` | 4.437 | 17,82 | 16,69 | **+6,77%** |
+| `CA` | 4.168 | 16,00 | 16,44 | −2,68% |
+| `OA` | 4.128 | 14,23 | 17,94 | −20,66% |
+| `CSD` | 4.102 | 15,81 | 16,12 | −1,93% |
+
+Ao retirar `OBS`, os outros 26.058 alarmes apresentam média de **100,77** ocorrências no centro e **102,03** nas extremidades, uma diferença de **−1,24%**. Assim, o pequeno aumento agregado do centro não se repete de maneira uniforme entre os diferentes defeitos.
+
+---
+
+### 4.5 Comportamento das Posições `01–24`
+
+A análise individual das posições mostra uma assimetria que a divisão binária pode ocultar. As posições `01–12` apresentam médias mais elevadas, enquanto ocorre queda acentuada a partir da posição `13`.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={perfilPosicoes} alt="Média de ocorrências ao longo das 24 posições de porta" width={900} format="png" />
+</div>
+
+As maiores médias foram registradas nas posições `02` (438,20), `09` (425,64), `07` (424,25), `10` (418,08), `08` (415,73) e `06` (410,73). O perfil não apresenta um pico central simétrico, o que enfraquece a interpretação de que o centro geométrico seja, por si só, a região mais utilizada.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
+
+### 5.1 Avaliação da Hipótese
+
+A hipótese recebe **suporte parcial e fraco** no recorte analisado:
+
+1. **Diferença Agregada Pequena:** O centro apresentou média apenas 1,74% maior que as extremidades.
+2. **Direção Consistente por Via:** O centro teve média maior em 11 das 12 combinações estação-via.
+3. **Significância Não Robusta:** O teste por via resultou em *p* = 0,0356, mas a verificação agrupada por estação resultou em *p* = 0,0938.
+4. **Influência de `OBS`:** Obstáculos representam 67,62% da base final e apresentam diferença de 3,20% a favor do centro. Sem `OBS`, o resultado se inverte ligeiramente.
+5. **Comportamento Diferente por Defeito:** Alguns códigos são mais frequentes no centro, enquanto outros são mais frequentes nas extremidades.
+6. **Ausência de Pico Central:** O perfil `01–24` indica maior concentração nas posições iniciais, e não uma elevação simétrica no centro.
+
+Portanto, os resultados apontam uma **associação fraca entre a classificação adotada e a ocorrência de alarmes**, mas não permitem afirmar que as portas centrais quebram mais por serem mais utilizadas.
+
+---
+
+### 5.2 Limitações e Próximos Passos
+
+As conclusões devem permanecer restritas ao recorte observado pelos seguintes motivos:
+
+* **Cobertura Parcial:** A planilha de alarmes contém apenas `BUT`, `FAL`, `FRA`, `FRE`, `HIG` e `LUZ`, e não todas as estações da Linha 4.
+* **Exportação Incompleta:** O próprio arquivo informa que o volume permitido foi excedido e que alguns dados podem ter sido omitidos.
+* **Portas Ausentes:** Foram observadas 257 das 288 posições teoricamente existentes nas seis estações. Não é possível distinguir portas sem alarmes de portas omitidas pela exportação.
+* **Uso Não Medido:** A posição foi utilizada como aproximação, mas não há contagem de passageiros nem localização de escadas, elevadores e acessos.
+* **Dependência Operacional:** Os dois lados de uma mesma estação podem ser correlacionados, reduzindo o número efetivo de unidades independentes.
+* **Alarme Não Equivale a Quebra:** Uma ocorrência de alarme representa uma anomalia registrada, não necessariamente uma falha que exigiu manutenção.
+
+Como próximos passos, recomenda-se obter a exportação completa, mapear os acessos de cada plataforma, incorporar dados de fluxo de passageiros e ciclos de abertura, e repetir a análise com modelos que controlem explicitamente as diferenças entre estação, via e período de operação.

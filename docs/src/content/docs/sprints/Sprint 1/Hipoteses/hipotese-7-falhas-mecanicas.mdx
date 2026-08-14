@@ -1,0 +1,230 @@
+---
+title: "Hipótese 7: Predominância de Falhas Mecânicas"
+description: "Investigação das ordens corretivas das Portas de Plataforma para identificar grupos recorrentes de causas e defeitos e verificar a predominância de falhas mecânicas."
+---
+
+import { Image } from 'astro:assets';
+import graficoGrupos from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-grupos-causas-defeitos.png';
+import graficoClassificacao from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-classificacao-falhas.png';
+import graficoSensibilidade from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-7/grafico-sensibilidade-tipos.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Fundamentação</h2>
+</div>
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são sistemas eletromecânicos compostos por sensores, travas, atuadores, motores, correias, controladores e elementos de comunicação. A operação contínua desses componentes pode gerar diferentes modos de falha, como desgaste, desajuste, travamento, perda de comunicação e falhas elétricas.
+
+A investigação da Hipótese 7 busca compreender se os problemas físicos e mecânicos constituem a principal origem das intervenções corretivas. Além de testar essa predominância, a análise organiza os registros em grupos de causas e defeitos que poderão apoiar a criação de indicadores e futuros modelos de manutenção preditiva.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
+
+* **H7.1 (Predominância Mecânica):** Mais de **50% das ordens de manutenção corretiva** estão associadas a falhas mecânicas de componentes.
+* **H7.2 (Agrupamentos Recorrentes):** As causas e os defeitos registrados podem ser organizados em grupos interpretáveis, revelando os mecanismos e modos de falha mais incidentes.
+
+A unidade de análise adotada foi uma **ordem SAP única**. O teste principal inclui:
+
+* **ZM01:** manutenção corretiva emergencial;
+* **ZM02:** manutenção corretiva programada.
+
+As ordens preventivas ZM03 foram excluídas do teste porque não representam necessariamente uma falha observada.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
+
+A investigação foi conduzida de forma incremental e rastreável:
+
+1. **Inspeção das Bases:** Verificação das dimensões, colunas e exemplos de registros das bases ZM01 e ZM02.
+2. **Análise de Qualidade:** Identificação de campos ausentes, números de ordem repetidos e inconsistências entre causa, defeito e objeto.
+3. **Preparação Conservadora:** Exclusão, apenas nas cópias de análise, de registros sem número de ordem e de todos os números repetidos com diagnósticos potencialmente conflitantes.
+4. **Padronização Textual:** Conversão de causa e defeito para maiúsculas, remoção de acentos, normalização de pontuação e espaços.
+5. **Agrupamento de Causas:** Organização das 25 causas padronizadas em grupos temáticos definidos por regras explícitas.
+6. **Agrupamento de Defeitos:** Organização das 112 categorias de defeito por modo de falha.
+7. **Avaliação Independente:** Classificação da evidência da causa e do defeito como mecânica, não mecânica ou indeterminada.
+8. **Cruzamento das Evidências:** Criação de uma classificação final que preserva divergências como `Conflitante`.
+9. **Teste Conservador:** Casos conflitantes e indeterminados permaneceram no denominador, mas não foram contados como mecânicos.
+10. **Análise de Sensibilidade:** Comparação do cenário conservador com os casos decididos e com o limite superior possível.
+
+---
+
+### 3.1 Preparação e Qualidade das Ordens
+
+| Base | Linhas Originais | Sem Número de Ordem | Números Repetidos | Linhas Excluídas por Repetição | Linhas Finais |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| **ZM01 - Emergencial** | 10.647 | 2 | 67 | 138 | 10.507 |
+| **ZM02 - Programada** | 1.163 | 5 | 5 | 10 | 1.148 |
+| **Total Final** | **11.810** | **7** | **72** | **148** | **11.655** |
+
+As bases originais foram preservadas. Os registros sem causa ou defeito não foram eliminados automaticamente, pois descrição, objeto e texto longo ainda podem conter informações relevantes.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Agrupamento de Causas e Defeitos</h2>
+</div>
+
+Como os campos estruturados já apresentavam um vocabulário relativamente controlado, foram utilizadas regras de domínio explícitas em vez de um algoritmo de clusterização opaco. Essa escolha permite auditar exatamente por que cada causa ou defeito pertence a determinado grupo.
+
+### 4.1 Grupos de Causas
+
+| Grupo de Causa | Quantidade | Percentual (%) |
+| :--- | ---: | ---: |
+| **Desgaste e deformação** | 3.215 | 27,58 |
+| **Comunicação e software** | 2.787 | 23,91 |
+| **Vibração, fixação e ajuste** | 2.258 | 19,37 |
+| **Uso, operação e ação externa** | 1.787 | 15,33 |
+| **Não informada** | 1.025 | 8,79 |
+| **Elétrica e alimentação** | 301 | 2,58 |
+| **Lubrificação, resíduos e ambiente** | 280 | 2,40 |
+| **Inconclusiva** | 2 | 0,02 |
+
+### 4.2 Grupos de Defeitos
+
+| Grupo de Defeito | Quantidade | Percentual (%) |
+| :--- | ---: | ---: |
+| **Desajuste ou regulagem** | 4.339 | 37,23 |
+| **Avaria** | 3.119 | 26,76 |
+| **Não informado** | 1.020 | 8,75 |
+| **Falha de comunicação** | 957 | 8,21 |
+| **Travamento** | 806 | 6,92 |
+| **Obstrução** | 395 | 3,39 |
+| **Condição elétrica ou ambiental** | 393 | 3,37 |
+| **Falha de configuração** | 270 | 2,32 |
+| **Dano, ruptura ou desgaste** | 233 | 2,00 |
+| **Ruído anormal** | 121 | 1,04 |
+| **Inconclusivo** | 2 | 0,02 |
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoGrupos} alt="Distribuição dos grupos de causas e defeitos das ordens corretivas" width={1100} format="png" />
+</div>
+
+Os resultados mostram que desgaste, vibração, fixação e desajustes possuem participação expressiva. Comunicação e software também representam parcela relevante, indicando que o comportamento do sistema não pode ser explicado exclusivamente pela dimensão mecânica.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Cruzamento das Evidências</h2>
+</div>
+
+A classificação mecânica não foi atribuída diretamente a todo registro que continha a palavra `avaria`. Esse termo foi mantido como indeterminado por poder representar tanto um componente mecânico quanto um dispositivo eletrônico.
+
+Foram adotadas as seguintes regras:
+
+* **Mecânica — causa e defeito:** os dois campos apresentam evidência mecânica;
+* **Mecânica — pela causa:** a causa é mecânica e o defeito é indeterminado;
+* **Mecânica — pelo defeito:** o defeito é mecânico e a causa é indeterminada;
+* **Não mecânica:** existe evidência não mecânica e nenhuma evidência mecânica;
+* **Conflitante:** causa e defeito apontam para naturezas diferentes;
+* **Indeterminada:** os campos não oferecem evidência suficiente.
+
+| Classificação Final | Quantidade | Percentual (%) |
+| :--- | ---: | ---: |
+| **Mecânica — causa e defeito** | 3.089 | 26,50 |
+| **Mecânica — pela causa** | 2.176 | 18,67 |
+| **Não mecânica** | 1.909 | 16,38 |
+| **Conflitante** | 1.733 | 14,87 |
+| **Indeterminada** | 1.415 | 12,14 |
+| **Mecânica — pelo defeito** | 1.333 | 11,44 |
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoClassificacao} alt="Classificação das ordens pelo cruzamento das evidências de causa e defeito" width={900} format="png" />
+</div>
+
+Preservar 1.733 casos conflitantes e 1.415 indeterminados evita que registros ambíguos sejam utilizados para favorecer artificialmente a hipótese.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Teste da Hipótese e Análise de Sensibilidade</h2>
+</div>
+
+No cenário conservador, somente as três categorias iniciadas por `Mecânica` foram contadas como falhas mecânicas. Todas as demais ordens permaneceram no denominador.
+
+| Cenário | Ordens Mecânicas | Denominador | Percentual Mecânico (%) |
+| :--- | ---: | ---: | ---: |
+| **Conservador** | 6.598 | 11.655 | **56,61** |
+| **Somente casos decididos** | 6.598 | 8.507 | **77,56** |
+| **Limite superior** | 9.746 | 11.655 | **83,62** |
+
+> **Nota:** O limite superior considera todos os conflitos e indeterminados como mecânicos. Ele não é uma estimativa, mas apenas o maior valor possível com as classificações atuais.
+
+### 6.1 Comparação por Tipo de Manutenção
+
+| Tipo de Manutenção | Total de Ordens | Ordens Mecânicas | Percentual Mecânico (%) |
+| :--- | ---: | ---: | ---: |
+| **ZM01 - Emergencial** | 10.507 | 5.809 | **55,29** |
+| **ZM02 - Programada** | 1.148 | 789 | **68,73** |
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoSensibilidade} alt="Análise de sensibilidade e proporção mecânica por tipo de manutenção" width={1050} format="png" />
+</div>
+
+O percentual supera o limiar de 50% nas duas modalidades. Portanto, o resultado agregado não é provocado exclusivamente pelas ordens programadas ou emergenciais.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Síntese e Validação da Hipótese</h2>
+</div>
+
+### 7.1 Validação da Hipótese H7.1
+
+A hipótese **H7.1 é sustentada para o conjunto de dados e para os critérios adotados nesta investigação**. Foram identificadas **6.598 ordens mecânicas entre 11.655 ordens corretivas**, correspondendo a **56,61%** no cenário mais conservador.
+
+O resultado deve ser interpretado como evidência sobre os registros analisados, não como prova de que a mesma proporção ocorrerá em qualquer período futuro.
+
+### 7.2 Validação da Hipótese H7.2
+
+A hipótese de agrupamentos recorrentes também foi sustentada. As categorias estruturadas permitiram identificar grupos dominantes e interpretáveis:
+
+1. **Desgaste e deformação** é o maior grupo de causas;
+2. **Vibração, fixação e ajuste** também possui participação expressiva;
+3. **Desajuste ou regulagem** é o modo de defeito mais frequente;
+4. **Avaria** é recorrente, mas requer informação adicional para determinar sua natureza;
+5. **Comunicação e software** representam uma frente não mecânica relevante.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Limitações da Investigação</h2>
+</div>
+
+1. **Regras de domínio ainda não homologadas:** os agrupamentos devem ser revisados pela engenharia de manutenção.
+2. **Diagnósticos conflitantes:** 1.733 ordens apresentam divergência entre causa e defeito.
+3. **Casos indeterminados:** 1.415 ordens não possuem evidência suficiente para classificação.
+4. **Campos ausentes:** a base preparada contém 1.025 causas e 1.020 defeitos ausentes.
+5. **Ordens repetidas:** números repetidos foram excluídos conservadoramente devido a diagnósticos divergentes.
+6. **Ausência de exposição operacional:** a análise não foi normalizada por quantidade de portas, ciclos de abertura, tempo de operação ou número de trens.
+7. **Associação não implica causalidade:** os padrões dos registros não demonstram, isoladamente, a causa física de cada ocorrência.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Recomendações para Manutenção Preditiva</h2>
+</div>
+
+* Validar a taxonomia de causas e defeitos com especialistas do domínio;
+* Revisar amostras das ordens conflitantes, indeterminadas e repetidas;
+* Padronizar o preenchimento dos diagnósticos no processo de registro;
+* Cruzar as ordens com estação, porta, componente e período;
+* Integrar alarmes, ciclos de abertura, tempo de operação e substituições;
+* Utilizar os grupos homologados como possíveis rótulos para modelos supervisionados;
+* Priorizar indicadores relacionados a desgaste, vibração, fixação e desajustes.
+
+O resultado confirma a relevância da dimensão mecânica para o projeto, mas também evidencia que a qualidade do diagnóstico e a integração com dados operacionais serão determinantes para construir modelos preditivos confiáveis.

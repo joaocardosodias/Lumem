@@ -188,3 +188,45 @@ body {
 	background-color: var(--sl-color-accent);
 	color: #ffffff;
 }
+
+/* --- Ajuste de Tamanho do Menu Lateral "On this page" (TOC) --- */
+starlight-toc {
+	font-size: 0.8rem !important;
+}
+
+starlight-toc h2 {
+	font-size: 0.85rem !important;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+starlight-toc a {
+	font-size: 0.78rem !important;
+	line-height: 1.3 !important;
+	padding-top: 0.2rem !important;
+	padding-bottom: 0.2rem !important;
+}
+
+/* Ocultar o menu lateral "On this page" (Table of Contents) globalmente */
+starlight-toc,
+.right-sidebar {
+	display: none !important;
+}
+
+/* Expandir o conteúdo para usar toda a largura da tela (estender para as bordas) */
+.main-pane {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.content-panel {
+	max-width: 100% !important;
+	padding-left: 2rem !important;
+	padding-right: 2rem !important;
+}
+
+.sl-container {
+	max-width: 100% !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}

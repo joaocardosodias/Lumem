@@ -1,0 +1,111 @@
+---
+title: "Limpeza de Dados: Alarmes das Portas de Plataforma"
+description: "Documentação do pipeline de higienização, unificação e sanitização das bases de dados de alarmes das Portas de Plataforma (PSDs)."
+---
+
+import { Image } from 'astro:assets';
+import graficoFunil from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-funil-limpeza.png';
+import graficoOutliers from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-comparativo-outliers.png';
+import graficoEstacoes from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-estacoes-limpas.png';
+import graficoTipos from '../../../../../assets/sprints/sprint1/limpeza-de-dados/alarmes/grafico-tipos-alarmes.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivos</h2>
+</div>
+
+O sucesso da modelagem preditiva depende da qualidade e integridade dos dados brutos. Este documento descreve o pipeline de engenharia de dados executado no notebook `eda/cleaning/limpeza_dados_alarmes.ipynb`, responsável por unificar e higienizar os históricos de alarmes (`Alarmes do sistema de PSD.xlsx` e `Histórico de alarmes 23-26.xlsx`).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Dicionário de Estações Metroviárias</h2>
+</div>
+
+Durante o parsing das TAGs de alarmes, foram identificadas **11 siglas técnicas oficiais** da Linha 4-Amarela:
+
+| Sigla | Nome Oficial | Papel Operacional |
+| :---: | :--- | :--- |
+| **`LUZ`** | Estação Luz | Terminal de integração (Linha 1-Azul, CPTM 7 e 11). |
+| **`REP`** | Estação República | Alta densidade (Integração Linha 3-Vermelha). |
+| **`HIG`** | Estação Higienópolis-Mackenzie | Estação intermediária de alta profundidade. |
+| **`PTA`** | Estação Paulista | Altíssimo fluxo (Integração Linha 2-Verde). |
+| **`FRE`** | Estação Fradique Coutinho | Estação intermediária comercial. |
+| **`FRA`** | Estação Faria Lima | **Primeira estação inaugurada (2010)**; maior tempo de operação. |
+| **`PIN`** | Estação Pinheiros | Polo de integração (Linha 9-Esmeralda). |
+| **`BUT`** | Estação Butantã | Terminal provisório histórico e conexão com ônibus. |
+| **`MBI`** | Estação São Paulo-Morumbi | Inaugurada em fase posterior (2018). |
+| **`VSO`** | Estação Vila Sônia | Terminal atual e local do Pátio de Manutenção. |
+| **`FAL`** | Pátio Vila Sônia / Faixa Auxiliar | Infraestrutura técnica e pátio interno de manutenção. |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Etapas do Pipeline de Limpeza</h2>
+</div>
+
+### 3.1 Unificação e Desduplicação
+A base bruta concatenada somou **1.189.874 registros**. Foram eliminadas **237.605 linhas duplicadas (19,97%)** resultantes de sobreposição de exportações.
+
+### 3.2 Parsing de TAGs e Correção de Estações
+A string da `TAG` segue dois padrões no sistema de monitoramento de alarmes:
+1. `PSD_EST_EST1_PDM09_TIPO` (ex: `PSD_FAL_FAL2_PDM09_OBS`) -> Estação: `FAL`.
+2. `PSD_P_EST1_MDU16_TIPO` (ex: `PSD_P_BUT1_MDU16_STS`) -> A letra `P` indica *Plataforma* e a estação real extraída é `BUT`.
+
+A aplicação do Regex corrigiu a atribuição de estações reais em toda a base:
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={graficoEstacoes} alt="Distribuição por Estação Tratada" width={750} format="png" />
+</div>
+
+---
+
+### 3.3 Tratamento de Outliers Extremos (> 30 Dias)
+Foram identificadas **172.511 ocorrências** com duração superior a 30 dias (chegando a mais de 300 dias). Esses casos decorrem de portas desativadas para manutenção pesada sem o encerramento do chamado no sistema de controle. Por não representarem a duração real do reparo, foram removidos:
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={graficoOutliers} alt="Comparativo da Distribuição de Tempos Antes e Depois" width={750} format="png" />
+</div>
+
+---
+
+### 3.4 Distribuição dos Principais Tipos de Alarmes Sanitizados
+
+Após a limpeza, os alarmes limpos foram categorizados por tipo de evento, destacando prevalência de obstruções e chaves fim de curso:
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={graficoTipos} alt="Principais Tipos de Alarmes Sanitizados" width={750} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Afunilamento de Volumetria do Pipeline</h2>
+</div>
+
+A evolução da volumetria ao longo do pipeline é demonstrada na tabela e gráfico abaixo:
+
+| Etapa | Registros Mantidos | Porcentagem |
+| :--- | :---: | :---: |
+| **1. Dataset Bruto Concatenado** | 1.189.874 | 100,0% |
+| **2. Base Desduplicada** | 952.269 | 80,0% |
+| **3. Remoção de Nulos Críticos** | 915.017 | 76,9% |
+| **4. Base Sanitizada Final (< 30 dias)** | **742.506** | **62,4%** |
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={graficoFunil} alt="Gráfico de Afunilamento de Volumetria" width={700} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Conclusão e Exportação</h2>
+</div>
+
+O dataset final sanitizado de **742.506 registros únicos** foi exportado para:
+`data/Alarmes/alarmes_trata_limpos_consolidado.csv`
