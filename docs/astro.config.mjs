@@ -9,7 +9,8 @@ export default defineConfig({
 	},
 	integrations: [
 		starlight({
-		title: 'Documentação',
+			title: 'Documentação',
+			tableOfContents: false,
 			logo: {
 				light: './src/assets/logo.png',
 				dark: './src/assets/logo-white.png',
@@ -29,14 +30,40 @@ export default defineConfig({
 							items: [
 								{ label: 'Análise de Valor e da Solução', slug: 'sprints/sprint-1/analise-de-valor-e-da-solução' },
 								{ label: 'Alinhamento ODS', slug: 'sprints/sprint-1/alinhamento-ods' },
-								{ label: 'Hipóteses', items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }] },
-								{ label: 'Limpeza de dados', items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }] },
+								{
+									label: 'Hipóteses',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }],
+								},
+								{
+									label: 'Limpeza de dados',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }],
+								},
+								{
+									label: 'Features Candidatas',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Features Candidatas' } }],
+								},
+								{
+									label: 'Personas',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Personas' } }],
+								},
 							],
 						},
-						{ label: 'Sprint 2', items: [{ autogenerate: { directory: 'sprints/Sprint 2' } }] },
-						{ label: 'Sprint 3', items: [{ autogenerate: { directory: 'sprints/Sprint 3' } }] },
-						{ label: 'Sprint 4', items: [{ autogenerate: { directory: 'sprints/Sprint 4' } }] },
-						{ label: 'Sprint 5', items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }] },
+						{
+							label: 'Sprint 2',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 2' } }],
+						},
+						{
+							label: 'Sprint 3',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 3' } }],
+						},
+						{
+							label: 'Sprint 4',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 4' } }],
+						},
+						{
+							label: 'Sprint 5',
+							items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }],
+						},
 					],
 				},
 			],

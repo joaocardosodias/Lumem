@@ -4,7 +4,7 @@ description: "Análise exploratória avançada com o limiar de severidade de 30 
 ---
 
 import { Image } from 'astro:assets';
-import graficoHorario from '../../../../../assets/sprints/sprint1/grafico-distribuicao-horaria.png';
+import graficoHorario from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-1/grafico-distribuicao-horaria.png';
 import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
@@ -90,4 +90,3 @@ As anomalias críticas que permanecem ativas por mais de 30 segundos refletem a 
 1. **Perda de Torque do Atuador e Estresse Térmico:** Nos horários de pico, a alta frequência de trens exige que o motor de passo e a correia de transmissão operem no limite de sua capacidade térmica. O acúmulo de calor aumenta a resistência interna dos enrolamentos elétricos, resultando em perda momentânea de torque mecânico para movimentar as folhas da porta contra o atrito das calhas superiores e inferiores.
 2. **Intervenção e Procedimento do Operador:** Quando a porta falha em completar o ciclo automático de fechamento após três tentativas contínuas de recuo (algoritmo interno do CLP), a lógica de segurança trava a porta na posição aberta por motivo de proteção. A normalização passa a depender da atuação manual do operador de plataforma ou de trem, que precisa inspecionar o trilho, desobstruir o canal e resetar a chave de laço no painel de comando local, processo que consome naturalmente mais de 30 segundos.
 3. **Emperramento Mecânico por Sujeira e Desgaste de Roletes:** O acúmulo de poeira metálica e sujeira nos trilhos guia, somado ao desgaste gradual dos roletes de sustentação, aumenta o coeficiente de atrito estático. Durante os picos, com o aumento da temperatura ambiente e da umidade na plataforma, o atrito se intensifica, exigindo mais tempo para a normalização do sinal de travado e selado.
-

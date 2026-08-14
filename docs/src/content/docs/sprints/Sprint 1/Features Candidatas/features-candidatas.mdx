@@ -1,0 +1,60 @@
+---
+title: "Seleção, Reavaliação e Justificativa Científica de Features Candidatas para os Modelos Preditivos"
+description: "Catálogo fundamentado com evidências empíricas e dados quantitativos para a seleção e descarte de atributos preditivos candidatos nos modelos de IA."
+---
+
+
+
+## 1. Contexto e Estratégia de Seleção
+
+Para construir um modelo preditivo de inteligência artificial de alto desempenho e confiabilidade industrial, a seleção de atributos (*Feature Selection*) deve basear-se estritamente em **evidências estatísticas, métricas quantitativas e princípios de física de manutenção**.
+
+Nesta etapa, reavaliamos os achados empíricos das análises exploratórias (Hipóteses 1 a 7) para separar os recursos com comprovado valor preditivo daqueles cuja relação foi **refutada com dados ou apresentou efeito prático irrelevante**.
+
+---
+
+## 2. Reavaliação Crítica: Features Descartadas com Base em Dados Empíricos
+
+Com base nos testes de dados das hipóteses, os seguintes atributos foram **descartados de forma fundamentada** para evitar ruído, viés e sobreajuste (*overfitting*) no modelo preditivo:
+
+| Feature Avaliada | Origem / Teste | Resultado Numérico do Teste | Fato Empírico e Justificativa de Descarte |
+| :--- | :--- | :---: | :--- |
+| `vol_passageiros_catraca` | **Hipótese 3** (Fluxo de Passageiros) | p = 0,865 / rho = -0,067 | **Refutada com Dados:** O teste estatístico cruzando o volume de validações de catraca com a taxa de alarmes confirmou a ausência de correlação (p > 0,05). O fluxo de passageiros por catraca **não é um preditor válido** de falhas. |
+| `vol_alarmes_acumulados_ante_corretiva` | **Hipótese 4** (Rampa Pré-Corretiva) | 55,4% dos alarmes ocorrem **depois** | **Refutada com Dados:** O teste nas janelas de 1, 3, 7 e 14 dias mostrou que mais da metade dos alarmes ocorrem após a manutenção, e não antes. A contagem genérica antes da ordem **não indica quebra iminente**. |
+| `posicao_centro_vs_extremidade` | **Hipótese 6** (Posição da Porta) | Diferença média de **1,74%** | **Insignificância Prática:** A comparação entre as portas centrais (315,83 ocorrências/porta) e de extremidade (310,43 ocorrências/porta) revelou um impacto prático negligenciável para o aprendizado de máquina. |
+
+---
+
+## 3. Catálogo das Melhores Features Candidatas e suas Justificativas
+
+A tabela abaixo apresenta os atributos preditivos selecionados, acompanhados de suas evidências empíricas e fundamentação física:
+
+| Categoria | Nome da Feature Candidata | Tipo | Fato Empírico / Evidência dos Dados | Justificativa e Mecanismo Físico no Modelo |
+| :--- | :--- | :---: | :--- | :--- |
+| **Severidade do Ativo** | `qtd_anomalias_criticas_30s_24h` | Numérico | **50,83% das anomalias graves (> 30s)** ocorrem nos horários de pico (78.645 registros na base). | Evita ruídos de retenção passageira de curta duração (menores ou iguais a 10s). Isolam episódios de perda de torque do atuador e falhas de selamento do laço de segurança. |
+| **Severidade do Ativo** | `max_tempo_normalizacao_6h` | Numérico | Picos de normalização acima de **1.200 segundos** indicam interrupções severas de circuito. | Captura o estresse mecânico recente e retenções prolongadas que exigiram intervenção de segurança antes da quebra total. |
+| **Regime Operacional** | `flag_horario_pico` | Binário | Concentração de **29,00% no pico da tarde** (16h-19h) e **21,83% no pico da manhã** (06h-09h). | Pondera o momento de máxima carga térmica nos enrolamentos dos motores de passo e aceleração do intervalo entre trens (*headway*). |
+| **Série Temporal** | `dia_semana_operacional` | Categórico | Queda comprovada de **30% a 52,7%** no volume de alertas aos domingos em relação aos dias úteis. | Ajusta a sensibilidade da IA ao ciclo semanal de circulação da frota, impedindo o disparo de falsos alarmes em dias de baixa exigência. |
+| **Série Temporal** | `flag_fim_de_semana` | Binário | Redução da média diária de **1.040 alarmes/dia (dias úteis)** para **681 alarmes/dia (domingos)**. | Atua como filtro de sensibilidade para ajustar as curvas de probabilidade durante o regime operacional reduzido. |
+| **Histórico SAP** | `dias_desde_ultima_corretiva` | Numérico | Ordens ZM01/ZM02 registram histórico de falhas de componentes repetidos em intervalos de 30 a 90 dias. | Alinha o modelo ao ciclo natural de desgaste mecânico pós-reparo, capturando a degradação gradual de correias, cabos e travadores. |
+| **Histórico SAP** | `dias_desde_ultima_preventiva` | Numérico | Ordens ZM03 afetam diretamente a fricção dos trilhos guia e desajuste de chaves de presença. | Mede o acúmulo de poeira metálica e ressecamento de lubrificante nos guias inferiores após a última revisão técnica. |
+| **Histórico SAP** | `qtd_ordens_corretivas_30d` | Numérico | **Evidência da Hipótese 7:** Defeitos em roletes e chaves `LSD` concentram mais de 70% das corretivas. | Identifica portas "crônicas" ou reincidentes que apresentaram falhas mecânicas/elétricas não resolvidas definitivamente no último mês. |
+| **Indicador Mecânico** | `taxa_reabertura_excedida_24h` | Numérico | Prevalência massiva do alarme do tipo `RCE` (*Reabertura Excedida*) e `FO` (*Esforço Excedido*). | Sinaliza fisicamente que o motor tentou fechar a porta repetidas vezes sem conseguir alinhar as folhas, indicando atrito excessivo no trilho. |
+| **Identificação Física** | `estacao_cod` | Categórico | Estações de 2010 como **Faria Lima (`FRA`) com 299.871 alarmes** e **Butantã (`BUT`) com 218.157**. | Incorpora o efeito do tempo de vida útil acumulado (mais de 14 anos de ciclagens contínuas nas estações pioneiras vs estações novas). |
+
+---
+
+## 4. Estrutura e Ingestão no Modelo: Tabela Mestra (Feature Matrix)
+
+Para alimentar os algoritmos de Machine Learning (como XGBoost, Random Forest ou Redes Neurais), os registros brutos de alarmes não são inseridos diretamente. Em vez disso, constrói-se uma **Tabela Mestra de Treinamento (*Feature Matrix*)**, onde cada linha representa o estado de uma porta em uma janela de tempo específica, conforme ilustrado no modelo conceitual abaixo:
+
+### 4.1 Arquitetura Conceitual da Tabela Mestra de Treino
+
+| ID_Porta | Timestamp de Avaliação | `qtd_anomalias_criticas_30s_24h` | `dias_desde_ultima_corretiva` | `flag_horario_pico` | `taxa_reaberturas_24h` | **TARGET (Rótulo Preditivo)** |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `BUT_P1_PDM12` | 10/05/2024 08:00 | **0** | **45 dias** | 1 | 0 | **0 (Operação Normal)** |
+| `BUT_P1_PDM12` | 11/05/2024 08:00 | **2** | **46 dias** | 1 | 1 | **0 (Operação Normal)** |
+| `BUT_P1_PDM12` | 12/05/2024 08:00 | **7** | **47 dias** | 1 | 4 | **1 (Falha nas próximas 48h)** |
+| `BUT_P1_PDM12` | 13/05/2024 08:00 | **12** | **48 dias** | 1 | 9 | **1 (Falha nas próximas 48h)** |
+
+---
