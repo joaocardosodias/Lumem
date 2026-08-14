@@ -1,9 +1,15 @@
 ---
-title: "Limpeza de dados: manutenção corretiva programada ZM02"
+title: "Limpeza de Dados: Ordens Corretivas Programadas (ZM02)"
 description: "Documentação do diagnóstico, tratamento, validação e exportação da base de ordens de manutenção corretiva programada ZM02."
 ---
 
-## 1. Objetivo
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
 
 Este documento descreve o pipeline de limpeza da base de **manutenção corretiva programada ZM02** das Portas de Plataforma (*Platform Screen Doors* — PSDs). O tratamento prepara os registros para integração com outras fontes e para etapas posteriores de análise e *feature engineering*.
 
@@ -26,7 +32,10 @@ eda/cleaning/limpeza-dados-ZM02-organizado.ipynb
 
 ---
 
-## 2. Fontes utilizadas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Fontes utilizadas</h2>
+</div>
 
 Foram avaliadas duas extrações:
 
@@ -39,7 +48,10 @@ As duas planilhas possuem a mesma aba (`Sheet1`), 1.163 linhas, 28 colunas, os m
 
 ---
 
-## 3. Diagnóstico inicial
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Diagnóstico inicial</h2>
+</div>
 
 ### 3.1 Dimensão e identificadores
 
@@ -82,7 +94,10 @@ As colunas `Falha` e `IQM` foram removidas por não possuírem nenhum valor. As 
 
 ---
 
-## 4. Padronização estrutural
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Padronização estrutural</h2>
+</div>
 
 Os nomes foram convertidos para letras minúsculas, sem acentos e no padrão `snake_case`. Espaços e caracteres especiais foram substituídos por `_`.
 
@@ -99,7 +114,10 @@ A coluna `linha_origem` foi criada com o número correspondente à linha da plan
 
 ---
 
-## 5. Tratamento temporal
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Tratamento temporal</h2>
+</div>
 
 ### 5.1 Datas e horários
 
@@ -132,7 +150,10 @@ Na ZM02, esse intervalo pode incluir espera por planejamento, materiais ou janel
 
 ---
 
-## 6. Limpeza textual
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Limpeza textual</h2>
+</div>
 
 Os campos textuais passaram pelas seguintes transformações:
 
@@ -147,7 +168,10 @@ Os textos narrativos, como `descricao` e `texto_longo_da_ordem`, tiveram sua cap
 
 ---
 
-## 7. Indicadores booleanos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Indicadores booleanos</h2>
+</div>
 
 As marcações `X` foram convertidas para indicadores booleanos:
 
@@ -160,7 +184,10 @@ Cada coluna original possuía somente uma marcação `X`. As flags foram mantida
 
 ---
 
-## 8. Colunas altamente esparsas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Colunas altamente esparsas</h2>
+</div>
 
 Ausência superior a 99% não foi utilizada como regra automática de descarte. Cada campo foi avaliado conforme sua informação remanescente.
 
@@ -176,7 +203,10 @@ Os arquivos originais e o DataFrame intermediário preservam todos os valores an
 
 ---
 
-## 9. Duplicidades
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Duplicidades</h2>
+</div>
 
 As cinco notas repetidas estão associadas às mesmas cinco ordens repetidas, formando dez linhas envolvidas. Nenhuma linha é uma duplicata exata.
 
@@ -198,7 +228,10 @@ Todas as linhas foram mantidas. Foram criadas as flags:
 
 ---
 
-## 10. Durações extremas e iguais a zero
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">10. Durações extremas e iguais a zero</h2>
+</div>
 
 | Estatística | Duração em horas |
 | :--- | ---: |
@@ -227,7 +260,10 @@ O notebook organizado contém visualizações da distribuição original, da dis
 
 ---
 
-## 11. Estrutura e validação final
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">11. Estrutura e validação final</h2>
+</div>
 
 Após a remoção de colunas vazias, temporárias, redundantes e altamente esparsas, a base final possui **27 colunas**.
 
@@ -248,7 +284,10 @@ As validações automatizadas confirmaram ainda que `nota` e `ordem` estão arma
 
 ---
 
-## 12. Exportação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">12. Exportação</h2>
+</div>
 
 O arquivo processado foi salvo em:
 
@@ -266,7 +305,10 @@ data/Corretiva Programada/processados/ZM02_limpa.xlsx
 
 ---
 
-## 13. Ressalvas para integração e análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">13. Ressalvas para integração e análise</h2>
+</div>
 
 - `duracao_avaria_horas` pode incluir espera por planejamento e não representa necessariamente o tempo efetivo do reparo.
 - Ordens e notas repetidas não devem ser deduplicadas somente pela chave, pois carregam classificações técnicas distintas.

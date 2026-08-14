@@ -4,18 +4,22 @@ description: Neste documento, abordaremos nossas duas personas, incluindo Ronald
 ---
 
 import { Image } from 'astro:assets';
-import ronaldoPersona from '../../../../../assets/sprints/sprint1/personas/ronaldo-persona.png';
-import martaPersona from '../../../../../assets/sprints/sprint1/personas/marta-persona.png';
+import ronaldoPersona from '../../../../assets/sprints/sprint1/personas/ronaldo-persona.png';
+import martaPersona from '../../../../assets/sprints/sprint1/personas/marta-persona.png';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
 
-# Personas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Personas</h2>
+</div>
 
-## O que é uma persona?
+### 1.1 O que é uma persona?
 
 Uma persona é uma representação semi-fictícia de um usuário, criada a partir de dados, comportamentos, necessidades, objetivos e características observadas no público real.
 
 Ela ajuda a compreender melhor quem utilizará a solução, quais são suas principais dores e como suas experiências e hábitos podem influenciar a adoção do produto.
 
-## Persona 1: Mecânico - Ronaldo
+## 1.2. Persona 1: Mecânico - Ronaldo
 
 ### Por que escolhemos o Ronaldo?
 
@@ -49,7 +53,7 @@ Além disso, considerando sua rotina de trabalho, o tempo limitado disponível p
 
 Dessa forma, a tecnologia pode tornar o trabalho de Ronaldo mais eficiente, contribuir para a segurança e disponibilidade das portas de plataforma e, ao mesmo tempo, complementar o conhecimento que ele já adquiriu ao longo de sua experiência profissional. 
 
-## Persona 2: Operadora - Marta
+## 1.3. Persona 2: Operadora - Marta
 
 ### Por que escolhemos o Marta?
 
@@ -80,7 +84,10 @@ A solução deve ajudá-la a antecipar possíveis falhas, reconhecer padrões no
 
 Além disso, considerando seu alto nível de letramento digital e sua abertura para novas tecnologias, a plataforma pode oferecer recursos analíticos, como indicadores de risco, históricos de ocorrências e rankings de criticidade. Ainda assim, essas informações devem ser apresentadas de forma clara e objetiva, permitindo uma interpretação rápida e segura.
 
-## Conclusão
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Conclusão</h2>
+</div>
 
 As personas de Ronaldo e Marta evidenciam que a solução deve atender a dois momentos complementares da manutenção das portas de plataforma: o planejamento orientado por dados e a execução técnica em campo. Enquanto Marta precisa centralizar informações, identificar padrões e definir prioridades, Ronaldo necessita de orientações objetivas que o ajudem a diagnosticar e resolver falhas dentro da janela reduzida de manutenção.
 
