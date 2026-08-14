@@ -7,8 +7,12 @@ import { Image } from 'astro:assets';
 import graficoMedianas from '../../../../../assets/sprints/sprint1/hipotese4-medianas-janelas.png';
 import graficoBoxplot from '../../../../../assets/sprints/sprint1/hipotese4-boxplot-14dias.png';
 import graficoTipos from '../../../../../assets/sprints/sprint1/hipotese4-tipos-alarme.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-## 1. Contexto Teórico e Problematização
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto Teórico e Problematização</h2>
+</div>
 
 As Portas de Plataforma (PSDs) operam em ciclos intensivos de acionamento e estão sujeitas a falhas mecânicas, elétricas e de controle ao longo do tempo. Uma hipótese comum em manutenção preditiva é a de que, antes de uma falha que exige intervenção corretiva, o equipamento já vinha "avisando" o problema através de um volume crescente de alarmes.
 
@@ -16,13 +20,19 @@ Para evitar ruído analítico, o estudo exclui os alarmes classificados como `OB
 
 ---
 
-## 2. Definindo a Questão Investigada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
 
 * **H4.1 (Aumento de alarmes antes da manutenção):** o volume de alarmes aumenta no intervalo imediatamente anterior à ordem de manutenção corretiva, em comparação ao intervalo equivalente posterior à intervenção.
 
 ---
 
-## 3. Metodologia de Análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
 
 Uma primeira versão desta análise comparava o volume de alarmes de **todo o sistema de PSD** contra a data de cada ordem de manutenção, sem considerar em qual estação a falha realmente ocorreu. Essa abordagem mistura o comportamento de portas que nada têm a ver com a ordem analisada e dilui qualquer sinal real de degradação local, por isso a metodologia foi refeita do zero.
 
@@ -34,7 +44,10 @@ Com o par "alarmes antes" / "alarmes depois" definido para cada ordem, a compara
 
 ---
 
-## 4. Achado Crítico: Cobertura Desigual de Alarmes por Estação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Achado Crítico: Cobertura Desigual de Alarmes por Estação</h2>
+</div>
 
 Antes de comparar antes/depois, foi feita uma checagem de cobertura: cruzando estação × tipo de alarme, verificou-se que **apenas a estação `BUT` possui alarmes técnicos (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`, `STS`) registrados na base atual**. As demais cinco estações monitoradas (`FAL`, `FRA`, `FRE`, `HIG`, `LUZ`) só têm eventos `OBS`, que já são removidos pela própria definição da hipótese.
 
@@ -42,7 +55,10 @@ Isso significa que, fora de `BUT`, contar "alarmes não-OBS" resultaria sempre e
 
 ---
 
-## 5. Resultados e Interpretação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Resultados e Interpretação</h2>
+</div>
 
 ### 5.1 Resumo por janela temporal
 
@@ -89,7 +105,10 @@ Para entender por que o volume "depois" supera o "antes" na janela de 14 dias, o
 
 ---
 
-## 6. Síntese e Análise Detalhada dos Resultados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
 
 Diferentemente da formulação original, os dados **não confirmam** que o volume de alarmes relevantes cresce antes da manutenção corretiva:
 
@@ -107,7 +126,10 @@ Isso sugere duas leituras possíveis. Uma delas, é que a manutenção foi reali
 
 Depois de analisar as tabelas, percebemos uma limitação técnica relevante nos dados disponibilizados inicialmente pelo parceiro, onde apenas a estação `BUT` possui alarmes técnicos (não-OBS) registrados na base atual; as demais cinco estações só registram `OBS`. A conclusão acima vale para a estação **Butantã** e não pode ser generalizada às demais estações sem uma base de alarmes mais completa.
 
-## 7. Conclusão
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Conclusão</h2>
+</div>
 
 A hipótese de que **alarmes relevantes se intensificam antes de uma manutenção corretiva não encontrou suporte estatístico** nos dados da estação `BUT`, a única com cobertura de alarmes técnicos suficiente para o teste. Em três das quatro janelas avaliadas o resultado é estatisticamente nulo, e na janela mais longa (14 dias) o padrão observado é o **inverso**: alarmes funcionais aumentam depois da intervenção.
 

@@ -5,9 +5,12 @@ description: "Análise exploratória detalhada passando por procura de uma faixa
 
 import { Image } from 'astro:assets';
 import graficoObsEstacao from '../../../../../assets/sprints/sprint1/grafico-alarmes-mensais-por-estacao.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-
-## 1. Contexto e Fundamentação Teórica
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Fundamentação Teórica</h2>
+</div>
 
 As Portas de Plataforma (PSDs - *Platform Screen Doors*) são sistemas eletromecânicos responsáveis por controlar e proteger o acesso entre a plataforma e a via ferroviária. Durante sua operação, diferentes tipos de alarmes são registrados pelo sistema de supervisão, permitindo acompanhar eventos relacionados ao funcionamento das portas, sensores, travas, comunicação e possíveis interferências durante os ciclos de abertura e fechamento.
 
@@ -21,7 +24,10 @@ A partir dessa observação, a investigação passou a analisar se a **localiza�
 
 ---
 
-## 2. Definindo a Questão Investigada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
 
 A hipótese final foi formulada buscando controlar o tipo de alarme e verificar exclusivamente o efeito da estação sobre seu comportamento temporal.
 
@@ -33,13 +39,16 @@ Dessa forma, a análise passou a comparar **o mesmo tipo de ocorrência em difer
 
 ---
 
-## 3. Metodologia de Análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
 
 A análise utilizou como principal fonte a base de alarmes do sistema PSD, originalmente composta por **150.003 registros**.
 
 Antes do teste da hipótese, os dados passaram pelas seguintes etapas de preparação e validação:
 
-1. **Validação Temporal:** O tempo de normalização foi calculado pela diferença entre `Horário da Normalizacao` e `Horário do Alarme`. O resultado foi comparado com a coluna textual original `Tempo de Normalização`, apresentando aproximadamente **99,52% de concordância dentro de 1 segundo** nos registros comparáveis.
+1. **Validação Temporal:** O tempo de normalização foi calculated pela diferença entre `Horário da Normalizacao` e `Horário do Alarme`. O resultado foi comparado com a coluna textual original `Tempo de Normalização`, apresentando aproximadamente **99,52% de concordância dentro de 1 segundo** nos registros comparáveis.
 
 2. **Seleção dos Registros Temporais:** Dos 150.003 alarmes originais, **112.751 possuíam informações suficientes para calcular o tempo de normalização** e puderam participar das análises temporais.
 
@@ -66,7 +75,10 @@ Antes do teste da hipótese, os dados passaram pelas seguintes etapas de prepara
 
 ---
 
-## 4. Resultados da Persistência dos Alarmes
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados da Persistência dos Alarmes</h2>
+</div>
 
 ### 4.1 Distribuição Geral dos Alarmes por Estação
 
@@ -155,9 +167,10 @@ Também foi analisada a proporção mensal de alarmes `OBS` acima de 24 horas po
 
 Essa visualização permite verificar se as diferenças encontradas são recorrentes ao longo do período analisado ou se estão concentradas em meses específicos.
 
----
-
-## 5. Síntese e Análise Detalhada dos Resultados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
 
 ### 5.1 Evolução das Hipóteses
 

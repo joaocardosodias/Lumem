@@ -2,8 +2,13 @@
 title: "Hipótese 2: Padrões Diários e Intensidade Operacional"
 description: "Análise comparativa dos alarmes entre os dias de maior operação (segunda a sábado) e os domingos."
 ---
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-## 1. Contexto Teórico e Problematização
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto Teórico e Problematização</h2>
+</div>
 
 O desgaste nos sistemas de Portas de Plataforma (PSDs) pode acompanhar a variação de intensidade do quadro de horários da linha. De segunda a sábado, o sistema opera sob regime de maior oferta, com menor intervalo entre trens, maior frequência de ciclos de abertura/fechamento e fluxo contínuo de passageiros.
 
@@ -11,13 +16,19 @@ A premissa a ser investigada é se a maior exigência operacional de segunda a s
 
 ---
 
-## 2. Definindo a Questão Investigada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
 
 * **Dia Operacional (Segunda a Sábado vs. Domingo):** Investiga-se se existe diferença estatisticamente significativa no volume médio diário de alarmes registrados entre a semana operacional (segunda-feira a sábado) e o domingo, buscando verificar a correlação entre a intensidade da operação comercial e a taxa de anomalias no sistema.
 
 ---
 
-## 3. Metodologia de Análise
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
 
 Para testar a validade da hipótese, os dados brutos de alarmes do sistema de Portas de Plataforma (PSDs) passam por um pipeline de tratamento. A abordagem garante que apenas eventos operacionais relevantes sejam computados e que a comparação entre os períodos ocorra de forma estatisticamente justa.
 
@@ -30,7 +41,10 @@ A primeira etapa consiste em purificar a base bruta, descartando registros incom
 
 ---
 
-## 4. Resultados da Distribuição Diária das Anomalias Críticas (> 30s)
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados da Distribuição Diária das Anomalias Críticas (> 30s)</h2>
+</div>
 
 Após o saneamento, 1.152.622 registros possuíam um formato válido de tempo de normalização. Com a aplicação da filtragem de ruídos operacionais, a análise considerou 835.232 alarmes, distribuídas em 844 dias: 725 dias de segunda a sábado e 119 domingos.
 
@@ -43,7 +57,10 @@ Após o saneamento, 1.152.622 registros possuíam um formato válido de tempo de
 
 ---
 
-## 5. Síntese e Análise Detalhada dos Resultados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
 
 ### 5.1 Validação da Hipótese
 
