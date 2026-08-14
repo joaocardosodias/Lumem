@@ -40,6 +40,10 @@ export default defineConfig({
 									label: 'Features Candidatas',
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Features Candidatas' } }],
 								},
+								{
+									label: 'Personas',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Personas' } }],
+								},
 							],
 						},
 						{
