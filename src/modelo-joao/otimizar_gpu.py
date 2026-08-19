@@ -44,9 +44,61 @@ def parse_args():
 def carregar_dados():
     path_treino = "data/treino_pronto_modelagem_v2.csv"
     path_teste = "data/teste_pronto_modelagem_v2.csv"
+    path_mestra = "data/tabela_mestra_bruta.csv"
     
     if not os.path.exists(path_treino) or not os.path.exists(path_teste):
-        raise FileNotFoundError("Datasets pré-processados não encontrados em data/. Execute a etapa 2 antes.")
+        if not os.path.exists(path_mestra):
+            raise FileNotFoundError(f"Nem os datasets prontos nem {path_mestra} foram encontrados. Certifique-se de ter os dados na pasta data/.")
+            
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Gerando datasets de modelagem v2 a partir da tabela mestra...")
+        df = pd.read_csv(path_mestra)
+        df['data_ref'] = pd.to_datetime(df['data_ref'])
+        
+        # Features 2.0
+        df['aceleracao_alarmes_7d'] = df['qtd_alarmes_7d'] - (df['qtd_alarmes_14d'] - df['qtd_alarmes_7d'])
+        df['tempo_medio_por_alarme_7d'] = df['tempo_parada_acumulado_7d'] / (df['qtd_alarmes_7d'] + 1)
+        df['proporcao_alarmes_graves_7d'] = df['qtd_anomalias_30s_14d'] / (df['qtd_alarmes_14d'] + 1)
+        df['faixa_risco_zm01'] = np.where((df['dias_desde_ultima_zm01'] >= 30) & (df['dias_desde_ultima_zm01'] <= 90), 1, 0)
+        
+        data_corte = pd.to_datetime('2026-01-01')
+        df_treino = df[df['data_ref'] < data_corte].copy()
+        df_teste = df[df['data_ref'] >= data_corte].copy()
+        
+        def aplicar_encodings(df_in):
+            df_out = df_in.copy()
+            df_out['plataforma_bin'] = df_out['plataforma'].map({'P1': 0, 'P2': 1}).fillna(0).astype(int)
+            df_out = pd.get_dummies(df_out, columns=['estacao'], prefix='estacao', drop_first=False)
+            return df_out
+
+        df_treino_enc = aplicar_encodings(df_treino)
+        df_teste_enc = aplicar_encodings(df_teste)
+        df_treino_enc, df_teste_enc = df_treino_enc.align(df_teste_enc, join='left', axis=1, fill_value=0)
+        
+        cols_para_escalonar = [
+            'idade_ativo_anos', 'porta',
+            'dias_desde_ultima_zm01', 'dias_desde_ultima_zm02', 'dias_desde_ultima_zm03',
+            'qtd_alarmes_1d', 'qtd_alarmes_7d', 'qtd_alarmes_14d',
+            'aceleracao_alarmes_7d', 'qtd_anomalias_30s_14d',
+            'tempo_parada_acumulado_7d', 'max_tempo_normalizacao_7d',
+            'tempo_medio_por_alarme_7d', 'proporcao_alarmes_graves_7d'
+        ]
+        
+        from sklearn.preprocessing import RobustScaler
+        scaler = RobustScaler().fit(df_treino_enc[cols_para_escalonar])
+        cols_scaled = [f"{c}_scaled" for c in cols_para_escalonar]
+        df_treino_enc[cols_scaled] = scaler.transform(df_treino_enc[cols_para_escalonar])
+        df_teste_enc[cols_scaled] = scaler.transform(df_teste_enc[cols_para_escalonar])
+        
+        cols_estacoes = [c for c in df_treino_enc.columns if c.startswith('estacao_')]
+        features = ['plataforma_bin', 'faixa_risco_zm01'] + cols_estacoes + cols_scaled
+        target_col = 'target_falha_7d'
+        
+        cols_export = ['id_ativo', 'data_ref'] + features + [target_col]
+        df_treino_enc[cols_export].to_csv(path_treino, index=False)
+        df_teste_enc[cols_export].to_csv(path_teste, index=False)
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Datasets v2 gerados com sucesso!")
+        
+        return df_treino_enc[features], df_treino_enc[target_col], df_teste_enc[features], df_teste_enc[target_col], features, df_teste_enc
         
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Carregando datasets de modelagem...")
     df_treino = pd.read_csv(path_treino)
