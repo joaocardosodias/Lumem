@@ -3,6 +3,4 @@
 catboost_info/
 __pycache__/
 *.pyc
-data/*.csv
-data/Alarmes/*.csv
-!data/Preventiva/preventiva_zm03_limpa.csv
+

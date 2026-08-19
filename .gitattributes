@@ -1,1 +1,4 @@
 /data/Alarmes/alarmes_trata_limpos_consolidado.csv filter=lfs diff=lfs merge=lfs -text
+/data/tabela_mestra_encoded.csv filter=lfs diff=lfs merge=lfs -text
+/data/treino_pronto_modelagem.csv filter=lfs diff=lfs merge=lfs -text
+/data/treino_pronto_modelagem_v2.csv filter=lfs diff=lfs merge=lfs -text
