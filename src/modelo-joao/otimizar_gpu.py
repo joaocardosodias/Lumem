@@ -4,7 +4,10 @@ Script de Otimização Massiva de Hiperparâmetros em GPU (CUDA)
 Modelo: XGBoost para Manutenção Preditiva de Portas de Plataforma (PSDs)
 Projeto Linha 4-Amarela
 
-Projetado para execução direta ou via SSH em servidores com GPU NVIDIA.
+Rastreia e exporta 3 Campeões:
+1. Campeão Geral (Melhor F1-Score / Equilíbrio)
+2. Campeão de Precisão (Maior Precisão Operacional)
+3. Campeão de Recall (Maior Cobertura de Falhas)
 """
 
 import argparse
@@ -129,12 +132,8 @@ def main():
     
     X_train, y_train, X_test, y_test, features, df_teste = carregar_dados()
     
-    # Validação Cruzada Temporal (3 Janelas Sequenciais)
     tscv = TimeSeriesSplit(n_splits=3)
     
-    # -------------------------------------------------------------
-    # FUNÇÃO OBJETIVO: MAXIMIZAR PRECISÃO + RECALL NA GPU
-    # -------------------------------------------------------------
     def objective(trial):
         params = {
             'n_estimators': trial.suggest_int('n_estimators', 150, 500, step=25),
@@ -180,12 +179,10 @@ def main():
         trial.set_user_attr('recall', mean_rec)
         trial.set_user_attr('f1_score', mean_f1)
         
-        # Log ao vivo para o terminal SSH
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Trial {trial.number+1:03d}/{args.n_trials} | Precisão: {mean_prec*100:5.2f}% | Recall: {mean_rec*100:5.2f}% | F1: {mean_f1:.4f} | (depth={params['max_depth']}, lr={params['learning_rate']:.4f}, scale_pos={params['scale_pos_weight']:.2f})")
         
         return mean_f1
 
-    # Iniciar Estudo Optuna
     study = optuna.create_study(
         direction='maximize',
         sampler=optuna.samplers.TPESampler(seed=42)
@@ -200,97 +197,102 @@ def main():
     )
     total_time = time.time() - start_time
     
-    print("\n" + "=" * 85)
+    # -------------------------------------------------------------
+    # RASTREAMENTO E EXPORTAÇÃO DOS 3 CAMPEÕES INDIVIDUAIS
+    # -------------------------------------------------------------
+    trials = study.trials
+    
+    best_trial_f1 = max(trials, key=lambda t: t.user_attrs.get('f1_score', 0))
+    best_trial_prec = max(trials, key=lambda t: t.user_attrs.get('precision', 0))
+    best_trial_rec = max(trials, key=lambda t: t.user_attrs.get('recall', 0))
+    
+    campeoes = [
+        ('🏆 CAMPEÃO GERAL (MELHOR F1-SCORE / EQUILÍBRIO)', best_trial_f1, 'f1_equilibrado'),
+        ('🎯 CAMPEÃO DE PRECISÃO (MAIOR PRECISÃO OPERACIONAL)', best_trial_prec, 'alta_precisao'),
+        ('🚨 CAMPEÃO DE RECALL (MAIOR COBERTURA DE FALHAS)', best_trial_rec, 'alto_recall')
+    ]
+    
+    print("\n" + "=" * 95)
     print(f"🏁 OTIMIZAÇÃO CONCLUÍDA EM {total_time/60:.2f} MINUTOS!")
-    print(f"🏆 Melhor F1-Score Médio na Validação: {study.best_value:.4f}")
-    melhor_trial = study.best_trial
-    print(f"   -> Precisão na Validação: {melhor_trial.user_attrs['precision']*100:.2f}%")
-    print(f"   -> Recall na Validação:    {melhor_trial.user_attrs['recall']*100:.2f}%")
-    print("=" * 85)
+    print("=" * 95)
     
-    # -------------------------------------------------------------
-    # TREINAR O MODELO FINAL NO DATASET COMPLETO DE TREINO
-    # -------------------------------------------------------------
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Treinando o modelo campeão com todos os dados de treino na GPU...")
-    best_params = study.best_params.copy()
-    best_params.update({
-        'tree_method': 'hist',
-        'device': args.device,
-        'random_state': 42,
-        'eval_metric': 'logloss'
-    })
-    
-    final_model = XGBClassifier(**best_params)
-    final_model.fit(X_train, y_train)
-    
-    # -------------------------------------------------------------
-    # AVALIAÇÃO FINAL NO TESTE CEGO DE PRODUÇÃO (2026)
-    # -------------------------------------------------------------
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Avaliando performance no conjunto de teste cego (2026)...")
-    probs_test = final_model.predict_proba(X_test)[:, 1]
-    
-    roc_auc = roc_auc_score(y_test, probs_test)
-    pr_auc = average_precision_score(y_test, probs_test)
-    
-    df_teste['prob_falha'] = probs_test
-    df_teste['semana'] = pd.to_datetime(df_teste['data_ref']).dt.isocalendar().week
-    
-    df_sem = df_teste.groupby(['id_ativo', 'semana']).agg(
-        max_prob=('prob_falha', 'max'),
-        houve_falha=('target_falha_7d', 'max')
-    ).reset_index()
-    
-    df_sem['pred'] = (df_sem['max_prob'] >= args.threshold).astype(int)
-    acertos = ((df_sem['pred'] == 1) & (df_sem['houve_falha'] == 1)).sum()
-    alertas_totais = (df_sem['pred'] == 1).sum()
-    falhas_totais = df_sem['houve_falha'].sum()
-    
-    prec = acertos / alertas_totais if alertas_totais > 0 else 0
-    rec = acertos / falhas_totais if falhas_totais > 0 else 0
-    f1 = 2 * prec * rec / (prec + rec + 1e-10)
-    
-    print("\n" + "=" * 85)
-    print("📊 RESULTADOS OPERACIONAIS FINAIS NO TESTE CEGO REAL (2026):")
-    print("=" * 85)
-    print(f"  -> ROC-AUC Score Global:      {roc_auc:.4f}")
-    print(f"  -> PR-AUC (Average Precision): {pr_auc:.4f}")
-    print(f"  -> Precisão Operacional:      {prec*100:.2f}% ({acertos:,} acertos em {alertas_totais:,} chamados)")
-    print(f"  -> Recall Operacional:         {rec*100:.2f}% ({acertos:,} de {falhas_totais:,} falhas evitadas)")
-    print(f"  -> F1-Score Operacional:       {f1:.4f}")
-    print("=" * 85)
-    
-    # -------------------------------------------------------------
-    # SALVAMENTO DOS ARTEFATOS
-    # -------------------------------------------------------------
+    relatorios_campeoes = {}
     os.makedirs("data/modelos_artefatos", exist_ok=True)
-    caminho_modelo = "data/modelos_artefatos/modelo_xgboost_gpu_otimizado.joblib"
-    joblib.dump(final_model, caminho_modelo)
     
-    relatorio = {
-        'timestamp': datetime.now().isoformat(),
-        'device': args.device,
-        'tempo_execucao_segundos': total_time,
-        'n_trials_executados': len(study.trials),
-        'melhores_hiperparametros': study.best_params,
-        'metricas_teste_2026': {
-            'roc_auc': float(roc_auc),
-            'pr_auc': float(pr_auc),
-            'precision_operacional': float(prec),
-            'recall_operacional': float(rec),
-            'f1_score': float(f1),
-            'acertos_falha': int(acertos),
-            'alertas_totais': int(alertas_totais),
-            'falhas_totais': int(falhas_totais)
-        }
-    }
-    
-    caminho_relatorio = "data/modelos_artefatos/relatorio_otimizacao_gpu.json"
-    with open(caminho_relatorio, 'w', encoding='utf-8') as f:
-        json.dump(relatorio, f, indent=2, ensure_ascii=False)
+    for titulo, t, slug in campeoes:
+        print(f"\n{titulo}:")
+        print(f"   -> Validação: Precisão = {t.user_attrs.get('precision', 0)*100:5.2f}% | Recall = {t.user_attrs.get('recall', 0)*100:5.2f}% | F1 = {t.user_attrs.get('f1_score', 0):.4f}")
+        print("   -> Hiperparâmetros Ótimos:")
+        for k, v in t.params.items():
+            print(f"        '{k}': {v},")
+            
+        params_t = t.params.copy()
+        params_t.update({
+            'tree_method': 'hist',
+            'device': args.device,
+            'random_state': 42,
+            'eval_metric': 'logloss'
+        })
         
-    print(f"\n✅ Modelo Campeão salvo em:    {caminho_modelo}")
-    print(f"✅ Relatório JSON salvo em:      {caminho_relatorio}")
-    print("=" * 85)
+        m_t = XGBClassifier(**params_t).fit(X_train, y_train)
+        probs_t = m_t.predict_proba(X_test)[:, 1]
+        
+        df_teste['prob_t'] = probs_t
+        df_teste['semana'] = pd.to_datetime(df_teste['data_ref']).dt.isocalendar().week
+        
+        df_sem = df_teste.groupby(['id_ativo', 'semana']).agg(
+            max_prob=('prob_t', 'max'),
+            houve_falha=('target_falha_7d', 'max')
+        ).reset_index()
+        
+        df_sem['pred'] = (df_sem['max_prob'] >= args.threshold).astype(int)
+        ac = ((df_sem['pred'] == 1) & (df_sem['houve_falha'] == 1)).sum()
+        al = (df_sem['pred'] == 1).sum()
+        tot = df_sem['houve_falha'].sum()
+        
+        prec_t = ac / al if al > 0 else 0
+        rec_t = ac / tot if tot > 0 else 0
+        f1_t = 2 * prec_t * rec_t / (prec_t + rec_t + 1e-10)
+        roc_t = roc_auc_score(y_test, probs_t)
+        pr_t = average_precision_score(y_test, probs_t)
+        
+        print(f"   📊 Performance no Teste Real 2026:")
+        print(f"        -> Precisão Operacional: {prec_t*100:.2f}% ({ac:,} acertos em {al:,} chamados)")
+        print(f"        -> Recall Operacional:    {rec_t*100:.2f}% ({ac:,} de {tot:,} falhas evitadas)")
+        print(f"        -> F1-Score Operacional:  {f1_t:.4f} | ROC-AUC: {roc_t:.4f} | PR-AUC: {pr_t:.4f}")
+        
+        caminho_mod = f"data/modelos_artefatos/modelo_xgboost_{slug}.joblib"
+        joblib.dump(m_t, caminho_mod)
+        print(f"        -> ✅ Modelo persistido em: {caminho_mod}")
+        
+        relatorios_campeoes[slug] = {
+            'perfil': titulo,
+            'hiperparametros': t.params,
+            'validacao': {
+                'precision': float(t.user_attrs.get('precision', 0)),
+                'recall': float(t.user_attrs.get('recall', 0)),
+                'f1_score': float(t.user_attrs.get('f1_score', 0))
+            },
+            'teste_real_2026': {
+                'precision_operacional': float(prec_t),
+                'recall_operacional': float(rec_t),
+                'f1_score': float(f1_t),
+                'roc_auc': float(roc_t),
+                'pr_auc': float(pr_t),
+                'acertos': int(ac),
+                'alertas_totais': int(al),
+                'falhas_totais': int(tot)
+            }
+        }
+        
+    caminho_json = "data/modelos_artefatos/relatorio_tres_campeoes.json"
+    with open(caminho_json, 'w', encoding='utf-8') as f:
+        json.dump(relatorios_campeoes, f, indent=2, ensure_ascii=False)
+        
+    print("\n" + "=" * 95)
+    print(f"✅ Todos os 3 modelos e o relatório consolidado foram salvos com sucesso!")
+    print(f"   -> Relatório JSON Completo: {caminho_json}")
+    print("=" * 95)
 
 if __name__ == "__main__":
     main()
