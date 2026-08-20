@@ -1,0 +1,1 @@
+/data/Alarmes/alarmes_trata_limpos_consolidado.csv filter=lfs diff=lfs merge=lfs -text
