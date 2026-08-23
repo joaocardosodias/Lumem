@@ -1,0 +1,35 @@
+---
+title: "Modelo Preditivo: Falha de Porta em 7 Dias"
+description: "Primeiro modelo preditivo do projeto: Random Forest treinado sobre o histórico de alarmes e manutenção das portas de plataforma, com seleção de features por SHAP e métrica por evento real."
+---
+
+import { Image } from 'astro:assets';
+import graficoShap from '../../../../assets/sprints/sprint2/modelo/grafico-modelo-shap.png';
+import graficoPr from '../../../../assets/sprints/sprint2/modelo/grafico-modelo-pr.png';
+import graficoEvento from '../../../../assets/sprints/sprint2/modelo/grafico-modelo-evento.png';
+import graficoCiclo from '../../../../assets/sprints/sprint2/modelo/grafico-modelo-ciclo.png';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+As portas de plataforma (PSDs) geram um histórico de alarmes e ordens de manutenção. Este modelo preditivo tenta testar se esse histórico consegue antecipar uma falha, não só explicar ela depois que ela aconteceu.
+
+**Pergunta:** considerando o histórico recente de alarmes e manutenção de uma porta, qual a probabilidade de ela quebrar nos próximos 7 dias?
+
+O notebook está em eda/modelo/modelo_preditivo_falhas.ipynb.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Metodologia</h2>
+</div>
+
+1. **Tabelas porta-dia:** as quatro tabelas já tinham sido tratadas na Sprint 1 (Alarmes, ZM01, ZM02, ZM03). Elas foram juntadas por estação + via + número da porta, usando o alarme da porta (`PDM`), a peça que falha de fato e gera ordem. O resultado é uma linha por porta por dia: 480 portas, 10 estações, ~307 mil linhas. Nenhuma feature usa informação do próprio dia ou do futuro.
+2. **Features:** Foram consideradas mais de de 40 features, organizadas em grupos (alarmes por tipo e janela móvel, duração, recência, histórico de manutenção SAP, identificação), mais um grupo criado especificamente para este modelo. Features relacionadas a repetição de corretivas (dias_desde_ultima_corretiva, n_corretivas_historico_total, intervalo_medio_zm01, razao_atraso_zm01), com a ideia de que uma porta atrasada em relação ao próprio ritmo histórico de quebra tem mais risco.
+3. **Separação treino/teste temporal:** diferente do 80/20 aleatório usual, a divisão foi feita por data. O treino foi até 23/04/2025 (232.992 linhas), e o teste a partir de 01/05/2025 (71.184 linhas), com 7 dias de folga entre os dois. Como as features usam médias móveis, dias vizinhos são quase idênticos. Misturar eles podia vazar informação de teste para o treino.
+4. **Modelo:** Random Forest, escolhido por enfrentar bem com combinações de sinais sem precisar criar a combinação manualmente, não exigir normalização, e combinar bem com SHAP para interpretação.
+
