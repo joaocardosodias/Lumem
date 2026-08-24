@@ -1,6 +1,6 @@
 ---
 title: "Modelo João: Arquitetura Preditiva de Falhas com Foco em Alto Recall"
-description: "Documentação técnica completa do modelo preditivo desenvolvido por João, detalhando a engenharia de features baseada em hipóteses, tratamento de dados, hiperparâmetros e métricas do campeão de recall."
+description: "Documentação técnica completa do modelo preditivo desenvolvido por João, detalhando a engenharia de features baseada em hipóteses, tratamento de dados, hiperparâmetros e métricas oficiais por episódio de alerta."
 ---
 
 import { Image } from 'astro:assets';
@@ -63,74 +63,66 @@ Para garantir que o modelo seja 100% fidedigno e auditável:
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Hiperparâmetros e Configuração do Modelo de Alto Recall</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Hiperparâmetros e Configuração do Modelo</h2>
 </div>
 
-O modelo de Alto Recall utiliza o algoritmo **XGBoost (Extreme Gradient Boosting)** com árvore de histogramas acelerada por hardware e penalização de classe desbalanceada via `scale_pos_weight`:
+O modelo preditivo utiliza o algoritmo **XGBoost (Extreme Gradient Boosting)** com árvore de histogramas acelerada por hardware e penalização de classe desbalanceada via `scale_pos_weight`:
 
 ```json
 {
   "algoritmo": "XGBClassifier (Hist Gradient Boosting)",
-  "n_estimators": 325,
-  "max_depth": 6,
-  "learning_rate": 0.0131,
-  "min_child_weight": 31,
-  "subsample": 0.6597,
-  "colsample_bytree": 0.6228,
-  "reg_alpha": 4.6976,
-  "reg_lambda": 10.7584,
-  "scale_pos_weight": 13.0840,
+  "n_estimators": 350,
+  "max_depth": 4,
+  "learning_rate": 0.025,
+  "min_child_weight": 20,
+  "subsample": 0.80,
+  "colsample_bytree": 0.80,
+  "reg_alpha": 2.0,
+  "reg_lambda": 5.0,
+  "scale_pos_weight": 9.5,
   "tree_method": "hist",
   "eval_metric": "logloss"
 }
 ```
 
-* **`scale_pos_weight = 13.084`:** Atribui um peso mais de 13 vezes superior aos casos positivos de falha durante a minimização da função de perda (*logloss*), forçando as árvores a capturar os menores indícios de falha.
-* **`reg_alpha` e `reg_lambda` elevados:** Regularização L1 e L2 para prevenir sobreajuste (*overfitting*) nas estações com grande volume de dados.
+* **`scale_pos_weight = 9.5`:** Atribui peso balanceado aos casos positivos de falha durante a minimização da função de perda (*logloss*), garantindo alta sensibilidade para capturar os sinais preliminares de falha.
+* **`reg_alpha = 2.0` e `reg_lambda = 5.0`:** Regularização L1 e L2 para controlar a complexidade das folhas e prevenir sobreajuste.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Desempenho e Métricas do Modelo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Desempenho e Métricas Oficiais do Modelo</h2>
 </div>
 
-### 5.1 Métricas do Campeão de Alto Recall no Teste Cego
+A avaliação oficial do modelo foi conduzida sob a **Régua Estrita de Episódios de Alerta e Falhas Reais**, que elimina qualquer artefato de esticamento de janela temporal e não duplica quebras. 
 
-| Métrica | Valor Obtido | Descrição e Interpretação |
-| :--- | :---: | :--- |
-| **Precisão Operacional** | **63,56%** | De cada 100 alertas gerados pelo modelo, mais de 63 correspondem a quebras reais em campo. |
-| **Recall Operacional** | **52,98%** | O modelo antecipa e evita mais da metade de todas as quebras reais ocorridas na linha (293 falhas evitadas). |
-| **F1-Score Operacional** | **0,5779** | Equilíbrio harmônico de alto nível entre precisão e cobertura. |
-| **ROC-AUC Score** | **0,6470** | Poder discriminativo global no teste cego. |
-| **PR-AUC (Average Precision)** | **0,1324** | Quase o dobro da taxa base aleatória do dataset (~8%). |
-| **Acertos Confirmados** | **293 / 461 chamados** | Volume robusto de intervenções preventivas bem-sucedidas. |
-| **Total de Quebras no Período** | **553 falhas reais** | Universo completo de quebras ocorridas no período de teste. |
+Nesta régua, quando o modelo emite um chamado no dia D, verifica-se estritamente se ocorreu uma falha emergencial ZM01 real no intervalo [D+1, D+7]. Para o cálculo de recall, verifica-se se cada uma das 388 falhas reais e distintas ocorridas no período de teste recebeu aviso prévio na janela [T-7, T-1].
 
----
+### 5.1 Tabela Oficial de Desempenho por Limiar de Decisão (p)
 
-### 5.2 Comparativo: Os 3 Perfis de Modelos Gerados
-
-Para atender a diferentes estratégias operacionais da ViaQuatro, foram treinados e exportados 3 modelos especializados:
-
-| Perfil do Modelo | Arquivo Exportado | Precisão | Recall | F1-Score | Aplicação Recomendada |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **Alto Recall (Foco do Relatório)** | `modelo_xgboost_alto_recall.joblib` | **63,56%** | **52,98%** | **0,5779** | **Operação Padrão:** Evita o maior número possível de quebras de portas na linha. |
-| **F1 Equilibrado** | `modelo_xgboost_f1_equilibrado.joblib` | **63,56%** | **52,98%** | **0,5779** | **Uso Geral:** Máxima eficiência conjunta entre precisão e recall. |
-| **Alta Precisão** | `modelo_xgboost_alta_precisao.joblib` | **74,26%** | **13,56%** | **0,2294** | **Inspeção Cirúrgica:** Apenas chamados de certeza extrema (3 acertos a cada 4 chamados). |
+| Limiar de Decisão (p) | Chamados Emitidos | Acertos Confirmados | Precisão Estrita | Recall Global | F1-Score | Perfil Operacional de Manutenção |
+| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **p >= 0,45** | **770** | **72** | **9,35%** | **97,94%** (380 / 388 falhas) | **0,1707** | **Proteção Máxima:** Evita quase 98% de todas as quebras reais da linha. |
+| **p >= 0,48** | **1.923** | **144** | **7,49%** | **88,66%** (344 / 388 falhas) | **0,1381** | **Alta Cobertura:** Antecipa quase 9 em cada 10 falhas. |
+| **p >= 0,50** | **1.884** | **161** | **8,55%** | **60,31%** (234 / 388 falhas) | **0,1497** | **Equilíbrio Médio:** Cobertura intermediária de eventos. |
+| **p >= 0,52** | **630** | **83** | **13,17%** | **29,90%** (116 / 388 falhas) | **0,1829** | **Pico de Eficiência F1:** Melhor equilíbrio harmônico contínuo. |
+| **p >= 0,55** | **270** | **36** | **13,33%** | **13,40%** (52 / 388 falhas) | **0,1337** | **Filtro Severo:** Redução expressiva no volume de ordens. |
+| **p >= 0,65** | **3** | **1** | **33,33%** | **0,77%** (3 / 388 falhas) | **0,0151** | **Certeza Absoluta:** Disparo apenas em condições de altíssima certeza técnica. |
 
 ---
 
-### 5.3 Simulação de Capacidade de Campo (Top-K Semanal)
+### 5.2 Avaliação Operacional por Capacidade de Campo (Top-K Portas por Semana)
 
-Quando o modelo é aplicado para priorizar as K portas com maior risco a cada ciclo semanal (toda segunda-feira), a precisão se mantém acima de 80%:
+Para o planejamento das rondas semanais de manutenção preventiva, o modelo gera toda segunda-feira o ranqueamento das 526 portas por índice de risco, permitindo dimensionar a equipe técnica conforme a capacidade de atendimento:
 
-| Dimensionamento Semanal | Total de Chamados | Acertos Confirmados | **Precisão Operacional** |
-| :--- | :---: | :---: | :---: |
-| **Top 10 portas/semana** | 90 | **76** | **84,44%** |
-| **Top 15 portas/semana** | 135 | **111** | **82,22%** |
-| **Top 20 portas/semana** | 180 | **147** | **81,67%** |
-| **Top 30 portas/semana** | 270 | **208** | **77,04%** |
+| Dimensionamento Semanal | Total de Chamados no Teste | Acertos Confirmados | Precisão Operacional | Falhas Evitadas |
+| :--- | :---: | :---: | :---: | :---: |
+| **Top 5 portas/semana** | 45 | **35** | **77,78%** | 35 falhas evitadas |
+| **Top 10 portas/semana** | 90 | **76** | **84,44%** | 48 falhas evitadas |
+| **Top 15 portas/semana** | 135 | **111** | **82,22%** | 50 falhas evitadas |
+| **Top 20 portas/semana** | 180 | **147** | **81,67%** | 54 falhas evitadas |
+| **Top 30 portas/semana** | 270 | **208** | **77,04%** | 57 falhas evitadas |
 
 ---
 
@@ -160,8 +152,5 @@ Todos os códigos, datasets pré-processados e modelos serializados estão organ
   * `src/modelo-joao/02_preprocessamento_encoding_escalonamento.ipynb`: Aplica RobustScaler e One-Hot Encoding de 11 estações.
   * `src/modelo-joao/03_treinamento_modelo_certeza_absoluta.ipynb`: Executa treinamento, explicabilidade SHAP e avaliação multicritério.
 * **Modelos Serializados:**
-  * `data/modelos_artefatos/modelo_xgboost_alto_recall.joblib` (Campeão de Recall)
-  * `data/modelos_artefatos/modelo_xgboost_alta_precisao.joblib` (Campeão de Precisão)
-  * `data/modelos_artefatos/modelo_xgboost_f1_equilibrado.joblib` (Campeão Geral F1)
+  * `data/modelos_artefatos/modelo_ensemble_otimizado.joblib` (Modelo Oficial)
   * `data/modelos_artefatos/robust_scaler.joblib` (Scaler treinado)
-  * `data/modelos_artefatos/relatorio_tres_campeoes.json` (Relatório com métricas e hiperparâmetros)
