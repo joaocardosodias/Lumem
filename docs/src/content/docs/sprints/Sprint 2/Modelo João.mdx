@@ -112,20 +112,6 @@ Nesta régua, quando o modelo emite um chamado no dia D, verifica-se estritament
 
 ---
 
-### 5.2 Avaliação Operacional por Capacidade de Campo (Top-K Portas por Semana)
-
-Para o planejamento das rondas semanais de manutenção preventiva, o modelo gera toda segunda-feira o ranqueamento das 526 portas por índice de risco, permitindo dimensionar a equipe técnica conforme a capacidade de atendimento:
-
-| Dimensionamento Semanal | Total de Chamados no Teste | Acertos Confirmados | Precisão Operacional | Falhas Evitadas |
-| :--- | :---: | :---: | :---: | :---: |
-| **Top 5 portas/semana** | 45 | **35** | **77,78%** | 35 falhas evitadas |
-| **Top 10 portas/semana** | 90 | **76** | **84,44%** | 48 falhas evitadas |
-| **Top 15 portas/semana** | 135 | **111** | **82,22%** | 50 falhas evitadas |
-| **Top 20 portas/semana** | 180 | **147** | **81,67%** | 54 falhas evitadas |
-| **Top 30 portas/semana** | 270 | **208** | **77,04%** | 57 falhas evitadas |
-
----
-
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Explicabilidade do Modelo (SHAP Values)</h2>
@@ -137,20 +123,3 @@ A análise de explicabilidade via SHAP (*SHapley Additive exPlanations*) confirm
 2. **`qtd_anomalias_30s_14d` e `qtd_anomalias_15s_7d`:** O acúmulo de retenções de segurança prolongadas é o indicador de maior peso para o disparo do alarme prévio.
 3. **`qtd_rce_7d` e `qtd_fo_7d`:** Reaberturas repetidas e picos de força no motor atuador diferenciam portas em falha iminente de portas em ciclagem normal.
 4. **`idade_ativo_anos` e Estações Pioneiras:** As estações inauguradas em 2010 (Faria Lima, Pinheiros, Butantã e Paulista) possuem naturalmente maior suscetibilidade por fadiga acumulada em 16 anos de operação contínua.
-
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Artefatos Exportados e Reprodutibilidade</h2>
-</div>
-
-Todos os códigos, datasets pré-processados e modelos serializados estão organizados no repositório:
-
-* **Notebooks:**
-  * `src/modelo-joao/01_construcao_tabela_mestra.ipynb`: Constrói a tabela mestra com 742k alarmes e ordens SAP.
-  * `src/modelo-joao/02_preprocessamento_encoding_escalonamento.ipynb`: Aplica RobustScaler e One-Hot Encoding de 11 estações.
-  * `src/modelo-joao/03_treinamento_modelo_certeza_absoluta.ipynb`: Executa treinamento, explicabilidade SHAP e avaliação multicritério.
-* **Modelos Serializados:**
-  * `data/modelos_artefatos/modelo_ensemble_otimizado.joblib` (Modelo Oficial)
-  * `data/modelos_artefatos/robust_scaler.joblib` (Scaler treinado)
