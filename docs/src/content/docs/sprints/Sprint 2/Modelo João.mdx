@@ -118,9 +118,9 @@ Nesta régua, quando o modelo emite um chamado no dia D, verifica-se estritament
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Explicabilidade do Modelo (SHAP Values)</h2>
 </div>
 
-<div style="margin: 2rem 0; text-align: center;">
-  <Image src={GraficoShap} alt="Importância das Features no Modelo Preditivo (SHAP Values)" format="png" style="width: 100%; max-width: 850px; height: auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
-  <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">Figura: Gráfico de impacto e distribuição dos SHAP Values para as principais variáveis do modelo.</p>
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 2.5rem 0;">
+  <Image src={GraficoShap} alt="Importância das Features no Modelo Preditivo (SHAP Values)" format="png" width={800} style="display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+  <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.75rem; text-align: center;">Figura: Gráfico de impacto e distribuição dos SHAP Values para as principais variáveis do modelo.</p>
 </div>
 
 A análise de explicabilidade via SHAP (*SHapley Additive exPlanations*) confirma que o modelo baseia suas decisões em mecanismos físicos reais de desgaste mecânico:
