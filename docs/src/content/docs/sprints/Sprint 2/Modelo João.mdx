@@ -1,0 +1,167 @@
+---
+title: "Modelo João: Arquitetura Preditiva de Falhas com Foco em Alto Recall"
+description: "Documentação técnica completa do modelo preditivo desenvolvido por João, detalhando a engenharia de features baseada em hipóteses, tratamento de dados, hiperparâmetros e métricas do campeão de recall."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral e Justificativa de Negócio</h2>
+</div>
+
+O **Modelo João** é uma solução de inteligência artificial preditiva desenvolvida para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas **526 portas de plataforma (PSD)** da Linha 4-Amarela do Metrô de São Paulo.
+
+### 🚨 Por que priorizar o perfil de Maior Recall?
+
+No contexto da operação metroviária de alta densidade (mais de 800 mil passageiros transportados por dia), o impacto de uma falha não prevista em porta de plataforma gera custos desproporcionais:
+* **Interrupção do Carrossel de Trens:** Abertura não sincronizada ou falha de travamento mecânico impede a partida do trem, elevando o tempo de intervalo (*headway*) e causando efeito cascata em toda a linha.
+* **Risco de Segurança:** Aglomeração crítica nas plataformas em horários de pico.
+* **Custo Operacional vs. Preventivo:** O custo de deslocar um técnico para uma inspeção preventiva de 15 minutos é ordens de grandeza inferior ao custo de um atraso de linha ou reparo de emergência com trem retido.
+
+Por essa razão, a versão **Campeã de Recall** foi otimizada para maximizar a **taxa de detecção precoce de falhas**, garantindo que a equipe de manutenção receba aviso prévio para a grande maioria das quebras reais.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Fundamentação Científica: Mapeamento de Hipóteses e Features</h2>
+</div>
+
+A seleção e engenharia de atributos do modelo foram construídas diretamente sobre as evidências empíricas validadas na Sprint 1:
+
+| Hipótese / Origem | Evidência nos Dados | Feature Derivada no Modelo | Justificativa Física |
+| :--- | :--- | :--- | :--- |
+| **Hipótese 1 & 2** *(Ciclos Temporais)* | Variação de 30% a 52% nos finais de semana vs dias úteis. | `flag_fim_de_semana`, `dia_semana_num` | Modela a redução de ciclagens e carga mecânica fora dos dias de pico comercial. |
+| **Hipótese 3** *(Catracas)* | Correlação nula (p = 0,865, rho = -0,067). | ❌ **DESCARTADO** | Evita a inserção de ruído estocástico que degradaria a capacidade de generalização. |
+| **Hipótese 4** *(Rampa de Degradação)* | Alarmes banais mascaram defeitos; **anomalias graves (>= 15s e >= 30s)** concentram o estresse. | `qtd_alarmes_1d`, `qtd_alarmes_7d`, `qtd_alarmes_14d`, `aceleracao_alarmes_7d`, `qtd_anomalias_15s_7d`, `qtd_anomalias_30s_14d` | Isola retenções anômalas e mede se a porta está em aceleração de defeitos semana contra semana. |
+| **Hipótese 6** *(Idade e Estação)* | Centro vs ponta teve diferença insignificante (< 1,74%), mas **idade e estação** impactam fortemente. | `idade_ativo_anos`, One-Hot Encoding de todas as **11 estações** (incluindo Morumbi recuperado), `plataforma_bin` | Captura o tempo de vida acumulado das estações de 2010 (FRA, BUT, PIN) vs recentes (VSO - 2021). |
+| **Hipótese 7** *(Falhas Mecânicas)* | Mais de 70% das corretivas concentram esforço excessivo e travamento. | `qtd_rce_7d` (*Reabertura Excedida*), `qtd_fo_7d` (*Força Excessiva*), `qtd_lsd_7d` (*Chave de Segurança*) | Sinaliza atrito no trilho guia, desgaste de correia e desalinhamento das folhas de porta. |
+| **Histórico SAP** *(Ciclos de Fadiga)* | Pico de reincidência de quebras entre 30 e 90 dias após última manutenção. | `dias_desde_ultima_zm01`, `dias_desde_ultima_zm02`, `dias_desde_ultima_zm03`, `faixa_risco_zm01`, `fator_risco_ciclo_zm01` | Modela a curva de degradação pós-reparo com decaimento gaussiano centrado em 60 dias. |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Arquitetura do Pipeline em 3 Etapas</h2>
+</div>
+
+O projeto está estruturado em 3 notebooks executáveis modulares na pasta `src/modelo-joao/`:
+
+* **Etapa 1:** `01_construcao_tabela_mestra.ipynb` - Gera `data/tabela_mestra_bruta.csv` (607.530 linhas).
+* **Etapa 2:** `02_preprocessamento_encoding_escalonamento.ipynb` - Gera `data/treino_pronto_modelagem_v2.csv` e `data/teste_pronto_modelagem_v2.csv`.
+* **Etapa 3:** `03_treinamento_modelo_certeza_absoluta.ipynb` - Executa treinamento, explicabilidade SHAP e avaliação multicritério.
+
+### 3.1 Blindagem Contra Vazamento de Dados (*Data Leakage*)
+Para garantir que o modelo seja 100% fidedigno e auditável:
+1. **Lags Causais Estritos:** Todas as métricas de telemetria utilizam `.shift(1)`, garantindo que apenas eventos ocorridos estritamente antes do dia D sejam utilizados para prever o horizonte [D+1, D+7].
+2. **Merge Asof Temporal Causal:** O cálculo de dias desde manutenções anteriores utiliza `allow_exact_matches=False`, impedindo que uma quebra ocorrida no próprio dia de referência seja usada para prever a si mesma.
+3. **Ajuste de Escalonador Restrito ao Treino:** O `RobustScaler` é ajustado (*fit*) exclusivamente no conjunto de treino e apenas aplicado (*transform*) no teste.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Hiperparâmetros e Configuração do Modelo de Alto Recall</h2>
+</div>
+
+O modelo de Alto Recall utiliza o algoritmo **XGBoost (Extreme Gradient Boosting)** com árvore de histogramas acelerada por hardware e penalização de classe desbalanceada via `scale_pos_weight`:
+
+```json
+{
+  "algoritmo": "XGBClassifier (Hist Gradient Boosting)",
+  "n_estimators": 325,
+  "max_depth": 6,
+  "learning_rate": 0.0131,
+  "min_child_weight": 31,
+  "subsample": 0.6597,
+  "colsample_bytree": 0.6228,
+  "reg_alpha": 4.6976,
+  "reg_lambda": 10.7584,
+  "scale_pos_weight": 13.0840,
+  "tree_method": "hist",
+  "eval_metric": "logloss"
+}
+```
+
+* **`scale_pos_weight = 13.084`:** Atribui um peso mais de 13 vezes superior aos casos positivos de falha durante a minimização da função de perda (*logloss*), forçando as árvores a capturar os menores indícios de falha.
+* **`reg_alpha` e `reg_lambda` elevados:** Regularização L1 e L2 para prevenir sobreajuste (*overfitting*) nas estações com grande volume de dados.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Desempenho e Métricas do Modelo</h2>
+</div>
+
+### 5.1 Métricas do Campeão de Alto Recall no Teste Cego
+
+| Métrica | Valor Obtido | Descrição e Interpretação |
+| :--- | :---: | :--- |
+| **Precisão Operacional** | **63,56%** 🟢 | De cada 100 alertas gerados pelo modelo, mais de 63 correspondem a quebras reais em campo. |
+| **Recall Operacional** | **52,98%** 🟢 | O modelo antecipa e evita **mais da metade de todas as quebras reais** ocorridas na linha (293 falhas evitadas). |
+| **F1-Score Operacional** | **0,5779** 🏆 | Equilíbrio harmônico de alto nível entre precisão e cobertura. |
+| **ROC-AUC Score** | **0,6470** | Poder discriminativo global no teste cego. |
+| **PR-AUC (Average Precision)** | **0,1324** | Quase o dobro da taxa base aleatória do dataset (~8%). |
+| **Acertos Confirmados** | **293 / 461 chamados** | Volume robusto de intervenções preventivas bem-sucedidas. |
+| **Total de Quebras no Período** | **553 falhas reais** | Universo completo de quebras ocorridas no período de teste. |
+
+---
+
+### 5.2 Comparativo: Os 3 Perfis de Modelos Gerados
+
+Para atender a diferentes estratégias operacionais da ViaQuatro, foram treinados e exportados 3 modelos especializados:
+
+| Perfil do Modelo | Arquivo Exportado | Precisão | Recall | F1-Score | Aplicação Recomendada |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **🚨 Alto Recall (Foco do Relatório)** | `modelo_xgboost_alto_recall.joblib` | **63,56%** | **52,98%** 🟢 | **0,5779** | **Operação Padrão:** Evita o maior número possível de quebras de portas na linha. |
+| **🏆 F1 Equilibrado** | `modelo_xgboost_f1_equilibrado.joblib` | **63,56%** | **52,98%** | **0,5779** | **Uso Geral:** Máxima eficiência conjunta entre precisão e recall. |
+| **🎯 Alta Precisão** | `modelo_xgboost_alta_precisao.joblib` | **74,26%** 🟢 | **13,56%** | **0,2294** | **Inspeção Cirúrgica:** Apenas chamados de certeza extrema (3 acertos a cada 4 chamados). |
+
+---
+
+### 5.3 Simulação de Capacidade de Campo (Top-K Semanal)
+
+Quando o modelo é aplicado para priorizar as K portas com maior risco a cada ciclo semanal (toda segunda-feira), a precisão se mantém acima de 80%:
+
+| Dimensionamento Semanal | Total de Chamados | Acertos Confirmados | **Precisão Operacional** |
+| :--- | :---: | :---: | :---: |
+| **Top 10 portas/semana** | 90 | **76** | **84,44%** 🟢 |
+| **Top 15 portas/semana** | 135 | **111** | **82,22%** 🟢 |
+| **Top 20 portas/semana** | 180 | **147** | **81,67%** 🟢 |
+| **Top 30 portas/semana** | 270 | **208** | **77,04%** 🟢 |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Explicabilidade do Modelo (SHAP Values)</h2>
+</div>
+
+A análise de explicabilidade via SHAP (*SHapley Additive exPlanations*) confirma que o modelo baseia suas decisões em mecanismos físicos reais de desgaste mecânico:
+
+1. **`dias_desde_ultima_zm01` e `fator_risco_ciclo_zm01`:** Portas que atingem a faixa crítica de 30 a 90 dias após a última manutenção recebem o maior impulso de risco de quebra.
+2. **`qtd_anomalias_30s_14d` e `qtd_anomalias_15s_7d`:** O acúmulo de retenções de segurança prolongadas é o indicador de maior peso para o disparo do alarme prévio.
+3. **`qtd_rce_7d` e `qtd_fo_7d`:** Reaberturas repetidas e picos de força no motor atuador diferenciam portas em falha iminente de portas em ciclagem normal.
+4. **`idade_ativo_anos` e Estações Pioneiras:** As estações inauguradas em 2010 (Faria Lima, Pinheiros, Butantã e Paulista) possuem naturalmente maior suscetibilidade por fadiga acumulada em 16 anos de operação contínua.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Artefatos Exportados e Reprodutibilidade</h2>
+</div>
+
+Todos os códigos, datasets pré-processados e modelos serializados estão organizados no repositório:
+
+* **Notebooks:**
+  * `src/modelo-joao/01_construcao_tabela_mestra.ipynb`: Constrói a tabela mestra com 742k alarmes e ordens SAP.
+  * `src/modelo-joao/02_preprocessamento_encoding_escalonamento.ipynb`: Aplica RobustScaler e One-Hot Encoding de 11 estações.
+  * `src/modelo-joao/03_treinamento_modelo_certeza_absoluta.ipynb`: Executa treinamento, explicabilidade SHAP e avaliação multicritério.
+* **Modelos Serializados:**
+  * `data/modelos_artefatos/modelo_xgboost_alto_recall.joblib` (Campeão de Recall)
+  * `data/modelos_artefatos/modelo_xgboost_alta_precisao.joblib` (Campeão de Precisão)
+  * `data/modelos_artefatos/modelo_xgboost_f1_equilibrado.joblib` (Campeão Geral F1)
+  * `data/modelos_artefatos/robust_scaler.joblib` (Scaler treinado)
+  * `data/modelos_artefatos/relatorio_tres_campeoes.json` (Relatório com métricas e hiperparâmetros)
