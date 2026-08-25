@@ -1,0 +1,52 @@
+{
+  "modelo": "raso_regularizado",
+  "arquivo_modelo": "modelo_catboost.cbm",
+  "target": "target_falha_7d",
+  "limiar": 0.31738017595573687,
+  "meta_recall_validacao": 0.8,
+  "melhor_iteracao": 308,
+  "features_categoricas": [
+    "id_psd",
+    "estacao_padrao",
+    "plataforma_padrao",
+    "dia_semana"
+  ],
+  "features_numericas": [
+    "domingo_flag",
+    "qtd_anomalias_criticas_30s",
+    "qtd_criticas_pico_manha",
+    "qtd_criticas_pico_tarde",
+    "duracao_media_alarmes_seg",
+    "duracao_maxima_alarme_seg",
+    "qtd_portas_com_alarme",
+    "qtd_anomalias_criticas_30s_7d",
+    "qtd_criticas_pico_7d",
+    "dias_com_anomalia_critica_7d",
+    "duracao_maxima_alarme_7d",
+    "proporcao_criticas_pico_7d",
+    "dias_desde_ultima_corretiva",
+    "dias_desde_ultima_preventiva",
+    "qtd_corretivas_emergenciais_30d",
+    "qtd_corretivas_programadas_30d",
+    "qtd_preventivas_nao_canceladas_30d"
+  ],
+  "metricas_validacao": {
+    "PR_AUC": 0.604606010423045,
+    "ROC_AUC": 0.5978935407744078,
+    "recall": 0.9162951956414066,
+    "precision": 0.5638524839987809,
+    "F1": 0.6981132075471698,
+    "proporcao_alertas": 0.8473657024793388
+  },
+  "metricas_teste": {
+    "PR_AUC": 0.5873714992166313,
+    "ROC_AUC": 0.5910783263258023,
+    "recall": 0.9192641798671436,
+    "precision": 0.5463103552991193,
+    "F1": 0.6853333333333333,
+    "proporcao_alertas": 0.8702431289640592,
+    "falhas_detectadas": 1799,
+    "falhas_nao_detectadas": 158,
+    "alertas_falsos": 1494
+  }
+}
