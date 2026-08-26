@@ -1,0 +1,279 @@
+---
+title: "Modelo 1: Previsão de Falha nos próximos 7 dias"
+description: "Documentação do modelo preditivo eda/models/model1.ipynb."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Escolha do Modelo</h2>
+</div>
+
+Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a porta irá quebrar dentro dos próximos 7 dias.
+
+A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas não finalizado e iniciamos o tratamento de dados e levantamento de novas features.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Os Dados: Quatro Fontes, Quatro Ângulos</h2>
+</div>
+
+- **Alarmes** (742.506 registros) — o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
+- **Corretiva Emergencial — ZM01** (10.543 linhas) e **Corretiva Programada — ZM02** (1.163 linhas) — as ordens de manutenção efetivamente abertas depois de uma falha, com data, estação, sintoma, causa e ação tomada. É a fonte da variável que se quer prever.
+- **Preventiva — ZM03** (569 linhas) — manutenção agendada (não motivada por falha), como troca de ar-condicionado do rack ou inspeção de rotina.
+
+A primeira decisão do notebook é juntar `ZM01` e `ZM02` num único `zm01` (11.706 linhas). As duas são "manutenção corretiva" — a diferença entre elas é só a urgência com que a ordem foi tratada, não o tipo de evento. Isso importa porque o alvo do modelo tem uma classe extremamente rara (estação que **não** falha na semana seguinte a uma manutenção), e cada linha extra de corretiva ajuda a enxergar melhor os poucos casos "sem falha" que existem no meio de milhares de "com falha".
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Pré-Processamento</h2>
+</div>
+
+Antes de qualquer feature, os dados precisam estar num formato que permita comparar eventos no tempo e cruzar estações entre bases diferentes.
+
+**Datetime.** `T` (horário de início da avaria) é a coluna mais importante do notebook inteiro — praticamente toda feature depois disso é "o que aconteceu antes de `T`, na mesma estação". Errar esse parsing propaga erro para tudo o mais.
+
+**Filtrando ruído: obstrução curta.** Nem todo alarme `OBS` (obstrução) representa um problema real na porta. Uma mochila que fica presa por um segundo e é liberada não é sinal de degradação mecânica — é o comportamento normal e esperado de uma porta de plataforma numa estação cheia. Alarmes `OBS` com duração menor que 30 segundos são descartados: eles adicionariam volume sem adicionar sinal, diluindo o efeito dos alarmes que de fato indicam algo errado com o equipamento.
+
+**Ordenação.** Por fim, cada base é ordenada por estação e por tempo. Toda a lógica de "olhar para trás no tempo" que vem a seguir (histórico de manutenções, contagem de alarmes recentes) depende de percorrer os eventos em ordem cronológica dentro de cada estação — sem essa ordenação, comparar um evento com o anterior simplesmente não faz sentido.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Engenharia de Features: Só o Passado Conta</h2>
+</div>
+
+Toda feature construída no notebook segue a mesma regra: **só pode usar informação que já existia no momento `T`**. Isso parece óbvio, mas é fácil quebrar por acidente — por exemplo, calcular a duração média de todas as manutenções de uma estação (incluindo a atual) contaminaria a feature com informação do próprio evento que se está tentando prever. Por isso praticamente todo cálculo usa `shift(1)`, `cumcount()` ou uma busca binária (`searchsorted`) limitada ao passado: a feature representa o que um mantenedor saberia, olhando o histórico da estação, exatamente antes daquele momento — nunca depois.
+
+As primeiras features vêm de uma intuição simples de manutenção preditiva: uma porta prestes a falhar normalmente já vem "avisando" — mais alarmes, manutenções mais recorrentes, reparos mais demorados.
+
+### 4.1 Identidade e exposição da estação
+
+`estacao` é extraída do campo `local_de_instalacao` e vira a chave usada em quase todo o resto do notebook para juntar informação entre bases diferentes. `numero_alarmes` é a feature mais simples possível: o total histórico de alarmes daquela estação, um proxy bruto de "quanto essa estação é usada e monitorada" — estações maiores/mais movimentadas tendem a acumular mais alarmes só pelo volume de operação, independente de estarem degradando ou não.
+
+### 4.2 Alarmes antes da manutenção
+
+`alarmes_antes_manu` conta, por busca binária num vetor de horários ordenado (bem mais rápido que filtrar o dataframe inteiro a cada linha), quantos alarmes já haviam acontecido em todo o sistema até o fim daquela avaria. É uma feature mais bruta que as janelas de tempo construídas a seguir — mede volume acumulado, não recência.
+
+### 4.3 Dias desde a última manutenção
+
+`shift(1)` dentro de cada grupo de estação pega o fim da manutenção anterior, e a diferença para `T` vira `dias_desde_ultima_manutencao`. A intuição é dupla — um intervalo curto pode indicar uma porta que "não fica boa" (mesmo problema voltando rápido), e um intervalo longo pode indicar acúmulo de desgaste natural. Estações na primeira manutenção do seu histórico recebem `-1` como sentinela, para não confundir "nunca teve manutenção antes" com "teve manutenção há zero dias".
+
+### 4.4 Janelas de alarme: 24h, 7 dias e tendência
+
+A feature mais diretamente ligada à ideia de "aviso antes da falha": quantos alarmes a estação teve nas últimas 24 horas e nos últimos 7 dias, sempre antes de `T`. A função de cálculo ordena os horários de alarme de cada estação uma vez e usa buscas binárias por evento de manutenção, em vez de varrer a base de alarmes inteira a cada linha — necessário para manter viável um cálculo repetido sobre centenas de milhares de registros.
+
+`tendencia_alarmes` combina as duas janelas numa única razão: alarmes das últimas 24h divididos pela média diária dos últimos 7 dias. Um valor bem acima de 1 significa "hoje está mais barulhento que o normal recente daquela estação" — uma tentativa de capturar não só o volume de alarme, mas se ele está *acelerando*.
+
+### 4.5 Reincidência e sazonalidade
+
+Depois de uma primeira rodada do modelo, olhar a importância de features e o mapa de correlação (seção 9) revelou que faltava capturar reincidência de forma mais direta:
+
+- `numero_manutencoes_anteriores`: quantas manutenções a estação já teve antes desta.
+- `duracao_media_manutencoes_anteriores`: duração média (em horas) dos reparos anteriores, sempre usando `shift(1)` para não vazar a duração da própria ocorrência atual.
+- `dia_semana` e `mes`: sazonalidade semanal e anual, extraídos de `T`.
+
+### 4.6 Manutenção preventiva (ZM03)
+
+A preventiva não entra na timeline que define o alvo — ela é manutenção agendada, não uma falha, e misturá-la ali contaminaria o rótulo (uma visita agendada sem problema nenhum passaria a contar como "falha chegando"). Em vez disso, ela entra como **feature**, do mesmo jeito que os alarmes:
+
+- `dias_desde_ultima_preventiva`: há quanto tempo a estação teve a última preventiva antes de `T`.
+- `preventivas_agendadas_prox_7d`: quantas preventivas já estão agendadas para os próximos 7 dias a partir de `T` — informação legítima de se ter no momento da previsão, já que manutenção preventiva é agendada com antecedência. Eventos cancelados são descartados por não terem ocorrido de fato (559 de 569 preventivas entram válidas).
+
+### 4.7 Codificação categórica
+
+`estacao`, `sintoma`, `objeto` e `defeito` são texto e precisam virar número. A escolha é `LabelEncoder` (cada categoria vira um inteiro) em vez de one-hot encoding: para um modelo baseado em árvores como o XGBoost isso não é um problema — a árvore não assume nenhuma ordem ou distância entre os códigos, só aprende a dividir por eles — e evita explodir o número de colunas com variáveis de alta cardinalidade como `defeito` e `sintoma`, que têm dezenas de categorias distintas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Definindo o Alvo e Separando Treino/Teste</h2>
+</div>
+
+### Como nasce `falha_proximos_7d`
+
+Para cada evento de manutenção, olha-se qual é o *próximo* evento da mesma estação e quantos dias faltam até lá. Se for 7 dias ou menos, o alvo é `1`; senão, `0`. A última manutenção de cada estação não tem um "próximo evento" para comparar, então essas linhas são descartadas — não há como rotulá-las.
+
+O resultado dessa definição dá o tom para o resto do notebook: **11.504 exemplos de classe `1` contra apenas 190 de classe `0`** (1,6% da base). Isso acontece porque, no histórico completo, a maioria das manutenções de uma estação é seguida por outra dentro de uma semana — falhas tendem a se agrupar no tempo. A classe rara — estação que "ficou bem" por 7 dias — é a mais interessante do ponto de vista prático, mas também a mais difícil de aprender, por ter poucos exemplos.
+
+### Por que separar por tempo, e não aleatoriamente
+
+O corte de treino/teste é feito no percentil 80 da data `T`, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes) — 9.355 exemplos de treino contra 2.339 de teste.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo: XGBoost sob Desbalanceamento Extremo</h2>
+</div>
+
+**Por que XGBoost.** Um modelo baseado em árvores de decisão combina bem com o tipo de feature construído: contagens, razões e categorias codificadas como inteiro, sem exigir normalização, lidando naturalmente com relações não-lineares. Também tem suporte nativo a `scale_pos_weight`, o que importa muito aqui.
+
+**Por que isso importa: o desbalanceamento.** 98,85% dos exemplos de teste são da classe `1`. Um modelo "preguiçoso" que sempre prevê `1` já acerta quase 99% das vezes — essa é a barra de comparação, e é isso que torna a acurácia comum uma métrica enganosa neste problema. Por isso:
+
+- **`scoring="balanced_accuracy"`** na busca de hiperparâmetros: essa métrica tira a média do recall das duas classes sem pesar pelo tamanho de cada uma, então um modelo que só acerta a classe majoritária pontua mal, mesmo tendo "acurácia" alta.
+- **`scale_pos_weight` incluído na grade de busca**, com o valor `1` (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela — para deixar a própria busca decidir, com dados, se vale a pena forçar mais atenção à classe rara ou se isso atrapalha mais do que ajuda.
+- **`RandomizedSearchCV`** (25 combinações amostradas) em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
+
+O resultado é onde a dificuldade do problema aparece de forma concreta:
+
+| Métrica (teste) | Classe `1` (falha) | Classe `0` (sem falha) |
+| :--- | :---: | :---: |
+| Precisão | 0,99 | **0,05** |
+| Recall | 0,94 | **0,26** |
+| F1 | 0,96 | **0,08** |
+| Suporte | 2.312 | 27 |
+
+Acurácia geral de 92,95% soa bem, mas é menor que o baseline de "sempre prever a classe majoritária" (98,85%) — sinal de que a reponderação de classe está custando acurácia bruta em troca de um pouco de recall na classe rara. A acurácia balanceada (59,83%) é a métrica que de fato importa aqui, e mostra o quadro real: pouco acima do que um classificador aleatório conseguiria (50%).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Diagnóstico: Overfitting vs. Desbalanceamento</h2>
+</div>
+
+O número de teste sozinho não diz *por que* o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
+
+- **Overfitting de verdade**: o modelo decorou padrões específicos dos exemplos de classe `0` no treino, que não se repetem no teste — nesse caso, teria desempenho ótimo no treino e ruim no teste, e a solução seria simplificar o modelo.
+- **Desbalanceamento estrutural**: mesmo sem decorar nada, existe tão pouco exemplo da classe rara e tão pouca separação real nas features que nenhum modelo aprenderia essa classe direito — nesse caso, o problema não é o modelo, é a quantidade e a qualidade de dado disponível.
+
+Comparando treino e teste lado a lado:
+
+| Métrica | Treino (n=9.355) | Teste (n=2.339) |
+| :--- | :---: | :---: |
+| Acurácia balanceada | 77,57% | 59,83% |
+| Recall — classe `0` | 0,76 | 0,26 |
+| Precisão — classe `0` | 0,06 | 0,05 |
+
+A queda é real (77,57% → 59,83% de acurácia balanceada): o modelo generaliza pior do que sugere o resultado de treino. Uma tentativa de regularização mais agressiva (árvores mais rasas, `min_child_weight` maior, L1/L2) foi testada para atacar esse gap — reduziu a diferença treino-teste (~22 → ~19 pontos), mas piorou o resultado absoluto: o recall da classe `0` no teste caiu de 26% para 4%. A configuração original foi mantida porque simplificar o modelo não resolve o problema de fundo: o teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Colocando em Dúvida o Próprio Rótulo</h2>
+</div>
+
+Antes de tentar mais ajuste de modelo, vale desconfiar de uma fonte mais básica de ruído: será que toda linha rotulada como "falha nos próximos 7 dias" representa uma falha *nova*, ou parte disso é a mesma falha sendo reaberta — o mesmo chamado, o mesmo problema, registrado de novo porque o primeiro reparo não resolveu de fato?
+
+A checagem mostra um quadro ambíguo, não conclusivo: **66,2%** das falhas têm a "próxima" em menos de 1 dia, e mesmo assim a flag `ordem_repetida_flag` do SAP marca reincidência em apenas **1,5%** desses casos (contra 0,7% quando o intervalo é maior). Ou seja, a maior parte dessa proximidade temporal não está sendo sinalizada pelo sistema como retrabalho — pode ser reincidência real não capturada pela flag, ou pode ser o comportamento genuíno do equipamento (uma porta com múltiplos problemas raramente falha só uma vez seguida).
+
+Uma tentativa de redefinir o alvo excluindo essas "reaberturas" (eventos da mesma estação a menos de 4 horas de distância) foi testada — sem melhora: a quantidade de exemplos de classe `0` no teste não mudou, e a precisão da classe rara caiu a zero num dos testes. A definição original do alvo foi mantida, mas essa incerteza permanece como um limite real do que os dados atuais permitem concluir com segurança.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Importância das Features e Mapa de Correlação</h2>
+</div>
+
+Com o modelo treinado e diagnosticado, cabe perguntar: o que ele está realmente usando para decidir? O gráfico de importância tem dois papéis no notebook — interpretabilidade (para uma equipe de manutenção confiar, ou desconfiar, de uma previsão) e direção de trabalho: foi essa mesma análise, numa rodada anterior, que motivou a criação das features de reincidência (seção 4.5).
+
+O mapa de correlação faz uma checagem final em duas frentes: redundância entre features (o caso de `centro_de_trabalho_responsavel` vs. `estacao`, discutido na próxima seção) e, mais importante, a correlação de cada feature com o próprio alvo. Aqui está o achado mais honesto do notebook inteiro: **nenhuma feature, isolada, tem correlação forte com `falha_proximos_7d`** — o que já antecipa por que o resultado da seção 6 é modesto, e não é um problema de hiperparâmetro.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">10. Features Utilizadas no Modelo Final</h2>
+</div>
+
+As 15 colunas de `colunas_features`, na ordem em que aparecem no notebook:
+
+| Feature | Tipo | O que captura | Por que entra no modelo |
+| :--- | :---: | :--- | :--- |
+| `dias_desde_ultima_manutencao` | Numérico | Tempo, em dias, desde a manutenção anterior na mesma estação (`-1` se for a primeira). | Testa se intervalos curtos (problema recorrente) ou longos (desgaste acumulado) se relacionam com o risco de falha. |
+| `alarmes_ultimas_24h` | Numérico | Contagem de alarmes da estação nas 24h antes de `T`. | Sinal de curtíssimo prazo — atividade anômala imediatamente anterior ao evento. |
+| `alarmes_ultimos_7d` | Numérico | Contagem de alarmes da estação nos 7 dias antes de `T`. | Mesmo princípio, numa janela mais estável e menos sensível a ruído pontual. |
+| `tendencia_alarmes` | Numérico (razão) | `alarmes_ultimas_24h` dividido pela média diária dos últimos 7 dias. | Tenta capturar aceleração — "hoje está mais barulhento que o normal recente" — não só volume absoluto. |
+| `estacao` | Categórico (label encoded) | Identidade da estação. | Cada estação tem características físicas e de uso próprias; também é a chave usada para juntar as demais features. |
+| `sintoma` | Categórico (label encoded) | Sintoma relatado na ordem de manutenção. | Descreve o tipo de manifestação do problema (ex.: "PDM não abre"). |
+| `objeto` | Categórico (label encoded) | Componente identificado como afetado. | Aponta qual peça do sistema está envolvida na falha. |
+| `defeito` | Categórico (label encoded) | Defeito técnico diagnosticado. | Classificação mais granular do problema do que o sintoma. |
+| `indisponivel_flag` | Booleano | Se a porta ficou indisponível durante a ocorrência. | Marca severidade — nem toda falha tira a porta de operação. |
+| `numero_manutencoes_anteriores` | Numérico | Contagem cumulativa de manutenções anteriores da estação. | Mede reincidência histórica: estações "crônicas" acumulam mais. |
+| `duracao_media_manutencoes_anteriores` | Numérico | Duração média (h) dos reparos anteriores da estação, até `T`. | Reparos historicamente mais longos podem indicar problemas mais complexos ou mal resolvidos. |
+| `dia_semana` | Numérico (0–6) | Dia da semana de `T`. | Testa sazonalidade semanal. |
+| `mes` | Numérico (1–12) | Mês de `T`. | Testa sazonalidade anual/climática. |
+| `dias_desde_ultima_preventiva` | Numérico | Dias desde a última preventiva (`ZM03`, não cancelada) da estação. | Preventiva não é falha, mas seu histórico descreve o quanto o equipamento vem sendo cuidado. |
+| `preventivas_agendadas_prox_7d` | Numérico | Quantas preventivas já estão agendadas para os 7 dias seguintes a `T`. | Informação legítima no momento da previsão — a agenda já existe quando o modelo roda. |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">11. Colunas Descartadas na Preparação dos Dados</h2>
+</div>
+
+Antes mesmo de virarem "candidatas" a feature, algumas colunas do dataset bruto foram excluídas por não carregarem informação útil:
+
+| Coluna | Motivo do Descarte | Evidência |
+| :--- | :--- | :--- |
+| `perfil_do_catalogo` | Constante em toda a base. | Importância zero no modelo treinado — não existe variação para o modelo aprender com. |
+| `centro_de_trabalho_responsavel` | Redundante com `estacao`. | Correlação de **0,99** entre as duas colunas — carregam essencialmente a mesma informação escrita de duas formas. |
+| `analisada_flag` | Sem poder discriminativo no modelo treinado. | Importância zero. |
+| `ordem_ausente_flag` | Sem poder discriminativo no modelo treinado. | Importância zero. |
+| `ordem_repetida_flag` | Sem poder discriminativo no modelo treinado. | Importância zero (embora tenha sido reaproveitada, fora do modelo, na investigação sobre reaberturas — seção 8). |
+
+Além dessas, um conjunto de campos administrativos e de texto livre nunca chegou a virar feature — `texto_longo_da_ordem`, `status_do_usuario_da_ordem`, `status_do_sistema_da_ordem`, `comentarios_classificacao_engenharia`, `causa`, `acao`, entre outros. São campos ricos em informação, mas em texto não estruturado ou fluxo de processo interno do SAP; extrair sinal deles exigiria NLP ou regras de negócio específicas que não foram construídas nesta etapa.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">12. Features e Abordagens Testadas e Descartadas Durante o Desenvolvimento</h2>
+</div>
+
+Diferente da seção anterior (colunas cortadas de cara), estas foram construídas, testadas com dados reais e só depois removidas — porque o resultado não justificou mantê-las. Registrar isso importa tanto quanto documentar o que ficou: mostra o que já foi investigado, evita repetir o mesmo teste no futuro, e é evidência de que a ausência de sinal é uma conclusão, não uma lacuna.
+
+| Feature/Abordagem | O que testava | Resultado | Decisão |
+| :--- | :--- | :--- | :--- |
+| `movimentacao_media_7d_antes` e `variacao_movimentacao_recente` (catraca, Linha 4) | Se o volume ou a **variação recente** de movimentação de passageiros (ângulo que a Hipótese 3 não tinha testado) se relaciona com risco de falha. | Efeito neutro a levemente negativo: precisão da classe rara caiu de 0,05 para 0,04, acurácia balanceada de 59,8% para 58,8%. | Descartada. Consistente com a Hipótese 3 (movimentação não explica anomalias de porta). |
+| Contagem de alarmes `OBS` como feature de degradação (investigada num notebook de hipótese à parte, depois removido) | Se o volume de obstrução recente prediz falha — no nível de estação e, de forma mais direta, no nível de porta física. | No nível de porta (o teste mecanicamente mais correto), a diferença de médias entre quem falha em 7d e quem não falha é quase nula (0,52 vs. 0,54 em 7 dias; 2,11 vs. 2,15 em 30 dias); tamanho de efeito ≈ 0,01–0,05 (irrelevante). | Nunca chegou a virar feature no modelo. |
+| Redefinição do alvo excluindo "reaberturas" (falhas da mesma estação a menos de 4h) | Se parte da classe `1` é retrabalho/duplicata, e se limpar isso melhora a precisão da classe `0`. | Nenhuma melhora — a quantidade de exemplos de classe `0` no teste não mudou, e a precisão caiu a zero num dos testes. | Revertido; mantida a definição original do alvo (ver seção 8). |
+| Ajuste do threshold de decisão (ótimo por F1 e por precisão-com-piso-de-recall, calculado out-of-fold no treino) | Se recalibrar o corte de decisão (em vez do padrão 0,5) melhora precisão/recall da classe rara no teste. | Instável: o ranking de probabilidade não se manteve estável entre treino e teste (drift temporal); um dos ajustes chegou a **zerar** a precisão no teste. | Não incorporado como abordagem padrão do modelo. |
+| Regularização mais agressiva do XGBoost (árvores mais rasas, `min_child_weight` maior, L1/L2) | Se reduzir a capacidade do modelo destrava o overfitting diagnosticado na seção 7. | Reduziu o gap treino-teste (~22 → ~19 pontos de acurácia balanceada), mas piorou o resultado absoluto: recall da classe `0` no teste caiu de 26% para 4%. | Revertida para a configuração original. |
+| Previsão de porta específica (modelo multiclasse, qual das ~500 portas físicas vai falhar) | Se, além de "vai falhar", dá para prever **onde** especificamente. | Acurácia top-1 de 3,9% (baseline 0,8%), top-3 de 9,3%, sobre 477 classes possíveis — bate o baseline, mas está longe de ser acionável. | Removida do notebook a pedido; registrada aqui como direção já explorada. |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">13. Do Catálogo da Sprint 1 ao Modelo Real</h2>
+</div>
+
+O catálogo de features candidatas da Sprint 1 (["Seleção, Reavaliação e Justificativa Científica de Features Candidatas"](/sprints/sprint-1/features-candidatas)) foi escrito antes do modelo existir, a partir só das Hipóteses 1–7. Vale registrar o que de fato aconteceu com cada proposta:
+
+| Candidata (Sprint 1) | O que virou no Modelo 1 |
+| :--- | :--- |
+| `vol_passageiros_catraca` | Testada de novo com um ângulo diferente (`variacao_movimentacao_recente`) — permanece descartada (seção 12). |
+| `vol_alarmes_acumulados_ante_corretiva` | Implementada como `alarmes_ultimas_24h` / `alarmes_ultimos_7d` / `tendencia_alarmes` — mantida no modelo, mas com poder preditivo reconhecidamente fraco (a própria Hipótese 4 já apontava nessa direção). |
+| `posicao_centro_vs_extremidade` | Nunca implementada — o dataset de manutenção usado no Modelo 1 não foi construído na granularidade de porta física (isso só foi feito depois, na direção experimental descartada de previsão por porta). |
+| `qtd_anomalias_criticas_30s_24h`, `max_tempo_normalizacao_6h`, `flag_horario_pico`, `flag_fim_de_semana` | Não implementadas nessa forma; `dia_semana` e `mes` cobrem sazonalidade de forma mais genérica, sem a granularidade de pico/fim de semana proposta. |
+| `dias_desde_ultima_corretiva` | Implementada como `dias_desde_ultima_manutencao`. |
+| `dias_desde_ultima_preventiva` | Implementada com o mesmo nome e propósito. |
+| `qtd_ordens_corretivas_30d` | Implementada de forma diferente: `numero_manutencoes_anteriores` conta o histórico completo da estação, não só uma janela de 30 dias. |
+| `taxa_reabertura_excedida_24h` | Não implementada — dependeria de segregar tipos de alarme específicos (`RCE`, `FO`) que o modelo atual não distingue. |
+| `estacao_cod` | Implementada como `estacao` (label encoded). |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">14. Síntese</h2>
+</div>
+
+Reunindo o que este documento (e o notebook por trás dele) mostra, do início ao fim:
+
+- O alvo `falha_proximos_7d` é extremamente desbalanceado (98,4% / 1,6%) porque, nos dados disponíveis, falhas tendem a se agrupar no tempo. Prever a classe rara é o objetivo mais valioso e também o mais difícil.
+- O modelo, mesmo com reponderação de classe e busca de hiperparâmetros, consegue apenas um sinal fraco sobre essa classe rara, e o diagnóstico treino-vs-teste mostra uma queda de desempenho real — o modelo não generaliza tão bem quanto o resultado de treino sugere.
+- A investigação sobre falhas muito próximas no tempo não encontrou uma explicação limpa, deixando uma dúvida legítima sobre o quão "limpo" é o próprio rótulo usado.
+- Nenhuma feature testada — dentro ou fora do modelo final — mostrou correlação forte com o alvo. O padrão se repete em ângulos independentes: alarmes técnicos antes da manutenção (Hipótese 4), movimentação de passageiros (Hipótese 3 e sua extensão no Modelo 1), obstrução como proxy de desgaste, posição/uso da porta (Hipótese 6).
+
+Isso aponta para um limite estrutural dos dados disponíveis hoje, não para um erro de modelagem: eventos discretos de alarme e manutenção parecem carregar menos sinal de degradação do que a intuição de manutenção preditiva sugere. Um próximo passo mais promissor provavelmente envolve um tipo de dado diferente (leitura contínua de sensor, por exemplo), não mais iteração sobre o que já está disponível.
