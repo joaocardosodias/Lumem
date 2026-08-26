@@ -11,21 +11,21 @@ import Background from '../../../../../assets/sprints/sprint1/background_title.p
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Escolha do Modelo</h2>
 </div>
 
-Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a porta irá quebrar dentro dos próximos 7 dias.
+Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a porta irá quebrar dentro dos próximos 7 dias. O objetivo é que a equipe da Motiva, consiga inserir novos dados e o modelo consiga avaliar e prever se ele irá quebrar nos próximos 7 dias. Nesse formato, seria necessário rodar o modelo com os novos dados.
 
 A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas não finalizado e iniciamos o tratamento de dados e levantamento de novas features.
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Os Dados: Quatro Fontes, Quatro Ângulos</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Tabelas Utilizadas</h2>
 </div>
 
-- **Alarmes** (742.506 registros) — o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
-- **Corretiva Emergencial — ZM01** (10.543 linhas) e **Corretiva Programada — ZM02** (1.163 linhas) — as ordens de manutenção efetivamente abertas depois de uma falha, com data, estação, sintoma, causa e ação tomada. É a fonte da variável que se quer prever.
-- **Preventiva — ZM03** (569 linhas) — manutenção agendada (não motivada por falha), como troca de ar-condicionado do rack ou inspeção de rotina.
+Para analise do modelo e levantamento de novas features, utilizamos as seguintes tabelas:
+- **Alarmes** (742.506 registros): o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
+- **Corretiva Emergencial — ZM01** e **Corretiva Programada — ZM02**: as ordens de manutenção efetivamente abertas depois de uma falha, com data, estação, sintoma, causa e ação tomada. É a fonte da variável que se quer prever.
+- **Preventiva — ZM03**: manutenção agendada (não motivada por falha), como troca de ar-condicionado do rack ou inspeção de rotina.
 
-A primeira decisão do notebook é juntar `ZM01` e `ZM02` num único `zm01` (11.706 linhas). As duas são "manutenção corretiva" — a diferença entre elas é só a urgência com que a ordem foi tratada, não o tipo de evento. Isso importa porque o alvo do modelo tem uma classe extremamente rara (estação que **não** falha na semana seguinte a uma manutenção), e cada linha extra de corretiva ajuda a enxergar melhor os poucos casos "sem falha" que existem no meio de milhares de "com falha".
-
+Depois disso, a próxima decisão foi juntar `ZM01` e `ZM02` num único `zm01` (11.706 linhas). As duas são manutenções corretivas, a diferença entre elas é só a urgência com que a ordem foi tratada, não o tipo de evento. Isso importa porque o alvo do modelo tem uma classe extremamente rara (estação que **não** falha na semana seguinte a uma manutenção), e cada linha extra de corretiva ajuda a enxergar melhor os poucos casos "sem falha" que existem no meio de milhares de "com falha".
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -34,7 +34,7 @@ A primeira decisão do notebook é juntar `ZM01` e `ZM02` num único `zm01` (11.
 
 Antes de qualquer feature, os dados precisam estar num formato que permita comparar eventos no tempo e cruzar estações entre bases diferentes.
 
-**Datetime.** `T` (horário de início da avaria) é a coluna mais importante do notebook inteiro — praticamente toda feature depois disso é "o que aconteceu antes de `T`, na mesma estação". Errar esse parsing propaga erro para tudo o mais.
+**Datetime.** `T` (horário de início da avaria) é a coluna mais importante do notebook inteiro, ele praticamente toda feature depois disso é "o que aconteceu antes de `T`, na mesma estação". Errar esse parsing propaga erro para tudo o mais.
 
 **Filtrando ruído: obstrução curta.** Nem todo alarme `OBS` (obstrução) representa um problema real na porta. Uma mochila que fica presa por um segundo e é liberada não é sinal de degradação mecânica — é o comportamento normal e esperado de uma porta de plataforma numa estação cheia. Alarmes `OBS` com duração menor que 30 segundos são descartados: eles adicionariam volume sem adicionar sinal, diluindo o efeito dos alarmes que de fato indicam algo errado com o equipamento.
 
