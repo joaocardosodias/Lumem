@@ -3,6 +3,10 @@ title: "Teste CatBoostClassifier — Documentação CRISP-DM"
 description: "Documentação da construção da tabela mestra, processamento, treinamento e avaliação do CatBoostClassifier para previsão de falhas em PSD."
 ---
 
+import { Image } from 'astro:assets';
+import CorrelacaoAlvo from '../../../../../assets/sprints/sprint2/modelo-07/correlacao_features_alvo.png';
+import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-07/mapa_correlacao_features.png';
+
 # Modelo-07 — Previsão de falhas em PSD
 
 ## 1. Visão geral
@@ -290,6 +294,75 @@ Os arquivos gerados foram:
 - `data/processados/modelo-07/base_teste.csv`;
 - `data/processados/modelo-07/configuracao_modelagem.json`.
 
+### 5.9 Análise de correlação
+
+A correlação foi calculada somente sobre o **conjunto de treino**, preservando validação e teste para suas respectivas funções. Foram usados dois coeficientes:
+
+- **Pearson**, que mede associação linear;
+- **Spearman**, que mede associação monotônica a partir da ordenação dos valores e é menos sensível à escala e a valores extremos.
+
+Como `target_falha_7d` é binário, sua correlação de Pearson com uma feature numérica equivale à correlação ponto-bisserial. As features categóricas (`id_psd`, `estacao_padrao`, `plataforma_padrao` e `dia_semana`) não foram convertidas em números arbitrários para essa análise, pois isso produziria correlações sem significado semântico.
+
+#### Correlação das features numéricas com o alvo
+
+<Image
+  src={CorrelacaoAlvo}
+  alt="Gráfico de barras da correlação de Spearman entre as features numéricas e o alvo de falha em sete dias. Corretivas emergenciais nos últimos 30 dias apresenta a maior correlação positiva, enquanto dias desde a última corretiva apresenta a maior correlação negativa."
+  format="webp"
+/>
+
+*Figura 1 — Correlação de Spearman das principais features numéricas com `target_falha_7d`, calculada somente no conjunto de treino. Azul representa correlação positiva e vermelho representa correlação negativa.*
+
+| Feature | Pearson | Spearman |
+|---|---:|---:|
+| `qtd_corretivas_emergenciais_30d` | 0,1608 | 0,1750 |
+| `dias_desde_ultima_corretiva` | -0,1355 | -0,1272 |
+| `proporcao_criticas_pico_7d` | -0,0764 | -0,0779 |
+| `duracao_maxima_alarme_7d` | -0,0723 | -0,0719 |
+| `qtd_corretivas_programadas_30d` | 0,0519 | 0,0776 |
+| `dias_com_anomalia_critica_7d` | -0,0496 | -0,0514 |
+| `duracao_media_alarmes_seg` | -0,0415 | -0,0417 |
+| `duracao_maxima_alarme_seg` | -0,0319 | -0,0377 |
+| `qtd_anomalias_criticas_30s_7d` | -0,0232 | -0,0581 |
+| `qtd_criticas_pico_7d` | -0,0216 | -0,0637 |
+| `qtd_anomalias_criticas_30s` | -0,0175 | -0,0324 |
+| `qtd_criticas_pico_tarde` | -0,0141 | -0,0265 |
+| `qtd_portas_com_alarme` | 0,0067 | -0,0176 |
+| `dias_desde_ultima_preventiva` | 0,0056 | 0,0040 |
+| `qtd_criticas_pico_manha` | -0,0021 | -0,0071 |
+| `qtd_preventivas_nao_canceladas_30d` | 0,0018 | 0,0018 |
+| `domingo_flag` | 0,0001 | 0,0001 |
+
+A associação individual mais forte ocorreu em `qtd_corretivas_emergenciais_30d`: quanto maior a quantidade de corretivas recentes, maior a frequência do alvo positivo. A correlação negativa de `dias_desde_ultima_corretiva` expressa o mesmo padrão por outro ângulo: valores menores representam uma corretiva mais recente e estão associados a maior risco futuro. Esse comportamento pode refletir recorrência ou persistência de problemas, mas não demonstra causalidade.
+
+Todas as correlações com o alvo possuem magnitude inferior a 0,18. Portanto, nenhuma feature numérica isolada explica fortemente a ocorrência futura de falha por uma relação linear ou monotônica simples. Esse resultado sustenta o uso de um modelo capaz de combinar categorias, interações e relações não lineares, embora também ajude a explicar a discriminação moderada observada nas métricas de AUC.
+
+#### Correlação entre as próprias features
+
+Para identificar redundância, também foi calculada a correlação de Spearman entre as features numéricas. Os pares mais correlacionados foram:
+
+<Image
+  src={MapaCorrelacao}
+  alt="Mapa de calor da correlação de Spearman entre oito features de alarmes. As correlações variam aproximadamente entre 0,68 e 1, com relações especialmente elevadas entre duração média e máxima e entre as contagens acumuladas de alarmes críticos."
+  format="webp"
+/>
+
+*Figura 2 — Mapa de correlação das principais features de alarmes. Células mais escuras representam maior redundância monotônica entre as variáveis.*
+
+| Feature 1 | Feature 2 | Spearman |
+|---|---|---:|
+| `duracao_media_alarmes_seg` | `duracao_maxima_alarme_seg` | 0,9926 |
+| `qtd_anomalias_criticas_30s_7d` | `qtd_criticas_pico_7d` | 0,9731 |
+| `qtd_anomalias_criticas_30s_7d` | `dias_com_anomalia_critica_7d` | 0,9132 |
+| `qtd_anomalias_criticas_30s` | `duracao_maxima_alarme_seg` | 0,9118 |
+| `qtd_anomalias_criticas_30s` | `duracao_media_alarmes_seg` | 0,9117 |
+| `duracao_maxima_alarme_seg` | `qtd_portas_com_alarme` | 0,9107 |
+| `qtd_anomalias_criticas_30s_7d` | `duracao_maxima_alarme_7d` | 0,9070 |
+| `qtd_criticas_pico_7d` | `dias_com_anomalia_critica_7d` | 0,8941 |
+| `dias_desde_ultima_preventiva` | `qtd_preventivas_nao_canceladas_30d` | -0,8372 |
+
+As correlações elevadas indicam que várias features descrevem aspectos próximos do mesmo comportamento operacional. Isso não impede o uso no CatBoost, que tolera preditores correlacionados, mas pode dividir a importância entre eles e tornar a interpretação individual menos estável. Em uma próxima iteração, recomenda-se comparar o desempenho com a remoção controlada de variáveis redundantes, sempre usando validação temporal e observando principalmente recall, PR-AUC e volume de alertas.
+
 ---
 
 ## 6. Fase 4 — Modelagem
@@ -434,7 +507,7 @@ O experimento atende à meta mínima de recall e demonstra que alarmes, históri
 
 ## 8. Fase 6 — Implantação e próximos ciclos
 
-### 8.1 Artefatos gerados
+### 8.1 Artefatos gerados após executar o modelo
 
 | Artefato | Finalidade |
 |---|---|
