@@ -85,3 +85,53 @@ O resultado dessa definição dá o tom para o resto do notebook: *11.504 exempl
 ### Por que separar por tempo, e não aleatoriamente
 
 O corte de treino/teste é feito no percentil 80 da data T, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes), o que resulta em 9.355 exemplos de treino contra 2.339 de teste.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo: XGBoost sob Desbalanceamento Extremo</h2>
+</div>
+
+Com treino e teste separados, falta escolher e ajustar o modelo. Duas decisões guiam essa etapa.
+
+A primeira é o algoritmo. O XGBoost é um modelo baseado em árvores de decisão, o que combina bem com o tipo de variável construído até aqui: contagens, razões e categorias codificadas como inteiro, sem exigir normalização e lidando naturalmente com relações não lineares. Ele também tem suporte nativo a scale_pos_weight, o que importa muito neste problema específico.
+
+A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 98,85% dos exemplos de teste são da classe 1. Um modelo preguiçoso que sempre prevê 1 já acerta quase 99% das vezes, e é essa a barra de comparação que torna a acurácia comum uma métrica enganosa aqui. Por isso a busca de hiperparâmetros foi montada assim:
+
+- **scoring="balanced_accuracy"**: essa métrica tira a média do recall das duas classes sem pesar pelo tamanho de cada uma, então um modelo que só acerta a classe majoritária pontua mal, mesmo tendo acurácia alta.
+- **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
+- **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
+
+O resultado é onde a dificuldade do problema aparece de forma concreta:
+
+| Métrica (teste) | Classe 1 (falha) | Classe 0 (sem falha) |
+| :--- | :---: | :---: |
+| Precisão | 0,99 | 0,05 |
+| Recall | 0,94 | 0,26 |
+| F1 | 0,96 | 0,08 |
+| Suporte | 2.312 | 27 |
+
+A acurácia geral fica em 92,95%, o que soa bem, mas é menor que o baseline de sempre prever a classe majoritária (98,85%), sinal de que a reponderação de classe está custando acurácia bruta em troca de um pouco de recall na classe rara. A acurácia balanceada, 59,83%, é a métrica que de fato importa aqui, e mostra o quadro real: pouco acima do que um classificador aleatório conseguiria (50%).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Diagnóstico: Overfitting vs. Desbalanceamento</h2>
+</div>
+
+O número de teste sozinho não diz por que o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
+
+- **Overfitting de verdade**: o modelo decorou padrões específicos dos exemplos de classe 0 no treino, que não se repetem no teste. Nesse cenário, o desempenho seria ótimo no treino e ruim no teste, e a solução seria simplificar o modelo (menos profundidade, mais regularização).
+- **Desbalanceamento estrutural**: mesmo sem decorar nada, existe tão pouco exemplo da classe rara e tão pouca separação real nas features que nenhum modelo aprenderia essa classe direito. Nesse cenário, o problema não é o modelo, é a quantidade e a qualidade de dado disponível, e simplificar o modelo só pioraria as coisas.
+
+Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de distinguir os dois cenários:
+
+| Métrica | Treino (n=9.355) | Teste (n=2.339) |
+| :--- | :---: | :---: |
+| Acurácia balanceada | 77,57% | 59,83% |
+| Recall, classe 0 | 0,76 | 0,26 |
+| Precisão, classe 0 | 0,06 | 0,05 |
+
+A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. Uma regularização mais agressiva (árvores mais rasas, min_child_weight maior, L1/L2) foi testada para atacar esse gap: reduziu a diferença entre treino e teste, de cerca de 22 para 19 pontos, mas piorou o resultado absoluto, com o recall da classe 0 no teste caindo de 26% para 4%. A configuração original foi mantida, porque simplificar o modelo não resolve o problema de fundo. O teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
