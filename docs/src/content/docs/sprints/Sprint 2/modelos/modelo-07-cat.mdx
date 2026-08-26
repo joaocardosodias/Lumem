@@ -1,0 +1,496 @@
+---
+title: "Teste CatBoostClassifier — Documentação CRISP-DM"
+description: "Documentação da construção da tabela mestra, processamento, treinamento e avaliação do CatBoostClassifier para previsão de falhas em PSD."
+---
+
+# Modelo-07 — Previsão de falhas em PSD
+
+## 1. Visão geral
+
+O Modelo-07 estima a probabilidade de um sistema de Portas de Plataforma (**PSD**) apresentar pelo menos uma falha confirmada nos sete dias seguintes. A previsão é realizada **ao final do dia de referência `D`**, usando somente informações disponíveis até esse momento.
+
+| Item | Definição |
+|---|---|
+| Algoritmo | `CatBoostClassifier` |
+| Unidade de análise | estação × plataforma × dia |
+| Momento da previsão | final do dia `D` |
+| Janela prevista | de `D+1` a `D+7` |
+| Alvo | `target_falha_7d` |
+| Prioridade operacional | maximizar recall sem ignorar precision e volume de alertas |
+| Sistemas analisados | 22 combinações PSD: 11 estações × 2 plataformas |
+| Seed de reprodutibilidade | 42 |
+
+Uma combinação PSD representa todo o sistema de portas de uma plataforma, e não uma única porta. A base contém 22 sistemas porque há duas plataformas em cada uma das 11 estações. Cada plataforma possui diversas portas PDM; portanto, “22 PSDs” não significa “22 portas”.
+
+## 2. Metodologia CRISP-DM
+
+O desenvolvimento seguiu as seis fases do CRISP-DM:
+
+1. entendimento do negócio;
+2. entendimento dos dados;
+3. preparação dos dados;
+4. modelagem;
+5. avaliação;
+6. implantação e próximos ciclos.
+
+O CRISP-DM é iterativo. Os resultados da avaliação atual alimentam um novo ciclo de preparação e modelagem, principalmente para diminuir o número de alertas falsos sem perder recall.
+
+---
+
+## 3. Fase 1 — Entendimento do negócio
+
+### 3.1 Problema
+
+Falhas nas portas de plataforma podem causar indisponibilidade, intervenções emergenciais e impacto na operação. O objetivo analítico é antecipar situações de risco para apoiar a priorização da manutenção.
+
+A pergunta que orienta o modelo é:
+
+> Com base no histórico conhecido até o final do dia `D`, este sistema PSD terá ao menos uma falha confirmada entre `D+1` e `D+7`?
+
+### 3.2 Uso esperado da previsão
+
+Cada linha prevista produz uma probabilidade de falha para uma combinação estação–plataforma. Quando a probabilidade é maior ou igual ao limiar operacional, o sistema gera um alerta que poderá apoiar inspeção, planejamento ou priorização de manutenção.
+
+O custo de deixar uma futura falha sem alerta foi considerado maior que o custo de inspecionar um sistema que não falhará. Por isso, **recall é a métrica prioritária**. Entretanto, recall não pode ser analisado isoladamente: um modelo que alerta quase todos os sistemas detectará muitas falhas, mas terá pouca utilidade para priorização.
+
+### 3.3 Critérios de sucesso
+
+- recall mínimo de 80% na validação;
+- menor quantidade possível de falhas não detectadas;
+- acompanhamento de precision, PR-AUC, F1 e proporção de alertas;
+- separação temporal rigorosa entre treino, validação e teste;
+- ausência de informação futura nas features;
+- rastreabilidade entre os dados processados, o modelo e o limiar utilizado.
+
+### 3.4 Hipóteses utilizadas
+
+As features foram orientadas pelas hipóteses investigadas na Sprint 1.
+
+| Hipótese | Evidência anterior | Uso no Modelo-07 |
+|---|---|---|
+| H1 — padrões temporais dos alarmes | sustentada | duração, alarmes críticos e janelas móveis de sete dias |
+| H2 — regime semanal e horários de pico | sustentada | dia da semana, domingo e alarmes nos picos da manhã e tarde |
+| H3 — movimentação de passageiros | refutada | dados de catraca não foram incluídos |
+| H4 — aumento de alarmes antes da corretiva | não confirmada | a contagem total de alarmes foi excluída; sinais críticos foram mantidos |
+| H5 — tempo de normalização e diferenças entre estações | possui sinal, mas não é suficiente isoladamente | duração de alarmes, estação e identificação do PSD |
+| H6 — posição central ou extremidade da porta | efeito prático pequeno | não foi priorizada no modelo agregado por plataforma |
+| H7 — recorrência de falhas mecânicas | sustentada | orientou a preservação do histórico de manutenção; detalhamento de causa e componente ficou para iteração futura |
+
+---
+
+## 4. Fase 2 — Entendimento dos dados
+
+### 4.1 Fontes carregadas
+
+| Fonte | Papel no projeto | Dimensão original | Período observado |
+|---|---|---:|---|
+| Histórico consolidado de alarmes | comportamento diário do sistema PSD | 742.506 × 15 | 27/02/2023 a 12/05/2026 |
+| ZM01 — corretiva emergencial | eventos corretivos e identificação de falhas confirmadas | 10.543 × 27 | 01/01/2023 a 01/04/2026 |
+| ZM02 — corretiva programada | histórico de intervenções programadas | 1.163 × 27 | 03/01/2023 a 28/03/2026 |
+| ZM03 — preventiva | histórico de manutenção preventiva | 569 × 19 | 26/12/2022 a 30/03/2026 |
+
+O período comum às quatro fontes foi definido entre **27/02/2023 e 28/03/2026**, totalizando 1.126 dias. Após esse filtro permaneceram:
+
+- 741.138 alarmes, ou 99,82% da fonte;
+- 10.200 corretivas emergenciais, ou 96,75%;
+- 1.085 corretivas programadas, ou 93,29%;
+- 530 preventivas, ou 93,15%.
+
+### 4.2 Granularidade escolhida
+
+Os eventos originais possuem granularidades diferentes: um alarme pode identificar uma porta ou componente, enquanto uma ordem de manutenção pode estar associada a um sistema mais amplo. Para permitir a integração, todos os eventos foram agregados para:
+
+```text
+data_referencia + estacao_padrao + plataforma_padrao
+```
+
+O identificador `id_psd` foi formado pela combinação da estação e da plataforma, como `BUT_P1` e `BUT_P2`.
+
+### 4.3 Padronização das chaves
+
+Foram criadas quatro chaves semânticas:
+
+| Chave | Significado |
+|---|---|
+| `estacao_padrao` | código normalizado da estação |
+| `plataforma_padrao` | número normalizado da plataforma |
+| `porta_padrao` | identificação normalizada da porta PDM, quando disponível |
+| `componente_padrao` | componente do sistema PSD identificado no evento |
+
+A porta e o componente foram preservados para auditoria e agregações, mas a linha final do modelo representa a plataforma inteira.
+
+### 4.4 Qualidade e cobertura das chaves
+
+Nos alarmes, estação e plataforma estavam preenchidas em 100% das linhas, enquanto porta e componente apresentaram aproximadamente 99,98% de cobertura. Nas ordens de manutenção, a cobertura foi menor, principalmente na base preventiva.
+
+| Fonte | Estação | Plataforma | Porta | Componente |
+|---|---:|---:|---:|---:|
+| Alarmes | 100,00% | 100,00% | 99,98% | 99,98% |
+| ZM01 | 99,80% | 97,91% | 87,86% | 89,92% |
+| ZM02 | 99,31% | 94,41% | — | — |
+| ZM03 | 81,90% | 55,01% | — | — |
+
+Ordens sem plataforma identificável não foram replicadas artificialmente nas duas plataformas, pois isso criaria eventos inexistentes. No período comum, ficaram fora das agregações por PSD 209 ordens ZM01 — das quais 51 estavam marcadas como falhas —, 56 ordens ZM02 e 238 ordens ZM03. Essa perda deve ser considerada na interpretação dos resultados.
+
+### 4.5 Principais riscos identificados
+
+- qualidade desigual das chaves entre as fontes;
+- possibilidade de mudança de conceito ou preenchimento ao longo do tempo;
+- uma ordem pode representar atividades distintas de uma falha física única;
+- agregação por plataforma perde informação específica de cada porta;
+- a distribuição temporal muda: a taxa positiva é maior em validação e teste do que em treino;
+- qualquer causa, defeito ou ação registrada após a falha seria vazamento se usada para prever a própria falha.
+
+---
+
+## 5. Fase 3 — Preparação dos dados
+
+Esta fase está implementada nos notebooks `01_construcao_tabela_mestra.ipynb` e `02_processamento.ipynb`.
+
+### 5.1 Construção da tabela mestra
+
+Foi criado um calendário completo para cada um dos 22 sistemas PSD durante os 1.126 dias do período comum. Isso garante a presença de dias sem alarmes ou manutenções, que recebem contagem zero em vez de desaparecerem da série.
+
+O produto dessa etapa é `data/processados/modelo-07/tabela_mestra_psd.csv`, com:
+
+| Verificação | Resultado |
+|---|---:|
+| Linhas | 24.772 |
+| Colunas | 26 |
+| Sistemas PSD | 22 |
+| Dias por PSD | 1.126 |
+| Chaves duplicadas | 0 |
+| Valores nulos | 0 |
+| Período | 27/02/2023 a 28/03/2026 |
+
+### 5.2 Agregações diárias de alarmes
+
+Para cada PSD e dia foram calculados:
+
+- quantidade total de alarmes;
+- quantidade de anomalias com duração superior a 30 segundos;
+- quantidade de anomalias críticas no pico da manhã, entre 06h e 09h;
+- quantidade de anomalias críticas no pico da tarde, entre 16h e 19h;
+- duração total, média e máxima dos alarmes;
+- quantidade de portas distintas com alarme.
+
+A contagem total de alarmes foi preservada na tabela mestra para auditoria, mas não entrou no modelo final porque a hipótese de crescimento genérico de alarmes antes da falha não foi confirmada.
+
+### 5.3 Agregações diárias de manutenção
+
+Foram calculadas contagens e durações para:
+
+- corretivas emergenciais;
+- falhas confirmadas;
+- indisponibilidades;
+- corretivas programadas;
+- preventivas canceladas e não canceladas.
+
+Após a validação das chaves, 9.991 ordens corretivas emergenciais foram associadas a um PSD. Dessas, 3.045 registros estavam marcados como falha confirmada, distribuídos em 2.593 combinações PSD-dia. Também foram associados 1.029 registros de corretiva programada e 292 de preventiva.
+
+### 5.4 Construção do alvo
+
+Para cada sistema PSD e dia `D`, o alvo foi calculado com os sete dias futuros:
+
+```text
+target_falha_7d(D) = 1, se existir falha em D+1, ..., D+7
+target_falha_7d(D) = 0, caso contrário
+```
+
+Falhas ocorridas no próprio dia `D` não fazem parte do alvo daquela linha. Os últimos sete dias de cada PSD não possuem uma janela futura completa; por isso, 154 linhas ficaram sem alvo e foram removidas antes da modelagem.
+
+É importante interpretar corretamente a matriz de confusão: cada observação positiva é um **PSD-dia cuja janela futura contém falha**. Uma mesma ocorrência futura pode tornar positivos até sete dias anteriores. Assim, “1.799 positivos detectados” não significa necessariamente 1.799 falhas físicas distintas.
+
+### 5.5 Engenharia de features
+
+#### Calendário
+
+- `dia_semana`;
+- `domingo_flag`.
+
+#### Estado do dia de referência
+
+- `qtd_anomalias_criticas_30s`;
+- `qtd_criticas_pico_manha`;
+- `qtd_criticas_pico_tarde`;
+- `duracao_media_alarmes_seg`;
+- `duracao_maxima_alarme_seg`;
+- `qtd_portas_com_alarme`.
+
+Como a previsão ocorre ao final do dia, essas variáveis podem usar eventos registrados durante `D`.
+
+#### Histórico móvel de sete dias
+
+- `qtd_anomalias_criticas_30s_7d`;
+- `qtd_criticas_pico_7d`;
+- `dias_com_anomalia_critica_7d`;
+- `duracao_maxima_alarme_7d`;
+- `proporcao_criticas_pico_7d`.
+
+As janelas incluem o próprio dia `D`, pois seus dados já estão disponíveis no momento da previsão.
+
+#### Histórico de manutenção
+
+- `dias_desde_ultima_corretiva`;
+- `dias_desde_ultima_preventiva`;
+- `qtd_corretivas_emergenciais_30d`;
+- `qtd_corretivas_programadas_30d`;
+- `qtd_preventivas_nao_canceladas_30d`.
+
+`dias_desde_ultima_corretiva`, por exemplo, é a diferença em dias entre `D` e a ocorrência corretiva mais recente do mesmo PSD. Se houve corretiva em `D`, o valor é zero; se a última foi três dias antes, o valor é três. Antes da primeira ocorrência conhecida, o valor permanece ausente e o CatBoost trata esse valor numérico nativamente.
+
+#### Features categóricas
+
+- `id_psd`;
+- `estacao_padrao`;
+- `plataforma_padrao`;
+- `dia_semana`.
+
+O CatBoost utiliza essas categorias diretamente e cria representações numéricas ordenadas durante o treinamento, evitando a expansão manual em centenas de colunas e reduzindo o risco de vazamento do alvo.
+
+### 5.6 Features efetivamente usadas
+
+O modelo final recebeu **21 features**: quatro categóricas e 17 numéricas. As colunas `qtd_falhas_confirmadas`, `qtd_falhas_proximos_7d` e `target_falha_7d` foram explicitamente bloqueadas como entrada. A primeira constrói o alvo e as duas últimas contêm informação futura ou a própria resposta.
+
+### 5.7 Candidatas de aprimoramento
+
+Foi preparada no notebook de processamento uma nova família de candidatas:
+
+- dias desde a última falha confirmada;
+- falhas confirmadas nos 7, 30 e 90 dias anteriores;
+- alarmes críticos, dias críticos e duração máxima em 30 dias;
+- razão entre alarmes críticos recentes e a média histórica de 30 dias.
+
+As features baseadas em falha usam `shift(1)`, portanto só consultam eventos anteriores a `D`. Essas candidatas **ainda não fazem parte das 21 entradas do modelo salvo** e devem ser avaliadas em um novo experimento temporal antes de serem incorporadas.
+
+### 5.8 Filtragem e divisão temporal
+
+Das 24.772 linhas originais:
+
+- 154 foram removidas por não possuírem sete dias futuros completos;
+- 638 foram removidas por não possuírem 30 dias completos de histórico;
+- 23.980 permaneceram disponíveis para os cortes temporais.
+
+Foi aplicada uma purga de sete dias entre os conjuntos. A purga impede que a janela do alvo de uma observação anterior alcance o período seguinte.
+
+| Conjunto | Período | Linhas | Positivos | Taxa positiva |
+|---|---|---:|---:|---:|
+| Treino | 28/03/2023 a 24/03/2025 | 16.016 | 7.264 | 45,35% |
+| Purga | 25/03/2025 a 31/03/2025 | 154 | — | — |
+| Validação | 01/04/2025 a 23/09/2025 | 3.872 | 2.019 | 52,14% |
+| Purga | 24/09/2025 a 30/09/2025 | 154 | — | — |
+| Teste | 01/10/2025 a 21/03/2026 | 3.784 | 1.957 | 51,72% |
+
+Não foi usado embaralhamento aleatório. O teste representa o período mais recente e permaneceu isolado até a decisão final do modelo e do limiar.
+
+Os arquivos gerados foram:
+
+- `data/processados/modelo-07/base_treino.csv`;
+- `data/processados/modelo-07/base_validacao.csv`;
+- `data/processados/modelo-07/base_teste.csv`;
+- `data/processados/modelo-07/configuracao_modelagem.json`.
+
+---
+
+## 6. Fase 4 — Modelagem
+
+### 6.1 Escolha do CatBoostClassifier
+
+O CatBoost foi escolhido como primeiro algoritmo por ser adequado a dados tabulares mistos, aceitar variáveis categóricas sem *one-hot encoding* manual, lidar com valores numéricos ausentes e representar relações não lineares. O treinamento ordenado das categorias ajuda a evitar que a representação de uma categoria use a resposta da própria linha.
+
+### 6.2 Preparação dos Pools
+
+Foram construídos `Pool`s separados de treino, validação e teste. As quatro features categóricas foram informadas explicitamente ao CatBoost. Nenhuma categoria desconhecida apareceu em validação ou teste.
+
+O conjunto de treino continha 456 valores numéricos ausentes, relacionados principalmente ao período anterior à primeira manutenção conhecida. Eles foram mantidos, pois o CatBoost possui tratamento nativo para ausências numéricas.
+
+### 6.3 Baseline
+
+O baseline utilizou:
+
+| Parâmetro | Valor |
+|---|---:|
+| `iterations` | 1.000 |
+| `learning_rate` | 0,05 |
+| `depth` | 6 |
+| `loss_function` | `Logloss` |
+| `eval_metric` | `AUC` |
+| `l2_leaf_reg` | 3 |
+| `random_strength` | 1 |
+| `random_seed` | 42 |
+| parada antecipada | 100 iterações |
+
+O melhor ponto foi encontrado na iteração 52. Na validação, o baseline obteve ROC-AUC de 0,5901 e PR-AUC de 0,5929.
+
+### 6.4 Seleção do limiar
+
+O CatBoost produz probabilidades. A classe positiva depende de um limiar:
+
+```text
+probabilidade >= limiar  → alerta de falha
+probabilidade <  limiar  → sem alerta
+```
+
+O limiar não foi fixado automaticamente em 0,5. Ele foi escolhido **somente na validação**, buscando a maior precision entre os pontos com recall mínimo de 80%. No baseline, o limiar foi 0,3888, com recall de 87,96% e precision de 56,60%.
+
+### 6.5 Aprimoramento por hiperparâmetros
+
+Foram comparadas arquiteturas com diferentes profundidades, regularização e balanceamento de classes. Todos os limiares abaixo foram definidos na validação.
+
+| Experimento | Melhor iteração | PR-AUC | ROC-AUC | Limiar | Recall | Precision | F1 | Alertas |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| profundo regularizado | 55 | 0,5962 | 0,5920 | 0,4251 | 80,34% | 57,33% | 66,91% | 73,06% |
+| intermediário regularizado | 86 | 0,5947 | 0,5918 | 0,3791 | 89,25% | 56,70% | 69,35% | 82,08% |
+| baseline | 52 | 0,5929 | 0,5901 | 0,3888 | 87,96% | 56,60% | 68,88% | 81,04% |
+| intermediário balanceado | 136 | 0,5945 | 0,5905 | 0,4132 | 87,77% | 56,51% | 68,75% | 80,99% |
+| **raso regularizado** | **308** | **0,6046** | **0,5979** | **0,3174** | **91,63%** | **56,39%** | **69,81%** | **84,74%** |
+
+O modelo **raso regularizado** foi selecionado por apresentar o maior recall, PR-AUC e F1 na validação, alinhando-se ao objetivo operacional.
+
+Seus principais hiperparâmetros foram:
+
+| Parâmetro | Valor |
+|---|---:|
+| `iterations` máximas | 1.500 |
+| `depth` | 4 |
+| `learning_rate` | 0,03 |
+| `l2_leaf_reg` | 5 |
+| `random_strength` | 0,5 |
+| `random_seed` | 42 |
+| melhor iteração | 308 |
+| limiar final | 0,317380 |
+
+---
+
+## 7. Fase 5 — Avaliação
+
+### 7.1 Métricas finais no teste
+
+O modelo e o limiar foram aplicados uma única vez ao conjunto de teste temporal.
+
+| Métrica | Resultado |
+|---|---:|
+| Recall | **91,93%** |
+| Precision | 54,63% |
+| F1 | 68,53% |
+| PR-AUC | 0,5874 |
+| ROC-AUC | 0,5911 |
+| Acurácia | 56,34% |
+| Proporção de alertas | 87,02% |
+
+### 7.2 Matriz de confusão
+
+| Resultado | Quantidade de linhas PSD-dia |
+|---|---:|
+| Verdadeiro positivo — futuro positivo alertado | 1.799 |
+| Falso negativo — futuro positivo não alertado | 158 |
+| Falso positivo — alerta sem futuro positivo | 1.494 |
+| Verdadeiro negativo — futuro negativo sem alerta | 333 |
+
+O modelo identificou 1.799 de 1.957 observações positivas e deixou 158 sem alerta. Em contrapartida, gerou 1.494 alertas falsos.
+
+### 7.3 Interpretação das métricas
+
+- **Recall** mede a proporção dos PSD-dias positivos que receberam alerta. É a principal métrica do projeto.
+- **Precision** mede quantos alertas correspondem de fato a um PSD-dia positivo.
+- **PR-AUC** resume o desempenho de precision e recall em todos os limiares. É especialmente útil quando a classe positiva é o foco.
+- **ROC-AUC** mede a capacidade geral de ordenar positivos acima de negativos em todos os limiares.
+- **F1** combina precision e recall em uma única média harmônica.
+- **Acurácia** mede o total de acertos, mas não expressa adequadamente o custo distinto entre perder uma falha e gerar um alerta falso.
+
+A acurácia de 56,34% não foi usada para escolher o modelo. O limiar baixo aumenta deliberadamente a sensibilidade, classificando mais casos como positivos. Ainda assim, PR-AUC e ROC-AUC próximas de 0,59 mostram que a capacidade de separação é apenas moderada.
+
+### 7.4 Interpretação das features
+
+Foram produzidas importância global do CatBoost e análises SHAP, incluindo o gráfico *beeswarm*. No modelo salvo, as features com maior importância global foram:
+
+| Feature | Importância |
+|---|---:|
+| `id_psd` | 25,51% |
+| `dias_desde_ultima_preventiva` | 13,25% |
+| `estacao_padrao` | 10,62% |
+| `qtd_corretivas_emergenciais_30d` | 9,77% |
+| `duracao_maxima_alarme_7d` | 8,05% |
+| `qtd_corretivas_programadas_30d` | 6,09% |
+| `proporcao_criticas_pico_7d` | 5,98% |
+| `qtd_criticas_pico_7d` | 5,78% |
+
+O SHAP permite analisar direção e intensidade: valores SHAP positivos elevam a probabilidade prevista, enquanto valores negativos a reduzem. No *beeswarm*, a posição horizontal representa o impacto, e a cor representa valores baixos ou altos das features numéricas. Features categóricas aparecem sem uma escala numérica natural.
+
+Importância e SHAP mostram associação aprendida pelo modelo, não causalidade. A alta relevância de `id_psd` e `estacao_padrao` sugere diferenças históricas entre locais, mas também exige monitoramento de generalização e deriva por estação.
+
+### 7.5 Conclusão da avaliação
+
+O experimento atende à meta mínima de recall e demonstra que alarmes, histórico de manutenção e identidade do sistema carregam sinal preditivo. Porém, **o modelo ainda não está pronto para uso operacional irrestrito**:
+
+- 87,02% das linhas de teste geram alerta;
+- 45,37% dos alertas são falsos;
+- ROC-AUC e PR-AUC indicam separação limitada;
+- a agregação por plataforma não localiza qual porta PDM deve ser inspecionada;
+- não foi validado se a equipe consegue atender o volume diário de alertas;
+- a definição do alvo pode contar a mesma falha em várias janelas diárias.
+
+---
+
+## 8. Fase 6 — Implantação e próximos ciclos
+
+### 8.1 Artefatos gerados
+
+| Artefato | Finalidade |
+|---|---|
+| `models/modelo-07/modelo_catboost.cbm` | modelo CatBoost serializado |
+| `models/modelo-07/metadata_modelo.json` | features, limiar, métricas e identificação do modelo |
+| `models/modelo-07/previsoes_teste.csv` | probabilidades e classes previstas no teste |
+| `models/modelo-07/importancia_features.csv` | importância global das features |
+
+O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetros aprendidos. Para reproduzir a decisão operacional, não basta carregar o modelo: também é necessário usar as mesmas 21 features, na mesma semântica, e aplicar o limiar `0,317380` registrado no metadata.
+
+### 8.2 Fluxo de inferência proposto
+
+1. consolidar os eventos conhecidos até o final de `D`;
+2. gerar uma linha para cada estação e plataforma;
+3. calcular as 21 features com as mesmas regras do treinamento;
+4. carregar `modelo_catboost.cbm`;
+5. gerar a probabilidade de falha;
+6. aplicar o limiar registrado no metadata;
+7. ordenar os alertas por probabilidade e disponibilizá-los à manutenção.
+
+### 8.3 Monitoramento necessário
+
+- recall depois que as janelas futuras de sete dias estiverem completas;
+- precision e quantidade diária de alertas;
+- falsos negativos e falsos positivos por estação e plataforma;
+- PR-AUC e ROC-AUC em janelas móveis;
+- distribuição das features e categorias desconhecidas;
+- atraso e qualidade dos dados de alarmes e manutenção;
+- capacidade real da equipe para atender alertas;
+- estabilidade do limiar diante de mudanças operacionais.
+
+### 8.4 Aprimoramentos recomendados
+
+1. testar as features históricas de falha e as janelas de 30 e 90 dias já preparadas;
+2. avaliar o modelo por falha física única, além da métrica por PSD-dia;
+3. selecionar o limiar considerando um limite operacional de alertas por dia;
+4. comparar CatBoost com LightGBM, XGBoost e regressão logística como referência;
+5. executar validação temporal em múltiplas janelas, e não apenas um único corte;
+6. avaliar calibração das probabilidades;
+7. estudar modelagem por porta PDM quando a cobertura das chaves permitir;
+8. incorporar categorias mecânicas de H7 somente com controle rigoroso do momento em que a informação se torna disponível;
+9. investigar por que a prevalência positiva aumenta de 45,35% no treino para aproximadamente 52% nos períodos posteriores;
+10. documentar com a área operacional o custo de falso negativo e falso positivo para transformar o limiar em decisão de negócio.
+
+---
+
+## 9. Rastreabilidade e reprodução
+
+| Ordem | Notebook | Entrada principal | Saída principal |
+|---:|---|---|---|
+| 1 | `src/modelo-07/01_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
+| 2 | `src/modelo-07/02_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
+| 3 | `src/modelo-07/03_treinamento_cat.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
+
+Para reproduzir o resultado, os notebooks devem ser executados nessa ordem. Os caminhos são resolvidos a partir da raiz do repositório, e o `random_seed=42` deve ser preservado. A avaliação final deve continuar usando o teste apenas depois de todas as decisões terem sido tomadas na validação.
+
+## 10. Síntese
+
+O primeiro ciclo CRISP-DM produziu um pipeline rastreável desde quatro fontes operacionais até um CatBoost treinado e serializado. O modelo alcançou recall elevado no período de teste, mas o volume de alertas e a discriminação moderada mostram que o próximo ciclo deve se concentrar em **manter a cobertura de falhas e aumentar a capacidade de priorização**.
