@@ -32,6 +32,7 @@ O notebook está em eda/modelo/modelo_preditivo_falhas.ipynb.
 2. **Features:** Foram consideradas mais de de 40 features, organizadas em grupos (alarmes por tipo e janela móvel, duração, recência, histórico de manutenção SAP, identificação), mais um grupo criado especificamente para este modelo. Features relacionadas a repetição de corretivas (dias_desde_ultima_corretiva, n_corretivas_historico_total, intervalo_medio_zm01, razao_atraso_zm01), com a ideia de que uma porta atrasada em relação ao próprio ritmo histórico de quebra tem mais risco.
 3. **Separação treino/teste temporal:** diferente do 80/20 aleatório usual, a divisão foi feita por data. O treino foi até 23/04/2025 (232.992 linhas), e o teste a partir de 01/05/2025 (71.184 linhas), com 7 dias de folga entre os dois. Como as features usam médias móveis, dias vizinhos são quase idênticos. Misturar eles podia vazar informação de teste para o treino.
 4. **Modelo:** Random Forest, escolhido por enfrentar bem com combinações de sinais sem precisar criar a combinação manualmente, não exigir normalização, e combinar bem com SHAP para interpretação.
+5. **Validação dos hiperparâmetros:** um `RandomizedSearchCV` seguido de `GridSearchCV` (com validação respeitando a ordem temporal) testou outras combinações de parâmetros. O resultado ficou muito próximo do modelo com parâmetros escolhidos manualmente, confirmando que eles já bons.
 
 ---
 
