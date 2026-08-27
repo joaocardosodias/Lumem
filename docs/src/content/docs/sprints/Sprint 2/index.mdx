@@ -30,6 +30,7 @@ A tabela a seguir consolida as principais características arquiteturais, métri
 | [**Modelo 2**](/sprints/sprint-2/modelos/modelo-2) | LightGBM Tunado + RF Baseline | Porta × Dia (526 PSDs) | 23 | **60,00%** | 22,00% | ROC-AUC: 0,634 | **Equilíbrio & Permutação:** Análise Gini vs Permutação |
 | [**Modelo 3**](/sprints/sprint-2/modelos/modelo-3) | Decision Tree | Porta × Dia | ~15 | Validação Temporal | Decisão Rápida | F1 na Validação | **Interpretabilidade:** Regras de decisão explícitas (CRISP-DM) |
 | [**Modelo 5**](/sprints/sprint-2/modelos/modelo-5) | Random Forest | Porta × Dia (480 PSDs) | 40+ | **65,00%** (evento) | 26,00% (episódio) | F1 evento: 0,372 | **Sensibilidade a Ciclos:** Modelagem de tempo e recorrência pós-reparo |
+| [**Modelo 6**](/sprints/sprint-2/modelos/modelo-6) | XGBoost Classifier | Estação × Evento | 14 | **94,00%** (falha) | 99,00% | Acurácia Balanceada: 59,83% | **Previsão por Estação:** Foco em features agregadas e reponderação de classes |
 | [**Modelo 7**](/sprints/sprint-2/modelos/modelo-7) | CatBoostClassifier | Plataforma × Dia (22 PSDs) | 21 | **91,93%** | 54,63% (pontual) | PR-AUC: 0,5892 | **Agregação por Plataforma:** Suporte nativo a variáveis categóricas |
 
 ---
@@ -55,6 +56,10 @@ A tabela a seguir consolida as principais características arquiteturais, métri
   - **Foco:** Modelagem do atraso em relação ao ciclo natural de manutenção da porta, painel analítico em Parquet e métricas agregadas por episódio de alerta e falha real.
   - **Código:** [`models/modelo-5/`](file:///home/cardoso/GitHub/g04/models/modelo-5/)
 
+* ⚙️ [**Modelo 6**](/sprints/sprint-2/modelos/modelo-6)
+  - **Foco:** Previsão de falhas nos próximos 7 dias por evento de manutenção com XGBoost, balanceamento de classes e busca por RandomizedSearchCV.
+  - **Código:** [`models/modelo-6/`](file:///home/cardoso/GitHub/g04/models/modelo-6/)
+
 * 🐱 [**Modelo 7**](/sprints/sprint-2/modelos/modelo-7)
   - **Foco:** Modelo agregado ao nível de plataforma de estação com processamento nativo de variáveis categóricas, regularização L2 severa e análise de correlação linear/monotônica com o alvo.
   - **Código:** [`models/modelo-7/`](file:///home/cardoso/GitHub/g04/models/modelo-7/)
@@ -73,6 +78,7 @@ Todos os códigos executáveis, scripts de preparação, matrizes pré-processad
   - `models/modelo-2/`: Scripts de preparação e notebook de modelagem.
   - `models/modelo-3/`: Notebook CRISP-DM de árvore de decisão.
   - `models/modelo-5/`: Script de painel e notebook de modelagem por eventos.
+  - `models/modelo-6/`: Notebook de modelagem XGBoost por evento/estação.
   - `models/modelo-7/`: 3 notebooks de preparação, processamento e CatBoost + artefato `.cbm`.
 * **Modelos Serializados e Scalers:** `data/modelos_artefatos/` (`.joblib`, `.cbm`, `.json`).
 * **Bases de Dados Processadas:** `data/` (tabelas mestras brutas, codificadas e splits temporais).

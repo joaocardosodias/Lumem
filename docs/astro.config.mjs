@@ -41,6 +41,7 @@ export default defineConfig({
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }],
 								},
 								{ label: 'Features Candidatas', slug: 'sprints/sprint-1/features-candidatas' },
+								{ label: 'Resumo para Prova', slug: 'sprints/sprint-1/resumo-para-prova' },
 							],
 						},
 						{

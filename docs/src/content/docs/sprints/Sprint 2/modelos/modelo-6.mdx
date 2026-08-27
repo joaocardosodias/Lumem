@@ -1,0 +1,137 @@
+---
+title: "Modelo 6"
+description: "Documentação do modelo preditivo XGBoost com engenharia de features por estação (Modelo 6)."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Escolha do Modelo</h2>
+</div>
+
+Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a porta irá quebrar dentro dos próximos 7 dias. O objetivo é que a equipe da Motiva, consiga inserir novos dados e o modelo consiga avaliar e prever se ele irá quebrar nos próximos 7 dias. Nesse formato, seria necessário rodar o modelo com os novos dados.
+
+A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas não finalizado e iniciamos o tratamento de dados e levantamento de novas features.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Tabelas Utilizadas</h2>
+</div>
+
+Para analise do modelo e levantamento de novas features, utilizamos as seguintes tabelas:
+- **Alarmes** (742.506 registros): o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
+- **Corretiva Emergencial (ZM01)** e **Corretiva Programada (ZM02)**: as ordens de manutenção efetivamente abertas depois de uma falha, com data, estação, sintoma, causa e ação tomada. É a fonte da variável que se quer prever.
+- **Preventiva (ZM03)**: manutenção agendada (não motivada por falha), como troca de ar-condicionado do rack ou inspeção de rotina.
+
+Depois disso, a próxima decisão foi juntar `ZM01` e `ZM02` num único `zm01` (11.706 linhas). As duas são manutenções corretivas, a diferença entre elas é só a urgência com que a ordem foi tratada, não o tipo de evento. Isso importa porque o alvo do modelo tem uma classe extremamente rara (estação que **não** falha na semana seguinte a uma manutenção), e cada linha extra de corretiva ajuda a enxergar melhor os poucos casos "sem falha" que existem no meio de milhares de "com falha".
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Pré-Processamento</h2>
+</div>
+
+Antes de construir qualquer variável no modelo, é fundamental garantir que os dados estejam estruturados de forma a permitir comparações temporais confiáveis e o cruzamento de informações entre diferentes fontes. Essa preparação se apoia em três pilares fundamentais: padronização do tempo, remoção de ruídos e ordenação cronológica.
+
+O ponto de partida e elemento mais crítico de toda a análise é o tratamento adequado da coluna T, que registra o horário de início da avaria. Praticamente todas as variáveis criadas nas etapas seguintes buscam responder à mesma pergunta: o que aconteceu nesta mesma estação antes do instante T? Qualquer falha na formatação dessa data gera um efeito dominó, comprometendo a precisão de todos os cálculos e modelos construídos a partir dela.
+
+Com o tempo devidamente ajustado, o passo seguinte é filtrar o ruído dos dados. Nem todo alerta disparado pelo sistema indica uma degradação real do equipamento. Um alarme de obstrução OBS gerado por uma mochila presa na porta por alguns segundos durante o horário de pico reflete apenas o fluxo normal da estação, e não um defeito mecânico na porta de plataforma. Para evitar que esses eventos irrelevantes poluam a base e diluam o impacto dos problemas reais, descartamos qualquer alarme OBS com duração inferior a 30 segundos, mantendo o foco apenas nos sinais com real potencial analítico.
+
+Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estação e organizada no tempo. Toda a lógica de análise depende da capacidade de consultar o passado, como checar o histórico recente de manutenções ou contar a frequência de alarmes anteriores. Percorrer os dados em ordem cronológica exata dentro de cada estação é o que garante que a comparação de um evento com o seu momento anterior faça sentido prático e matemático.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Utilizadas</h2>
+</div>
+
+Com os dados devidamente preparados, o passo seguinte é transformar esse histórico bruto em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. Isso parece óbvio, mas é fácil quebrar por acidente. Calcular, por exemplo, a duração média de todas as manutenções de uma estação incluindo a atual contaminaria a variável com informação do próprio evento que se está tentando prever. Por isso praticamente todo cálculo usa shift(1), cumcount() ou uma busca binária (searchsorted) limitada ao passado, de forma que cada feature representa exatamente o que um mantenedor saberia, olhando o histórico da estação, no instante imediatamente anterior àquele momento, nunca depois.
+
+A primeira leva de variáveis nasce de uma intuição simples de manutenção preditiva: uma porta prestes a falhar normalmente já vem avisando, seja em mais alarmes, em manutenções mais recorrentes ou em reparos mais demorados. Dessa ideia nasceram:
+
+- **estacao**: extraída do campo local_de_instalacao, vira a chave usada para juntar informação entre as diferentes bases.
+- **numero_alarmes**: total histórico de alarmes daquela estação, um proxy bruto de quanto ela é usada e monitorada (estações maiores e mais movimentadas tendem a acumular mais alarmes só pelo volume de operação, independente de estarem degradando ou não).
+- **alarmes_antes_manu**: conta, por busca binária num vetor de horários ordenado, quantos alarmes já haviam acontecido em todo o sistema até o fim daquela avaria, uma medida bruta de volume acumulado.
+- **dias_desde_ultima_manutencao**: usa um shift dentro de cada grupo de estação para pegar o fim da manutenção anterior e calcular a distância até T. A intuição é dupla: um intervalo curto pode indicar uma porta que não fica boa (o mesmo problema voltando rápido), e um intervalo longo pode indicar acúmulo natural de desgaste. Estações na primeira manutenção do seu histórico recebem -1 como sentinela, para não confundir "nunca teve manutenção antes" com "teve manutenção há zero dias".
+- **alarmes_ultimas_24h e alarmes_ultimos_7d**: quantos alarmes a estação teve nas últimas 24 horas e nos últimos 7 dias, sempre antes de T. É a feature mais diretamente ligada à ideia de aviso antes da falha.
+- **tendencia_alarmes**: combina as duas janelas acima numa única razão, dividindo os alarmes das últimas 24h pela média diária dos últimos 7 dias. Um valor bem acima de 1 significa que a estação está mais barulhenta do que o seu normal recente, uma tentativa de capturar não só o volume de alarme, mas se ele está acelerando.
+
+Depois de uma primeira rodada do modelo, olhar a importância de cada variável revelou que faltava capturar reincidência de forma mais direta:
+
+- **numero_manutencoes_anteriores**: quantas manutenções a estação já teve antes desta.
+- **duracao_media_manutencoes_anteriores**: duração média (em horas) dos reparos anteriores, sempre usando shift(1) para não vazar a duração da própria ocorrência atual.
+- **dia_semana e mes**: extraídos de T, testam se existe sazonalidade semanal ou anual no comportamento das falhas.
+
+A manutenção preventiva também entra como feature, nunca como parte da definição do alvo: misturá-la na timeline que define a falha contaminaria o rótulo, já que uma visita agendada sem problema nenhum passaria a contar como "falha chegando".
+
+- **dias_desde_ultima_preventiva**: há quanto tempo a estação teve a última preventiva antes de T.
+- **preventivas_agendadas_prox_7d**: quantas preventivas já estão agendadas para os 7 dias seguintes, uma informação legítima de se ter no momento da previsão, já que manutenção preventiva é agendada com antecedência. Eventos cancelados são descartados por não terem ocorrido de fato, o que deixa 559 das 569 preventivas originais válidas.
+
+Por fim, estacao, sintoma, objeto e defeito são campos de texto e precisam virar número antes de alimentar o modelo. A escolha recai sobre o LabelEncoder, que transforma cada categoria num inteiro, em vez do one-hot encoding: para um modelo baseado em árvores como o XGBoost isso não é um problema, já que a árvore não assume nenhuma ordem ou distância entre os códigos, apenas aprende a dividir por eles, e essa escolha evita explodir o número de colunas com variáveis de alta cardinalidade como defeito e sintoma, que têm dezenas de categorias distintas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Definindo o Alvo e Separando Treino/Teste</h2>
+</div>
+
+### Como nasce falha_proximos_7d
+
+Para cada evento de manutenção, olha-se qual é o próximo evento da mesma estação e quantos dias faltam até lá. Se for 7 dias ou menos, o alvo é 1; senão, 0. A última manutenção de cada estação não tem um "próximo evento" para comparar, então essas linhas são descartadas, já que não há como rotulá-las.
+
+O resultado dessa definição dá o tom para o resto do notebook: *11.504 exemplos de classe 1 contra apenas 190 de classe 0* (1,6% da base). Isso acontece porque, no histórico completo, a maioria das manutenções de uma estação é seguida por outra dentro de uma semana, ou seja, falhas tendem a se agrupar no tempo. A classe rara, a estação que "ficou bem" por 7 dias, é a mais interessante do ponto de vista prático, mas também a mais difícil de aprender, por ter poucos exemplos.
+
+### Por que separar por tempo, e não aleatoriamente
+
+O corte de treino/teste é feito no percentil 80 da data T, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes), o que resulta em 9.355 exemplos de treino contra 2.339 de teste.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo</h2>
+</div>
+
+Com treino e teste separados, falta escolher e ajustar o modelo. Duas decisões guiam essa etapa.
+
+A primeira é o algoritmo. O XGBoost é um modelo baseado em árvores de decisão, o que combina bem com o tipo de variável construído até aqui: contagens, razões e categorias codificadas como inteiro, sem exigir normalização e lidando naturalmente com relações não lineares. Ele também tem suporte nativo a scale_pos_weight, o que importa muito neste problema específico.
+
+A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 98,85% dos exemplos de teste são da classe 1. Um modelo preguiçoso que sempre prevê 1 já acerta quase 99% das vezes, e é essa a barra de comparação que torna a acurácia comum uma métrica enganosa aqui. Por isso a busca de hiperparâmetros foi montada assim:
+
+- **scoring="balanced_accuracy"**: essa métrica tira a média do recall das duas classes sem pesar pelo tamanho de cada uma, então um modelo que só acerta a classe majoritária pontua mal, mesmo tendo acurácia alta.
+- **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
+- **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
+
+O resultado é onde a dificuldade do problema aparece de forma concreta:
+
+| Métrica (teste) | Classe 1 (falha) | Classe 0 (sem falha) |
+| :--- | :---: | :---: |
+| Precisão | 0,99 | 0,05 |
+| Recall | 0,94 | 0,26 |
+| F1 | 0,96 | 0,08 |
+| Suporte | 2.312 | 27 |
+
+A acurácia geral fica em 92,95%, o que soa bem, mas é menor que o baseline de sempre prever a classe majoritária (98,85%), sinal de que a reponderação de classe está custando acurácia bruta em troca de um pouco de recall na classe rara. A acurácia balanceada, 59,83%, é a métrica que de fato importa aqui, e mostra o quadro real: pouco acima do que um classificador aleatório conseguiria (50%).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Overfitting vs. Desbalanceamento</h2>
+</div>
+
+O número de teste sozinho não diz por que o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
+
+- **Overfitting de verdade**: o modelo decorou padrões específicos dos exemplos de classe 0 no treino, que não se repetem no teste. Nesse cenário, o desempenho seria ótimo no treino e ruim no teste, e a solução seria simplificar o modelo (menos profundidade, mais regularização).
+- **Desbalanceamento estrutural**: mesmo sem decorar nada, existe tão pouco exemplo da classe rara e tão pouca separação real nas features que nenhum modelo aprenderia essa classe direito. Nesse cenário, o problema não é o modelo, é a quantidade e a qualidade de dado disponível, e simplificar o modelo só pioraria as coisas.
+
+Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de distinguir os dois cenários:
+
+| Métrica | Treino (n=9.355) | Teste (n=2.339) |
+| :--- | :---: | :---: |
+| Acurácia balanceada | 77,57% | 59,83% |
+| Recall, classe 0 | 0,76 | 0,26 |
+| Precisão, classe 0 | 0,06 | 0,05 |
+
+A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. Uma regularização mais agressiva (árvores mais rasas, min_child_weight maior, L1/L2) foi testada para atacar esse gap: reduziu a diferença entre treino e teste, de cerca de 22 para 19 pontos, mas piorou o resultado absoluto, com o recall da classe 0 no teste caindo de 26% para 4%. A configuração original foi mantida, porque simplificar o modelo não resolve o problema de fundo. O teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
