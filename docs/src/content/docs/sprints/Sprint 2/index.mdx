@@ -1,0 +1,86 @@
+---
+title: "Visão Geral e Entregas da Sprint 2"
+description: "Resumo executivo da Sprint 2: Modelagem Preditiva de Falhas em Portas de Plataforma (PSD), Feature Engineering, Encodings e Modelos Campeões."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo Executivo da Sprint 2</h2>
+</div>
+
+A **Sprint 2** concentrou-se na construção, treinamento, validação, calibração de hiperparâmetros e explicabilidade dos **Modelos Preditivos de Inteligência Artificial** desenvolvidos pelo Grupo 04 para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas 526 portas de plataforma (**PSD**) da Linha 4-Amarela do Metrô de São Paulo.
+
+Nesta etapa, consolidamos a **Tabela Mestra Contínua** (*Feature Store*), aplicamos técnicas rigorosas de engenharia de dados e blindagem temporal contra vazamento de dados (*data leakage*), treinamos diferentes famílias de algoritmos de Machine Learning (Árvores de Decisão, Random Forest, XGBoost, LightGBM, CatBoost e Ensembles) e avaliamos os resultados sob as réguas operacionais de engenharia de manutenção.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Quadro Comparativo dos Modelos Desenvolvidos</h2>
+</div>
+
+A tabela a seguir consolida as principais características arquiteturais, métricas e perfis operacionais de cada modelo desenvolvido pela equipe:
+
+| Modelo | Algoritmo Principal | Granularidade | Features | Recall | Precisão | Métrica de Destaque | Perfil Operacional |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| [**Modelo 1**](/sprints/sprint-2/modelos/modelo-1) | XGBoost (Hist) & Ensemble | Porta × Dia (526 PSDs) | 32 | **97,94%** (estrito) | 9,35% a 33,33% | F1: 0,1829 (p=0,52) | **Proteção Máxima:** Evita 380 de 388 falhas reais na linha |
+| [**Modelo 2**](/sprints/sprint-2/modelos/modelo-2) | LightGBM Tunado + RF Baseline | Porta × Dia (526 PSDs) | 23 | **60,00%** | 22,00% | ROC-AUC: 0,634 | **Equilíbrio & Permutação:** Análise Gini vs Permutação |
+| [**Modelo 3**](/sprints/sprint-2/modelos/modelo-3) | Decision Tree | Porta × Dia | ~15 | Validação Temporal | Decisão Rápida | F1 na Validação | **Interpretabilidade:** Regras de decisão explícitas (CRISP-DM) |
+| [**Modelo 5**](/sprints/sprint-2/modelos/modelo-5) | Random Forest | Porta × Dia (480 PSDs) | 40+ | **65,00%** (evento) | 26,00% (episódio) | F1 evento: 0,372 | **Sensibilidade a Ciclos:** Modelagem de tempo e recorrência pós-reparo |
+| [**Modelo 6**](/sprints/sprint-2/modelos/modelo-6) | XGBoost Classifier | Estação × Evento | 14 | **94,00%** (falha) | 99,00% | Acurácia Balanceada: 59,83% | **Previsão por Estação:** Foco em features agregadas e reponderação de classes |
+| [**Modelo 7**](/sprints/sprint-2/modelos/modelo-7) | CatBoostClassifier | Plataforma × Dia (22 PSDs) | 21 | **91,93%** | 54,63% (pontual) | PR-AUC: 0,5892 | **Agregação por Plataforma:** Suporte nativo a variáveis categóricas |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Documentação Detalhada por Modelo</h2>
+</div>
+
+* 🚀 [**Modelo 1**](/sprints/sprint-2/modelos/modelo-1)
+  - **Foco:** Maximização do recall para proteção contra paradas na linha, calibração via Optuna, tratamento de classes desbalanceadas (`scale_pos_weight = 9.5`), mitigação de leakage temporal e explicabilidade global com SHAP Beeswarm.
+  - **Código:** [`models/modelo-1/`](file:///home/cardoso/GitHub/g04/models/modelo-1/)
+
+* 🌲 [**Modelo 2**](/sprints/sprint-2/modelos/modelo-2)
+  - **Foco:** Comparação sistemática da importância de features por Gini vs. Permutação no conjunto de teste, pipeline de consolidação de 5 fontes (incluindo Catracas) e tuning com early stopping.
+  - **Código:** [`models/modelo-2/`](file:///home/cardoso/GitHub/g04/models/modelo-2/)
+
+* 📊 [**Modelo 3**](/sprints/sprint-2/modelos/modelo-3)
+  - **Foco:** Aplicação rigorosa das 5 fases do CRISP-DM, árvore de decisão de alta transparência com regras auditáveis por técnicos de manutenção e validação temporal sem vazamento.
+  - **Código:** [`models/modelo-3/`](file:///home/cardoso/GitHub/g04/models/modelo-3/)
+
+* ⏱️ [**Modelo 5**](/sprints/sprint-2/modelos/modelo-5)
+  - **Foco:** Modelagem do atraso em relação ao ciclo natural de manutenção da porta, painel analítico em Parquet e métricas agregadas por episódio de alerta e falha real.
+  - **Código:** [`models/modelo-5/`](file:///home/cardoso/GitHub/g04/models/modelo-5/)
+
+* ⚙️ [**Modelo 6**](/sprints/sprint-2/modelos/modelo-6)
+  - **Foco:** Previsão de falhas nos próximos 7 dias por evento de manutenção com XGBoost, balanceamento de classes e busca por RandomizedSearchCV.
+  - **Código:** [`models/modelo-6/`](file:///home/cardoso/GitHub/g04/models/modelo-6/)
+
+* 🐱 [**Modelo 7**](/sprints/sprint-2/modelos/modelo-7)
+  - **Foco:** Modelo agregado ao nível de plataforma de estação com processamento nativo de variáveis categóricas, regularização L2 severa e análise de correlação linear/monotônica com o alvo.
+  - **Código:** [`models/modelo-7/`](file:///home/cardoso/GitHub/g04/models/modelo-7/)
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Artefatos e Reprodutibilidade</h2>
+</div>
+
+Todos os códigos executáveis, scripts de preparação, matrizes pré-processadas e modelos serializados estão estruturados na pasta [`models/`](file:///home/cardoso/GitHub/g04/models/):
+
+* **Diretório Unificado de Modelos:** `models/`
+  - `models/modelo-1/`: 3 notebooks modulares de pipeline contínuo.
+  - `models/modelo-2/`: Scripts de preparação e notebook de modelagem.
+  - `models/modelo-3/`: Notebook CRISP-DM de árvore de decisão.
+  - `models/modelo-5/`: Script de painel e notebook de modelagem por eventos.
+  - `models/modelo-6/`: Notebook de modelagem XGBoost por evento/estação.
+  - `models/modelo-7/`: 3 notebooks de preparação, processamento e CatBoost + artefato `.cbm`.
+* **Modelos Serializados e Scalers:** `data/modelos_artefatos/` (`.joblib`, `.cbm`, `.json`).
+* **Bases de Dados Processadas:** `data/` (tabelas mestras brutas, codificadas e splits temporais).
+
+

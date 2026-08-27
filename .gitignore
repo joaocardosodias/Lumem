@@ -1,5 +1,8 @@
-.venv
+.venv/
 /.venv
 /venv/
 venv/
 /venv
+catboost_info/
+__pycache__/
+*.pyc
