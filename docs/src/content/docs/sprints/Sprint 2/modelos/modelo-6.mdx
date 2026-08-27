@@ -135,3 +135,28 @@ Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de
 | Precisão, classe 0 | 0,06 | 0,05 |
 
 A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. Uma regularização mais agressiva (árvores mais rasas, min_child_weight maior, L1/L2) foi testada para atacar esse gap: reduziu a diferença entre treino e teste, de cerca de 22 para 19 pontos, mas piorou o resultado absoluto, com o recall da classe 0 no teste caindo de 26% para 4%. A configuração original foi mantida, porque simplificar o modelo não resolve o problema de fundo. O teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Síntese Final e Recomendação Operacional</h2>
+</div>
+
+### 8.1 O que o modelo 6 realmente trouxe
+
+O Modelo 6 cumpriu seu papel como uma etapa importante da jornada de desenvolvimento: ele mostrou que o histórico de alarmes, manutenção e recorrência de falhas em uma mesma estação contém sinal preditivo, mas também evidenciou uma limitação estrutural do problema. A classe de interesse — estação que não falha nos próximos 7 dias — é extremamente rara, e a base que a sustenta é pequena demais para que uma árvore XGBoost, mesmo bem configurada, consiga separar essa classe com robustez operacional sem custo em falsa segurança.
+
+Em termos práticos, o modelo não deve ser lido como um decisor absoluto de manutenção, mas como um sistema de triagem e priorização. Ele funciona melhor quando responde à pergunta: *“nesta estação, o que está acontecendo de forma anormal e recorrente o suficiente para merecer atenção imediata?”* Isso é útil para apoiar inspeções, revisar eventos críticos e dar atenção ao histórico recente, mas não substitui uma leitura humana do contexto operacional.
+
+### 8.2 Leitura soberana das métricas
+
+A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
+
+Além disso, o conjunto ainda revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para apenas 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+
+Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
+
+### 8.3 Conclusão
+
+O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
+
+Esse resultado é importante porque redefine a aplicação prática do modelo: ele funciona melhor como um sistema de apoio à decisão, de priorização de atenção e de alerta de risco, e não como um mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
