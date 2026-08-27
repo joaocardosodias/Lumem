@@ -1,0 +1,89 @@
+{
+  "f1_equilibrado": {
+    "perfil": "🏆 CAMPEÃO GERAL (MELHOR F1-SCORE / EQUILÍBRIO)",
+    "hiperparametros": {
+      "n_estimators": 325,
+      "max_depth": 6,
+      "learning_rate": 0.013105456314738839,
+      "min_child_weight": 31,
+      "subsample": 0.6596834432905521,
+      "colsample_bytree": 0.6227680575448478,
+      "reg_alpha": 4.697589011826829,
+      "reg_lambda": 10.758362948857464,
+      "scale_pos_weight": 13.08397348116461
+    },
+    "validacao": {
+      "precision": 0.19585877642846672,
+      "recall": 0.14665193551818204,
+      "f1_score": 0.1620385267117974
+    },
+    "teste_real_2026": {
+      "precision_operacional": 0.6355748373101953,
+      "recall_operacional": 0.5298372513562387,
+      "f1_score": 0.577909270167374,
+      "roc_auc": 0.6469949307485594,
+      "pr_auc": 0.13240654827034565,
+      "acertos": 293,
+      "alertas_totais": 461,
+      "falhas_totais": 553
+    }
+  },
+  "alta_precisao": {
+    "perfil": "🎯 CAMPEÃO DE PRECISÃO (MAIOR PRECISÃO OPERACIONAL)",
+    "hiperparametros": {
+      "n_estimators": 300,
+      "max_depth": 4,
+      "learning_rate": 0.03830823952215972,
+      "min_child_weight": 13,
+      "subsample": 0.7022506269873263,
+      "colsample_bytree": 0.7282266451527921,
+      "reg_alpha": 0.4438356290281593,
+      "reg_lambda": 6.062876097511011,
+      "scale_pos_weight": 6.996737821583597
+    },
+    "validacao": {
+      "precision": 0.24530960725917225,
+      "recall": 0.04773353763828275,
+      "f1_score": 0.07687412363583604
+    },
+    "teste_real_2026": {
+      "precision_operacional": 0.7425742574257426,
+      "recall_operacional": 0.13562386980108498,
+      "f1_score": 0.2293577981390207,
+      "roc_auc": 0.648522694061597,
+      "pr_auc": 0.1329309912120477,
+      "acertos": 75,
+      "alertas_totais": 101,
+      "falhas_totais": 553
+    }
+  },
+  "alto_recall": {
+    "perfil": "🚨 CAMPEÃO DE RECALL (MAIOR COBERTURA DE FALHAS)",
+    "hiperparametros": {
+      "n_estimators": 325,
+      "max_depth": 6,
+      "learning_rate": 0.013105456314738839,
+      "min_child_weight": 31,
+      "subsample": 0.6596834432905521,
+      "colsample_bytree": 0.6227680575448478,
+      "reg_alpha": 4.697589011826829,
+      "reg_lambda": 10.758362948857464,
+      "scale_pos_weight": 13.08397348116461
+    },
+    "validacao": {
+      "precision": 0.19585877642846672,
+      "recall": 0.14665193551818204,
+      "f1_score": 0.1620385267117974
+    },
+    "teste_real_2026": {
+      "precision_operacional": 0.6355748373101953,
+      "recall_operacional": 0.5298372513562387,
+      "f1_score": 0.577909270167374,
+      "roc_auc": 0.6469949307485594,
+      "pr_auc": 0.13240654827034565,
+      "acertos": 293,
+      "alertas_totais": 461,
+      "falhas_totais": 553
+    }
+  }
+}

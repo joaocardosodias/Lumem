@@ -1,0 +1,36 @@
+---
+title: "Visão Geral e Entregas da Sprint 2"
+description: "Resumo executivo da Sprint 2: Modelagem Preditiva de Falhas em Portas de Plataforma (PSD), Feature Engineering, Encodings e Modelos Campeões."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo da Sprint 2</h2>
+</div>
+
+A **Sprint 2** concentrou-se na construção, treinamento, validação e explicabilidade dos **Modelos Preditivos de Inteligência Artificial** para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas 526 portas de plataforma da Linha 4-Amarela.
+
+Nesta etapa, consolidamos a **Tabela Mestra Contínua** (*Feature Store*), aplicamos técnicas avançadas de engenharia de dados e blindagem contra vazamento temporal (*data leakage*), treinamos algoritmos de ponta com calibração de hiperparâmetros e avaliamos os resultados sob as réguas de engenharia de manutenção.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Índice de Modelos e Entregas</h2>
+</div>
+
+### Modelagem Preditiva
+
+* [**Modelo João**](/sprints/sprint-2/modelo-joão)
+  - **Descrição:** Documentação técnica da modelagem preditiva desenvolvida por João, com 32 features baseadas em hipóteses, pipeline de 3 etapas, hiperparâmetros, métricas oficiais por episódio de alerta e explicabilidade SHAP.
+
+---
+
+### Artefatos e Reprodutibilidade
+
+Todo o código-fonte executável e os modelos serializados estão disponíveis nas pastas do projeto:
+* **Notebooks:** `src/modelo-joao/`
+* **Artefatos e Modelos Salvos:** `data/modelos_artefatos/`
