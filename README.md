@@ -65,9 +65,8 @@ Clique [aqui](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) para a
 │   ├── modelo-1/ --> Modelo 1: XGBoost & Ensembles.
 │   ├── modelo-2/ --> Modelo 2: LightGBM & Random Forest Baseline.
 │   ├── modelo-3/ --> Modelo 3: Árvore de Decisão CRISP-DM.
-│   ├── modelo-4/ --> Modelo 4: CatBoostClassifier (Plataforma × Dia).
 │   ├── modelo-5/ --> Modelo 5: Random Forest por Evento e Ciclos.
-│   └── README.md --> Guia mestre e quadro comparativo dos modelos.
+│   └── modelo-7/ --> Modelo 7: CatBoostClassifier (Plataforma × Dia).
 ├── requirements.txt --> Dependências Python do projeto.
 └── README.md --> Arquivo guia de apresentação do projeto (o mesmo que você está lendo agora).
 ```
@@ -119,8 +118,8 @@ pip install -r requirements.txt
    - **Modelo 1:** `models/modelo-1/`
    - **Modelo 2:** `models/modelo-2/`
    - **Modelo 3:** `models/modelo-3/`
-   - **Modelo 4:** `models/modelo-4/`
    - **Modelo 5:** `models/modelo-5/`
+   - **Modelo 7:** `models/modelo-7/`
 
 ## Histórico de lançamentos
 

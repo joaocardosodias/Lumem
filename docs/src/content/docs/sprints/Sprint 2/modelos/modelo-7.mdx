@@ -1,5 +1,5 @@
 ---
-title: "Modelo 4"
+title: "Modelo 7"
 description: "Documentação da construção da tabela mestra, processamento, treinamento e avaliação do CatBoostClassifier para previsão de falhas em PSD."
 ---
 
@@ -513,10 +513,10 @@ O experimento atende à meta mínima de recall e demonstra que alarmes, históri
 
 | Artefato | Finalidade |
 |---|---|
-| `models/modelo-4/modelo_catboost.cbm` | modelo CatBoost serializado |
-| `models/modelo-4/metadata_modelo.json` | features, limiar, métricas e identificação do modelo |
-| `models/modelo-4/previsoes_teste.csv` | probabilidades e classes previstas no teste |
-| `models/modelo-4/importancia_features.csv` | importância global das features |
+| `models/modelo-7/modelo_catboost.cbm` | modelo CatBoost serializado |
+| `models/modelo-7/metadata_modelo.json` | features, limiar, métricas e identificação do modelo |
+| `models/modelo-7/previsoes_teste.csv` | probabilidades e classes previstas no teste |
+| `models/modelo-7/importancia_features.csv` | importância global das features |
 
 O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetros aprendidos. Para reproduzir a decisão operacional, não basta carregar o modelo: também é necessário usar as mesmas 21 features, na mesma semântica, e aplicar o limiar `0,317380` registrado no metadata.
 
@@ -560,9 +560,9 @@ O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetro
 
 | Ordem | Notebook | Entrada principal | Saída principal |
 |---:|---|---|---|
-| 1 | `models/modelo-4/01_modelo_4_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
-| 2 | `models/modelo-4/02_modelo_4_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
-| 3 | `models/modelo-4/03_modelo_4_treinamento.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
+| 1 | `models/modelo-7/01_modelo_7_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
+| 2 | `models/modelo-7/02_modelo_7_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
+| 3 | `models/modelo-7/03_modelo_7_treinamento.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
 
 Para reproduzir o resultado, os notebooks devem ser executados nessa ordem. Os caminhos são resolvidos a partir da raiz do repositório, e o `random_seed=42` deve ser preservado. A avaliação final deve continuar usando o teste apenas depois de todas as decisões terem sido tomadas na validação.
 
