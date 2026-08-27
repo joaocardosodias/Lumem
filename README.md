@@ -68,7 +68,6 @@ Clique [aqui](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) para a
 │   ├── modelo-07-catboost/ --> CatBoostClassifier (Plataforma × Dia).
 │   ├── modelo-random-forest/ --> Random Forest por Evento e Ciclos de Manutenção.
 │   └── README.md --> Guia mestre e quadro comparativo dos modelos.
-├── src/ --> Atalhos e módulos auxiliares de código-fonte.
 ├── requirements.txt --> Dependências Python do projeto.
 └── README.md --> Arquivo guia de apresentação do projeto (o mesmo que você está lendo agora).
 ```
