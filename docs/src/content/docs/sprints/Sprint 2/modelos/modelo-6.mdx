@@ -179,10 +179,3 @@ A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao lo
 
 Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
 
-Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
-
-### 8.4 Conclusão
-
-O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
-
-Esse resultado redefine a aplicação prática do modelo: ele funciona melhor como sistema de apoio à decisão, priorização de atenção e alerta de risco, e não como mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
