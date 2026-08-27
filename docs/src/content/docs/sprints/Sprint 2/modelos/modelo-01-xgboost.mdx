@@ -1,11 +1,11 @@
 ---
-title: "Modelo João"
+title: "Modelo 1: XGBoost & Ensembles (João)"
 description: "Documentação técnica do modelo preditivo desenvolvido por João, detalhando a engenharia de features, tratamento de dados, hiperparâmetros e explicabilidade SHAP."
 ---
 
 import { Image } from 'astro:assets';
-import Background from '../../../../assets/sprints/sprint1/background_title.png';
-import GraficoShap from '../../../../assets/sprints/sprint2/grafico-shap-modelo-joao.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import GraficoShap from '../../../../../assets/sprints/sprint2/grafico-shap-modelo-joao.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -48,7 +48,7 @@ A seleção e engenharia de atributos do modelo foram construídas diretamente s
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Arquitetura do Pipeline em 3 Etapas</h2>
 </div>
 
-O projeto está estruturado em 3 notebooks executáveis modulares na pasta `src/modelo-joao/`:
+O projeto está estruturado em 3 notebooks executáveis modulares na pasta `models/modelo-01-xgboost/` (com atalho legado em `src/modelo-joao/`):
 
 * **Etapa 1:** `01_construcao_tabela_mestra.ipynb` - Gera `data/tabela_mestra_bruta.csv` (607.530 linhas).
 * **Etapa 2:** `02_preprocessamento_encoding_escalonamento.ipynb` - Gera `data/treino_pronto_modelagem_v2.csv` e `data/teste_pronto_modelagem_v2.csv`.

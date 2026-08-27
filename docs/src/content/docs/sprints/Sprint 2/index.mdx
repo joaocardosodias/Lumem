@@ -8,29 +8,72 @@ import Background from '../../../../assets/sprints/sprint1/background_title.png'
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo da Sprint 2</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo Executivo da Sprint 2</h2>
 </div>
 
-A **Sprint 2** concentrou-se na construção, treinamento, validação e explicabilidade dos **Modelos Preditivos de Inteligência Artificial** para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas 526 portas de plataforma da Linha 4-Amarela.
+A **Sprint 2** concentrou-se na construção, treinamento, validação, calibração de hiperparâmetros e explicabilidade dos **Modelos Preditivos de Inteligência Artificial** desenvolvidos pelo Grupo 04 para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas 526 portas de plataforma (**PSD**) da Linha 4-Amarela do Metrô de São Paulo.
 
-Nesta etapa, consolidamos a **Tabela Mestra Contínua** (*Feature Store*), aplicamos técnicas avançadas de engenharia de dados e blindagem contra vazamento temporal (*data leakage*), treinamos algoritmos de ponta com calibração de hiperparâmetros e avaliamos os resultados sob as réguas de engenharia de manutenção.
+Nesta etapa, consolidamos a **Tabela Mestra Contínua** (*Feature Store*), aplicamos técnicas rigorosas de engenharia de dados e blindagem temporal contra vazamento de dados (*data leakage*), treinamos diferentes famílias de algoritmos de Machine Learning (Árvores de Decisão, Random Forest, XGBoost, LightGBM, CatBoost e Ensembles) e avaliamos os resultados sob as réguas operacionais de engenharia de manutenção.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Índice de Modelos e Entregas</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Quadro Comparativo dos Modelos Desenvolvidos</h2>
 </div>
 
-### Modelagem Preditiva
+A tabela a seguir consolida as principais características arquiteturais, métricas e perfis operacionais de cada modelo desenvolvido pela equipe:
 
-* [**Modelo João**](/sprints/sprint-2/modelo-joão)
-  - **Descrição:** Documentação técnica da modelagem preditiva desenvolvida por João, com 32 features baseadas em hipóteses, pipeline de 3 etapas, hiperparâmetros, métricas oficiais por episódio de alerta e explicabilidade SHAP.
+| Modelo | Algoritmo Principal | Granularidade | Features | Recall | Precisão | Métrica de Destaque | Perfil Operacional |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| [**Modelo 1 (João)**](/sprints/sprint-2/modelos/modelo-01-xgboost) | XGBoost (Hist) & Ensemble | Porta × Dia (526 PSDs) | 32 | **97,94%** (estrito) | 9,35% a 33,33% | F1: 0,1829 (p=0,52) | **Proteção Máxima:** Evita 380 de 388 falhas reais na linha |
+| [**Modelo 2**](/sprints/sprint-2/modelos/modelo-02-lightgbm) | LightGBM Tunado + RF Baseline | Porta × Dia (526 PSDs) | 23 | **60,00%** | 22,00% | ROC-AUC: 0,634 | **Equilíbrio & Permutação:** Análise Gini vs Permutação |
+| [**Modelo 6**](/sprints/sprint-2/modelos/modelo-06-arvore-decisao) | Decision Tree | Porta × Dia | ~15 | Validação Temporal | Decisão Rápida | F1 na Validação | **Interpretabilidade:** Regras de decisão explícitas (CRISP-DM) |
+| [**Modelo 7**](/sprints/sprint-2/modelos/modelo-07-catboost) | CatBoostClassifier | Plataforma × Dia (22 PSDs) | 21 | **91,93%** | 54,63% (pontual) | PR-AUC: 0,5892 | **Agregação por Plataforma:** Suporte nativo a variáveis categóricas |
+| [**Modelo Random Forest**](/sprints/sprint-2/modelos/modelo-random-forest) | Random Forest | Porta × Dia (480 PSDs) | 40+ | **65,00%** (evento) | 26,00% (episódio) | F1 evento: 0,372 | **Sensibilidade a Ciclos:** Modelagem de tempo e recorrência pós-reparo |
 
 ---
 
-### Artefatos e Reprodutibilidade
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Documentação Detalhada por Modelo</h2>
+</div>
 
-Todo o código-fonte executável e os modelos serializados estão disponíveis nas pastas do projeto:
-* **Notebooks:** `src/modelo-joao/`
-* **Artefatos e Modelos Salvos:** `data/modelos_artefatos/`
+* 🚀 [**Modelo 1: XGBoost & Ensembles (João)**](/sprints/sprint-2/modelos/modelo-01-xgboost)
+  - **Foco:** Maximização do recall para proteção contra paradas na linha, calibração via Optuna, tratamento de classes desbalanceadas (`scale_pos_weight = 9.5`), mitigação de leakage temporal e explicabilidade global com SHAP Beeswarm.
+  - **Código:** [`models/modelo-01-xgboost/`](file:///home/cardoso/GitHub/g04/models/modelo-01-xgboost/)
+
+* 🌲 [**Modelo 2: Classificação de Risco com LightGBM e Random Forest**](/sprints/sprint-2/modelos/modelo-02-lightgbm)
+  - **Foco:** Comparação sistemática da importância de features por Gini vs. Permutação no conjunto de teste, pipeline de consolidação de 5 fontes (incluindo Catracas) e tuning com early stopping.
+  - **Código:** [`models/modelo-02-lightgbm/`](file:///home/cardoso/GitHub/g04/models/modelo-02-lightgbm/)
+
+* 📊 [**Modelo 6: Árvore de Decisão para Predição de Falhas**](/sprints/sprint-2/modelos/modelo-06-arvore-decisao)
+  - **Foco:** Aplicação rigorosa das 5 fases do CRISP-DM, árvore de decisão de alta transparência com regras auditáveis por técnicos de manutenção e validação temporal sem vazamento.
+  - **Código:** [`models/modelo-06-arvore-decisao/`](file:///home/cardoso/GitHub/g04/models/modelo-06-arvore-decisao/)
+
+* 🐱 [**Modelo 7: CatBoostClassifier (Plataforma × Dia)**](/sprints/sprint-2/modelos/modelo-07-catboost)
+  - **Foco:** Modelo agregado ao nível de plataforma de estação com processamento nativo de variáveis categóricas, regularização L2 severa e análise de correlação linear/monotônica com o alvo.
+  - **Código:** [`models/modelo-07-catboost/`](file:///home/cardoso/GitHub/g04/models/modelo-07-catboost/)
+
+* ⏱️ [**Modelo Baseline: Random Forest (Evento & Ciclos)**](/sprints/sprint-2/modelos/modelo-random-forest)
+  - **Foco:** Modelagem do atraso em relação ao ciclo natural de manutenção da porta, painel analítico em Parquet e métricas agregadas por episódio de alerta e falha real.
+  - **Código:** [`models/modelo-random-forest/`](file:///home/cardoso/GitHub/g04/models/modelo-random-forest/)
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Artefatos e Reprodutibilidade</h2>
+</div>
+
+Todos os códigos executáveis, scripts de preparação, matrizes pré-processadas e modelos serializados estão estruturados na pasta [`models/`](file:///home/cardoso/GitHub/g04/models/):
+
+* **Diretório Unificado de Modelos:** `models/`
+  - `models/modelo-01-xgboost/`: 3 notebooks modulares de pipeline contínuo.
+  - `models/modelo-02-lightgbm/`: Scripts de preparação e notebook de modelagem.
+  - `models/modelo-06-arvore-decisao/`: Notebook CRISP-DM de árvore de decisão.
+  - `models/modelo-07-catboost/`: 3 notebooks de preparação, processamento e CatBoost + artefato `.cbm`.
+  - `models/modelo-random-forest/`: Script de painel e notebook de modelagem por eventos.
+* **Modelos Serializados e Scalers:** `data/modelos_artefatos/` (`.joblib`, `.cbm`, `.json`).
+* **Bases de Dados Processadas:** `data/` (tabelas mestras brutas, codificadas e splits temporais).
+

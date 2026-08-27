@@ -45,7 +45,13 @@ export default defineConfig({
 						},
 						{
 							label: 'Sprint 2',
-							items: [{ autogenerate: { directory: 'sprints/Sprint 2' } }],
+							items: [
+								{ label: 'Visão Geral da Sprint 2', slug: 'sprints/sprint-2' },
+								{
+									label: 'Modelos Preditivos',
+									items: [{ autogenerate: { directory: 'sprints/Sprint 2/modelos' } }],
+								},
+							],
 						},
 						{
 							label: 'Sprint 3',

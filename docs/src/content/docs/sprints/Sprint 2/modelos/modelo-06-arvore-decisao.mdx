@@ -1,9 +1,17 @@
 ---
-title: "Árvore de Decisão para Predição de Falhas em PSDs"
+title: "Modelo 6: Árvore de Decisão"
 description: "Documentação das etapas 1 a 5 do CRISP-DM aplicadas ao Modelo 6, que estima falhas em portas de plataforma nos sete dias seguintes."
 ---
 
-Esta página documenta o desenvolvimento do **Modelo 6 — Árvore de Decisão para Predição de Falhas em PSDs**, construído exclusivamente com os dados disponibilizados pelo parceiro. O código reproduzível está no notebook `models/sprint-2/Modelo_6_decision_tree.ipynb`.
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral e CRISP-DM</h2>
+</div>
+
+Esta página documenta o desenvolvimento do **Modelo 6 — Árvore de Decisão para Predição de Falhas em PSDs**, construído exclusivamente com os dados disponibilizados pelo parceiro. O código reproduzível está no notebook `models/modelo-06-arvore-decisao/Modelo_6_decision_tree.ipynb`.
 
 O desenvolvimento segue as cinco primeiras fases da metodologia [CRISP-DM](https://www.datascience-pm.com/crisp-dm-2/): entendimento do negócio, entendimento dos dados, preparação dos dados, modelagem e avaliação. A sexta fase, implantação, não faz parte do escopo desta entrega.
 
@@ -346,6 +354,6 @@ Como próximos passos, recomenda-se validar o target com o parceiro, verificar i
 ## Referências e evidências
 
 - [CRISP-DM — Data Science Process Alliance](https://www.datascience-pm.com/crisp-dm-2/);
-- Notebook reproduzível: `models/sprint-2/Modelo_6_decision_tree.ipynb`;
+- Notebook reproduzível: `models/modelo-06-arvore-decisao/Modelo_6_decision_tree.ipynb`;
 - Limpeza da ZM01: `eda/cleaning/limpeza-dados-ZM01.ipynb`;
 - Limpeza dos alarmes: `eda/cleaning/limpeza_dados_alarmes.ipynb`.

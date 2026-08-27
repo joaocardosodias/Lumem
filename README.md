@@ -46,16 +46,30 @@ Clique [aqui](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) para a
 ## Estrutura de pastas
 
 ```
-├── assets/ --> Arquivos de imagens, diagramas e recursos visuais da documentação.
-├── docs/ --> Código fonte do portal de documentação estática (Astro / Starlight).
+├── data/ --> Bases de dados brutas, tratadas e modelos serializados.
+│   ├── Alarmes/
+│   ├── Catracas/
+│   ├── Corretiva Emergencial/
+│   ├── Corretiva Programada/
+│   ├── Preventiva/
+│   └── modelos_artefatos/ --> Modelos treinados (.joblib, .cbm, .json).
+├── docs/ --> Código-fonte do portal de documentação estática (Astro / Starlight).
 │   ├── src/
 │   │   ├── assets/
 │   │   └── content/docs/
 │   └── astro.config.mjs
 ├── eda/ --> Notebooks de Análise Exploratória de Dados, teste de hipóteses e scripts de limpeza.
-│   ├── cleaning/
-│   └── hipoteses/
-├── src/ --> Todo o código fonte dos modelos preditivos e scripts de engenharia de recursos.
+│   ├── cleaning/ --> Pipelines de limpeza de dados da Sprint 1.
+│   └── hipoteses/ --> Validação estatística das 7 hipóteses de falha.
+├── models/ --> Diretório centralizado e padronizado dos modelos preditivos (Sprint 2).
+│   ├── modelo-01-xgboost/ --> XGBoost & Ensembles (João).
+│   ├── modelo-02-lightgbm/ --> LightGBM Tunado & Random Forest Baseline.
+│   ├── modelo-06-arvore-decisao/ --> Árvore de Decisão CRISP-DM.
+│   ├── modelo-07-catboost/ --> CatBoostClassifier (Plataforma × Dia).
+│   ├── modelo-random-forest/ --> Random Forest por Evento e Ciclos de Manutenção.
+│   └── README.md --> Guia mestre e quadro comparativo dos modelos.
+├── src/ --> Atalhos e módulos auxiliares de código-fonte.
+├── requirements.txt --> Dependências Python do projeto.
 └── README.md --> Arquivo guia de apresentação do projeto (o mesmo que você está lendo agora).
 ```
 
@@ -83,39 +97,40 @@ npm run dev
 
 &emsp; Acesse a página `http://localhost:4321` no navegador.
 
-### 2. Análise de Dados e Limpeza (Python / Jupyter Notebooks)
+### 2. Modelagem Preditiva e Análise de Dados (Python / Jupyter)
 
-&emsp; As etapas de higienização de dados e testes de hipóteses estão centralizadas no diretório `eda/`.
+&emsp; Os pipelines de modelagem preditiva estão centralizados no diretório [`models/`](./models/).
 
-**Passo a passo para execução dos notebooks:**
+**Passo a passo para execução:**
 
 1. Crie e ative um ambiente virtual Python:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-2. Instale as dependências para análise de dados:
+2. Instale as dependências completas do projeto:
 
 ```bash
-pip install pandas numpy matplotlib seaborn jupyter
+pip install -r requirements.txt
 ```
 
-3. Abra o ambiente Jupyter Notebook para rodar os pipelines de limpeza:
-
-```bash
-jupyter notebook eda/cleaning/
-```
+3. Execute os notebooks do modelo desejado em [`models/`](./models/):
+   - **Modelo 1 (XGBoost / João):** `models/modelo-01-xgboost/`
+   - **Modelo 2 (LightGBM):** `models/modelo-02-lightgbm/`
+   - **Modelo 6 (Árvore de Decisão):** `models/modelo-06-arvore-decisao/`
+   - **Modelo 7 (CatBoost):** `models/modelo-07-catboost/`
+   - **Modelo Random Forest (Evento):** `models/modelo-random-forest/`
 
 ## Histórico de lançamentos
 
 - 0.1.0 - 14/08/2026
   - [sprint 1] Entendimento do negócio (Motiva), alinhamento com ODS, definição de personas (Ronaldo e Marta), formulação e validação estatística de 7 hipóteses de falha, pipelines de limpeza de dados (Alarmes, ZM01, ZM02, ZM03) e definição das features candidatas.
-- 0.2.0 - Sprint 2 (A realizar)
-  - [sprint 2] Mapeamento do fluxo de dados e desenvolvimento preliminar do modelo de machine learning/pipeline preditivo.
+- 0.2.0 - 27/08/2026
+  - [sprint 2] Consolidação da Tabela Mestra Contínua, engenharia de features (32+ atributos), blindagem contra vazamento temporal (*data leakage*), treinamento de 5 arquiteturas de Machine Learning (Árvores de Decisão, Random Forest, XGBoost, LightGBM, CatBoost e Ensembles), calibração de hiperparâmetros, avaliação sob métricas estritas de manutenção e explicabilidade global com SHAP.
 - 0.3.0 - Sprint 3 (A realizar)
-  - [sprint 3] Treinamento e avaliação dos modelos de inteligência artificial.
+  - [sprint 3] Refinamento dos modelos, otimização de limiares operacionais e avaliação de impacto financeiro.
 - 0.4.0 - Sprint 4 (A realizar)
   - [sprint 4] Integração do modelo com a interface visual e relatórios operacionais.
 - 0.5.0 - Sprint 5 (A realizar)

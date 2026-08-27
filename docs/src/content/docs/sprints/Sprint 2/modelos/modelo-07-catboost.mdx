@@ -1,15 +1,17 @@
 ---
-title: "Teste CatBoostClassifier — Documentação CRISP-DM"
+title: "Modelo 7: CatBoostClassifier"
 description: "Documentação da construção da tabela mestra, processamento, treinamento e avaliação do CatBoostClassifier para previsão de falhas em PSD."
 ---
 
 import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 import CorrelacaoAlvo from '../../../../../assets/sprints/sprint2/modelo-07/correlacao_features_alvo.png';
 import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-07/mapa_correlacao_features.png';
 
-# Modelo-07 — Previsão de falhas em PSD
-
-## 1. Visão geral
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral e Arquitetura do Modelo</h2>
+</div>
 
 O Modelo-07 estima a probabilidade de um sistema de Portas de Plataforma (**PSD**) apresentar pelo menos uma falha confirmada nos sete dias seguintes. A previsão é realizada **ao final do dia de referência `D`**, usando somente informações disponíveis até esse momento.
 
@@ -511,10 +513,10 @@ O experimento atende à meta mínima de recall e demonstra que alarmes, históri
 
 | Artefato | Finalidade |
 |---|---|
-| `models/modelo-07/modelo_catboost.cbm` | modelo CatBoost serializado |
-| `models/modelo-07/metadata_modelo.json` | features, limiar, métricas e identificação do modelo |
-| `models/modelo-07/previsoes_teste.csv` | probabilidades e classes previstas no teste |
-| `models/modelo-07/importancia_features.csv` | importância global das features |
+| `models/modelo-07-catboost/modelo_catboost.cbm` | modelo CatBoost serializado |
+| `models/modelo-07-catboost/metadata_modelo.json` | features, limiar, métricas e identificação do modelo |
+| `models/modelo-07-catboost/previsoes_teste.csv` | probabilidades e classes previstas no teste |
+| `models/modelo-07-catboost/importancia_features.csv` | importância global das features |
 
 O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetros aprendidos. Para reproduzir a decisão operacional, não basta carregar o modelo: também é necessário usar as mesmas 21 features, na mesma semântica, e aplicar o limiar `0,317380` registrado no metadata.
 
@@ -558,9 +560,9 @@ O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetro
 
 | Ordem | Notebook | Entrada principal | Saída principal |
 |---:|---|---|---|
-| 1 | `src/modelo-07/01_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
-| 2 | `src/modelo-07/02_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
-| 3 | `src/modelo-07/03_treinamento_cat.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
+| 1 | `models/modelo-07-catboost/01_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
+| 2 | `models/modelo-07-catboost/02_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
+| 3 | `models/modelo-07-catboost/03_treinamento_cat.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
 
 Para reproduzir o resultado, os notebooks devem ser executados nessa ordem. Os caminhos são resolvidos a partir da raiz do repositório, e o `random_seed=42` deve ser preservado. A avaliação final deve continuar usando o teste apenas depois de todas as decisões terem sido tomadas na validação.
 
