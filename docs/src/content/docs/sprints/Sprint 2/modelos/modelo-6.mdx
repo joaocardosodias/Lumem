@@ -88,8 +88,6 @@ O resultado dessa definição dá o tom para o resto do notebook: *11.504 exempl
 
 O corte de treino/teste é feito no percentil 80 da data T, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes), o que resulta em 9.355 exemplos de treino contra 2.339 de teste.
 
----
-
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo</h2>
@@ -121,8 +119,6 @@ O gráfico de importância das features do notebook reforça essa leitura. As va
 <Image src={ImportanciaFeatures} alt="Gráfico de importância das features no modelo XGBoost" width={900} />
 
 <p style="text-align: center; font-style: italic;">Importância das features calculada pelo XGBoost no notebook do Modelo 6.</p>
-
----
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
