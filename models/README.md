@@ -10,11 +10,11 @@ Todos os modelos desenvolvidos pela equipe foram padronizados em subpastas dedic
 
 | Diretório | Modelo & Algoritmo | Unidade / Granularidade | Alvo / Janela | Destaque Técnico |
 | :--- | :--- | :--- | :--- | :--- |
-| [`modelo-01-xgboost/`](./modelo-01-xgboost/) | **XGBoost & Ensembles** (João) | Porta × Dia (526 PSDs) | Falha em 7 dias (ZM01) | 32 features, `scale_pos_weight=9.5`, regularização L1/L2, 97,94% de recall estrito e explicabilidade SHAP. |
-| [`modelo-02-lightgbm/`](./modelo-02-lightgbm/) | **LightGBM & Random Forest** | Porta × Dia (526 PSDs) | Falha em 7 dias (ZM01/ZM02) | 23 features, análise cruzada Gini vs Permutação no teste, ROC-AUC 0,634. |
-| [`modelo-06-arvore-decisao/`](./modelo-06-arvore-decisao/) | **Árvore de Decisão** | Porta individual × Dia | Falha em 7 dias (ZM01) | Metodologia CRISP-DM completa (1 a 5), alta interpretabilidade e regras de decisão explícitas. |
-| [`modelo-07-catboost/`](./modelo-07-catboost/) | **CatBoostClassifier** | Plataforma × Dia | Falha em 7 dias (ZM01) | 21 features (4 categóricas nativas), regularização L2 severa, recall de 91,93% no teste. |
-| [`modelo-random-forest/`](./modelo-random-forest/) | **Random Forest (Evento & Ciclos)** | Porta × Dia | Falha em 7 dias (ZM01) | Painel unificado, features de ciclo/recorrência pós-manutenção, métricas por episódio real (F1: 0,372). |
+| [`modelo-1/`](./modelo-1/) | **Modelo 1 (XGBoost & Ensembles)** | Porta × Dia (526 PSDs) | Falha em 7 dias (ZM01) | 32 features, `scale_pos_weight=9.5`, regularização L1/L2, 97,94% de recall estrito e explicabilidade SHAP. |
+| [`modelo-2/`](./modelo-2/) | **Modelo 2 (LightGBM & Random Forest)** | Porta × Dia (526 PSDs) | Falha em 7 dias (ZM01/ZM02) | 23 features, análise cruzada Gini vs Permutação no teste, ROC-AUC 0,634. |
+| [`modelo-3/`](./modelo-3/) | **Modelo 3 (Árvore de Decisão)** | Porta individual × Dia | Falha em 7 dias (ZM01) | Metodologia CRISP-DM completa (1 a 5), alta interpretabilidade e regras de decisão explícitas. |
+| [`modelo-4/`](./modelo-4/) | **Modelo 4 (CatBoostClassifier)** | Plataforma × Dia | Falha em 7 dias (ZM01) | 21 features (4 categóricas nativas), regularização L2 severa, recall de 91,93% no teste. |
+| [`modelo-5/`](./modelo-5/) | **Modelo 5 (Random Forest Evento & Ciclos)** | Porta × Dia | Falha em 7 dias (ZM01) | Painel unificado, features de ciclo/recorrência pós-manutenção, métricas por episódio real (F1: 0,372). |
 
 ---
 
@@ -24,11 +24,11 @@ A tabela abaixo resume o desempenho dos modelos nas principais réguas de engenh
 
 | Modelo | Algoritmo Principal | Features | Recall | Precisão | Métrica Complementar | Perfil Operacional |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Modelo 1 (João)** | XGBoost Classifier | 32 | **97,94%** (estrito) | 9,35% a 33,33% | F1: 0,1829 (p=0,52) | Proteção máxima contra quebras na linha |
+| **Modelo 1** | XGBoost Classifier | 32 | **97,94%** (estrito) | 9,35% a 33,33% | F1: 0,1829 (p=0,52) | Proteção máxima contra quebras na linha |
 | **Modelo 2** | LightGBM Tunado | 23 | **60,00%** | 22,00% | ROC-AUC: 0,634 | Equilíbrio e interpretabilidade de features |
-| **Modelo 6** | Decision Tree | ~15 | Validação Temporal | Decisão Rápida | PR-AUC / F1 | Baseline de regras simples e auditoria |
-| **Modelo 7** | CatBoostClassifier | 21 | **91,93%** | 54,63% (pontual) | PR-AUC: 0,5892 | Agregação por plataforma com variáveis categóricas |
-| **Modelo Random Forest** | Random Forest | 40+ | **65,00%** (por evento) | 26,00% (por episódio) | F1 evento: 0,372 | Sensibilidade a ciclos de fadiga pós-manutenção |
+| **Modelo 3** | Decision Tree | ~15 | Validação Temporal | Decisão Rápida | PR-AUC / F1 | Baseline de regras simples e auditoria |
+| **Modelo 4** | CatBoostClassifier | 21 | **91,93%** | 54,63% (pontual) | PR-AUC: 0,5892 | Agregação por plataforma com variáveis categóricas |
+| **Modelo 5** | Random Forest | 40+ | **65,00%** (por evento) | 26,00% (por episódio) | F1 evento: 0,372 | Sensibilidade a ciclos de fadiga pós-manutenção |
 
 ---
 
@@ -41,24 +41,24 @@ pip install -r requirements.txt
 ```
 
 ### Ordem de Execução por Modelo:
-1. **Modelo 1 (XGBoost / João):**
-   - Executar `modelo-01-xgboost/01_construcao_tabela_mestra.ipynb`
-   - Executar `modelo-01-xgboost/02_preprocessamento_encoding_escalonamento.ipynb`
-   - Executar `modelo-01-xgboost/03_treinamento_modelo_certeza_absoluta.ipynb`
-2. **Modelo 2 (LightGBM):**
-   - Executar `python modelo-02-lightgbm/limpeza_consolidacao.py`
-   - Executar `python modelo-02-lightgbm/construir_dataset_modelo.py`
-   - Executar `python modelo-02-lightgbm/preparar_features_modelo.py`
-   - Executar `modelo-02-lightgbm/modelo_2.ipynb`
-3. **Modelo 6 (Árvore de Decisão):**
-   - Executar `modelo-06-arvore-decisao/Modelo_6_decision_tree.ipynb`
-4. **Modelo 7 (CatBoost):**
-   - Executar `modelo-07-catboost/01_construcao_tabela_mestra.ipynb`
-   - Executar `modelo-07-catboost/02_processamento.ipynb`
-   - Executar `modelo-07-catboost/03_treinamento_cat.ipynb`
-5. **Modelo Random Forest (Evento):**
-   - Executar `python modelo-random-forest/construir_painel.py`
-   - Executar `modelo-random-forest/modelo_preditivo_falhas.ipynb`
+1. **Modelo 1:**
+   - Executar `modelo-1/01_construcao_tabela_mestra.ipynb`
+   - Executar `modelo-1/02_preprocessamento_encoding_escalonamento.ipynb`
+   - Executar `modelo-1/03_treinamento_modelo_certeza_absoluta.ipynb`
+2. **Modelo 2:**
+   - Executar `python modelo-2/limpeza_consolidacao.py`
+   - Executar `python modelo-2/construir_dataset_modelo.py`
+   - Executar `python modelo-2/preparar_features_modelo.py`
+   - Executar `modelo-2/modelo_2.ipynb`
+3. **Modelo 3:**
+   - Executar `modelo-3/Modelo_6_decision_tree.ipynb`
+4. **Modelo 4:**
+   - Executar `modelo-4/01_construcao_tabela_mestra.ipynb`
+   - Executar `modelo-4/02_processamento.ipynb`
+   - Executar `modelo-4/03_treinamento_cat.ipynb`
+5. **Modelo 5:**
+   - Executar `python modelo-5/construir_painel.py`
+   - Executar `modelo-5/modelo_preditivo_falhas.ipynb`
 
 ---
 

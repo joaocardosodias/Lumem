@@ -4,3 +4,4 @@
 /data/treino_pronto_modelagem_v2.csv filter=lfs diff=lfs merge=lfs -text
 /models/sprint-2/modelo_2/data/alarmes_limpo.csv filter=lfs diff=lfs merge=lfs -text
 /models/modelo-02-lightgbm/data/alarmes_limpo.csv filter=lfs diff=lfs merge=lfs -text
+/models/modelo-2/data/alarmes_limpo.csv filter=lfs diff=lfs merge=lfs -text

@@ -62,11 +62,11 @@ Clique [aqui](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) para a
 │   ├── cleaning/ --> Pipelines de limpeza de dados da Sprint 1.
 │   └── hipoteses/ --> Validação estatística das 7 hipóteses de falha.
 ├── models/ --> Diretório centralizado e padronizado dos modelos preditivos (Sprint 2).
-│   ├── modelo-01-xgboost/ --> XGBoost & Ensembles (João).
-│   ├── modelo-02-lightgbm/ --> LightGBM Tunado & Random Forest Baseline.
-│   ├── modelo-06-arvore-decisao/ --> Árvore de Decisão CRISP-DM.
-│   ├── modelo-07-catboost/ --> CatBoostClassifier (Plataforma × Dia).
-│   ├── modelo-random-forest/ --> Random Forest por Evento e Ciclos de Manutenção.
+│   ├── modelo-1/ --> Modelo 1: XGBoost & Ensembles.
+│   ├── modelo-2/ --> Modelo 2: LightGBM & Random Forest Baseline.
+│   ├── modelo-3/ --> Modelo 3: Árvore de Decisão CRISP-DM.
+│   ├── modelo-4/ --> Modelo 4: CatBoostClassifier (Plataforma × Dia).
+│   ├── modelo-5/ --> Modelo 5: Random Forest por Evento e Ciclos.
 │   └── README.md --> Guia mestre e quadro comparativo dos modelos.
 ├── requirements.txt --> Dependências Python do projeto.
 └── README.md --> Arquivo guia de apresentação do projeto (o mesmo que você está lendo agora).
@@ -116,11 +116,11 @@ pip install -r requirements.txt
 ```
 
 3. Execute os notebooks do modelo desejado em [`models/`](./models/):
-   - **Modelo 1 (XGBoost / João):** `models/modelo-01-xgboost/`
-   - **Modelo 2 (LightGBM):** `models/modelo-02-lightgbm/`
-   - **Modelo 6 (Árvore de Decisão):** `models/modelo-06-arvore-decisao/`
-   - **Modelo 7 (CatBoost):** `models/modelo-07-catboost/`
-   - **Modelo Random Forest (Evento):** `models/modelo-random-forest/`
+   - **Modelo 1:** `models/modelo-1/`
+   - **Modelo 2:** `models/modelo-2/`
+   - **Modelo 3:** `models/modelo-3/`
+   - **Modelo 4:** `models/modelo-4/`
+   - **Modelo 5:** `models/modelo-5/`
 
 ## Histórico de lançamentos
 
