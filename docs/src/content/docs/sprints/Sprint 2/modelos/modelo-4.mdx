@@ -560,9 +560,9 @@ O arquivo `.cbm` contém as árvores, transformações categóricas e parâmetro
 
 | Ordem | Notebook | Entrada principal | Saída principal |
 |---:|---|---|---|
-| 1 | `models/modelo-4/01_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
-| 2 | `models/modelo-4/02_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
-| 3 | `models/modelo-4/03_treinamento_cat.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
+| 1 | `models/modelo-4/01_modelo_4_construcao_tabela_mestra.ipynb` | alarmes, ZM01, ZM02 e ZM03 tratados | `tabela_mestra_psd.csv` |
+| 2 | `models/modelo-4/02_modelo_4_processamento.ipynb` | tabela mestra | bases de treino, validação e teste + configuração |
+| 3 | `models/modelo-4/03_modelo_4_treinamento.ipynb` | bases temporais e configuração | modelo `.cbm`, metadata, previsões e importâncias |
 
 Para reproduzir o resultado, os notebooks devem ser executados nessa ordem. Os caminhos são resolvidos a partir da raiz do repositório, e o `random_seed=42` deve ser preservado. A avaliação final deve continuar usando o teste apenas depois de todas as decisões terem sido tomadas na validação.
 

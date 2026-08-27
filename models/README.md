@@ -42,23 +42,23 @@ pip install -r requirements.txt
 
 ### Ordem de Execução por Modelo:
 1. **Modelo 1:**
-   - Executar `modelo-1/01_construcao_tabela_mestra.ipynb`
-   - Executar `modelo-1/02_preprocessamento_encoding_escalonamento.ipynb`
-   - Executar `modelo-1/03_treinamento_modelo_certeza_absoluta.ipynb`
+   - Executar `modelo-1/01_modelo_1_construcao_tabela_mestra.ipynb`
+   - Executar `modelo-1/02_modelo_1_preprocessamento.ipynb`
+   - Executar `modelo-1/03_modelo_1_treinamento.ipynb`
 2. **Modelo 2:**
    - Executar `python modelo-2/limpeza_consolidacao.py`
    - Executar `python modelo-2/construir_dataset_modelo.py`
    - Executar `python modelo-2/preparar_features_modelo.py`
    - Executar `modelo-2/modelo_2.ipynb`
 3. **Modelo 3:**
-   - Executar `modelo-3/Modelo_6_decision_tree.ipynb`
+   - Executar `modelo-3/modelo_3.ipynb`
 4. **Modelo 4:**
-   - Executar `modelo-4/01_construcao_tabela_mestra.ipynb`
-   - Executar `modelo-4/02_processamento.ipynb`
-   - Executar `modelo-4/03_treinamento_cat.ipynb`
+   - Executar `modelo-4/01_modelo_4_construcao_tabela_mestra.ipynb`
+   - Executar `modelo-4/02_modelo_4_processamento.ipynb`
+   - Executar `modelo-4/03_modelo_4_treinamento.ipynb`
 5. **Modelo 5:**
    - Executar `python modelo-5/construir_painel.py`
-   - Executar `modelo-5/modelo_preditivo_falhas.ipynb`
+   - Executar `modelo-5/modelo_5.ipynb`
 
 ---
 

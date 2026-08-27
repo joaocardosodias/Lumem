@@ -6,7 +6,7 @@ Modelo preditivo baseado em Random Forest que modela os ciclos de recorrência p
 ## 2. Arquivos
 - `construir_painel.py`: Constrói o painel analítico `painel.parquet` integrando as 4 fontes de dados por estação, via e porta.
 - `painel.parquet`: Painel pré-processado.
-- `modelo_preditivo_falhas.ipynb`: Notebook com seleção de features por SHAP, treinamento do Random Forest e avaliação por episódio real.
+- `modelo_5.ipynb`: Notebook com seleção de features por SHAP, treinamento do Random Forest e avaliação por episódio real.
 
 ## 3. Resultados
 - **Captura por Evento Real:** 65,0% das falhas reais (766 de 1.178) antecipadas com 26,0% de precisão por episódio.
