@@ -42,7 +42,7 @@ Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estaç
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Engenharia de Features: Só o Passado Conta</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Utilizadas</h2>
 </div>
 
 Com os dados devidamente preparados, o passo seguinte é transformar esse histórico bruto em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. Isso parece óbvio, mas é fácil quebrar por acidente. Calcular, por exemplo, a duração média de todas as manutenções de uma estação incluindo a atual contaminaria a variável com informação do próprio evento que se está tentando prever. Por isso praticamente todo cálculo usa shift(1), cumcount() ou uma busca binária (searchsorted) limitada ao passado, de forma que cada feature representa exatamente o que um mantenedor saberia, olhando o histórico da estação, no instante imediatamente anterior àquele momento, nunca depois.
@@ -90,7 +90,7 @@ O corte de treino/teste é feito no percentil 80 da data T, não com amostragem 
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo: XGBoost sob Desbalanceamento Extremo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo</h2>
 </div>
 
 Com treino e teste separados, falta escolher e ajustar o modelo. Duas decisões guiam essa etapa.
@@ -118,7 +118,7 @@ A acurácia geral fica em 92,95%, o que soa bem, mas é menor que o baseline de 
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Diagnóstico: Overfitting vs. Desbalanceamento</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Overfitting vs. Desbalanceamento</h2>
 </div>
 
 O número de teste sozinho não diz por que o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
