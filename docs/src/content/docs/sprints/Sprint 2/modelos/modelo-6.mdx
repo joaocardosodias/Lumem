@@ -138,25 +138,51 @@ A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Síntese Final e Recomendação Operacional</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Busca por Portas e Limite Operacional</h2>
 </div>
 
-### 8.1 O que o modelo 6 realmente trouxe
+A busca por portas não foi uma etapa isolada do modelo. Ela foi uma extensão natural do problema, e o resultado mostrou muito bem por que essa extensão é mais dura do que a previsão inicial.
 
-O Modelo 6 cumpriu seu papel como uma etapa importante da jornada de desenvolvimento: ele mostrou que o histórico de alarmes, manutenção e recorrência de falhas em uma mesma estação contém sinal preditivo, mas também evidenciou uma limitação estrutural do problema. A classe de interesse — estação que não falha nos próximos 7 dias — é extremamente rara, e a base que a sustenta é pequena demais para que uma árvore XGBoost, mesmo bem configurada, consiga separar essa classe com robustez operacional sem custo em falsa segurança.
+A lógica foi a seguinte:
 
-Em termos práticos, o modelo não deve ser lido como um decisor absoluto de manutenção, mas como um sistema de triagem e priorização. Ele funciona melhor quando responde à pergunta: *“nesta estação, o que está acontecendo de forma anormal e recorrente o suficiente para merecer atenção imediata?”* Isso é útil para apoiar inspeções, revisar eventos críticos e dar atenção ao histórico recente, mas não substitui uma leitura humana do contexto operacional.
+1. Primeiro, o modelo estimava se a estação teria falha nos próximos 7 dias.
+2. Em seguida, a análise tentava restringir o problema às portas da mesma estação, que são as candidatas mais plausíveis de falhar naquele mesmo contexto local.
+3. Por fim, o modelo tentava escolher a porta alvo entre as portas daquela estação, usando o mesmo histórico de alarmes e manutenção como sinal de decisão.
 
-### 8.2 Leitura soberana das métricas
+O ponto crítico é que a segunda e a terceira etapas dependem de uma informação muito mais particular e muito mais rara. Em muitos casos, a estação inteira aparece como um risco local, mas a porta que de fato falha não é identificada com confiança a partir dos sinais disponíveis no histórico atual. A base não tem variação suficiente, nem repetição suficiente, para transformar esse problema em um ranking de portas estável e operacionalmente útil.
 
-A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
-
-Além disso, o conjunto ainda revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para apenas 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor ficou abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
 
 Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
 
-### 8.3 Conclusão
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Síntese Final e Recomendação Operacional</h2>
+</div>
+
+### 9.1 O que o modelo 6 realmente trouxe
+
+O Modelo 6 cumpriu seu papel como uma etapa importante da jornada de desenvolvimento: ele mostrou que o histórico de alarmes, manutenção e recorrência de falhas em uma mesma estação contém sinal preditivo, mas também evidenciou uma limitação estrutural do problema. A classe de interesse, a estação que não falha nos próximos 7 dias, é extremamente rara, e a base que a sustenta é pequena demais para que uma árvore XGBoost, mesmo bem configurada, consiga separar essa classe com robustez operacional sem custo em falsa segurança.
+
+Em termos práticos, o modelo não deve ser lido como um decisor absoluto de manutenção, mas como um sistema de triagem e priorização. Ele funciona melhor quando responde à pergunta: “nesta estação, o que está acontecendo de forma anormal e recorrente o suficiente para merecer atenção imediata?” Isso é útil para apoiar inspeções, revisar eventos críticos e dar atenção ao histórico recente, mas não substitui uma leitura humana do contexto operacional.
+
+### 9.2 Leitura soberana das métricas
+
+A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
+
+### 9.3 Conclusão
 
 O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
 
-Esse resultado é importante porque redefine a aplicação prática do modelo: ele funciona melhor como um sistema de apoio à decisão, de priorização de atenção e de alerta de risco, e não como um mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
+Esse resultado redefine a aplicação prática do modelo: ele funciona melhor como sistema de apoio à decisão, priorização de atenção e alerta de risco, e não como mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
+A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
+
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+
+Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
+
+### 8.4 Conclusão
+
+O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
+
+Esse resultado redefine a aplicação prática do modelo: ele funciona melhor como sistema de apoio à decisão, priorização de atenção e alerta de risco, e não como mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
