@@ -5,6 +5,8 @@ description: "Documentação do modelo preditivo XGBoost com engenharia de featu
 
 import { Image } from 'astro:assets';
 import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import ImportanciaFeatures from '../../../../../assets/sprints/sprint2/modelo-6/importancia-features.png';
+import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-6/mapa-correlacao.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -114,6 +116,12 @@ O resultado é onde a dificuldade do problema aparece de forma concreta:
 
 A acurácia geral fica em 92,95%, o que soa bem, mas é menor que o baseline de sempre prever a classe majoritária (98,85%), sinal de que a reponderação de classe está custando acurácia bruta em troca de um pouco de recall na classe rara. A acurácia balanceada, 59,83%, é a métrica que de fato importa aqui, e mostra o quadro real: pouco acima do que um classificador aleatório conseguiria (50%).
 
+O gráfico de importância das features do notebook reforça essa leitura. As variáveis mais relevantes continuam sendo sinais de volume e recorrência — como histórico de alarmes, tempo desde a última manutenção e tendência recente —, mas o peso delas não é tão concentrado a ponto de produzir uma separação clara da classe rara. Em outras palavras, o modelo está reconhecendo algum sinal de risco, mas não tem uma variável dominante e robusta que o faça decidir com confiança quando a estação está realmente em um caminho de falha ou de estabilidade. Isso explica por que o recall da classe 0 sobe apenas a 26% e a precisão continua baixa.
+
+<Image src={ImportanciaFeatures} alt="Gráfico de importância das features no modelo XGBoost" width={900} />
+
+<p style="text-align: center; font-style: italic;">Importância das features calculada pelo XGBoost no notebook do Modelo 6.</p>
+
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
@@ -135,6 +143,12 @@ Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de
 | Precisão, classe 0 | 0,06 | 0,05 |
 
 A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. Uma regularização mais agressiva (árvores mais rasas, min_child_weight maior, L1/L2) foi testada para atacar esse gap: reduziu a diferença entre treino e teste, de cerca de 22 para 19 pontos, mas piorou o resultado absoluto, com o recall da classe 0 no teste caindo de 26% para 4%. A configuração original foi mantida, porque simplificar o modelo não resolve o problema de fundo. O teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
+
+O diagnóstico fica ainda mais claro quando se olha para o mapa de correlação construido no notebook. O heatmap mostra que as features têm correlações entre si, mas não há um padrão linear forte e consistente com o alvo `falha_proximos_7d`. Isso é o que se espera quando o sinal real do problema está espalhado em vários indicadores e não em uma única variável claramente discriminante. Se o target tivesse uma relação linear forte com alguma feature central, o heatmap teria revelado isso de forma mais nítida; o que aparece é justamente o contrário: várias informações parcialmente relacionadas, mas sem um eixo decisivo e estável.
+
+<Image src={MapaCorrelacao} alt="Mapa de correlação entre as features e o alvo do Modelo 6" width={900} />
+
+<p style="text-align: center; font-style: italic;">Mapa de correlação entre as features e o alvo, reproduzido a partir do notebook.</p>
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -178,4 +192,6 @@ Esse resultado redefine a aplicação prática do modelo: ele funciona melhor co
 A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
 
 Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+
+Essa conclusão também está alinhada com a leitura dos gráficos do notebook: o gráfico de importância revela que o modelo consegue apontar alguns fatores de risco, mas sem uma borda clara de decisão; o mapa de correlação mostra que as features não convergem para um sinal único e forte. Quando o problema passa de "estação em risco" para "porta específica em risco", a informação disponível não é mais suficiente para sustentar uma decisão operativa confiável.
 
