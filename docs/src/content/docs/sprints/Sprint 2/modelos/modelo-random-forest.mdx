@@ -1,0 +1,87 @@
+---
+title: "Modelo Preditivo: Falha de Porta em 7 Dias"
+description: "Primeiro modelo preditivo do projeto: Random Forest treinado sobre o histórico de alarmes e manutenção das portas de plataforma, com seleção de features por SHAP e métrica por evento real."
+---
+
+import { Image } from 'astro:assets';
+import graficoShap from '../../../../../assets/sprints/sprint2/modelo/grafico-modelo-shap.png';
+import graficoPr from '../../../../../assets/sprints/sprint2/modelo/grafico-modelo-pr.png';
+import graficoEvento from '../../../../../assets/sprints/sprint2/modelo/grafico-modelo-evento.png';
+import graficoCiclo from '../../../../../assets/sprints/sprint2/modelo/grafico-modelo-ciclo.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+As portas de plataforma (PSDs) geram um histórico de alarmes e ordens de manutenção. Este modelo preditivo tenta testar se esse histórico consegue antecipar uma falha, não só explicar ela depois que ela aconteceu.
+
+**Pergunta:** considerando o histórico recente de alarmes e manutenção de uma porta, qual a probabilidade de ela quebrar nos próximos 7 dias?
+
+O notebook está em eda/modelo/modelo_preditivo_falhas.ipynb.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Metodologia</h2>
+</div>
+
+1. **Tabelas porta-dia:** as quatro tabelas já tinham sido tratadas na Sprint 1 (Alarmes, ZM01, ZM02, ZM03). Elas foram juntadas por estação + via + número da porta, usando o alarme da porta (`PDM`), a peça que falha de fato e gera ordem. O resultado é uma linha por porta por dia: 480 portas, 10 estações, ~307 mil linhas. Nenhuma feature usa informação do próprio dia ou do futuro.
+2. **Features:** Foram consideradas mais de de 40 features, organizadas em grupos (alarmes por tipo e janela móvel, duração, recência, histórico de manutenção SAP, identificação), mais um grupo criado especificamente para este modelo. Features relacionadas a repetição de corretivas (dias_desde_ultima_corretiva, n_corretivas_historico_total, intervalo_medio_zm01, razao_atraso_zm01), com a ideia de que uma porta atrasada em relação ao próprio ritmo histórico de quebra tem mais risco.
+3. **Separação treino/teste temporal:** diferente do 80/20 aleatório usual, a divisão foi feita por data. O treino foi até 23/04/2025 (232.992 linhas), e o teste a partir de 01/05/2025 (71.184 linhas), com 7 dias de folga entre os dois. Como as features usam médias móveis, dias vizinhos são quase idênticos. Misturar eles podia vazar informação de teste para o treino.
+4. **Modelo:** Random Forest, escolhido por enfrentar bem com combinações de sinais sem precisar criar a combinação manualmente, não exigir normalização, e combinar bem com SHAP para interpretação.
+5. **Validação dos hiperparâmetros:** um `RandomizedSearchCV` seguido de `GridSearchCV` (com validação respeitando a ordem temporal) testou outras combinações de parâmetros. O resultado ficou muito próximo do modelo com parâmetros escolhidos manualmente, confirmando que eles já bons.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Resultados</h2>
+</div>
+
+### 3.1 O que o modelo mais usa (SHAP)
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoShap} alt="Gráfico SHAP mostrando as features mais importantes e sua contribuição para a previsão" width={800} format="png" />
+</div>
+
+`n_corretivas_historico_total` (a feature de ciclo) liderou o gráfico, seguida pela duração do alarme (`dur_max_30d`, `dur_max_7d`). Parece fazer sentido, uma porta que já quebrou várias vezes ou tem alarme mais persistente tendem a ter risco maior.
+
+Com esse resultado, foi remido as features com contribuição baixas. Sobraram 71 das 83 features candidatas. As 12 removidas são quase todas contagens raras em janela de 1-3 dias e as duas features de calendário, não houve perda de performance com PR-AUC praticamente igual (processamento foi economizado).
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoPr} alt="Curva precisão-recall comparando o modelo com todas as features e o modelo com as features selecionadas pelo SHAP" width={800} format="png" />
+</div>
+
+### 3.2 Métrica por linha vs. por evento
+
+Quando o modelo mede linha a linha (cada dia como um alerta independente), ele tem precisão de 15,9% e recall de 55,3%. Mas essa não é a pergunta que a operação faz e sim: quando o modelo avisa, esse aviso caiu dentro dos 7 dias em que a porta realmente quebrou? Reagrupando por evento real e por episódio de alerta (dias consecutivos de alerta viram um único aviso), o resultado mudou:
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoEvento} alt="Gráfico de barras comparando precisão, recall e F1 calculados por linha porta-dia versus por evento real/episódio de alerta" width={800} format="png" />
+</div>
+
+Por evento, o modelo captura*65,0% das falhas reais (766 de 1.178), e 26,0%*dos episódios de alerta (496 de 1.905) realmente antecipam uma falha. Um resultado acima da leitura por linha, porque aqui basta acertar um dos 7 dias, não todos.
+
+### 3.3 O que a feature de ciclo mudou
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoCiclo} alt="Gráfico de barras comparando recall, precisão e F1 por evento/episódio antes e depois das features de ciclo" width={800} format="png" />
+</div>
+
+Comparando com uma versão do modelo sem as features de ciclo, o F1 por evento sobe de 0,325 para 0,372 (recall 55,5% → 65,0%, precisão 23,0% → 26,0%). Isso mostra que portas com histórico de mais corretivas tem mais risco mesmo quando os alarmes recentes não estão altos. Esse é um ponto que as features de ciclo trazem e que as janelas de alarme sozinhas não mostravam.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Síntese</h2>
+</div>
+
+### 4.1 O que ficou validado
+
+O histórico recente de alarmes e manutenção tem sinal preditivo para falha em 7 dias. Por evento, o modelo antecipa 65,0% das falhas reais, e mais de 1 em cada 4 episódios de alerta realmente vira falha. A feature de ciclo/recorrência (ideia testada neste modelo) foi a que teve mais impacto por essa melhora, confirmando que o atraso em relação ao próprio ritmo de quebra da porta é um sinal importante tanto quanto o volume de alarmes recentes.
+
+Também foi pensado para o problema que estamos lidando com que: entre as duas métricas o recall importa mais que precisão: mandar a manutenção checar uma porta que no fim não quebrou custa uma inspeção a mais, enquanto o modelo não avisar nada e a porta quebrar é pior. Ainda assim, um recall muito alto sozinho não é garantia de um bom modelo, se ele simplesmente apontasse quase todas as portas como risco, o recall subiria sem o modelo ter aprendido nada de fato, então ele sempre precisa ser lido junto com a precisão, não isolado.
