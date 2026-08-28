@@ -1,0 +1,277 @@
+---
+title: "Modelo 2"
+description: "Documentação do treinamento, tuning e avaliação do modelo de classificação binária que prevê risco de falha de Portas de Plataforma (PSD) nos próximos 7 dias."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import giniBaselineRf from '../../../../../assets/sprints/sprint2/modelos/modelo_2/gini-baseline-rf.png';
+import permutacaoBaselineRf from '../../../../../assets/sprints/sprint2/modelos/modelo_2/permutacao-baseline-rf.png';
+import matrizRocBaselineRf from '../../../../../assets/sprints/sprint2/modelos/modelo_2/matriz-roc-baseline-rf.png';
+import matrizRocLightgbmDefault from '../../../../../assets/sprints/sprint2/modelos/modelo_2/matriz-roc-lightgbm-default.png';
+import importanciaLightgbmDefault from '../../../../../assets/sprints/sprint2/modelos/modelo_2/importancia-lightgbm-default.png';
+import permutacaoLightgbmTunado from '../../../../../assets/sprints/sprint2/modelos/modelo_2/permutacao-lightgbm-tunado.png';
+import matrizConfusaoFinal from '../../../../../assets/sprints/sprint2/modelos/modelo_2/matriz-confusao-final.png';
+import curvaPrecisaoRecallFinal from '../../../../../assets/sprints/sprint2/modelos/modelo_2/curva-precisao-recall-final.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+Este documento descreve o pipeline de modelagem executado no notebook `models/modelo-2/modelo_2.ipynb`, cujo objetivo é prever a manutenção preditiva das Portas de Plataforma (PSDs).
+
+**Tarefa definida:** classificação binária — para cada porta, em cada dia, prever se haverá uma falha nos próximos 7 dias (`falha_7d`).
+
+**Dataset de entrada:** `dataset_modelo_final.csv`, construído em `construir_dataset_modelo.py` e `preparar_features_modelo.py` a partir das bases já limpas (Alarmes, ZM01, ZM02, ZM03, Catracas). São **296.472 linhas** (uma por porta/dia) e **27 colunas**, cobrindo o período de **27/02/2023 a 25/03/2026**, com **15,42%** de casos positivos (janela com falha).
+
+Antes de escolher e ajustar um modelo final, foi necessário medir o **peso de cada feature** na previsão de falha, via importância de um modelo baseline (Random Forest) e via importância por permutação. Isso orienta quais features vale a pena manter, remover ou aprofundar antes do tuning.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Separação Treino/Teste</h2>
+</div>
+
+Como o objetivo é prever o **futuro**, o split não pode ser aleatório: misturaria dias de teste anteriores a dias de treino, vazando informação futura para o modelo (*data leakage*). Em vez disso, os dados foram ordenados por data e os últimos ~20% dos dias reservados como teste, simulando a situação real de prever falhas em dias que o modelo nunca viu.
+
+| Conjunto | Linhas | Período | Positivos |
+| :--- | :---: | :--- | :---: |
+| **Treino** | 237.072 | 27/02/2023 a 12/08/2025 | 15,14% |
+| **Teste** | 59.400 | 13/08/2025 a 25/03/2026 | 16,53% |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Modelo Baseline: Random Forest</h2>
+</div>
+
+Um Random Forest (`class_weight="balanced"` para compensar o desbalanceamento de 15,4% de positivos) foi treinado como **baseline exploratório**, não como modelo final, seu papel é estimar a importância relativa de cada feature antes de decidir o algoritmo definitivo e fazer o tuning de hiperparâmetros.
+
+**23 features** utilizadas: as 11 colunas one-hot de estação (`estacao_*`), contagens de alarmes em janelas de 3/7/14 dias, tempo médio de normalização, dias desde o último alarme, passageiros de entrada/saída (e média em 7 dias), dias desde a última corretiva/preventiva e número de corretivas nos últimos 90 dias. `data`, `estacao`, `porta` e `falha_7d` ficam de fora, são identificadores ou o próprio alvo, não sinais preditivos.
+
+### 3.1 Importância das features (Gini)
+
+Importância nativa do Random Forest: quanto cada feature reduz a impureza (Gini) nas árvores, em média. É rápida de calcular, mas tende a inflar features numéricas de alta cardinalidade, por isso é cruzada com a importância por permutação a seguir.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={giniBaselineRf} alt="Importância Gini das features no Random Forest baseline" width={750} format="png" />
+</div>
+
+As três features de maior peso são `dias_desde_ultima_corretiva` (0,161), `n_corretivas_90d` (0,146) e `tempo_medio_normalizacao_7d` (0,131), o histórico de manutenção corretiva de cada porta domina o ranking.
+
+### 3.2 Importância por permutação
+
+A importância por permutação embaralha cada feature (uma de cada vez) no conjunto de **teste** e mede quanto a métrica de avaliação (ROC AUC) piora. É calculada fora da amostra de treino, então não sofre o viés de overfitting da importância Gini, e reflete melhor o que a feature realmente contribui para prever dias/portas nunca vistos.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={permutacaoBaselineRf} alt="Importância por permutação das features no Random Forest baseline" width={750} format="png" />
+</div>
+
+O topo se mantém coerente com a importância Gini (`dias_desde_ultima_corretiva`, `n_corretivas_90d`), mas várias features (`n_alarmes_7d`, `passageiros_saida`, `estacao_FRE`, `estacao_PTA`, `passageiros_entrada`) apresentam importância **negativa ou próxima de zero**, indício de que carregam pouco ou nenhum sinal real.
+
+### 3.3 Comparação Gini vs. Permutação
+
+Cruzando os dois rankings, as features que aparecem no topo em ambos (`dias_desde_ultima_corretiva`, `n_corretivas_90d`, `tempo_medio_normalizacao_7d`, `passageiros_media_7d`) são as mais confiáveis para o modelo final. Já `estacao_LUZ` sobe de rank 13 (Gini) para rank 3 (permutação), sinal de que sua contribuição real é maior do que a importância Gini sugere.
+
+### 3.4 Desempenho do baseline
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={matrizRocBaselineRf} alt="Matriz de confusão e curva ROC do Random Forest baseline" width={800} format="png" />
+</div>
+
+| Métrica | Valor |
+| :--- | :---: |
+| **ROC AUC (teste)** | 0,611 |
+| **Precisão (falha em 7d)** | 0,21 |
+| **Recall (falha em 7d)** | 0,59 |
+| **Acurácia** | 0,57 |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelo Final: LightGBM</h2>
+</div>
+
+O Random Forest serviu apenas como baseline exploratório para medir peso de feature. Para o treinamento final, foi escolhido o **LightGBM** (Gradient Boosting de árvores), pelos seguintes motivos:
+
+* Costuma superar Random Forest em problemas tabulares desbalanceados como este (15,4% de positivos).
+* Lida nativamente com valores ausentes (`NaN`), várias features aqui têm nulo com significado real (ex.: `dias_desde_ultimo_alarme` nulo quando a porta nunca teve alarme antes), então não é preciso imputar e arriscar distorcer esse sinal.
+* Rápido o suficiente para as ~237 mil linhas de treino, com margem para tuning.
+
+As mesmas 23 features e o mesmo split temporal do baseline foram mantidos.
+
+### 4.1 Validação temporal
+
+Para escolher o número de árvores (evitar overfitting) sem usar o conjunto de teste, os últimos ~15% dos dias **dentro do treino** foram separados como validação:
+
+| Conjunto | Linhas | Período |
+| :--- | :---: | :--- |
+| **Treino (fit)** | 201.432 | até 30/03/2025 |
+| **Validação (early stopping)** | 35.640 | 31/03/2025 a 12/08/2025 |
+
+`is_unbalance=True` compensa o desbalanceamento (equivalente ao `class_weight="balanced"` do Random Forest). O treino parou na **iteração 82**, com AUC de validação de **0,599**.
+
+### 4.2 Avaliação no conjunto de teste (hiperparâmetros padrão)
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={matrizRocLightgbmDefault} alt="Matriz de confusão e curva ROC do LightGBM com hiperparâmetros padrão" width={800} format="png" />
+</div>
+
+| Métrica | Valor |
+| :--- | :---: |
+| **ROC AUC (teste)** | 0,605 |
+| **Precisão (falha em 7d)** | 0,22 |
+| **Recall (falha em 7d)** | 0,49 |
+| **Acurácia** | 0,63 |
+
+### 4.3 Importância das features (hiperparâmetros padrão)
+
+Importância nativa do LightGBM (número de vezes que cada feature foi usada para splits, ponderado por ganho), para comparar com o ranking do Random Forest baseline.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={importanciaLightgbmDefault} alt="Importância das features no LightGBM com hiperparâmetros padrão" width={750} format="png" />
+</div>
+
+`passageiros_media_7d` assume o topo do ranking (430 usos), seguida por `dias_desde_ultima_corretiva` (397), `dias_desde_ultima_preventiva` e `tempo_medio_normalizacao_7d` (269 cada). `estacao_REP` não foi usada nenhuma vez pelo modelo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Tuning de Hiperparâmetros</h2>
+</div>
+
+### 5.1 Por que não usar `GridSearchCV`/`cross_val_score` padrão
+
+As ferramentas de validação cruzada do scikit-learn embaralham e particionam aleatoriamente por padrão, o que vazaria dado futuro para o treino. Em vez disso, foi construída manualmente uma **validação cruzada por janela expansiva (walk-forward)**: o conjunto de treino é dividido em 4 folds cronológicos, cada um treinando com todo o histórico anterior e validando no período seguinte.
+
+| Fold | Linhas (fit) | Linhas (val) | Positivos (val) |
+| :---: | :---: | :---: | :---: |
+| 1 | 47.256 | 47.256 | 13,4% |
+| 2 | 94.512 | 47.256 | 15,2% |
+| 3 | 141.768 | 47.256 | 15,5% |
+| 4 | 189.024 | 47.256 | 17,0% |
+
+### 5.2 Espaço de busca e random search
+
+Random search com **25 combinações**, variando `num_leaves`, `learning_rate`, `min_child_samples`, `subsample`, `colsample_bytree`, `reg_alpha` e `reg_lambda`. Para cada combinação, o modelo foi treinado e avaliado nos 4 folds, usando a **AUC média entre folds** como critério de escolha.
+
+### 5.3 Melhor combinação encontrada
+
+| Hiperparâmetro | Valor |
+| :--- | :---: |
+| `num_leaves` | 15 |
+| `learning_rate` | 0,01 |
+| `min_child_samples` | 200 |
+| `subsample` | 0,6 |
+| `colsample_bytree` | 0,6 |
+| `reg_alpha` | 0,0 |
+| `reg_lambda` | 0,0 |
+
+**AUC médio na CV: 0,6183 ± 0,0308.**
+
+O tuning tende a preferir árvores mais rasas e regularizadas (`num_leaves` baixo, `min_child_samples` alto), coerente com o sinal moderado das features: um modelo mais conservador generaliza melhor do que um mais flexível quando o sinal é fraco.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Revisão de Features Fracas</h2>
+</div>
+
+Com os melhores hiperparâmetros, um modelo com as 23 features originais foi retreinado e sua importância por permutação recalculada no conjunto de teste, agora com o LightGBM já tunado, para decidir quais features não carregam sinal real.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={permutacaoLightgbmTunado} alt="Importância por permutação do LightGBM tunado, com features negativas destacadas em vermelho" width={750} format="png" />
+</div>
+
+**7 features com importância ≤ 0** foram identificadas como candidatas a remoção: `estacao_FRE`, `estacao_PTA`, `passageiros_saida`, `dias_desde_ultimo_alarme`, `passageiros_entrada`, `estacao_REP`, `estacao_FAL`. O embaralhamento delas não piora (ou até melhora ligeiramente) a AUC no teste, sinal de que não ajudam o modelo a generalizar.
+
+Os dois conjuntos foram comparados após retreino:
+
+| Conjunto | Nº features | AUC (teste) |
+| :--- | :---: | :---: |
+| Completo | 23 | 0,6054 |
+| Reduzido (sem features fracas) | **16** | **0,6066** |
+
+Como o AUC do conjunto reduzido ficou igual ou levemente melhor, foi confirmado que as features removidas eram apenas ruído, permitindo seguir com um modelo mais simples, sem perda de desempenho.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Modelo Final (Hiperparâmetros Tunados + Features Revisadas)</h2>
+</div>
+
+O modelo final junta as duas otimizações, os hiperparâmetros do random search e o conjunto de **16 features** revisado: `estacao_BUT`, `estacao_FRA`, `estacao_HIG`, `estacao_LUZ`, `estacao_MBI`, `estacao_PIN`, `estacao_VSO`, `n_alarmes_3d`, `n_alarmes_7d`, `n_alarmes_14d`, `n_alarmes_obs_7d`, `tempo_medio_normalizacao_7d`, `passageiros_media_7d`, `dias_desde_ultima_corretiva`, `dias_desde_ultima_preventiva`, `n_corretivas_90d`.
+
+| Métrica | Valor |
+| :--- | :---: |
+| **Melhor iteração** | 1.259 |
+| **AUC validação** | 0,6031 |
+| **AUC teste** | 0,6066 |
+
+### 7.1 Priorização: recall acima de precisão
+
+Um falso negativo (falha real não prevista) é operacionalmente muito mais caro que um falso positivo (alerta desnecessário). Essa é a lente para interpretar as métricas a seguir, calculadas no limiar padrão do classificador (0,5):
+
+| Métrica | Valor (limiar 0,5) |
+| :--- | :---: |
+| **Acurácia** | 0,550 |
+| **Precisão** | 0,206 |
+| **Recall** | 0,605 |
+| **F1** | 0,308 |
+
+### 7.2 Matriz de confusão
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={matrizConfusaoFinal} alt="Matriz de confusão do modelo final no limiar 0.5" width={550} format="png" />
+</div>
+
+Das **9.820 falhas reais** no período de teste, o modelo capturou **5.939 (60,5%)** e perdeu 3.881.
+
+### 7.3 Curva precisão-recall
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={curvaPrecisaoRecallFinal} alt="Curva precisão-recall do modelo final no conjunto de teste" width={700} format="png" />
+</div>
+
+A curva mostra o trade-off completo entre precisão e recall conforme o limiar de decisão varia. O ponto vermelho marca o limiar padrão (0,5); o limiar final de operação ainda não foi fixado, é uma decisão de negócio que deve ser apoiada nesta curva.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Validação Cruzada do Modelo Final</h2>
+</div>
+
+Os mesmos 4 folds temporais foram reaplicados, agora com os hiperparâmetros tunados e o conjunto de features reduzido, para confirmar que o desempenho não depende de um único split treino/teste sortudo.
+
+| Fold | AUC | Melhor iteração |
+| :---: | :---: | :---: |
+| 1 | 0,5791 | 18 |
+| 2 | 0,6469 | 54 |
+| 3 | 0,6462 | 189 |
+| 4 | 0,6010 | 631 |
+
+**AUC médio (CV): 0,6183 ± 0,0293** — **AUC no teste (holdout, nunca usado na CV): 0,6066**.
+
+O AUC do teste ficar dentro da faixa da CV (média ± desvio-padrão) é um bom sinal: o resultado do holdout é consistente com o que o modelo entrega em outros períodos.
+
+---
+
+## Resumo
+
+* **Tarefa**: classificação binária, prever se uma porta terá falha nos próximos 7 dias, a partir de 296.472 linhas (porta/dia) com 15,42% de positivos.
+* **Split temporal** (sem embaralhamento) para evitar vazamento de dado futuro: treino até 12/08/2025, teste a partir de 13/08/2025.
+* **Baseline (Random Forest)**: usado só para medir peso de feature; ROC AUC de 0,611 no teste.
+* **Modelo final: LightGBM**, escolhido por lidar melhor com desbalanceamento e valores ausentes com significado.
+* **Tuning**: random search de 25 combinações avaliado por validação cruzada temporal *walk-forward* (4 folds); melhor combinação com AUC médio de CV de 0,6183 ± 0,0308.
+* **Revisão de features**: 7 das 23 features (importância por permutação ≤ 0) foram removidas sem perda de desempenho, ficando com um conjunto final de **16 features**.
+* O sinal mais forte continua sendo o **histórico de corretiva por porta** (`dias_desde_ultima_corretiva`, `n_corretivas_90d`) e o uso de passageiros, confirmando o que já se via desde a validação de correlação inicial.
+* **Métricas do modelo final no limiar padrão (0,5)**: acurácia 55,0%, precisão 20,6%, recall 60,5%, F1 0,308. O recall é a métrica mais relevante para este caso de uso (custo de falso negativo > falso positivo), mas o limiar final de operação ainda não foi fixado, decisão de negócio a ser apoiada na curva precisão-recall.
+* **Validação cruzada do modelo final**: AUC de teste (0,6066) dentro da faixa observada nos 4 folds temporais (0,6183 ± 0,0293), reduzindo a chance de o resultado ser sorte de um split específico.

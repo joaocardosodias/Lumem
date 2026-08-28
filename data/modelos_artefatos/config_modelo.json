@@ -1,0 +1,50 @@
+{
+  "nome_modelo": "XGBoost Certeza Absoluta (Random Search Tuned)",
+  "threshold_oficial": 0.65,
+  "features": [
+    "plataforma_bin",
+    "faixa_risco_zm01",
+    "estacao_BUT",
+    "estacao_FAL",
+    "estacao_FRA",
+    "estacao_FRE",
+    "estacao_HIG",
+    "estacao_LUZ",
+    "estacao_PIN",
+    "estacao_PTA",
+    "estacao_REP",
+    "estacao_VSO",
+    "idade_ativo_anos_scaled",
+    "porta_scaled",
+    "dias_desde_ultima_zm01_scaled",
+    "dias_desde_ultima_zm02_scaled",
+    "dias_desde_ultima_zm03_scaled",
+    "qtd_alarmes_1d_scaled",
+    "qtd_alarmes_7d_scaled",
+    "qtd_alarmes_14d_scaled",
+    "aceleracao_alarmes_7d_scaled",
+    "qtd_anomalias_30s_14d_scaled",
+    "tempo_parada_acumulado_7d_scaled",
+    "max_tempo_normalizacao_7d_scaled",
+    "tempo_medio_por_alarme_7d_scaled",
+    "proporcao_alarmes_graves_7d_scaled"
+  ],
+  "melhores_hiperparametros": {
+    "colsample_bytree": 0.7991745517677157,
+    "learning_rate": 0.03154830703992233,
+    "max_depth": 3,
+    "min_child_weight": 33,
+    "n_estimators": 230,
+    "reg_alpha": 1.16712405710114,
+    "reg_lambda": 8.312919646661223,
+    "scale_pos_weight": 9.877259093227618,
+    "subsample": 0.6599152198701645
+  },
+  "metricas_teste_2026": {
+    "roc_auc": 0.6476744524276667,
+    "pr_auc": 0.13233172581652441,
+    "precision_operacional": 0.7777777777777778,
+    "recall_operacional": 0.46835443037974683,
+    "f1_score": 0.5846501128199
+  }
+}
