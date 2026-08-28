@@ -13,7 +13,7 @@ import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-6/mapa-
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Escolha do Modelo</h2>
 </div>
 
-Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a porta irá quebrar dentro dos próximos 7 dias. O objetivo é que a equipe da Motiva, consiga inserir novos dados e o modelo consiga avaliar e prever se ele irá quebrar nos próximos 7 dias. Nesse formato, seria necessário rodar o modelo com os novos dados.
+Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a **estação** terá uma nova falha nos próximos 7 dias. O objetivo é que a equipe da Motiva consiga inserir novos dados de alarmes e o modelo avalie o risco agregado da estação. A identificação da porta específica é uma etapa posterior de busca e não faz parte da classificação principal.
 
 A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas não finalizado e iniciamos o tratamento de dados e levantamento de novas features.
 
@@ -47,29 +47,17 @@ Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estaç
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Utilizadas</h2>
 </div>
 
-Com os dados devidamente preparados, o passo seguinte é transformar esse histórico bruto em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. Isso parece óbvio, mas é fácil quebrar por acidente. Calcular, por exemplo, a duração média de todas as manutenções de uma estação incluindo a atual contaminaria a variável com informação do próprio evento que se está tentando prever. Por isso praticamente todo cálculo usa shift(1), cumcount() ou uma busca binária (searchsorted) limitada ao passado, de forma que cada feature representa exatamente o que um mantenedor saberia, olhando o histórico da estação, no instante imediatamente anterior àquele momento, nunca depois.
+Com os dados devidamente preparados, o passo seguinte é transformar os alarmes em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. O classificador utiliza exclusivamente `alarmes_ultimas_24h`, `alarmes_ultimos_7d` e `tendencia_alarmes`, calculadas antes do evento previsto. Assim, nenhum diagnóstico ou informação registrada depois da falha é fornecido como entrada.
 
 A primeira leva de variáveis nasce de uma intuição simples de manutenção preditiva: uma porta prestes a falhar normalmente já vem avisando, seja em mais alarmes, em manutenções mais recorrentes ou em reparos mais demorados. Dessa ideia nasceram:
 
 - **estacao**: extraída do campo local_de_instalacao, vira a chave usada para juntar informação entre as diferentes bases.
 - **numero_alarmes**: total histórico de alarmes daquela estação, um proxy bruto de quanto ela é usada e monitorada (estações maiores e mais movimentadas tendem a acumular mais alarmes só pelo volume de operação, independente de estarem degradando ou não).
 - **alarmes_antes_manu**: conta, por busca binária num vetor de horários ordenado, quantos alarmes já haviam acontecido em todo o sistema até o fim daquela avaria, uma medida bruta de volume acumulado.
-- **dias_desde_ultima_manutencao**: usa um shift dentro de cada grupo de estação para pegar o fim da manutenção anterior e calcular a distância até T. A intuição é dupla: um intervalo curto pode indicar uma porta que não fica boa (o mesmo problema voltando rápido), e um intervalo longo pode indicar acúmulo natural de desgaste. Estações na primeira manutenção do seu histórico recebem -1 como sentinela, para não confundir "nunca teve manutenção antes" com "teve manutenção há zero dias".
 - **alarmes_ultimas_24h e alarmes_ultimos_7d**: quantos alarmes a estação teve nas últimas 24 horas e nos últimos 7 dias, sempre antes de T. É a feature mais diretamente ligada à ideia de aviso antes da falha.
 - **tendencia_alarmes**: combina as duas janelas acima numa única razão, dividindo os alarmes das últimas 24h pela média diária dos últimos 7 dias. Um valor bem acima de 1 significa que a estação está mais barulhenta do que o seu normal recente, uma tentativa de capturar não só o volume de alarme, mas se ele está acelerando.
 
-Depois de uma primeira rodada do modelo, olhar a importância de cada variável revelou que faltava capturar reincidência de forma mais direta:
-
-- **numero_manutencoes_anteriores**: quantas manutenções a estação já teve antes desta.
-- **duracao_media_manutencoes_anteriores**: duração média (em horas) dos reparos anteriores, sempre usando shift(1) para não vazar a duração da própria ocorrência atual.
-- **dia_semana e mes**: extraídos de T, testam se existe sazonalidade semanal ou anual no comportamento das falhas.
-
-A manutenção preventiva também entra como feature, nunca como parte da definição do alvo: misturá-la na timeline que define a falha contaminaria o rótulo, já que uma visita agendada sem problema nenhum passaria a contar como "falha chegando".
-
-- **dias_desde_ultima_preventiva**: há quanto tempo a estação teve a última preventiva antes de T.
-- **preventivas_agendadas_prox_7d**: quantas preventivas já estão agendadas para os 7 dias seguintes, uma informação legítima de se ter no momento da previsão, já que manutenção preventiva é agendada com antecedência. Eventos cancelados são descartados por não terem ocorrido de fato, o que deixa 559 das 569 preventivas originais válidas.
-
-Por fim, estacao, sintoma, objeto e defeito são campos de texto e precisam virar número antes de alimentar o modelo. A escolha recai sobre o LabelEncoder, que transforma cada categoria num inteiro, em vez do one-hot encoding: para um modelo baseado em árvores como o XGBoost isso não é um problema, já que a árvore não assume nenhuma ordem ou distância entre os códigos, apenas aprende a dividir por eles, e essa escolha evita explodir o número de colunas com variáveis de alta cardinalidade como defeito e sintoma, que têm dezenas de categorias distintas.
+Os campos de manutenção, como `defeito`, `sintoma`, `objeto` e `indisponivel_flag`, são mantidos apenas para formar ou analisar o rótulo. Eles não entram no treinamento, pois só ficam disponíveis depois que o atendimento ocorre.
 
 ---
 
@@ -103,7 +91,9 @@ A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 9
 - **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
 - **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
 
-O resultado é onde a dificuldade do problema aparece de forma concreta:
+O resultado registrado abaixo corresponde à execução anterior do notebook, antes da retirada dos campos de diagnóstico. Como o conjunto de features foi corrigido para usar somente alarmes, essas métricas e os gráficos precisam ser recalculados antes de serem considerados o resultado oficial do Modelo 6.
+
+O resultado anterior era onde a dificuldade do problema aparecia de forma concreta:
 
 | Métrica (teste) | Classe 1 (falha) | Classe 0 (sem falha) |
 | :--- | :---: | :---: |
