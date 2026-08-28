@@ -58,7 +58,7 @@ Os seguintes modelos foram incluídos na comparação:
 | Modelo 5 | Random Forest |
 | Modelo 6 | XGBoost |
 | Modelo 7 | CatBoost |
-| Modelo 8 | Extra Trees |
+| Modelo 4 | Extra Trees |
 
 O **Modelo 4 não foi incluído porque não havia um Modelo 4 entre os artefatos disponibilizados para análise**.
 
@@ -88,7 +88,7 @@ A tabela utilizada como base para as análises foi:
 | Modelo 5 | N/A | 0,1590 | 0,5530 | 0,2470 | 0,6970 | 0,1850 |
 | Modelo 6 | 0,9295 | 0,9900 | 0,9400 | 0,9600 | N/A | N/A |
 | Modelo 7 | 0,5634 | 0,5463 | 0,9193 | 0,6853 | 0,5911 | 0,5874 |
-| Modelo 8 | 0,5904 | 0,0326 | 0,5824 | 0,0618 | 0,6075 | 0,0407 |
+| Modelo 4 | 0,5904 | 0,0326 | 0,5824 | 0,0618 | 0,6075 | 0,0407 |
 
 ---
 
@@ -113,7 +113,7 @@ Modelo 2 = 0,2060
 Modelo 5 = 0,1590
 Modelo 3 = 0,1242
 Modelo 1 = 0,1047
-Modelo 8 = 0,0326
+Modelo 4 = 0,0326
 ```
 
 Visualmente, o Modelo 6 apresentou um valor muito superior aos demais.
@@ -132,7 +132,7 @@ Os resultados foram:
 Modelo 6 = 0,9400
 Modelo 7 = 0,9193
 Modelo 2 = 0,6050
-Modelo 8 = 0,5824
+Modelo 4 = 0,5824
 Modelo 5 = 0,5530
 Modelo 1 = 0,5361
 Modelo 3 = 0,3163
@@ -157,7 +157,7 @@ Modelo 2 = 0,3080
 Modelo 5 = 0,2470
 Modelo 3 = 0,1784
 Modelo 1 = 0,1751
-Modelo 8 = 0,0618
+Modelo 4 = 0,0618
 ```
 
 O Modelo 7 apresentou o segundo melhor F1-score e ficou muito acima dos demais modelos, com exceção do Modelo 6.
@@ -244,7 +244,7 @@ Os resultados disponíveis foram:
 | Modelo | ROC-AUC |
 |---|---:|
 | Modelo 5 | 0,6970 |
-| Modelo 8 | 0,6075 |
+| Modelo 4 | 0,6075 |
 | Modelo 2 | 0,6066 |
 | Modelo 7 | 0,5911 |
 | Modelo 3 | 0,5713 |
@@ -258,7 +258,7 @@ O principal destaque foi o **Modelo 5**, com ROC-AUC de aproximadamente:
 
 Esse foi o melhor valor entre os modelos com a métrica registrada.
 
-O Modelo 8 e o Modelo 2 ficaram praticamente empatados, com aproximadamente 0,607.
+O Modelo 4 e o Modelo 2 ficaram praticamente empatados, com aproximadamente 0,607.
 
 O Modelo 7 obteve ROC-AUC de 0,5911.
 
@@ -288,7 +288,7 @@ Os resultados registrados foram:
 | Modelo 5 | 0,1850 |
 | Modelo 3 | 0,1065 |
 | Modelo 1 | 0,0913 |
-| Modelo 8 | 0,0407 |
+| Modelo 4 | 0,0407 |
 
 O resultado do **Modelo 7 foi claramente superior aos demais**.
 
@@ -326,7 +326,7 @@ Os valores disponíveis foram:
 |---|---:|
 | Modelo 6 | 0,9295 |
 | Modelo 3 | 0,7689 |
-| Modelo 8 | 0,5904 |
+| Modelo 4 | 0,5904 |
 | Modelo 7 | 0,5634 |
 | Modelo 2 | 0,5500 |
 
@@ -453,9 +453,9 @@ Ao desconsiderar a interpretação simplista do Modelo 6 devido ao forte desbala
 
 ---
 
-## Modelo 8
+## Modelo 4
 
-O Modelo 8 apresentou Recall competitivo, mas Precision muito baixa.
+O Modelo 4 apresentou Recall competitivo, mas Precision muito baixa.
 
 ```text
 Accuracy  = 0,5904
@@ -557,7 +557,7 @@ Modelo 7 = 0,5874
 Modelo 5 = 0,1850
 Modelo 3 = 0,1065
 Modelo 1 = 0,0913
-Modelo 8 = 0,0407
+Modelo 4 = 0,0407
 ```
 
 Isso indica que o Modelo 7 preserva um bom equilíbrio entre Precision e Recall ao longo de diferentes thresholds.
