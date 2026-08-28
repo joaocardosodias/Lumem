@@ -1,6 +1,6 @@
 ---
 title: "Modelo 2"
-description: "Documentação do treinamento, tuning e avaliação do modelo de classificação binária que prevê risco de falha de Portas de Plataforma (PSD) nos próximos 7 dias."
+description: "Documentação das etapas 1 a 5 do CRISP-DM aplicadas ao Modelo 2, que estima risco de falha de Portas de Plataforma (PSD) nos próximos 7 dias."
 ---
 
 import { Image } from 'astro:assets';
@@ -16,23 +16,114 @@ import curvaPrecisaoRecallFinal from '../../../../../assets/sprints/sprint2/mode
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral</h2>
 </div>
 
-Este documento descreve o pipeline de modelagem executado no notebook `models/modelo-2/modelo_2.ipynb`, cujo objetivo é prever a manutenção preditiva das Portas de Plataforma (PSDs).
+Esta página documenta o desenvolvimento do **Modelo 2 — Random Forest e LightGBM para predição de falhas em PSDs**, construído com os dados disponibilizados. O código reproduzível está nos scripts `models/modelo-2/limpeza_consolidacao.py`, `construir_dataset_modelo.py`, `preparar_features_modelo.py` e no notebook `models/modelo-2/modelo_2.ipynb`.
 
-**Tarefa definida:** classificação binária — para cada porta, em cada dia, prever se haverá uma falha nos próximos 7 dias (`falha_7d`).
+O desenvolvimento segue as cinco primeiras fases da metodologia [CRISP-DM](https://www.datascience-pm.com/crisp-dm-2/): entendimento do negócio, entendimento dos dados, preparação dos dados, modelagem e avaliação. A sexta fase, implantação, não faz parte do escopo desta entrega.
 
-**Dataset de entrada:** `dataset_modelo_final.csv`, construído em `construir_dataset_modelo.py` e `preparar_features_modelo.py` a partir das bases já limpas (Alarmes, ZM01, ZM02, ZM03, Catracas). São **296.472 linhas** (uma por porta/dia) e **27 colunas**, cobrindo o período de **27/02/2023 a 25/03/2026**, com **15,42%** de casos positivos (janela com falha).
-
-Antes de escolher e ajustar um modelo final, foi necessário medir o **peso de cada feature** na previsão de falha, via importância de um modelo baseline (Random Forest) e via importância por permutação. Isso orienta quais features vale a pena manter, remover ou aprofundar antes do tuning.
+| Fase CRISP-DM | Resultado nesta implementação |
+| :--- | :--- |
+| 1. Entendimento do negócio | Definição da previsão de falha por porta em janela de 7 dias |
+| 2. Entendimento dos dados | Inspeção das bases de Alarmes, ZM01/ZM02, ZM03 e Catracas |
+| 3. Preparação dos dados | Limpeza, construção do painel porta/dia, do target e das features |
+| 4. Modelagem | Baseline (Random Forest), escolha do LightGBM, tuning e revisão de features |
+| 5. Avaliação | Validação cruzada temporal, teste final e análise de limitações |
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Separação Treino/Teste</h2>
-</div>
+## 1. Entendimento do negócio
+
+### 1.1 Problema
+
+As Portas de Plataforma (PSDs) geram alarmes de operação e possuem ordens de manutenção corretiva e preventiva registradas pela Motiva. O objetivo do modelo é transformar esse histórico em um indicador de risco por porta que ajude a antecipar falhas antes que elas ocorram.
+
+A pergunta respondida pelo modelo é:
+
+> **Uma determinada PSD apresentará uma falha nos próximos 7 dias?**
+
+O modelo realiza uma classificação binária diária, `falha_7d`, calculada para cada porta em cada dia:
+
+- `0`: nenhuma ordem corretiva (ZM01 ou ZM02) registrada para a porta entre d+1 e d+7;
+- `1`: pelo menos uma ordem corretiva registrada para a porta entre d+1 e d+7.
+
+### 1.2 Objetivo analítico
+
+O objetivo é identificar, com a maior antecedência possível, portas com risco elevado de falha, priorizando **recall** sobre precisão, um falso negativo (falha real não prevista) é operacionalmente muito mais caro do que um falso positivo (alerta desnecessário de inspeção).
+
+Antes de treinar o modelo final, foi necessário medir o **peso de cada feature** na previsão de falha, via importância de um modelo baseline (Random Forest) e via importância por permutação, para orientar quais features vale a pena manter, remover ou aprofundar antes do tuning de hiperparâmetros.
+
+### 1.3 Restrições conhecidas
+
+- As ordens ZM01 (corretiva emergencial) e ZM02 (corretiva programada) são usadas como aproximação de falha, mas não comprovam necessariamente uma quebra física;
+- O painel é construído em granularidade diária por porta, sem distinguir o componente ou o tipo exato da falha esperada;
+- A taxa de eventos positivos é baixa (15,4%), o que limita o teto de precisão alcançável sem gerar excesso de alertas;
+
+---
+
+## 2. Entendimento dos dados
+
+### 2.1 Dados fornecidos
+
+| Base | Arquivo utilizado (limpo) | Finalidade no modelo |
+| :--- | :--- | :--- |
+| Alarmes | `data/alarmes_limpo.csv` | Contagens de alarmes e tempo de normalização por porta/dia |
+| Corretiva emergencial (ZM01) | `data/zm01_corretiva_emergencial_limpo.csv` | Construção do target `falha_7d` e histórico de corretivas |
+| Corretiva programada (ZM02) | `data/zm02_corretiva_programada_limpo.csv` | Construção do target `falha_7d` e histórico de corretivas |
+| Preventiva (ZM03) | `data/zm03_preventiva_limpo.csv` | Dias desde a última manutenção preventiva por estação |
+| Catracas | `data/catracas_limpo.csv` | Volume de passageiros de entrada/saída por estação/dia |
+
+Não foram usadas fontes externas para treinar o modelo. As bases brutas são limpas em `limpeza_consolidacao.py`, reaplicando a mesma lógica documentada em `eda/cleaning/` (dedup exato, remoção de linhas incompletas/subtotais, parsing de datas e de TAGs).
+
+### 2.2 Volumetria das bases limpas
+
+| Base | Linhas (após limpeza) |
+| :--- | ---: |
+| Alarmes | 822.366 |
+| ZM01 (corretiva emergencial) | 10.543 |
+| ZM02 (corretiva programada) | 1.163 |
+| ZM03 (preventiva) | 569 |
+| Catracas | 13.080 |
+
+Nos Alarmes, a duração é reconstruída a partir do campo textual `Tempo de Normalização` e alarmes com duração acima de 30 dias (tickets travados) são descartados, igual ao pipeline de `eda/cleaning/limpeza_dados_alarmes.ipynb`. Nas Catracas, o cabeçalho mesclado do Excel original é reconstruído e a tabela é reformatada para o formato longo (data, estação, entrada, saída).
+
+### 2.3 Problemas de qualidade identificados
+
+- Nem todas as ordens ZM01/ZM02 informam uma porta individual no local de instalação (`local_de_instalacao`), sendo necessário extrair estação e porta via expressão regular sobre a TAG;
+- A cobertura de estações e o volume de alarmes não são constantes ao longo do período observado;
+- ZM03 (preventiva) só identifica a estação, não a porta individual, então seu sinal (`dias_desde_ultima_preventiva`) é aplicado por estação, não por porta;
+- Catracas registra passageiros por estação, não por porta, então o sinal de fluxo também é aplicado a todas as portas da mesma estação.
+
+Esses pontos foram considerados tanto na preparação quanto na interpretação dos resultados.
+
+---
+
+## 3. Preparação dos dados
+
+### 3.1 Identificação da unidade analisada
+
+Cada porta é identificada pela combinação de estação e número de porta, extraída da TAG (`PSD-<estação>` e `PP<porta>PDM`) nos Alarmes e do campo `local_de_instalacao` nas ordens ZM01/ZM02. Esse identificador comum permite relacionar alarmes e corretivas da mesma porta em `construir_dataset_modelo.py`.
+
+### 3.2 Construção do painel porta/dia
+
+Foi criada uma grade diária (produto cartesiano de portas × dias) cobrindo o período comum às três bases (Alarmes, Catracas e Corretivas), com o fim da janela recuado em 7 dias para garantir que todo dia do painel tenha um horizonte completo de observação do target. Sobre essa grade foram agregadas, por porta e dia: contagens de alarmes, tempo médio de normalização, contagens de corretivas e preventivas, e passageiros de entrada/saída da estação.
+
+**Dataset de entrada final:** `dataset_modelo_final.csv`, construído em `construir_dataset_modelo.py` e `preparar_features_modelo.py`. São **296.472 linhas** (uma por porta/dia) e **27 colunas**, cobrindo o período de **27/02/2023 a 25/03/2026**, com **15,42%** de casos positivos (janela com falha).
+
+### 3.3 Construção das features
+
+Sobre o painel diário foram calculadas, sempre usando apenas dados **estritamente anteriores** ao dia de referência (via `.shift(1)` antes de qualquer janela móvel, evitando vazamento temporal): contagens de alarmes em janelas de 3/7/14 dias, tempo médio de normalização, dias desde o último alarme, passageiros de entrada/saída (e média em 7 dias), dias desde a última corretiva/preventiva e número de corretivas nos últimos 90 dias.
+
+`estacao` (11 categorias) foi convertida em one-hot (`estacao_BUT`, `estacao_PIN`, ...) em `preparar_features_modelo.py`. As colunas numéricas foram mantidas sem normalização/escala, já que os modelos avaliados (Random Forest, LightGBM) são baseados em árvore e não exigem features na mesma escala. `porta` foi mantida apenas como identificador e não entra como feature de entrada: usá-la diretamente arriscaria o modelo decorar o equipamento em vez de generalizar pelo seu histórico, que já está capturado em `n_corretivas_90d` e demais features de janela.
+
+**23 features** de entrada resultaram desse processo: as 11 colunas one-hot de estação, contagens de alarmes em janelas de 3/7/14 dias, tempo médio de normalização, dias desde o último alarme, passageiros de entrada/saída (e média em 7 dias), dias desde a última corretiva/preventiva e número de corretivas nos últimos 90 dias. `data`, `estacao`, `porta` e `falha_7d` ficam de fora do treino, são identificadores ou o próprio alvo, não sinais preditivos.
+
+### 3.4 Construção do target
+
+Para cada porta e dia de referência, `falha_7d` é igual a `1` quando existe pelo menos uma ordem ZM01 ou ZM02 registrada para aquela porta entre o dia seguinte e os sete dias posteriores (d+1 a d+7), calculado com uma janela móvel invertida sobre a série diária de eventos por porta.
+
+### 3.5 Separação temporal
 
 Como o objetivo é prever o **futuro**, o split não pode ser aleatório: misturaria dias de teste anteriores a dias de treino, vazando informação futura para o modelo (*data leakage*). Em vez disso, os dados foram ordenados por data e os últimos ~20% dos dias reservados como teste, simulando a situação real de prever falhas em dias que o modelo nunca viu.
 
@@ -43,16 +134,13 @@ Como o objetivo é prever o **futuro**, o split não pode ser aleatório: mistur
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Modelo Baseline: Random Forest</h2>
-</div>
+## 4. Modelagem
 
-Um Random Forest (`class_weight="balanced"` para compensar o desbalanceamento de 15,4% de positivos) foi treinado como **baseline exploratório**, não como modelo final, seu papel é estimar a importância relativa de cada feature antes de decidir o algoritmo definitivo e fazer o tuning de hiperparâmetros.
+### 4.1 Modelo baseline: Random Forest
 
-**23 features** utilizadas: as 11 colunas one-hot de estação (`estacao_*`), contagens de alarmes em janelas de 3/7/14 dias, tempo médio de normalização, dias desde o último alarme, passageiros de entrada/saída (e média em 7 dias), dias desde a última corretiva/preventiva e número de corretivas nos últimos 90 dias. `data`, `estacao`, `porta` e `falha_7d` ficam de fora, são identificadores ou o próprio alvo, não sinais preditivos.
+Um Random Forest (`class_weight="balanced"` para compensar o desbalanceamento de 15,4% de positivos) foi treinado como **baseline exploratório**, não como modelo final. Seu papel é estimar a importância relativa de cada feature antes de decidir o algoritmo definitivo e fazer o tuning de hiperparâmetros.
 
-### 3.1 Importância das features (Gini)
+#### 4.1.1 Importância das features (Gini)
 
 Importância nativa do Random Forest: quanto cada feature reduz a impureza (Gini) nas árvores, em média. É rápida de calcular, mas tende a inflar features numéricas de alta cardinalidade, por isso é cruzada com a importância por permutação a seguir.
 
@@ -62,7 +150,7 @@ Importância nativa do Random Forest: quanto cada feature reduz a impureza (Gini
 
 As três features de maior peso são `dias_desde_ultima_corretiva` (0,161), `n_corretivas_90d` (0,146) e `tempo_medio_normalizacao_7d` (0,131), o histórico de manutenção corretiva de cada porta domina o ranking.
 
-### 3.2 Importância por permutação
+#### 4.1.2 Importância por permutação
 
 A importância por permutação embaralha cada feature (uma de cada vez) no conjunto de **teste** e mede quanto a métrica de avaliação (ROC AUC) piora. É calculada fora da amostra de treino, então não sofre o viés de overfitting da importância Gini, e reflete melhor o que a feature realmente contribui para prever dias/portas nunca vistos.
 
@@ -72,11 +160,11 @@ A importância por permutação embaralha cada feature (uma de cada vez) no conj
 
 O topo se mantém coerente com a importância Gini (`dias_desde_ultima_corretiva`, `n_corretivas_90d`), mas várias features (`n_alarmes_7d`, `passageiros_saida`, `estacao_FRE`, `estacao_PTA`, `passageiros_entrada`) apresentam importância **negativa ou próxima de zero**, indício de que carregam pouco ou nenhum sinal real.
 
-### 3.3 Comparação Gini vs. Permutação
+#### 4.1.3 Comparação Gini vs. Permutação
 
 Cruzando os dois rankings, as features que aparecem no topo em ambos (`dias_desde_ultima_corretiva`, `n_corretivas_90d`, `tempo_medio_normalizacao_7d`, `passageiros_media_7d`) são as mais confiáveis para o modelo final. Já `estacao_LUZ` sobe de rank 13 (Gini) para rank 3 (permutação), sinal de que sua contribuição real é maior do que a importância Gini sugere.
 
-### 3.4 Desempenho do baseline
+#### 4.1.4 Desempenho do baseline
 
 <div style="margin: 1.5rem 0; text-align: center;">
   <Image src={matrizRocBaselineRf} alt="Matriz de confusão e curva ROC do Random Forest baseline" width={800} format="png" />
@@ -89,22 +177,17 @@ Cruzando os dois rankings, as features que aparecem no topo em ambos (`dias_desd
 | **Recall (falha em 7d)** | 0,59 |
 | **Acurácia** | 0,57 |
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelo Final: LightGBM</h2>
-</div>
+### 4.2 Escolha do algoritmo final: LightGBM
 
 O Random Forest serviu apenas como baseline exploratório para medir peso de feature. Para o treinamento final, foi escolhido o **LightGBM** (Gradient Boosting de árvores), pelos seguintes motivos:
 
-* Costuma superar Random Forest em problemas tabulares desbalanceados como este (15,4% de positivos).
-* Lida nativamente com valores ausentes (`NaN`), várias features aqui têm nulo com significado real (ex.: `dias_desde_ultimo_alarme` nulo quando a porta nunca teve alarme antes), então não é preciso imputar e arriscar distorcer esse sinal.
+* Costuma superar Random Forest em problemas tabulares desbalanceados como este (15,4% de positivos);
+* Lida nativamente com valores ausentes (`NaN`), várias features aqui têm nulo com significado real (ex.: `dias_desde_ultimo_alarme` nulo quando a porta nunca teve alarme antes), então não é preciso imputar e arriscar distorcer esse sinal;
 * Rápido o suficiente para as ~237 mil linhas de treino, com margem para tuning.
 
 As mesmas 23 features e o mesmo split temporal do baseline foram mantidos.
 
-### 4.1 Validação temporal
+#### 4.2.1 Validação temporal
 
 Para escolher o número de árvores (evitar overfitting) sem usar o conjunto de teste, os últimos ~15% dos dias **dentro do treino** foram separados como validação:
 
@@ -115,7 +198,7 @@ Para escolher o número de árvores (evitar overfitting) sem usar o conjunto de 
 
 `is_unbalance=True` compensa o desbalanceamento (equivalente ao `class_weight="balanced"` do Random Forest). O treino parou na **iteração 82**, com AUC de validação de **0,599**.
 
-### 4.2 Avaliação no conjunto de teste (hiperparâmetros padrão)
+#### 4.2.2 Avaliação no conjunto de teste (hiperparâmetros padrão)
 
 <div style="margin: 1.5rem 0; text-align: center;">
   <Image src={matrizRocLightgbmDefault} alt="Matriz de confusão e curva ROC do LightGBM com hiperparâmetros padrão" width={800} format="png" />
@@ -128,7 +211,7 @@ Para escolher o número de árvores (evitar overfitting) sem usar o conjunto de 
 | **Recall (falha em 7d)** | 0,49 |
 | **Acurácia** | 0,63 |
 
-### 4.3 Importância das features (hiperparâmetros padrão)
+#### 4.2.3 Importância das features (hiperparâmetros padrão)
 
 Importância nativa do LightGBM (número de vezes que cada feature foi usada para splits, ponderado por ganho), para comparar com o ranking do Random Forest baseline.
 
@@ -138,14 +221,9 @@ Importância nativa do LightGBM (número de vezes que cada feature foi usada par
 
 `passageiros_media_7d` assume o topo do ranking (430 usos), seguida por `dias_desde_ultima_corretiva` (397), `dias_desde_ultima_preventiva` e `tempo_medio_normalizacao_7d` (269 cada). `estacao_REP` não foi usada nenhuma vez pelo modelo.
 
----
+### 4.3 Tuning de hiperparâmetros
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Tuning de Hiperparâmetros</h2>
-</div>
-
-### 5.1 Por que não usar `GridSearchCV`/`cross_val_score` padrão
+#### 4.3.1 Por que não usar `GridSearchCV`/`cross_val_score` padrão
 
 As ferramentas de validação cruzada do scikit-learn embaralham e particionam aleatoriamente por padrão, o que vazaria dado futuro para o treino. Em vez disso, foi construída manualmente uma **validação cruzada por janela expansiva (walk-forward)**: o conjunto de treino é dividido em 4 folds cronológicos, cada um treinando com todo o histórico anterior e validando no período seguinte.
 
@@ -156,11 +234,11 @@ As ferramentas de validação cruzada do scikit-learn embaralham e particionam a
 | 3 | 141.768 | 47.256 | 15,5% |
 | 4 | 189.024 | 47.256 | 17,0% |
 
-### 5.2 Espaço de busca e random search
+#### 4.3.2 Espaço de busca e random search
 
 Random search com **25 combinações**, variando `num_leaves`, `learning_rate`, `min_child_samples`, `subsample`, `colsample_bytree`, `reg_alpha` e `reg_lambda`. Para cada combinação, o modelo foi treinado e avaliado nos 4 folds, usando a **AUC média entre folds** como critério de escolha.
 
-### 5.3 Melhor combinação encontrada
+#### 4.3.3 Melhor combinação encontrada
 
 | Hiperparâmetro | Valor |
 | :--- | :---: |
@@ -176,12 +254,7 @@ Random search com **25 combinações**, variando `num_leaves`, `learning_rate`, 
 
 O tuning tende a preferir árvores mais rasas e regularizadas (`num_leaves` baixo, `min_child_samples` alto), coerente com o sinal moderado das features: um modelo mais conservador generaliza melhor do que um mais flexível quando o sinal é fraco.
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Revisão de Features Fracas</h2>
-</div>
+### 4.4 Revisão de features fracas
 
 Com os melhores hiperparâmetros, um modelo com as 23 features originais foi retreinado e sua importância por permutação recalculada no conjunto de teste, agora com o LightGBM já tunado, para decidir quais features não carregam sinal real.
 
@@ -200,12 +273,7 @@ Os dois conjuntos foram comparados após retreino:
 
 Como o AUC do conjunto reduzido ficou igual ou levemente melhor, foi confirmado que as features removidas eram apenas ruído, permitindo seguir com um modelo mais simples, sem perda de desempenho.
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Modelo Final (Hiperparâmetros Tunados + Features Revisadas)</h2>
-</div>
+### 4.5 Modelo final selecionado
 
 O modelo final junta as duas otimizações, os hiperparâmetros do random search e o conjunto de **16 features** revisado: `estacao_BUT`, `estacao_FRA`, `estacao_HIG`, `estacao_LUZ`, `estacao_MBI`, `estacao_PIN`, `estacao_VSO`, `n_alarmes_3d`, `n_alarmes_7d`, `n_alarmes_14d`, `n_alarmes_obs_7d`, `tempo_medio_normalizacao_7d`, `passageiros_media_7d`, `dias_desde_ultima_corretiva`, `dias_desde_ultima_preventiva`, `n_corretivas_90d`.
 
@@ -215,7 +283,13 @@ O modelo final junta as duas otimizações, os hiperparâmetros do random search
 | **AUC validação** | 0,6031 |
 | **AUC teste** | 0,6066 |
 
-### 7.1 Priorização: recall acima de precisão
+A escolha do LightGBM tunado com o conjunto reduzido de features é sustentada pela combinação das evidências das Seções 4.1 a 4.4: AUC de teste superior ao dos hiperparâmetros padrão (0,6066 vs. 0,605), AUC de CV consistente (0,6183 ± 0,0308) e nenhuma perda de desempenho ao remover as 7 features sem sinal real.
+
+---
+
+## 5. Avaliação
+
+### 5.1 Priorização: recall acima de precisão
 
 Um falso negativo (falha real não prevista) é operacionalmente muito mais caro que um falso positivo (alerta desnecessário). Essa é a lente para interpretar as métricas a seguir, calculadas no limiar padrão do classificador (0,5):
 
@@ -226,7 +300,7 @@ Um falso negativo (falha real não prevista) é operacionalmente muito mais caro
 | **Recall** | 0,605 |
 | **F1** | 0,308 |
 
-### 7.2 Matriz de confusão
+### 5.2 Matriz de confusão
 
 <div style="margin: 1.5rem 0; text-align: center;">
   <Image src={matrizConfusaoFinal} alt="Matriz de confusão do modelo final no limiar 0.5" width={550} format="png" />
@@ -234,7 +308,7 @@ Um falso negativo (falha real não prevista) é operacionalmente muito mais caro
 
 Das **9.820 falhas reais** no período de teste, o modelo capturou **5.939 (60,5%)** e perdeu 3.881.
 
-### 7.3 Curva precisão-recall
+### 5.3 Curva precisão-recall
 
 <div style="margin: 1.5rem 0; text-align: center;">
   <Image src={curvaPrecisaoRecallFinal} alt="Curva precisão-recall do modelo final no conjunto de teste" width={700} format="png" />
@@ -242,12 +316,7 @@ Das **9.820 falhas reais** no período de teste, o modelo capturou **5.939 (60,5
 
 A curva mostra o trade-off completo entre precisão e recall conforme o limiar de decisão varia. O ponto vermelho marca o limiar padrão (0,5); o limiar final de operação ainda não foi fixado, é uma decisão de negócio que deve ser apoiada nesta curva.
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Validação Cruzada do Modelo Final</h2>
-</div>
+### 5.4 Validação cruzada do modelo final
 
 Os mesmos 4 folds temporais foram reaplicados, agora com os hiperparâmetros tunados e o conjunto de features reduzido, para confirmar que o desempenho não depende de um único split treino/teste sortudo.
 
@@ -261,6 +330,19 @@ Os mesmos 4 folds temporais foram reaplicados, agora com os hiperparâmetros tun
 **AUC médio (CV): 0,6183 ± 0,0293** — **AUC no teste (holdout, nunca usado na CV): 0,6066**.
 
 O AUC do teste ficar dentro da faixa da CV (média ± desvio-padrão) é um bom sinal: o resultado do holdout é consistente com o que o modelo entrega em outros períodos.
+
+### 5.5 Conclusão da avaliação
+
+O modelo LightGBM tunado apresentou sinal preditivo consistente entre CV e teste, com recall de 60,5% no limiar padrão, mas AUC ainda moderado (~0,61) e precisão baixa (20,6%). Portanto, o resultado é classificado como **prova de conceito**: útil para priorizar inspeções, mas não aprovado para uso autônomo em manutenção sem revisão humana.
+
+As principais limitações são:
+
+- as ordens ZM01/ZM02 são uma aproximação de falha e precisam ser validadas com especialistas;
+- os sinais de preventiva (ZM03) e de passageiros (Catracas) são aplicados por estação, não por porta individual, diluindo parte do sinal;
+- o limiar final de operação ainda não foi fixado, é uma decisão de negócio a ser apoiada na curva precisão-recall (Seção 5.3);
+- o AUC de teste (0,6066) está dentro da faixa de CV, mas o desvio-padrão entre folds (±0,0293) mostra que o desempenho varia por período.
+
+Como próximos passos, recomenda-se validar o target com o parceiro, obter granularidade por porta para preventiva e passageiros, definir o custo de falsos alertas e falhas não detectadas, e comparar o LightGBM com outros algoritmos de boosting.
 
 ---
 
