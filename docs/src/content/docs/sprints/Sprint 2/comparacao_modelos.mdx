@@ -11,8 +11,8 @@ Este documento registra o processo utilizado para comparar os modelos desenvolvi
 
 A análise mostrou que nem todos os modelos resolvem exatamente o mesmo problema preditivo. Em especial, os **Modelos 5 e 7 não são totalmente comparáveis**, pois possuem targets com granularidades diferentes:
 
-- **Modelo 5:** prevê se **alguma porta** apresentará falha;
-- **Modelo 7:** prevê se **uma porta específica** apresentará falha.
+- **Modelo 5:** prevê se **uma porta específica** apresentará falha;
+- **Modelo 7:** prevê se **alguma porta de um sistema PSD (estação + plataforma)** apresentará falha.
 
 Por esse motivo, a seleção final não foi feita apenas pela comparação direta dos valores das métricas. Também foi considerada a aderência do target ao nível de decisão desejado.
 
@@ -91,27 +91,27 @@ A diferença mais importante para a decisão final ocorre entre os Modelos 5 e 7
 
 ### Modelo 5
 
-O target do Modelo 5 responde, em essência:
-
-> **“Alguma porta apresentará uma falha?”**
-
-Portanto, sua previsão está associada à ocorrência de falha em alguma porta dentro do contexto considerado pelo modelo.
-
-### Modelo 7
-
-O target do Modelo 7 responde a uma pergunta mais específica:
+O target do Modelo 5 responde a uma pergunta mais específica:
 
 > **“Esta porta específica apresentará uma falha?”**
 
-Nesse caso, a previsão está associada diretamente à identificação da porta individual com risco de falha.
+Portanto, sua previsão está associada diretamente à identificação da porta individual com risco de falha.
+
+### Modelo 7
+
+O target do Modelo 7 responde, em essência:
+
+> **“Algum sistema PSD (conjunto de portas de uma plataforma) apresentará uma falha?”**
+
+Nesse caso, a previsão está associada à ocorrência de falha em alguma porta do sistema, não a uma porta específica.
 
 ### Impacto na comparação
 
 Essa diferença significa que os valores de ROC-AUC, PR-AUC, Precision, Recall e F1 dos Modelos 5 e 7 **não devem ser interpretados como uma disputa direta em condições idênticas**.
 
-O Modelo 5 pode apresentar melhor desempenho em determinada métrica e, ainda assim, estar resolvendo um problema diferente e menos granular.
+O Modelo 7 pode apresentar melhor desempenho em determinada métrica e, ainda assim, estar resolvendo um problema diferente e menos granular.
 
-O Modelo 7 possui uma tarefa mais específica: além de indicar risco de falha, precisa associar esse risco à porta correta.
+O Modelo 5 possui uma tarefa mais específica: além de indicar risco de falha, precisa associar esse risco à porta correta.
 
 Por isso, as métricas continuam sendo apresentadas lado a lado como uma visão geral dos experimentos, mas a escolha final leva em consideração também **qual pergunta cada modelo efetivamente responde**.
 
@@ -299,7 +299,7 @@ O principal destaque numérico foi o **Modelo 5**, com ROC-AUC de aproximadament
 
 Esse foi o maior valor entre os modelos com a métrica registrada.
 
-Entretanto, após a revisão dos targets, esse resultado não deve ser interpretado como evidência de que o Modelo 5 supera diretamente o Modelo 7, pois os dois resolvem problemas diferentes. O Modelo 5 prevê a ocorrência de falha em alguma porta, enquanto o Modelo 7 tenta identificar a falha de uma porta específica.
+Entretanto, após a revisão dos targets, esse resultado não deve ser interpretado como evidência de que o Modelo 5 supera diretamente o Modelo 7, pois os dois resolvem problemas diferentes. O Modelo 5 tenta identificar a falha de uma porta específica, enquanto o Modelo 7 prevê a ocorrência de falha em alguma porta de um sistema PSD.
 
 O Modelo 8 e o Modelo 2 ficaram praticamente empatados, com aproximadamente 0,607.
 
@@ -454,7 +454,7 @@ Também apresentou o segundo maior PR-AUC disponível.
 
 Entretanto, o Modelo 5 **não foi tratado como concorrente direto do Modelo 7**, pois seus targets são diferentes.
 
-O Modelo 5 busca prever se **alguma porta** apresentará falha, enquanto o Modelo 7 busca prever se **uma porta específica** apresentará falha.
+O Modelo 5 busca prever se **uma porta específica** apresentará falha, enquanto o Modelo 7 busca prever se **alguma porta de um sistema PSD** apresentará falha.
 
 Assim, os bons resultados do Modelo 5 foram reconhecidos, mas não utilizados como evidência direta de superioridade ou inferioridade em relação ao Modelo 7.
 
@@ -547,7 +547,7 @@ Assim, o ranking foi utilizado apenas como resumo visual das métricas e não co
 
 # 12. Por que o Modelo 7 foi escolhido
 
-A seleção do Modelo 7 não foi baseada em uma única métrica.
+A seleção do Modelo 7 como o modelo de nível sistema PSD/plataforma não foi baseada em uma única métrica.
 
 Ela foi resultado da combinação de vários fatores.
 
@@ -625,7 +625,7 @@ O Modelo 7 não foi o melhor em todas as métricas.
 
 O Modelo 5, por exemplo, apresentou ROC-AUC numericamente superior, embora em um target diferente.
 
-O Modelo 7 apresentou desempenho forte em várias métricas simultaneamente dentro de sua formulação de previsão por porta específica:
+O Modelo 7 apresentou desempenho forte em várias métricas simultaneamente dentro de sua formulação de previsão por sistema PSD:
 
 ```text
 Precision = 0,5463
@@ -647,17 +647,17 @@ A revisão do grupo identificou que os Modelos 5 e 7 **não são totalmente comp
 
 O Modelo 5 busca responder:
 
-> **“Alguma porta apresentará uma falha?”**
+> **“Esta porta específica apresentará uma falha?”**
 
-Sua previsão está relacionada à ocorrência de uma falha em alguma porta no contexto considerado.
+Isso exige uma granularidade maior, pois o modelo precisa associar o risco à porta individual.
 
 ### Target do Modelo 7
 
 O Modelo 7 busca responder:
 
-> **“Esta porta específica apresentará uma falha?”**
+> **“Algum sistema PSD (conjunto de portas de uma plataforma) apresentará uma falha?”**
 
-Isso exige uma granularidade maior, pois o modelo precisa associar o risco à porta individual.
+Sua previsão está relacionada à ocorrência de uma falha em alguma porta do sistema, não a uma porta específica.
 
 ### Consequência para as métricas
 
@@ -680,13 +680,13 @@ PR-AUC    = 0,5874
 
 Esses números foram mantidos na mesma tabela para documentar os resultados originais, mas **não devem ser usados como se os dois modelos tivessem sido avaliados sobre exatamente a mesma tarefa**.
 
-O maior ROC-AUC do Modelo 5 indica bom desempenho para o target que ele se propõe a prever.
+O Modelo 5 apresenta uma tarefa mais específica, voltada à identificação do risco de falha de uma porta individual — é o único dos dois com essa granularidade.
 
-Já o Modelo 7 apresenta forte desempenho em uma tarefa mais específica, voltada à identificação do risco de falha de uma porta individual.
+Já o maior PR-AUC e Recall do Modelo 7 refletem o desempenho dele em um problema mais agregado (sistema PSD), com uma taxa de positivos naturalmente mais alta, e não uma capacidade de identificação mais fina.
 
-Portanto, a escolha do Modelo 7 não significa que ele “venceu” diretamente o Modelo 5 em uma disputa experimental idêntica.
+Portanto, o Modelo 7 não "venceu" diretamente o Modelo 5 em uma disputa experimental idêntica — essa disputa idêntica não existe entre os dois.
 
-A escolha significa que, entre os modelos analisados, o Modelo 7 combina métricas fortes com um target mais granular e mais adequado quando o objetivo é identificar **qual porta específica** está sob risco.
+Por isso, a decisão do grupo foi manter os dois modelos como serviços separados: o parceiro escolhe qual usar de acordo com o nível de decisão que precisa — porta específica (Modelo 5) ou sistema PSD/plataforma (Modelo 7) — sem que um substitua o outro.
 
 ---
 
@@ -730,7 +730,7 @@ Após analisar:
 - granularidade da previsão;
 - consistência geral dos resultados;
 
-o modelo selecionado para a tarefa de identificação de risco em nível de porta específica foi:
+entre os candidatos avaliados para o nível de sistema PSD/plataforma, o modelo selecionado foi:
 
 # **Modelo 7 — CatBoost**
 
@@ -745,6 +745,8 @@ As métricas que sustentam a escolha são:
 | ROC-AUC | 0,5911 |
 | PR-AUC | 0,5874 |
 
+Para o nível de porta específica, o modelo mantido é o **Modelo 5 — Random Forest**, já que é o único dos dois candidatos com essa granularidade. Os dois modelos são mantidos como serviços separados — ver seção 14.
+
 ---
 
 # 14. Conclusão
@@ -755,42 +757,41 @@ O Modelo 6 é o principal exemplo de como a distribuição das classes altera a 
 
 A revisão também revelou uma diferença metodológica importante entre os Modelos 5 e 7.
 
-O Modelo 5 busca prever se **alguma porta** apresentará falha.
+O Modelo 5 busca prever se **uma porta específica** apresentará falha.
 
-O Modelo 7 busca prever se **uma porta específica** apresentará falha.
+O Modelo 7 busca prever se **alguma porta de um sistema PSD** apresentará falha.
 
-Portanto, os dois modelos não representam uma comparação direta sobre a mesma tarefa. O ROC-AUC superior do Modelo 5 deve ser reconhecido como um bom resultado dentro de seu próprio target, mas não pode ser utilizado isoladamente para afirmar que ele é superior ao Modelo 7.
+Portanto, os dois modelos não representam uma comparação direta sobre a mesma tarefa. O maior PR-AUC e Recall do Modelo 7 devem ser reconhecidos como um bom resultado dentro de seu próprio target — mais agregado e com uma taxa de positivos naturalmente maior —, não como evidência de que ele é superior ao Modelo 5 de forma geral.
 
-O Modelo 7, por sua vez, apresentou:
+O Modelo 5, por sua vez, apresentou:
 
 ```text
-Precision = 0,5463
-Recall    = 0,9193
-F1        = 0,6853
-ROC-AUC   = 0,5911
-PR-AUC    = 0,5874
+Precision = 0,1590
+Recall    = 0,5530
+F1        = 0,2470
+ROC-AUC   = 0,6970
+PR-AUC    = 0,1850
 ```
 
-Além de apresentar métricas fortes, especialmente em Recall, F1-score e PR-AUC, o Modelo 7 opera em uma granularidade mais específica, associando o risco de falha a uma porta individual.
+Ele opera em uma granularidade mais específica, associando o risco de falha a uma porta individual — é o único dos dois modelos capaz disso.
 
-Isso torna sua saída mais adequada para um cenário em que não basta saber que uma falha poderá acontecer: é necessário identificar **qual porta está sob risco**.
+Isso o torna mais adequado para um cenário em que não basta saber que uma falha pode acontecer em algum lugar da plataforma: é necessário identificar **qual porta está sob risco**.
+
+Já o Modelo 7 é mais adequado quando a decisão é tomada em nível de sistema PSD/plataforma, com métricas mais fortes e consistentes dentro desse recorte.
 
 Por esse motivo, a decisão final foi:
 
-> **O Modelo 7 foi selecionado como o modelo mais adequado para a previsão em nível de porta específica, mas o modelo 5 não foi descartado**
+> **Os dois modelos foram mantidos, cada um como um serviço/endpoint separado. O parceiro escolhe qual usar de acordo com o nível de decisão que precisa: porta específica (Modelo 5) ou sistema PSD/plataforma (Modelo 7). Nenhum dos dois foi descartado.**
 
-Essa conclusão não significa que o Modelo 7 seja numericamente superior ao Modelo 5 em uma tarefa idêntica, porque essa tarefa idêntica não existe entre os dois experimentos.
+Essa conclusão não significa que um modelo seja numericamente superior ao outro em uma tarefa idêntica, porque essa tarefa idêntica não existe entre os dois experimentos.
 
-A escolha do Modelo 7 resulta da combinação entre:
+A decisão de manter os dois resulta da combinação entre:
 
-- desempenho consistente;
-- Recall elevado;
-- F1-score forte;
-- maior PR-AUC registrado;
-- granularidade em nível de porta específica;
-- maior utilidade da previsão para identificação direta do equipamento sob risco.
+- desempenho forte e consistente do Modelo 7 dentro do seu próprio recorte (sistema PSD);
+- granularidade em nível de porta específica, exclusiva do Modelo 5;
+- utilidades operacionais diferentes e complementares para o parceiro.
 
-Assim, a seleção final considera não apenas as métricas, mas também **o que cada modelo efetivamente prevê**.
+Assim, a seleção final considera não apenas as métricas, mas também **o que cada modelo efetivamente prevê** e como isso serve a diferentes decisões operacionais.
 
 ---
 
@@ -800,40 +801,30 @@ Assim, a seleção final considera não apenas as métricas, mas também **o que
 Modelos avaliados:
 1, 2, 3, 5, 6, 7 e 8
 
-Modelo selecionado:
-Modelo 7
+Modelos mantidos (endpoints separados):
+Modelo 5 e Modelo 7
 
-Algoritmo:
+Modelo 5 (nível porta específica):
+Random Forest
+Precision = 0,1590 | Recall = 0,5530 | F1 = 0,2470
+ROC-AUC = 0,6970 | PR-AUC = 0,1850
+
+Modelo 7 (nível sistema PSD/plataforma):
 CatBoost
+Precision = 0,5463 | Recall = 0,9193 | F1 = 0,6853
+ROC-AUC = 0,5911 | PR-AUC = 0,5874
 
-Accuracy:
-0,5634
-
-Precision:
-0,5463
-
-Recall:
-0,9193
-
-F1-score:
-0,6853
-
-ROC-AUC:
-0,5911
-
-PR-AUC:
-0,5874
-
-Observação sobre o Modelo 5:
-não é diretamente comparável ao Modelo 7.
-O Modelo 5 prevê se alguma porta apresentará falha,
-enquanto o Modelo 7 prevê uma porta específica.
+Observação sobre comparabilidade:
+Modelo 5 e Modelo 7 não são diretamente comparáveis.
+O Modelo 5 prevê se uma porta específica apresentará falha,
+enquanto o Modelo 7 prevê se alguma porta de um sistema PSD apresentará falha.
 
 Principal ressalva:
 Modelo 6 apresenta métricas nominais muito altas,
 mas seu target possui aproximadamente 98,85% de classe positiva.
 
 Critério final:
-consistência das métricas, granularidade do target
-e adequação à identificação de uma porta específica
+consistência das métricas dentro de cada target
+e complementaridade entre as granularidades (porta específica vs. sistema PSD),
+mantendo os dois como serviços separados para o parceiro escolher
 ```
