@@ -48,6 +48,8 @@ export default defineConfig({
 							label: 'Sprint 2',
 							items: [
 								{ label: 'Visão Geral da Sprint 2', slug: 'sprints/sprint-2' },
+								{ label: 'Comparação dos Modelos', slug: 'sprints/sprint-2/comparacao_modelos' },
+								{ label: 'Wireframe', slug: 'sprints/sprint-2/wireframe' },
 								{
 									label: 'Modelos Preditivos',
 									items: [{ autogenerate: { directory: 'sprints/Sprint 2/modelos' } }],
