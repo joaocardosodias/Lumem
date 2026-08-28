@@ -47,15 +47,21 @@ Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estaç
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Utilizadas</h2>
 </div>
 
-Com os dados devidamente preparados, o passo seguinte é transformar os alarmes em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. O classificador utiliza exclusivamente `alarmes_ultimas_24h`, `alarmes_ultimos_7d` e `tendencia_alarmes`, calculadas antes do evento previsto. Assim, nenhum diagnóstico ou informação registrada depois da falha é fornecido como entrada.
+Com os dados devidamente preparados, o passo seguinte é transformar o histórico em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. O classificador utiliza dez sinais temporais e de contagem, calculados antes do evento previsto, sem fornecer diagnóstico ou informação registrada depois da falha.
 
 A primeira leva de variáveis nasce de uma intuição simples de manutenção preditiva: uma porta prestes a falhar normalmente já vem avisando, seja em mais alarmes, em manutenções mais recorrentes ou em reparos mais demorados. Dessa ideia nasceram:
 
 - **estacao**: extraída do campo local_de_instalacao, vira a chave usada para juntar informação entre as diferentes bases.
-- **numero_alarmes**: total histórico de alarmes daquela estação, um proxy bruto de quanto ela é usada e monitorada (estações maiores e mais movimentadas tendem a acumular mais alarmes só pelo volume de operação, independente de estarem degradando ou não).
-- **alarmes_antes_manu**: conta, por busca binária num vetor de horários ordenado, quantos alarmes já haviam acontecido em todo o sistema até o fim daquela avaria, uma medida bruta de volume acumulado.
 - **alarmes_ultimas_24h e alarmes_ultimos_7d**: quantos alarmes a estação teve nas últimas 24 horas e nos últimos 7 dias, sempre antes de T. É a feature mais diretamente ligada à ideia de aviso antes da falha.
 - **tendencia_alarmes**: combina as duas janelas acima numa única razão, dividindo os alarmes das últimas 24h pela média diária dos últimos 7 dias. Um valor bem acima de 1 significa que a estação está mais barulhenta do que o seu normal recente, uma tentativa de capturar não só o volume de alarme, mas se ele está acelerando.
+- **dias_desde_ultima_manutencao**: intervalo desde o fim da manutenção anterior na estação, com `-1` quando não existe histórico.
+- **numero_manutencoes_anteriores**: quantidade de manutenções anteriores da estação, calculada em ordem cronológica.
+- **duracao_media_manutencoes_anteriores**: média da duração dos reparos anteriores, usando `shift(1)` para excluir a ocorrência atual.
+- **dia_semana e mes**: variáveis de sazonalidade extraídas do instante T.
+- **dias_desde_ultima_preventiva**: tempo desde a última preventiva anterior a T.
+- **preventivas_agendadas_prox_7d**: quantidade de preventivas já agendadas no intervalo entre T e os sete dias seguintes.
+
+`numero_alarmes` e `alarmes_antes_manu` permanecem disponíveis para análise exploratória, mas não entram no classificador final: o primeiro usa o total do período e o segundo depende do fim da avaria, ambos com risco de informação posterior ao momento da previsão.
 
 Os campos de manutenção, como `defeito`, `sintoma`, `objeto` e `indisponivel_flag`, são mantidos apenas para formar ou analisar o rótulo. Eles não entram no treinamento, pois só ficam disponíveis depois que o atendimento ocorre.
 
@@ -91,20 +97,18 @@ A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 9
 - **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
 - **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
 
-O resultado registrado abaixo corresponde à execução anterior do notebook, antes da retirada dos campos de diagnóstico. Como o conjunto de features foi corrigido para usar somente alarmes, essas métricas e os gráficos precisam ser recalculados antes de serem considerados o resultado oficial do Modelo 6.
-
-O resultado anterior era onde a dificuldade do problema aparecia de forma concreta:
+O resultado atual, com as dez features temporais e de contexto descritas acima, mostra a dificuldade do problema de forma concreta:
 
 | Métrica (teste) | Classe 1 (falha) | Classe 0 (sem falha) |
 | :--- | :---: | :---: |
 | Precisão | 0,99 | 0,05 |
-| Recall | 0,94 | 0,26 |
-| F1 | 0,96 | 0,08 |
+| Recall | 0,95 | 0,22 |
+| F1 | 0,97 | 0,08 |
 | Suporte | 2.312 | 27 |
 
-A acurácia geral fica em 92,95%, o que soa bem, mas é menor que o baseline de sempre prever a classe majoritária (98,85%), sinal de que a reponderação de classe está custando acurácia bruta em troca de um pouco de recall na classe rara. A acurácia balanceada, 59,83%, é a métrica que de fato importa aqui, e mostra o quadro real: pouco acima do que um classificador aleatório conseguiria (50%).
+A acurácia geral fica em 93,93%, ainda abaixo do baseline de sempre prever a classe majoritária (98,85%). A acurácia balanceada, 58,49%, é a métrica que de fato importa aqui: o modelo melhora pouco em relação ao acaso e continua com baixa capacidade de reconhecer a classe rara.
 
-O gráfico de importância das features do notebook reforça essa leitura. As variáveis mais relevantes continuam sendo sinais de volume e recorrência — como histórico de alarmes, tempo desde a última manutenção e tendência recente —, mas o peso delas não é tão concentrado a ponto de produzir uma separação clara da classe rara. Em outras palavras, o modelo está reconhecendo algum sinal de risco, mas não tem uma variável dominante e robusta que o faça decidir com confiança quando a estação está realmente em um caminho de falha ou de estabilidade. Isso explica por que o recall da classe 0 sobe apenas a 26% e a precisão continua baixa.
+O gráfico de importância das features reforça essa leitura. As variáveis mais relevantes são sinais de volume, recência e recorrência, mas o peso delas não é concentrado a ponto de produzir uma separação clara da classe rara. O modelo reconhece algum sinal de risco, mas não tem uma variável dominante e robusta para decidir quando a estação está realmente em um caminho de falha ou estabilidade.
 
 <Image src={ImportanciaFeatures} alt="Gráfico de importância das features no modelo XGBoost" width={900} />
 
@@ -124,13 +128,13 @@ Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de
 
 | Métrica | Treino (n=9.355) | Teste (n=2.339) |
 | :--- | :---: | :---: |
-| Acurácia balanceada | 77,57% | 59,83% |
-| Recall, classe 0 | 0,76 | 0,26 |
-| Precisão, classe 0 | 0,06 | 0,05 |
+| Acurácia balanceada | 74,98% | 58,49% |
+| Recall, classe 0 | 0,79 | 0,22 |
+| Precisão, classe 0 | 0,05 | 0,05 |
 
-A queda é real, de 77,57% para 59,83% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. Uma regularização mais agressiva (árvores mais rasas, min_child_weight maior, L1/L2) foi testada para atacar esse gap: reduziu a diferença entre treino e teste, de cerca de 22 para 19 pontos, mas piorou o resultado absoluto, com o recall da classe 0 no teste caindo de 26% para 4%. A configuração original foi mantida, porque simplificar o modelo não resolve o problema de fundo. O teto aqui é a quantidade de dado disponível, não a complexidade do modelo.
+A queda é real, de 74,98% para 58,49% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. A classe 0 tem apenas 27 exemplos no teste; por isso, pequenas mudanças no número de acertos alteram bastante o recall. O resultado deve ser tratado como evidência de sinal fraco e instável, não como uma previsão operacional autônoma.
 
-O diagnóstico fica ainda mais claro quando se olha para o mapa de correlação construido no notebook. O heatmap mostra que as features têm correlações entre si, mas não há um padrão linear forte e consistente com o alvo `falha_proximos_7d`. Isso é o que se espera quando o sinal real do problema está espalhado em vários indicadores e não em uma única variável claramente discriminante. Se o target tivesse uma relação linear forte com alguma feature central, o heatmap teria revelado isso de forma mais nítida; o que aparece é justamente o contrário: várias informações parcialmente relacionadas, mas sem um eixo decisivo e estável.
+O diagnóstico fica ainda mais claro no mapa de correlação construído no notebook. O heatmap compara as dez features com o alvo `falha_proximos_7d` e mostra relações lineares que, isoladamente, não formam um eixo decisivo. Isso não prova ausência de relações não lineares, mas reforça que a previsão depende de combinações fracas e difíceis de generalizar.
 
 <Image src={MapaCorrelacao} alt="Mapa de correlação entre as features e o alvo do Modelo 6" width={900} />
 
@@ -151,7 +155,7 @@ A lógica foi a seguinte:
 
 O ponto crítico é que a segunda e a terceira etapas dependem de uma informação muito mais particular e muito mais rara. Em muitos casos, a estação inteira aparece como um risco local, mas a porta que de fato falha não é identificada com confiança a partir dos sinais disponíveis no histórico atual. A base não tem variação suficiente, nem repetição suficiente, para transformar esse problema em um ranking de portas estável e operacionalmente útil.
 
-Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor ficou abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais ficou em 12,85% (n = 2.312). Esse valor ficou abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
 
 Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
 
@@ -177,7 +181,7 @@ O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação cont
 Esse resultado redefine a aplicação prática do modelo: ele funciona melhor como sistema de apoio à decisão, priorização de atenção e alerta de risco, e não como mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
 A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
 
-Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais caiu para 13,49% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais ficou em 12,85% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
 
-Essa conclusão também está alinhada com a leitura dos gráficos do notebook: o gráfico de importância revela que o modelo consegue apontar alguns fatores de risco, mas sem uma borda clara de decisão; o mapa de correlação mostra que as features não convergem para um sinal único e forte. Quando o problema passa de "estação em risco" para "porta específica em risco", a informação disponível não é mais suficiente para sustentar uma decisão operativa confiável.
+Essa conclusão também está alinhada com a leitura dos novos gráficos do notebook: o gráfico de importância revela que o modelo usa vários fatores de risco, sem uma variável dominante; o mapa de correlação mostra que as features não convergem para um sinal linear único e forte. Quando o problema passa de "estação em risco" para "porta específica em risco", a informação disponível não é mais suficiente para sustentar uma decisão operativa confiável.
 
