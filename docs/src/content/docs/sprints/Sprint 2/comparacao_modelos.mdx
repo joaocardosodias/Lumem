@@ -86,7 +86,7 @@ A tabela utilizada como base para as análises foi:
 | Modelo 2 | 0,5500 | 0,2060 | 0,6050 | 0,3080 | 0,6066 | N/A |
 | Modelo 3 | 0,7689 | 0,1242 | 0,3163 | 0,1784 | 0,5713 | 0,1065 |
 | Modelo 5 | N/A | 0,1590 | 0,5530 | 0,2470 | 0,6970 | 0,1850 |
-| Modelo 6 | 0,9295 | 0,9900 | 0,9400 | 0,9600 | N/A | N/A |
+| Modelo 6 | 0,9372 | 0,9900 | 0,9500 | 0,9700 | N/A | N/A |
 | Modelo 7 | 0,5634 | 0,5463 | 0,9193 | 0,6853 | 0,5911 | 0,5874 |
 | Modelo 4 | 0,5904 | 0,0326 | 0,5824 | 0,0618 | 0,6075 | 0,0407 |
 
@@ -129,7 +129,7 @@ O Recall representa a capacidade de encontrar os casos positivos existentes.
 Os resultados foram:
 
 ```text
-Modelo 6 = 0,9400
+Modelo 6 = 0,9500
 Modelo 7 = 0,9193
 Modelo 2 = 0,6050
 Modelo 4 = 0,5824
@@ -151,7 +151,7 @@ O F1-score combina Precision e Recall por meio da média harmônica.
 Os resultados foram:
 
 ```text
-Modelo 6 = 0,9600
+Modelo 6 = 0,9700
 Modelo 7 = 0,6853
 Modelo 2 = 0,3080
 Modelo 5 = 0,2470
@@ -171,10 +171,10 @@ O Modelo 6 inicialmente parecia ser o vencedor absoluto da comparação.
 Ele apresentou:
 
 ```text
-Accuracy  = 0,9295
+Accuracy  = 0,9372
 Precision = 0,9900
-Recall    = 0,9400
-F1        = 0,9600
+Recall    = 0,9500
+F1        = 0,9700
 ```
 
 Entretanto, a distribuição de classes de seu experimento revelou uma característica crítica:
@@ -201,7 +201,7 @@ Accuracy = 98,85%
 Enquanto o Modelo 6 obteve:
 
 ```text
-Accuracy = 92,95%
+Accuracy = 93,72%
 ```
 
 Portanto, sua Accuracy foi inferior à de um classificador que sempre previsse a classe majoritária.
@@ -210,14 +210,14 @@ Além disso, o desempenho para a classe minoritária foi muito inferior:
 
 ```text
 Precision classe 0 = 0,05
-Recall classe 0    = 0,26
+Recall classe 0    = 0,22
 F1 classe 0        = 0,08
 ```
 
 A Balanced Accuracy registrada foi aproximadamente:
 
 ```text
-59,83%
+58,39%
 ```
 
 Esses resultados mostram que os altos valores de Precision, Recall e F1 da classe positiva não representam necessariamente uma capacidade geral superior de discriminação entre as classes.
@@ -324,7 +324,7 @@ Os valores disponíveis foram:
 
 | Modelo | Accuracy |
 |---|---:|
-| Modelo 6 | 0,9295 |
+| Modelo 6 | 0,9372 |
 | Modelo 3 | 0,7689 |
 | Modelo 4 | 0,5904 |
 | Modelo 7 | 0,5634 |
@@ -416,10 +416,10 @@ Por isso, foi considerado o principal concorrente do Modelo 7.
 Apresentou as maiores métricas brutas de Precision, Recall e F1.
 
 ```text
-Accuracy  = 0,9295
+Accuracy  = 0,9372
 Precision = 0,9900
-Recall    = 0,9400
-F1        = 0,9600
+Recall    = 0,9500
+F1        = 0,9700
 ```
 
 Entretanto, a classe positiva representava aproximadamente 98,85% do conjunto de teste.
@@ -625,8 +625,8 @@ O Modelo 6 possui métricas nominais superiores:
 
 ```text
 Precision = 0,9900
-Recall    = 0,9400
-F1        = 0,9600
+Recall    = 0,9500
+F1        = 0,9700
 ```
 
 Entretanto, seu conjunto de teste possui aproximadamente:
