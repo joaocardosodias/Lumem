@@ -10,8 +10,10 @@ import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-6/mapa-
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Escolha do Modelo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Entendimento do Negócio</h2>
 </div>
+
+### 1.1 Objetivo do experimento
 
 Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a **estação** terá uma nova falha nos próximos 7 dias. O objetivo é que a equipe da Motiva consiga inserir novos dados de alarmes e o modelo avalie o risco agregado da estação. A identificação da porta específica é uma etapa posterior de busca e não faz parte da classificação principal.
 
@@ -19,8 +21,10 @@ A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas 
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Tabelas Utilizadas</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entendimento dos Dados</h2>
 </div>
+
+### 2.1 Fontes utilizadas
 
 Para analise do modelo e levantamento de novas features, utilizamos as seguintes tabelas:
 - **Alarmes** (742.506 registros): o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
@@ -31,8 +35,10 @@ Depois disso, a próxima decisão foi juntar `ZM01` e `ZM02` num único `zm01` (
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Pré-Processamento</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Preparação dos Dados</h2>
 </div>
+
+### 3.1 Pré-processamento
 
 Antes de construir qualquer variável no modelo, é fundamental garantir que os dados estejam estruturados de forma a permitir comparações temporais confiáveis e o cruzamento de informações entre diferentes fontes. Essa preparação se apoia em três pilares fundamentais: padronização do tempo, remoção de ruídos e ordenação cronológica.
 
@@ -42,10 +48,7 @@ Com o tempo devidamente ajustado, o passo seguinte é filtrar o ruído dos dados
 
 Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estação e organizada no tempo. Toda a lógica de análise depende da capacidade de consultar o passado, como checar o histórico recente de manutenções ou contar a frequência de alarmes anteriores. Percorrer os dados em ordem cronológica exata dentro de cada estação é o que garante que a comparação de um evento com o seu momento anterior faça sentido prático e matemático.
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Utilizadas</h2>
-</div>
+### 3.2 Features utilizadas
 
 Com os dados devidamente preparados, o passo seguinte é transformar o histórico em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. O classificador utiliza dez sinais temporais e de contagem, calculados antes do evento previsto, sem fornecer diagnóstico ou informação registrada depois da falha.
 
@@ -67,24 +70,21 @@ Os campos de manutenção, como `defeito`, `sintoma`, `objeto` e `indisponivel_f
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Definindo o Alvo e Separando Treino/Teste</h2>
-</div>
+### 3.3 Definição do alvo e separação temporal
 
-### Como nasce falha_proximos_7d
+#### Como nasce `falha_proximos_7d`
 
 Para cada evento de manutenção, olha-se qual é o próximo evento da mesma estação e quantos dias faltam até lá. Se for 7 dias ou menos, o alvo é 1; senão, 0. A última manutenção de cada estação não tem um "próximo evento" para comparar, então essas linhas são descartadas, já que não há como rotulá-las.
 
 O resultado dessa definição dá o tom para o resto do notebook: *11.504 exemplos de classe 1 contra apenas 190 de classe 0* (1,6% da base). Isso acontece porque, no histórico completo, a maioria das manutenções de uma estação é seguida por outra dentro de uma semana, ou seja, falhas tendem a se agrupar no tempo. A classe rara, a estação que "ficou bem" por 7 dias, é a mais interessante do ponto de vista prático, mas também a mais difícil de aprender, por ter poucos exemplos.
 
-### Por que separar por tempo, e não aleatoriamente
+#### Por que separar por tempo, e não aleatoriamente
 
 O corte de treino/teste é feito no percentil 80 da data T, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes), o que resulta em 9.355 exemplos de treino contra 2.339 de teste.
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Treinando o Modelo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelagem</h2>
 </div>
 
 Com treino e teste separados, falta escolher e ajustar o modelo. Duas decisões guiam essa etapa.
@@ -96,6 +96,13 @@ A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 9
 - **scoring="balanced_accuracy"**: essa métrica tira a média do recall das duas classes sem pesar pelo tamanho de cada uma, então um modelo que só acerta a classe majoritária pontua mal, mesmo tendo acurácia alta.
 - **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
 - **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Avaliação</h2>
+</div>
+
+### 5.1 Resultados do classificador
 
 O resultado atual, com as dez features temporais e de contexto descritas acima, mostra a dificuldade do problema de forma concreta:
 
@@ -114,10 +121,7 @@ O gráfico de importância das features reforça essa leitura. As variáveis mai
 
 <p style="text-align: center; font-style: italic;">Importância das features calculada pelo XGBoost no notebook do Modelo 6.</p>
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Overfitting vs. Desbalanceamento</h2>
-</div>
+### 5.2 Diagnóstico de generalização
 
 O número de teste sozinho não diz por que o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
 
@@ -140,10 +144,7 @@ O diagnóstico fica ainda mais claro no mapa de correlação construído no note
 
 <p style="text-align: center; font-style: italic;">Mapa de correlação entre as features e o alvo, reproduzido a partir do notebook.</p>
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Busca por Portas e Limite Operacional</h2>
-</div>
+### 5.3 Busca por portas e limite operacional
 
 A busca por portas não foi uma etapa isolada do modelo. Ela foi uma extensão natural do problema, e o resultado mostrou muito bem por que essa extensão é mais dura do que a previsão inicial.
 
@@ -161,20 +162,20 @@ Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação,
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Síntese Final e Recomendação Operacional</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Implantação e Próximos Ciclos</h2>
 </div>
 
-### 9.1 O que o modelo 6 realmente trouxe
+### 6.1 O que o Modelo 6 realmente trouxe
 
 O Modelo 6 cumpriu seu papel como uma etapa importante da jornada de desenvolvimento: ele mostrou que o histórico de alarmes, manutenção e recorrência de falhas em uma mesma estação contém sinal preditivo, mas também evidenciou uma limitação estrutural do problema. A classe de interesse, a estação que não falha nos próximos 7 dias, é extremamente rara, e a base que a sustenta é pequena demais para que uma árvore XGBoost, mesmo bem configurada, consiga separar essa classe com robustez operacional sem custo em falsa segurança.
 
 Em termos práticos, o modelo não deve ser lido como um decisor absoluto de manutenção, mas como um sistema de triagem e priorização. Ele funciona melhor quando responde à pergunta: “nesta estação, o que está acontecendo de forma anormal e recorrente o suficiente para merecer atenção imediata?” Isso é útil para apoiar inspeções, revisar eventos críticos e dar atenção ao histórico recente, mas não substitui uma leitura humana do contexto operacional.
 
-### 9.2 Leitura soberana das métricas
+### 6.2 Leitura das métricas para uso operacional
 
 A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
 
-### 9.3 Conclusão
+### 6.3 Conclusão e recomendação
 
 O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
 
