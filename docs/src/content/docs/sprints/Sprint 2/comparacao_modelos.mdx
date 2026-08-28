@@ -1,0 +1,734 @@
+---
+title: "Comparação e Seleção dos Modelos"
+description: "Comparação das métricas e seleção do modelo de Machine Learning do projeto."
+---
+
+# Comparação e Seleção dos Modelos de Machine Learning
+
+## Visão geral
+
+Este documento registra o processo utilizado para comparar os modelos desenvolvidos pelo grupo e justificar a seleção final do **Modelo 7** como o modelo com desempenho mais consistente entre os candidatos avaliados.
+
+A comparação foi realizada a partir dos resultados já registrados nos experimentos originais de cada modelo.
+
+Nenhum modelo foi:
+
+- retreinado;
+- recalibrado;
+- ajustado novamente;
+- submetido a novas features;
+- submetido a novos hiperparâmetros;
+- submetido a novo threshold;
+- avaliado em dados diferentes dos utilizados originalmente.
+
+O objetivo foi comparar os modelos **como foram entregues**, utilizando somente as métricas disponíveis em seus respectivos experimentos.
+
+---
+
+# 1. Objetivo da comparação
+
+A etapa de comparação foi criada para responder à seguinte pergunta:
+
+> **Entre os modelos desenvolvidos pelo grupo, qual apresentou o melhor desempenho geral de acordo com as métricas registradas em seus experimentos?**
+
+A escolha não foi baseada apenas em uma única métrica.
+
+Foram considerados, sempre que disponíveis:
+
+- Accuracy;
+- Precision;
+- Recall;
+- F1-score;
+- ROC-AUC;
+- PR-AUC.
+
+Além dos valores numéricos, também foi considerada a interpretação das métricas em função da distribuição das classes de cada experimento.
+
+---
+
+# 2. Modelos analisados
+
+Os seguintes modelos foram incluídos na comparação:
+
+| Modelo | Algoritmo |
+|---|---|
+| Modelo 1 | XGBoost + HistGradientBoosting |
+| Modelo 2 | LightGBM |
+| Modelo 3 | Decision Tree |
+| Modelo 5 | Random Forest |
+| Modelo 6 | XGBoost |
+| Modelo 7 | CatBoost |
+| Modelo 4 | Extra Trees |
+
+O **Modelo 4 não foi incluído porque não havia um Modelo 4 entre os artefatos disponibilizados para análise**.
+
+---
+
+# 3. Regra adotada para a comparação
+
+A principal regra metodológica da comparação foi:
+
+> **Não recalcular métricas ausentes e não alterar os modelos originais.**
+
+Isso significa que, caso determinada métrica não estivesse registrada originalmente para um modelo, ela foi mantida como ausente.
+
+Essa decisão foi importante para evitar criar uma situação em que alguns modelos fossem avaliados com novos critérios ou novos dados enquanto outros permanecessem com seus resultados originais.
+
+---
+
+# 4. Tabela consolidada de métricas
+
+A tabela utilizada como base para as análises foi:
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|---|---:|---:|---:|---:|---:|---:|
+| Modelo 1 | N/A | 0,1047 | 0,5361 | 0,1751 | 0,5235 | 0,0913 |
+| Modelo 2 | 0,5500 | 0,2060 | 0,6050 | 0,3080 | 0,6066 | N/A |
+| Modelo 3 | 0,7689 | 0,1242 | 0,3163 | 0,1784 | 0,5713 | 0,1065 |
+| Modelo 5 | N/A | 0,1590 | 0,5530 | 0,2470 | 0,6970 | 0,1850 |
+| Modelo 6 | 0,9372 | 0,9900 | 0,9500 | 0,9700 | N/A | N/A |
+| Modelo 7 | 0,5634 | 0,5463 | 0,9193 | 0,6853 | 0,5911 | 0,5874 |
+| Modelo 4 | 0,5904 | 0,0326 | 0,5824 | 0,0618 | 0,6075 | 0,0407 |
+
+---
+
+# 5. Primeira comparação: Precision, Recall e F1-score
+
+A primeira análise comparou as três métricas disponíveis para todos os modelos:
+
+- Precision;
+- Recall;
+- F1-score.
+
+## 5.1. Precision
+
+A Precision representa, entre os casos classificados como positivos pelo modelo, quantos realmente pertenciam à classe positiva.
+
+Os maiores valores observados foram:
+
+```text
+Modelo 6 = 0,9900
+Modelo 7 = 0,5463
+Modelo 2 = 0,2060
+Modelo 5 = 0,1590
+Modelo 3 = 0,1242
+Modelo 1 = 0,1047
+Modelo 4 = 0,0326
+```
+
+Visualmente, o Modelo 6 apresentou um valor muito superior aos demais.
+
+Entretanto, esse resultado precisou ser investigado com mais cuidado devido à distribuição de classes de seu experimento.
+
+---
+
+## 5.2. Recall
+
+O Recall representa a capacidade de encontrar os casos positivos existentes.
+
+Os resultados foram:
+
+```text
+Modelo 6 = 0,9500
+Modelo 7 = 0,9193
+Modelo 2 = 0,6050
+Modelo 4 = 0,5824
+Modelo 5 = 0,5530
+Modelo 1 = 0,5361
+Modelo 3 = 0,3163
+```
+
+O Modelo 7 apresentou um Recall muito alto, próximo ao Modelo 6 e claramente superior aos demais candidatos.
+
+Isso significa que, dentro de seu experimento, o Modelo 7 conseguiu identificar aproximadamente 91,9% dos casos positivos.
+
+---
+
+## 5.3. F1-score
+
+O F1-score combina Precision e Recall por meio da média harmônica.
+
+Os resultados foram:
+
+```text
+Modelo 6 = 0,9700
+Modelo 7 = 0,6853
+Modelo 2 = 0,3080
+Modelo 5 = 0,2470
+Modelo 3 = 0,1784
+Modelo 1 = 0,1751
+Modelo 4 = 0,0618
+```
+
+O Modelo 7 apresentou o segundo melhor F1-score e ficou muito acima dos demais modelos, com exceção do Modelo 6.
+
+---
+
+# 6. Análise crítica do Modelo 6
+
+O Modelo 6 inicialmente parecia ser o vencedor absoluto da comparação.
+
+Ele apresentou:
+
+```text
+Accuracy  = 0,9372
+Precision = 0,9900
+Recall    = 0,9500
+F1        = 0,9700
+```
+
+Entretanto, a distribuição de classes de seu experimento revelou uma característica crítica:
+
+> aproximadamente **98,85% das observações do conjunto de teste pertenciam à classe positiva**.
+
+Em outras palavras, a classe 1 era extremamente dominante.
+
+No conjunto de teste existiam aproximadamente:
+
+```text
+Classe 1: 2.312 observações
+Classe 0:    27 observações
+```
+
+Esse cenário torna as métricas da classe positiva naturalmente muito altas para um modelo que favorece essa classe.
+
+O próprio experimento mostrou que um baseline extremamente simples, que previsse sempre a classe majoritária, atingiria aproximadamente:
+
+```text
+Accuracy = 98,85%
+```
+
+Enquanto o Modelo 6 obteve:
+
+```text
+Accuracy = 93,72%
+```
+
+Portanto, sua Accuracy foi inferior à de um classificador que sempre previsse a classe majoritária.
+
+Além disso, o desempenho para a classe minoritária foi muito inferior:
+
+```text
+Precision classe 0 = 0,05
+Recall classe 0    = 0,22
+F1 classe 0        = 0,08
+```
+
+A Balanced Accuracy registrada foi aproximadamente:
+
+```text
+58,39%
+```
+
+Esses resultados mostram que os altos valores de Precision, Recall e F1 da classe positiva não representam necessariamente uma capacidade geral superior de discriminação entre as classes.
+
+Por esse motivo, o Modelo 6 foi mantido na comparação, mas suas métricas foram interpretadas com cautela.
+
+---
+
+# 7. Comparação de ROC-AUC
+
+A segunda análise focou em ROC-AUC.
+
+ROC-AUC mede a capacidade do modelo de discriminar positivos e negativos ao longo de diferentes thresholds.
+
+De forma geral:
+
+```text
+0,50 = comportamento próximo ao acaso
+1,00 = separação perfeita
+```
+
+Os resultados disponíveis foram:
+
+| Modelo | ROC-AUC |
+|---|---:|
+| Modelo 5 | 0,6970 |
+| Modelo 4 | 0,6075 |
+| Modelo 2 | 0,6066 |
+| Modelo 7 | 0,5911 |
+| Modelo 3 | 0,5713 |
+| Modelo 1 | 0,5235 |
+
+O principal destaque foi o **Modelo 5**, com ROC-AUC de aproximadamente:
+
+```text
+0,6970
+```
+
+Esse foi o melhor valor entre os modelos com a métrica registrada.
+
+O Modelo 4 e o Modelo 2 ficaram praticamente empatados, com aproximadamente 0,607.
+
+O Modelo 7 obteve ROC-AUC de 0,5911.
+
+Embora não seja o melhor resultado nessa métrica, ele permaneceu acima do baseline aleatório de 0,50.
+
+## Modelos ausentes nessa análise
+
+O Modelo 6 não apareceu nessa visualização porque seu experimento original não registrou ROC-AUC.
+
+O Modelo 4 não aparece porque não existia entre os modelos disponibilizados.
+
+Nenhum valor adicional foi calculado para preencher essas ausências.
+
+---
+
+# 8. Comparação de PR-AUC
+
+A análise seguinte utilizou PR-AUC.
+
+PR-AUC é particularmente importante em problemas de classificação desbalanceados porque avalia a relação entre Precision e Recall ao longo de diferentes thresholds.
+
+Os resultados registrados foram:
+
+| Modelo | PR-AUC |
+|---|---:|
+| Modelo 7 | 0,5874 |
+| Modelo 5 | 0,1850 |
+| Modelo 3 | 0,1065 |
+| Modelo 1 | 0,0913 |
+| Modelo 4 | 0,0407 |
+
+O resultado do **Modelo 7 foi claramente superior aos demais**.
+
+Seu PR-AUC foi:
+
+```text
+0,5874
+```
+
+Enquanto o segundo melhor resultado, do Modelo 5, foi:
+
+```text
+0,1850
+```
+
+A diferença entre os dois foi muito significativa.
+
+Esse resultado foi importante para a escolha final porque mostra que o bom desempenho do Modelo 7 em Precision e Recall não depende apenas de um threshold específico.
+
+O modelo mantém uma relação favorável entre essas duas métricas ao longo de diferentes limiares de decisão.
+
+## Modelos ausentes nessa análise
+
+Os Modelos 2 e 6 não possuem PR-AUC registrada em seus experimentos originais e, portanto, não foram incluídos nesse gráfico.
+
+---
+
+# 9. Comparação de Accuracy
+
+A Accuracy foi analisada apenas como métrica complementar.
+
+Os valores disponíveis foram:
+
+| Modelo | Accuracy |
+|---|---:|
+| Modelo 6 | 0,9372 |
+| Modelo 3 | 0,7689 |
+| Modelo 4 | 0,5904 |
+| Modelo 7 | 0,5634 |
+| Modelo 2 | 0,5500 |
+
+O Modelo 6 novamente apresentou o maior valor bruto.
+
+Entretanto, devido ao forte desbalanceamento de seu target, essa métrica não foi considerada suficiente para classificá-lo como o melhor modelo.
+
+A própria comparação com o baseline majoritário mostrou que sua Accuracy era inferior à de uma estratégia de prever sempre a classe dominante.
+
+Por isso, a Accuracy foi interpretada apenas em conjunto com as demais métricas.
+
+---
+
+# 10. Visão geral das métricas
+
+A análise conjunta mostrou diferentes perfis de desempenho.
+
+## Modelo 1
+
+Apresentou resultados modestos de forma geral.
+
+```text
+Precision = 0,1047
+Recall    = 0,5361
+F1        = 0,1751
+ROC-AUC   = 0,5235
+PR-AUC    = 0,0913
+```
+
+O ROC-AUC ficou pouco acima de 0,50.
+
+---
+
+## Modelo 2
+
+Apresentou um comportamento relativamente equilibrado entre os modelos intermediários.
+
+```text
+Accuracy  = 0,5500
+Precision = 0,2060
+Recall    = 0,6050
+F1        = 0,3080
+ROC-AUC   = 0,6066
+```
+
+Seu F1-score foi superior aos Modelos 1, 3, 5 e 8.
+
+---
+
+## Modelo 3
+
+Apresentou Accuracy relativamente alta, mas baixo Recall.
+
+```text
+Accuracy  = 0,7689
+Precision = 0,1242
+Recall    = 0,3163
+F1        = 0,1784
+ROC-AUC   = 0,5713
+PR-AUC    = 0,1065
+```
+
+---
+
+## Modelo 5
+
+Foi um dos modelos mais fortes da comparação.
+
+```text
+Precision = 0,1590
+Recall    = 0,5530
+F1        = 0,2470
+ROC-AUC   = 0,6970
+PR-AUC    = 0,1850
+```
+
+Seu principal destaque foi o melhor ROC-AUC entre todos os modelos avaliados nessa métrica.
+
+Também apresentou o segundo melhor PR-AUC disponível.
+
+Por isso, foi considerado o principal concorrente do Modelo 7.
+
+---
+
+## Modelo 6
+
+Apresentou as maiores métricas brutas de Precision, Recall e F1.
+
+```text
+Accuracy  = 0,9372
+Precision = 0,9900
+Recall    = 0,9500
+F1        = 0,9700
+```
+
+Entretanto, a classe positiva representava aproximadamente 98,85% do conjunto de teste.
+
+Dessa forma, seus resultados não foram considerados diretamente comparáveis aos demais sem levar em conta essa particularidade.
+
+---
+
+## Modelo 7
+
+O Modelo 7 apresentou um conjunto de métricas forte e consistente:
+
+```text
+Accuracy  = 0,5634
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+ROC-AUC   = 0,5911
+PR-AUC    = 0,5874
+```
+
+Os principais destaques foram:
+
+- segundo maior Recall bruto;
+- segundo maior F1 bruto;
+- Precision significativamente superior à maioria dos modelos;
+- maior PR-AUC da comparação;
+- desempenho elevado em diferentes métricas ao mesmo tempo.
+
+Ao desconsiderar a interpretação simplista do Modelo 6 devido ao forte desbalanceamento de sua classe positiva, o Modelo 7 se destacou como o candidato mais consistente.
+
+---
+
+## Modelo 4
+
+O Modelo 4 apresentou Recall competitivo, mas Precision muito baixa.
+
+```text
+Accuracy  = 0,5904
+Precision = 0,0326
+Recall    = 0,5824
+F1        = 0,0618
+ROC-AUC   = 0,6075
+PR-AUC    = 0,0407
+```
+
+O modelo conseguiu identificar uma parcela relevante dos casos positivos, mas produziu grande quantidade de falsos positivos.
+
+Isso foi refletido no baixo F1-score e no baixo PR-AUC.
+
+---
+
+# 11. Ranking dos modelos
+
+Foi criado um ranking geral a partir da posição de cada modelo em cada métrica disponível.
+
+Para cada métrica:
+
+```text
+maior valor = melhor posição
+```
+
+Em seguida, foi calculada a posição média de cada modelo considerando apenas as métricas disponíveis.
+
+Esse ranking foi utilizado como apoio visual e não como regra automática para a escolha.
+
+A razão é que uma média simples de posições não consegue representar particularidades importantes dos experimentos, como o forte desbalanceamento observado no Modelo 6.
+
+Assim, o ranking foi interpretado em conjunto com as análises anteriores.
+
+---
+
+# 12. Por que o Modelo 7 foi escolhido
+
+A seleção do Modelo 7 não foi baseada em uma única métrica.
+
+Ela foi resultado da combinação de vários fatores.
+
+## 12.1. Recall muito elevado
+
+O Modelo 7 apresentou:
+
+```text
+Recall = 0,9193
+```
+
+Isso significa elevada capacidade de identificação da classe positiva.
+
+Esse foi um dos melhores resultados entre todos os modelos.
+
+---
+
+## 12.2. Precision elevada em conjunto com Recall alto
+
+Um Recall muito alto pode ser obtido classificando grande parte da base como positiva.
+
+Entretanto, o Modelo 7 manteve:
+
+```text
+Precision = 0,5463
+```
+
+Isso representa um equilíbrio significativamente melhor do que o observado na maioria dos demais modelos.
+
+---
+
+## 12.3. F1-score forte
+
+O F1-score foi:
+
+```text
+0,6853
+```
+
+Esse valor mostra que o equilíbrio entre Precision e Recall permaneceu forte.
+
+Entre os modelos sem a particularidade extrema do Modelo 6, esse foi o maior F1-score da comparação.
+
+---
+
+## 12.4. Melhor PR-AUC
+
+O argumento mais forte a favor do Modelo 7 foi seu PR-AUC:
+
+```text
+0,5874
+```
+
+Esse resultado ficou muito acima dos demais.
+
+Comparação:
+
+```text
+Modelo 7 = 0,5874
+Modelo 5 = 0,1850
+Modelo 3 = 0,1065
+Modelo 1 = 0,0913
+Modelo 4 = 0,0407
+```
+
+Isso indica que o Modelo 7 preserva um bom equilíbrio entre Precision e Recall ao longo de diferentes thresholds.
+
+Assim, seu bom resultado não depende apenas do limiar específico utilizado na classificação final.
+
+---
+
+## 12.5. Consistência entre métricas
+
+O Modelo 7 não foi o melhor em todas as métricas.
+
+O Modelo 5, por exemplo, apresentou ROC-AUC superior.
+
+Entretanto, o Modelo 7 apresentou desempenho forte em várias métricas simultaneamente:
+
+```text
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+ROC-AUC   = 0,5911
+PR-AUC    = 0,5874
+```
+
+Essa consistência foi considerada mais importante do que liderar apenas uma métrica.
+
+---
+
+## 12.6. Comparação com o Modelo 5
+
+O Modelo 5 foi considerado o principal concorrente.
+
+### Vantagens do Modelo 5
+
+```text
+ROC-AUC = 0,6970
+```
+
+Esse foi o melhor ROC-AUC da comparação.
+
+Também apresentou:
+
+```text
+PR-AUC = 0,1850
+```
+
+### Vantagens do Modelo 7
+
+```text
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+PR-AUC    = 0,5874
+```
+
+O Modelo 7 apresentou desempenho claramente superior nas métricas relacionadas à identificação dos casos positivos e no equilíbrio Precision-Recall.
+
+Assim, embora o Modelo 5 possua melhor ROC-AUC, o conjunto das métricas favoreceu o Modelo 7.
+
+---
+
+## 12.7. Comparação com o Modelo 6
+
+O Modelo 6 possui métricas nominais superiores:
+
+```text
+Precision = 0,9900
+Recall    = 0,9500
+F1        = 0,9700
+```
+
+Entretanto, seu conjunto de teste possui aproximadamente:
+
+```text
+98,85% de classe positiva
+```
+
+O baseline majoritário supera sua própria Accuracy.
+
+Por esse motivo, seus números elevados não foram considerados suficientes para caracterizar melhor capacidade de classificação geral.
+
+O Modelo 7 apresentou resultados mais equilibrados e mais informativos para a comparação.
+
+---
+
+# 13. Resultado final
+
+Após analisar:
+
+- Precision;
+- Recall;
+- F1-score;
+- Accuracy;
+- ROC-AUC;
+- PR-AUC;
+- distribuição das classes;
+- comportamento do Modelo 6;
+- consistência geral dos resultados;
+
+o modelo selecionado foi:
+
+# **Modelo 7 — CatBoost**
+
+As métricas que sustentam a escolha são:
+
+| Métrica | Resultado |
+|---|---:|
+| Accuracy | 0,5634 |
+| Precision | 0,5463 |
+| Recall | 0,9193 |
+| F1-score | 0,6853 |
+| ROC-AUC | 0,5911 |
+| PR-AUC | 0,5874 |
+
+---
+
+# 14. Conclusão
+
+A comparação mostrou que selecionar um modelo apenas pela maior Accuracy, Precision, Recall ou F1-score isoladamente pode produzir uma conclusão enganosa.
+
+O Modelo 6 é o principal exemplo: seus valores brutos são extremamente elevados, porém o forte desbalanceamento de sua classe positiva torna essas métricas pouco representativas quando analisadas sem contexto.
+
+O Modelo 5 apresentou a melhor capacidade de discriminação segundo ROC-AUC e foi considerado um candidato forte.
+
+Entretanto, o Modelo 7 apresentou o melhor conjunto de resultados relacionados à classe positiva, com Recall muito elevado, Precision relativamente alta, F1-score forte e, principalmente, PR-AUC significativamente superior aos demais.
+
+Por esse motivo, a decisão final foi:
+
+> **O Modelo 7 foi considerado o modelo com desempenho mais consistente entre os candidatos analisados e foi selecionado como o melhor modelo da comparação.**
+
+A escolha não foi determinada pelo maior valor isolado de uma métrica, mas pela combinação entre desempenho, consistência e interpretação adequada dos resultados.
+
+---
+
+## Resumo executivo
+
+```text
+Modelos avaliados:
+1, 2, 3, 5, 6, 7 e 8
+
+Modelo selecionado:
+Modelo 7
+
+Algoritmo:
+CatBoost
+
+Accuracy:
+0,5634
+
+Precision:
+0,5463
+
+Recall:
+0,9193
+
+F1-score:
+0,6853
+
+ROC-AUC:
+0,5911
+
+PR-AUC:
+0,5874
+
+Principal concorrente:
+Modelo 5
+
+Principal ressalva:
+Modelo 6 apresenta métricas nominais muito altas,
+mas seu target possui aproximadamente 98,85% de classe positiva.
+
+Critério final:
+consistência entre diferentes métricas e análise crítica dos resultados
+```
