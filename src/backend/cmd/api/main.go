@@ -53,8 +53,13 @@ func main() {
 	defer db.Close()
 
 	userRepo := repository.NewSQLiteUserRepository(db)
+	alarmRepo := repository.NewSQLiteAlarmRepository(db)
+
 	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
+	ingestUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
+
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
+	uploadHandler := httpAdapter.NewUploadHandler(ingestUC)
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -84,6 +89,8 @@ func main() {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/auth/login", authHandler.Login)
+		v1.POST("/uploads/alarms", uploadHandler.UploadAlarms)
+		v1.GET("/uploads/:id", uploadHandler.GetUploadStatus)
 	}
 
 	protected := v1.Group("")
