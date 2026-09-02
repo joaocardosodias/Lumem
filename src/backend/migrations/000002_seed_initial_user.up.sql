@@ -3,7 +3,7 @@ VALUES (
     'usr_operator_01',
     'Operador Linha 4',
     'operador@motiva.com.br',
-    '$2a$12$KIXe8KkY3SjQp9z7UuYkTeO1X9R2oN6F8qJ0Z3t1W5A7B8C9D0E1F',
+    '$2a$10$TR89JJNCXFRtOtkD40so9uEtg77fGZSWjX8uqWn.SF46invv0uTTO',
     'operator',
     1,
     CURRENT_TIMESTAMP,
