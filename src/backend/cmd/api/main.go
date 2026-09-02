@@ -13,6 +13,7 @@ import (
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/adapter/repository"
+	"github.com/g04/backend/internal/config"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -36,45 +37,30 @@ func runMigrations(dbPath, migrationsPath string) error {
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	cfg := config.LoadConfig()
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "chave-secreta-super-segura-linha4"
-	}
-
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "database.db"
-	}
-
-	migrationsPath := os.Getenv("MIGRATIONS_PATH")
-	if migrationsPath == "" {
-		migrationsPath = "migrations"
-	}
-
-	log.Printf("Aplicando migrações em %s a partir de %s...", dbPath, migrationsPath)
-	if err := runMigrations(dbPath, migrationsPath); err != nil {
+	log.Printf("Ambiente: %s | DB: %s", cfg.Environment, cfg.DBPath)
+	log.Printf("Aplicando migrações em %s a partir de %s...", cfg.DBPath, cfg.MigrationsPath)
+	if err := runMigrations(cfg.DBPath, cfg.MigrationsPath); err != nil {
 		log.Fatalf("Falha ao aplicar migrações: %v", err)
 	}
 	log.Println("Migrações aplicadas com sucesso.")
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", cfg.DBPath)
 	if err != nil {
 		log.Fatalf("Falha ao conectar no SQLite: %v", err)
 	}
 	defer db.Close()
 
 	userRepo := repository.NewSQLiteUserRepository(db)
-	loginUC := usecase.NewLoginUseCase(userRepo, jwtSecret, 24*time.Hour)
+	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 
+	if cfg.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.Default()
 
-	
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -86,11 +72,12 @@ func main() {
 		c.Next()
 	})
 
-				router.GET("/health", func(c *gin.Context) {
+	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "ok",
-			"service": "backend-linha4-go",
-			"time":    time.Now().Format(time.RFC3339),
+			"status":      "ok",
+			"service":     "backend-linha4-go",
+			"environment": cfg.Environment,
+			"time":        time.Now().Format(time.RFC3339),
 		})
 	})
 
@@ -100,7 +87,7 @@ func main() {
 	}
 
 	protected := v1.Group("")
-	protected.Use(httpAdapter.AuthMiddleware(jwtSecret))
+	protected.Use(httpAdapter.AuthMiddleware(cfg.JWTSecret))
 	{
 		protected.GET("/auth/me", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -112,12 +99,12 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: router,
 	}
 
 	go func() {
-		log.Printf("Servidor backend rodando na porta %s...", port)
+		log.Printf("Servidor backend iniciado na porta %s...", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Erro inesperado no servidor: %v", err)
 		}
