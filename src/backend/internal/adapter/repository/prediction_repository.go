@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -11,10 +10,10 @@ import (
 var _ domain.PredictionRepository = (*SQLitePredictionRepository)(nil)
 
 type SQLitePredictionRepository struct {
-	db *sql.DB
+	db DBExecutor
 }
 
-func NewSQLitePredictionRepository(db *sql.DB) *SQLitePredictionRepository {
+func NewSQLitePredictionRepository(db DBExecutor) *SQLitePredictionRepository {
 	return &SQLitePredictionRepository{db: db}
 }
 
@@ -45,16 +44,10 @@ func (r *SQLitePredictionRepository) ListDoorsForInference(ctx context.Context) 
 }
 
 func (r *SQLitePredictionRepository) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
 	now := time.Now()
 	run.CreatedAt = now
 
-	res, err := tx.ExecContext(ctx, `
+	res, err := r.db.ExecContext(ctx, `
 		INSERT INTO prediction_runs (horizon_days, total_doors_evaluated, total_doors_at_risk, created_at)
 		VALUES (?, ?, ?, ?)
 	`, run.HorizonDays, run.TotalDoorsEvaluated, run.TotalDoorsAtRisk, now.Format("2006-01-02 15:04:05"))
@@ -68,7 +61,7 @@ func (r *SQLitePredictionRepository) SaveRun(ctx context.Context, run *domain.Pr
 	}
 	run.ID = runID
 
-	stmt, err := tx.PrepareContext(ctx, `
+	stmt, err := r.db.PrepareContext(ctx, `
 		INSERT INTO predictions (run_id, station_code, platform, door_number, will_fail, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
@@ -96,7 +89,7 @@ func (r *SQLitePredictionRepository) SaveRun(ctx context.Context, run *domain.Pr
 		}
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 func (r *SQLitePredictionRepository) GetLatestRun(ctx context.Context) (*domain.PredictionRun, error) {

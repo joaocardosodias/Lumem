@@ -11,10 +11,10 @@ import (
 var _ domain.DashboardRepository = (*SQLiteDashboardRepository)(nil)
 
 type SQLiteDashboardRepository struct {
-	db *sql.DB
+	db DBExecutor
 }
 
-func NewSQLiteDashboardRepository(db *sql.DB) *SQLiteDashboardRepository {
+func NewSQLiteDashboardRepository(db DBExecutor) *SQLiteDashboardRepository {
 	return &SQLiteDashboardRepository{db: db}
 }
 

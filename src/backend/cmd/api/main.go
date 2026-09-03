@@ -71,6 +71,7 @@ func main() {
 	defer db.Close()
 
 	bus := eventbus.NewInMemoryEventBus(logger)
+	_ = repository.NewSQLiteUnitOfWork(db)
 
 	userRepo := repository.NewSQLiteUserRepository(db)
 	alarmRepo := repository.NewSQLiteAlarmRepository(db)

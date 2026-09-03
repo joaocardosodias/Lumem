@@ -12,10 +12,10 @@ import (
 var _ domain.UserRepository = (*SQLiteUserRepository)(nil)
 
 type SQLiteUserRepository struct {
-	db *sql.DB
+	db DBExecutor
 }
 
-func NewSQLiteUserRepository(db *sql.DB) *SQLiteUserRepository {
+func NewSQLiteUserRepository(db DBExecutor) *SQLiteUserRepository {
 	return &SQLiteUserRepository{db: db}
 }
 
