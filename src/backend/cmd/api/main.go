@@ -92,6 +92,7 @@ func main() {
 	maintHandler := httpAdapter.NewMaintenanceHandler(createMaintUC)
 	insHandler := httpAdapter.NewInspectionHandler(insUC)
 	dashHandler := httpAdapter.NewDashboardHandler(dashUC)
+	healthHandler := httpAdapter.NewHealthHandler(db)
 
 	limiter := httpAdapter.NewRateLimiter(50, 100)
 
@@ -118,14 +119,9 @@ func main() {
 		c.Next()
 	})
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":      "ok",
-			"service":     "backend-linha4-go",
-			"environment": cfg.Environment,
-			"time":        time.Now().Format(time.RFC3339),
-		})
-	})
+	router.GET("/healthz/live", healthHandler.Live)
+	router.GET("/healthz/ready", healthHandler.Ready)
+	router.GET("/health", healthHandler.Ready)
 
 	v1 := router.Group("/api/v1")
 	{
