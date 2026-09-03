@@ -12,6 +12,7 @@ import (
 	"time"
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
+	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/config"
 	"github.com/g04/backend/internal/usecase"
@@ -56,17 +57,23 @@ func main() {
 	alarmRepo := repository.NewSQLiteAlarmRepository(db)
 	maintRepo := repository.NewSQLiteMaintenanceRepository(db)
 	insRepo := repository.NewSQLiteInspectionRepository(db)
+	dashRepo := repository.NewSQLiteDashboardRepository(db)
+	predRepo := repository.NewSQLitePredictionRepository(db)
+
+	mlClient := mlclient.NewClient(cfg.VPSModelURL)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
+	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
 	maintHandler := httpAdapter.NewMaintenanceHandler(createMaintUC)
 	insHandler := httpAdapter.NewInspectionHandler(insUC)
+	dashHandler := httpAdapter.NewDashboardHandler(dashUC)
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -99,12 +106,20 @@ func main() {
 		v1.POST("/uploads/alarms", uploadHandler.UploadAlarms)
 		v1.POST("/uploads/maintenance", uploadHandler.UploadMaintenance)
 		v1.GET("/uploads/:id", uploadHandler.GetUploadStatus)
+
 		v1.GET("/maintenance", maintHandler.List)
 		v1.POST("/maintenance", maintHandler.Create)
+
 		v1.POST("/inspections", insHandler.Create)
 		v1.GET("/inspections", insHandler.List)
 		v1.GET("/inspections/:id", insHandler.GetByID)
 		v1.PATCH("/inspections/:id/status", insHandler.UpdateStatus)
+
+		v1.GET("/dashboard/summary", dashHandler.GetSummary)
+		v1.GET("/doors/:id/timeline", dashHandler.GetDoorTimeline)
+		v1.GET("/stations/:code/doors/status", dashHandler.GetStationDoorsStatus)
+		v1.POST("/predictions/trigger", dashHandler.TriggerPredictions)
+		v1.GET("/predictions/latest", dashHandler.GetLatestPredictions)
 	}
 
 	protected := v1.Group("")

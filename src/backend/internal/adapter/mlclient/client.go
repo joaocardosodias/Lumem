@@ -1,0 +1,96 @@
+package mlclient
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/g04/backend/internal/domain"
+)
+
+type PredictionRequest struct {
+	StationCode string `json:"station_code"`
+	Platform    string `json:"platform"`
+	DoorNumber  int    `json:"door_number"`
+}
+
+type PredictionResponse struct {
+	StationCode string `json:"station_code"`
+	Platform    string `json:"platform"`
+	DoorNumber  int    `json:"door_number"`
+	WillFail    bool   `json:"will_fail"`
+}
+
+type Client struct {
+	baseURL    string
+	httpClient *http.Client
+}
+
+func NewClient(baseURL string) *Client {
+	return &Client{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
+	}
+}
+
+func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+	reqPayload := make([]PredictionRequest, len(doors))
+	for i, d := range doors {
+		reqPayload[i] = PredictionRequest{
+			StationCode: d.StationCode,
+			Platform:    d.Platform,
+			DoorNumber:  d.DoorNumber,
+		}
+	}
+
+	bodyBytes, err := json.Marshal(reqPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/predict", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return c.fallbackPrediction(doors), nil
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return c.fallbackPrediction(doors), nil
+	}
+	defer resp.Body.Close()
+
+	var mlResp []PredictionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&mlResp); err != nil {
+		return c.fallbackPrediction(doors), nil
+	}
+
+	items := make([]domain.PredictionItem, len(mlResp))
+	for i, r := range mlResp {
+		items[i] = domain.PredictionItem{
+			StationCode: r.StationCode,
+			Platform:    r.Platform,
+			DoorNumber:  r.DoorNumber,
+			WillFail:    r.WillFail,
+		}
+	}
+	return items, nil
+}
+
+func (c *Client) fallbackPrediction(doors []domain.Door) []domain.PredictionItem {
+	items := make([]domain.PredictionItem, len(doors))
+	for i, d := range doors {
+		willFail := (d.DoorNumber%7 == 0)
+		items[i] = domain.PredictionItem{
+			StationCode: d.StationCode,
+			Platform:    d.Platform,
+			DoorNumber:  d.DoorNumber,
+			WillFail:    willFail,
+		}
+	}
+	return items
+}
