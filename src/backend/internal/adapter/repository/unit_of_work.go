@@ -8,37 +8,37 @@ import (
 	"github.com/g04/backend/internal/domain"
 )
 
-var _ domain.UnitOfWork = (*SQLiteUnitOfWork)(nil)
+var _ domain.UnitOfWork = (*PostgresUnitOfWork)(nil)
 
-type SQLiteUnitOfWork struct {
+type PostgresUnitOfWork struct {
 	db *sql.DB
 }
 
-func NewSQLiteUnitOfWork(db *sql.DB) *SQLiteUnitOfWork {
-	return &SQLiteUnitOfWork{db: db}
+func NewPostgresUnitOfWork(db *sql.DB) *PostgresUnitOfWork {
+	return &PostgresUnitOfWork{db: db}
 }
 
-type sqliteUnitOfWorkStore struct {
+type postgresUnitOfWorkStore struct {
 	tx *sql.Tx
 }
 
-func (s *sqliteUnitOfWorkStore) Predictions() domain.PredictionRepository {
-	return NewSQLitePredictionRepository(s.tx)
+func (s *postgresUnitOfWorkStore) Predictions() domain.PredictionRepository {
+	return NewPostgresPredictionRepository(s.tx)
 }
 
-func (s *sqliteUnitOfWorkStore) Inspections() domain.InspectionRepository {
-	return NewSQLiteInspectionRepository(s.tx)
+func (s *postgresUnitOfWorkStore) Inspections() domain.InspectionRepository {
+	return NewPostgresInspectionRepository(s.tx)
 }
 
-func (s *sqliteUnitOfWorkStore) Maintenances() domain.MaintenanceRepository {
-	return NewSQLiteMaintenanceRepository(s.tx)
+func (s *postgresUnitOfWorkStore) Maintenances() domain.MaintenanceRepository {
+	return NewPostgresMaintenanceRepository(s.tx)
 }
 
-func (s *sqliteUnitOfWorkStore) Alarms() domain.AlarmRepository {
-	return NewSQLiteAlarmRepository(s.tx)
+func (s *postgresUnitOfWorkStore) Alarms() domain.AlarmRepository {
+	return NewPostgresAlarmRepository(s.tx)
 }
 
-func (u *SQLiteUnitOfWork) Do(ctx context.Context, fn func(store domain.UnitOfWorkStore) error) error {
+func (u *PostgresUnitOfWork) Do(ctx context.Context, fn func(store domain.UnitOfWorkStore) error) error {
 	tx, err := u.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("falha ao iniciar transacao: %w", err)
@@ -48,7 +48,7 @@ func (u *SQLiteUnitOfWork) Do(ctx context.Context, fn func(store domain.UnitOfWo
 		_ = tx.Rollback()
 	}()
 
-	store := &sqliteUnitOfWorkStore{tx: tx}
+	store := &postgresUnitOfWorkStore{tx: tx}
 
 	if err := fn(store); err != nil {
 		return err

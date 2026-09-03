@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS inspections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    prediction_id INTEGER REFERENCES predictions(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY,
+    prediction_id TEXT REFERENCES predictions(id) ON DELETE SET NULL,
     station_code TEXT NOT NULL,
     platform TEXT NOT NULL,
     door_number INTEGER NOT NULL,
@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS inspections (
     assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
     notes TEXT,
     scheduled_for TEXT,
-    completed_at DATETIME,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status);

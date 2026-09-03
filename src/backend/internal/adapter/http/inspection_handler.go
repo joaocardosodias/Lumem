@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -33,10 +34,9 @@ func (h *InspectionHandler) Create(c *gin.Context) {
 }
 
 func (h *InspectionHandler) UpdateStatus(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID e obrigatorio.")
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *InspectionHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	dto, err := h.uc.UpdateStatus(c.Request.Context(), id, input)
+	dto, err := h.uc.UpdateStatus(c.Request.Context(), idParam, input)
 	if err != nil {
 		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 		return
@@ -80,14 +80,13 @@ func (h *InspectionHandler) List(c *gin.Context) {
 }
 
 func (h *InspectionHandler) GetByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID e obrigatorio.")
 		return
 	}
 
-	dto, err := h.uc.GetByID(c.Request.Context(), id)
+	dto, err := h.uc.GetByID(c.Request.Context(), idParam)
 	if err != nil {
 		RespondProblem(c, http.StatusNotFound, "ERR_INSPECTION_NOT_FOUND", "Inspecao Nao Encontrada", "A inspecao solicitada nao foi localizada.")
 		return

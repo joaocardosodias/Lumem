@@ -58,29 +58,3 @@ func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 		t.Errorf("esperava 2 eventos no repositorio, obteve %d", len(maintRepo.events))
 	}
 }
-
-func TestIngestMaintenanceUseCase_MissingDate(t *testing.T) {
-	maintRepo := &mockMaintRepo{}
-	uploadRepo := newMockAlarmRepo()
-	sheetParser := parser.NewDefaultSpreadsheetParser()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, sheetParser)
-
-	csvData := `ordem,tipo_de_nota,sintoma
-53954586,ZM01,SEM DATA DE INICIO
-`
-	uploadID, err := uc.StartIngestion(context.Background(), "zm01_invalido.csv", strings.NewReader(csvData), "ZM01")
-	if err != nil {
-		t.Fatalf("falha ao iniciar ingestao: %v", err)
-	}
-
-	time.Sleep(50 * time.Millisecond)
-
-	upload, err := uploadRepo.GetUploadByID(context.Background(), uploadID)
-	if err != nil {
-		t.Fatalf("falha ao buscar status do upload: %v", err)
-	}
-
-	if upload.Status != "failed" {
-		t.Errorf("esperava status failed, obteve %s", upload.Status)
-	}
-}

@@ -20,17 +20,20 @@ import (
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func runMigrations(dbPath, migrationsPath string) error {
-	m, err := migrate.New("file://"+migrationsPath, "sqlite3://"+dbPath)
+func runMigrations(db *sql.DB, migrationsPath string) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return err
 	}
-	defer m.Close()
+	m, err := migrate.NewWithDatabaseInstance("file://"+migrationsPath, "postgres", driver)
+	if err != nil {
+		return err
+	}
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
@@ -50,36 +53,53 @@ func main() {
 
 	logger.Info("inicializando aplicacao",
 		slog.String("environment", cfg.Environment),
-		slog.String("db_path", cfg.DBPath),
+		slog.Bool("run_migrations", cfg.RunMigrations),
+		slog.String("db_host", cfg.DBHost),
+		slog.String("db_port", cfg.DBPort),
+		slog.String("db_name", cfg.DBName),
 	)
 
-	logger.Info("aplicando migracoes no banco de dados",
-		slog.String("db_path", cfg.DBPath),
-		slog.String("migrations_path", cfg.MigrationsPath),
-	)
-	if err := runMigrations(cfg.DBPath, cfg.MigrationsPath); err != nil {
-		logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	logger.Info("migracoes aplicadas com sucesso")
-
-	db, err := sql.Open("sqlite3", cfg.DBPath)
+	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("falha ao conectar no sqlite", slog.String("error", err.Error()))
+		logger.Error("falha ao conectar no postgres/supabase", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	defer db.Close()
 
-	bus := eventbus.NewInMemoryEventBus(logger)
-	_ = repository.NewSQLiteUnitOfWork(db)
+	db.SetMaxOpenConns(20)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(10 * time.Minute)
 
-	userRepo := repository.NewSQLiteUserRepository(db)
-	alarmRepo := repository.NewSQLiteAlarmRepository(db)
-	maintRepo := repository.NewSQLiteMaintenanceRepository(db)
-	insRepo := repository.NewSQLiteInspectionRepository(db)
-	dashRepo := repository.NewSQLiteDashboardRepository(db)
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := db.PingContext(pingCtx); err != nil {
+		logger.Warn("aviso: conexao inicial com supabase indisponivel ou aguardando credenciais",
+			slog.String("error", err.Error()),
+		)
+	} else {
+		logger.Info("conexao com supabase postgres estabelecida com sucesso")
+		if cfg.RunMigrations {
+			logger.Info("aplicando migracoes no banco de dados", slog.String("migrations_path", cfg.MigrationsPath))
+			if err := runMigrations(db, cfg.MigrationsPath); err != nil {
+				logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
+			} else {
+				logger.Info("migracoes aplicadas com sucesso")
+			}
+		} else {
+			logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
+		}
+	}
+	pingCancel()
+
+	bus := eventbus.NewInMemoryEventBus(logger)
+	_ = repository.NewPostgresUnitOfWork(db)
+
+	userRepo := repository.NewPostgresUserRepository(db)
+	alarmRepo := repository.NewPostgresAlarmRepository(db)
+	maintRepo := repository.NewPostgresMaintenanceRepository(db)
+	insRepo := repository.NewPostgresInspectionRepository(db)
+	dashRepo := repository.NewPostgresDashboardRepository(db)
 	cachedDashRepo := repository.NewCachedDashboardRepository(dashRepo, 30*time.Second)
-	predRepo := repository.NewSQLitePredictionRepository(db)
+	predRepo := repository.NewPostgresPredictionRepository(db)
 
 	usecase.RegisterEventSubscribers(bus, insRepo, cachedDashRepo, logger)
 
@@ -99,6 +119,7 @@ func main() {
 	insHandler := httpAdapter.NewInspectionHandler(insUC)
 	dashHandler := httpAdapter.NewDashboardHandler(dashUC)
 	healthHandler := httpAdapter.NewHealthHandler(db)
+	docsHandler := httpAdapter.NewDocsHandler("docs/openapi.json")
 
 	limiter := httpAdapter.NewRateLimiter(50, 100)
 
@@ -124,6 +145,10 @@ func main() {
 		}
 		c.Next()
 	})
+
+	router.GET("/openapi.json", docsHandler.OpenAPISpec)
+	router.GET("/docs", docsHandler.SwaggerUI)
+	router.GET("/swagger", docsHandler.SwaggerUI)
 
 	router.GET("/healthz/live", healthHandler.Live)
 	router.GET("/healthz/ready", healthHandler.Ready)

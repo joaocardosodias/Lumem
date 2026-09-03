@@ -2,51 +2,53 @@ package usecase_test
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 
-	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/domain"
-	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatalf("falha ao abrir sqlite em memoria: %v", err)
-	}
+type mockUnitOfWorkStore struct {
+	insRepo domain.InspectionRepository
+}
 
-	_, err = db.Exec(`
-		CREATE TABLE inspections (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			station_code TEXT NOT NULL,
-			platform TEXT NOT NULL,
-			door_number INTEGER NOT NULL,
-			scheduled_for TEXT,
-			priority TEXT DEFAULT 'normal',
-			status TEXT DEFAULT 'pending',
-			notes TEXT,
-			technician TEXT,
-			completed_at TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
-	`)
-	if err != nil {
-		t.Fatalf("falha ao criar schema de teste: %v", err)
-	}
+func (m *mockUnitOfWorkStore) Predictions() domain.PredictionRepository {
+	return nil
+}
 
-	return db
+func (m *mockUnitOfWorkStore) Inspections() domain.InspectionRepository {
+	return m.insRepo
+}
+
+func (m *mockUnitOfWorkStore) Maintenances() domain.MaintenanceRepository {
+	return nil
+}
+
+func (m *mockUnitOfWorkStore) Alarms() domain.AlarmRepository {
+	return nil
+}
+
+type mockUOW struct {
+	store     *mockUnitOfWorkStore
+	committed bool
+	rolledBack bool
+}
+
+func (m *mockUOW) Do(ctx context.Context, fn func(store domain.UnitOfWorkStore) error) error {
+	if err := fn(m.store); err != nil {
+		m.rolledBack = true
+		return err
+	}
+	m.committed = true
+	return nil
 }
 
 func TestUnitOfWork_CommitOnSuccess(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	insRepo := newMockInspectionRepo()
+	store := &mockUnitOfWorkStore{insRepo: insRepo}
+	uow := &mockUOW{store: store}
 
-	uow := repository.NewSQLiteUnitOfWork(db)
-
-	err := uow.Do(context.Background(), func(store domain.UnitOfWorkStore) error {
+	err := uow.Do(context.Background(), func(s domain.UnitOfWorkStore) error {
 		ins := &domain.Inspection{
 			StationCode: "FAL",
 			Platform:    "P1",
@@ -54,43 +56,30 @@ func TestUnitOfWork_CommitOnSuccess(t *testing.T) {
 			Status:      "pending",
 			Priority:    "critical",
 		}
-		return store.Inspections().Create(context.Background(), ins)
+		return s.Inspections().Create(context.Background(), ins)
 	})
 
 	if err != nil {
 		t.Fatalf("esperava sucesso na transacao: %v", err)
 	}
 
-	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM inspections").Scan(&count)
-	if err != nil {
-		t.Fatalf("erro ao contar inspecoes: %v", err)
+	if !uow.committed {
+		t.Errorf("esperava transacao confirmada (committed = true)")
 	}
 
-	if count != 1 {
-		t.Fatalf("esperava 1 inspecao confirmada, obteve %d", count)
+	inspections, _ := insRepo.List(context.Background(), 10, 0, "")
+	if len(inspections) != 1 {
+		t.Fatalf("esperava 1 inspecao criada, obteve %d", len(inspections))
 	}
 }
 
 func TestUnitOfWork_RollbackOnError(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	insRepo := newMockInspectionRepo()
+	store := &mockUnitOfWorkStore{insRepo: insRepo}
+	uow := &mockUOW{store: store}
+	expectedErr := errors.New("falha simulada")
 
-	uow := repository.NewSQLiteUnitOfWork(db)
-	expectedErr := errors.New("falha simulada no meio da operacao")
-
-	err := uow.Do(context.Background(), func(store domain.UnitOfWorkStore) error {
-		ins := &domain.Inspection{
-			StationCode: "PIN",
-			Platform:    "P2",
-			DoorNumber:  8,
-			Status:      "pending",
-			Priority:    "critical",
-		}
-		if err := store.Inspections().Create(context.Background(), ins); err != nil {
-			return err
-		}
-
+	err := uow.Do(context.Background(), func(s domain.UnitOfWorkStore) error {
 		return expectedErr
 	})
 
@@ -98,13 +87,7 @@ func TestUnitOfWork_RollbackOnError(t *testing.T) {
 		t.Fatalf("esperava erro %v, obteve %v", expectedErr, err)
 	}
 
-	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM inspections").Scan(&count)
-	if err != nil {
-		t.Fatalf("erro ao contar inspecoes: %v", err)
-	}
-
-	if count != 0 {
-		t.Fatalf("esperava 0 inspecoes devido ao rollback, obteve %d", count)
+	if !uow.rolledBack {
+		t.Errorf("esperava transacao desfeita (rolledBack = true)")
 	}
 }

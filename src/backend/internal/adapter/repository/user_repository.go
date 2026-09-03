@@ -9,38 +9,38 @@ import (
 	"github.com/g04/backend/internal/domain"
 )
 
-var _ domain.UserRepository = (*SQLiteUserRepository)(nil)
+var _ domain.UserRepository = (*PostgresUserRepository)(nil)
 
-type SQLiteUserRepository struct {
+type PostgresUserRepository struct {
 	db DBExecutor
 }
 
-func NewSQLiteUserRepository(db DBExecutor) *SQLiteUserRepository {
-	return &SQLiteUserRepository{db: db}
+func NewPostgresUserRepository(db DBExecutor) *PostgresUserRepository {
+	return &PostgresUserRepository{db: db}
 }
 
-func (r *SQLiteUserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
 		SELECT id, name, email, password_hash, role, is_active, created_at, updated_at
 		FROM users
-		WHERE email = ?
+		WHERE email = $1
 		LIMIT 1
 	`
+	row := r.db.QueryRowContext(ctx, query, email)
 
-	var user domain.User
-	var createdAtStr, updatedAtStr string
+	var u domain.User
+	var createdAt, updatedAt time.Time
 
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&createdAtStr,
-		&updatedAtStr,
+	err := row.Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.Role,
+		&u.IsActive,
+		&createdAt,
+		&updatedAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
@@ -48,43 +48,34 @@ func (r *SQLiteUserRepository) GetByEmail(ctx context.Context, email string) (*d
 		return nil, err
 	}
 
-	if t, err := time.Parse("2006-01-02 15:04:05", createdAtStr); err == nil {
-		user.CreatedAt = t
-	} else if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-		user.CreatedAt = t
-	}
+	u.CreatedAt = createdAt
+	u.UpdatedAt = updatedAt
 
-	if t, err := time.Parse("2006-01-02 15:04:05", updatedAtStr); err == nil {
-		user.UpdatedAt = t
-	} else if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-		user.UpdatedAt = t
-	}
-
-	return &user, nil
+	return &u, nil
 }
 
-func (r *SQLiteUserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+func (r *PostgresUserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `
 		SELECT id, name, email, password_hash, role, is_active, created_at, updated_at
 		FROM users
-		WHERE id = ?
+		WHERE id = $1
 		LIMIT 1
 	`
+	row := r.db.QueryRowContext(ctx, query, id)
 
-	var user domain.User
-	var createdAtStr, updatedAtStr string
+	var u domain.User
+	var createdAt, updatedAt time.Time
 
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&createdAtStr,
-		&updatedAtStr,
+	err := row.Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.Role,
+		&u.IsActive,
+		&createdAt,
+		&updatedAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
@@ -92,47 +83,26 @@ func (r *SQLiteUserRepository) GetByID(ctx context.Context, id string) (*domain.
 		return nil, err
 	}
 
-	if t, err := time.Parse("2006-01-02 15:04:05", createdAtStr); err == nil {
-		user.CreatedAt = t
-	} else if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
-		user.CreatedAt = t
-	}
+	u.CreatedAt = createdAt
+	u.UpdatedAt = updatedAt
 
-	if t, err := time.Parse("2006-01-02 15:04:05", updatedAtStr); err == nil {
-		user.UpdatedAt = t
-	} else if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
-		user.UpdatedAt = t
-	}
-
-	return &user, nil
+	return &u, nil
 }
 
-func (r *SQLiteUserRepository) Create(ctx context.Context, user *domain.User) error {
+func (r *PostgresUserRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `
 		INSERT INTO users (id, name, email, password_hash, role, is_active, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-
-	now := time.Now()
-	if user.CreatedAt.IsZero() {
-		user.CreatedAt = now
-	}
-	if user.UpdatedAt.IsZero() {
-		user.UpdatedAt = now
-	}
-
-	_, err := r.db.ExecContext(
-		ctx,
-		query,
+	_, err := r.db.ExecContext(ctx, query,
 		user.ID,
 		user.Name,
 		user.Email,
 		user.PasswordHash,
 		user.Role,
 		user.IsActive,
-		user.CreatedAt.Format("2006-01-02 15:04:05"),
-		user.UpdatedAt.Format("2006-01-02 15:04:05"),
+		user.CreatedAt,
+		user.UpdatedAt,
 	)
-
 	return err
 }

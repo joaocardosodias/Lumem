@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type IngestAlarmsUseCase struct {
@@ -24,10 +25,10 @@ func NewIngestAlarmsUseCase(repo domain.AlarmRepository) *IngestAlarmsUseCase {
 	return &IngestAlarmsUseCase{repo: repo}
 }
 
-func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader) (int64, error) {
+func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader) (string, error) {
 	tmpFile, err := os.CreateTemp("", "alarm_upload_*.csv")
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer tmpFile.Close()
 
@@ -36,7 +37,7 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 
 	if _, err := io.Copy(tmpFile, tee); err != nil {
 		os.Remove(tmpFile.Name())
-		return 0, err
+		return "", err
 	}
 
 	hashStr := hex.EncodeToString(hasher.Sum(nil))
@@ -48,6 +49,7 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 	}
 
 	upload := &domain.FileUpload{
+		ID:       uuid.New().String(),
 		FileName: fileName,
 		FileType: "alarms_csv",
 		FileHash: hashStr,
@@ -56,7 +58,7 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 
 	if err := uc.repo.CreateUpload(ctx, upload); err != nil {
 		os.Remove(tmpFile.Name())
-		return 0, err
+		return "", err
 	}
 
 	go uc.processFileAsync(upload.ID, tmpFile.Name())
@@ -64,7 +66,7 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 	return upload.ID, nil
 }
 
-func (uc *IngestAlarmsUseCase) processFileAsync(uploadID int64, filePath string) {
+func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string) {
 	defer os.Remove(filePath)
 
 	file, err := os.Open(filePath)
@@ -145,6 +147,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID int64, filePath string)
 		}
 
 		alarm := &domain.Alarm{
+			ID:                     uuid.New().String(),
 			UploadID:               uploadID,
 			Tag:                    strings.TrimSpace(row[tagIdx]),
 			StationCode:            strings.TrimSpace(row[stationIdx]),
@@ -155,6 +158,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID int64, filePath string)
 			EventTimestamp:         strings.TrimSpace(row[timeIdx]),
 			NormalizationTimestamp: normTime,
 			Source:                 "csv",
+			CreatedAt:              time.Now(),
 		}
 
 		batch = append(batch, alarm)
@@ -188,7 +192,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID int64, filePath string)
 	}
 }
 
-func (uc *IngestAlarmsUseCase) failUpload(uploadID int64, reason string) {
+func (uc *IngestAlarmsUseCase) failUpload(uploadID string, reason string) {
 	bgCtx := context.Background()
 	now := time.Now()
 	upload, err := uc.repo.GetUploadByID(bgCtx, uploadID)
@@ -200,7 +204,7 @@ func (uc *IngestAlarmsUseCase) failUpload(uploadID int64, reason string) {
 	}
 }
 
-func (uc *IngestAlarmsUseCase) GetStatus(ctx context.Context, uploadID int64) (*UploadStatusOutputDTO, error) {
+func (uc *IngestAlarmsUseCase) GetStatus(ctx context.Context, uploadID string) (*UploadStatusOutputDTO, error) {
 	u, err := uc.repo.GetUploadByID(ctx, uploadID)
 	if err != nil {
 		return nil, err

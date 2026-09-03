@@ -14,7 +14,7 @@ type DashboardSummaryOutputDTO struct {
 }
 
 type TimelineAlarmOutputDTO struct {
-	ID                     int64  `json:"id"`
+	ID                     string `json:"id"`
 	Tag                    string `json:"tag"`
 	AlarmType              string `json:"alarm_type"`
 	DurationSeconds        int    `json:"duration_seconds"`
@@ -23,7 +23,7 @@ type TimelineAlarmOutputDTO struct {
 }
 
 type TimelineMaintenanceOutputDTO struct {
-	ID             int64   `json:"id"`
+	ID             string  `json:"id"`
 	OrderType      string  `json:"order_type"`
 	SAPOrderNumber string  `json:"sap_order_number,omitempty"`
 	StartTimestamp string  `json:"start_timestamp"`
@@ -34,7 +34,7 @@ type TimelineMaintenanceOutputDTO struct {
 }
 
 type TimelineInspectionOutputDTO struct {
-	ID           int64   `json:"id"`
+	ID           string  `json:"id"`
 	Status       string  `json:"status"`
 	Priority     string  `json:"priority"`
 	Notes        string  `json:"notes,omitempty"`
@@ -66,7 +66,8 @@ type DoorStatusOutputDTO struct {
 }
 
 type PredictionItemOutputDTO struct {
-	ID          int64  `json:"id"`
+	ID          string `json:"id"`
+	RunID       string `json:"run_id"`
 	StationCode string `json:"station_code"`
 	Platform    string `json:"platform"`
 	DoorNumber  int    `json:"door_number"`
@@ -74,7 +75,7 @@ type PredictionItemOutputDTO struct {
 }
 
 type PredictionRunOutputDTO struct {
-	ID                  int64                     `json:"id"`
+	ID                  string                    `json:"id"`
 	HorizonDays         int                       `json:"horizon_days"`
 	TotalDoorsEvaluated int                       `json:"total_doors_evaluated"`
 	TotalDoorsAtRisk    int                       `json:"total_doors_at_risk"`

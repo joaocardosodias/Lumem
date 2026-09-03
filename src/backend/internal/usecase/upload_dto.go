@@ -1,7 +1,7 @@
 package usecase
 
 type UploadStatusOutputDTO struct {
-	ID            int64   `json:"id"`
+	ID            string  `json:"id"`
 	FileName      string  `json:"file_name"`
 	FileType      string  `json:"file_type"`
 	Status        string  `json:"status"`

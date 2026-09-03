@@ -6,12 +6,15 @@ import (
 
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/google/uuid"
 )
 
 func (m *mockMaintRepo) Create(ctx context.Context, event *domain.MaintenanceEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	event.ID = int64(len(m.events) + 1)
+	if event.ID == "" {
+		event.ID = uuid.New().String()
+	}
 	m.events = append(m.events, event)
 	return nil
 }
@@ -42,7 +45,7 @@ func TestCreateMaintenanceUseCase_Success(t *testing.T) {
 		t.Fatalf("esperava sucesso na criacao manual, obteve: %v", err)
 	}
 
-	if dto.ID == 0 {
+	if dto.ID == "" {
 		t.Errorf("id deveria ser preenchido")
 	}
 

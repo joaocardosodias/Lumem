@@ -2,7 +2,7 @@ package http
 
 import (
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -78,14 +78,13 @@ func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 }
 
 func (h *UploadHandler) GetUploadStatus(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID e obrigatorio.")
 		return
 	}
 
-	upload, err := h.ingestAlarmsUC.GetStatus(c.Request.Context(), id)
+	upload, err := h.ingestAlarmsUC.GetStatus(c.Request.Context(), idParam)
 	if err != nil {
 		RespondDomainError(c, err)
 		return

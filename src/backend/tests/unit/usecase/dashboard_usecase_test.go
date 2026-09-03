@@ -32,7 +32,7 @@ type mockPredictionRepo struct {
 }
 
 func (m *mockPredictionRepo) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
-	run.ID = 1
+	run.ID = "run-test-123"
 	m.latestRun = run
 	return nil
 }
@@ -56,6 +56,8 @@ func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([
 	items := make([]domain.PredictionItem, len(doors))
 	for i, d := range doors {
 		items[i] = domain.PredictionItem{
+			ID:          "pred-item",
+			RunID:       "run-test-123",
 			StationCode: d.StationCode,
 			Platform:    d.Platform,
 			DoorNumber:  d.DoorNumber,

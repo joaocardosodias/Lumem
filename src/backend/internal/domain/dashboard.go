@@ -24,7 +24,7 @@ type Door struct {
 }
 
 type PredictionRun struct {
-	ID                  int64            `json:"id"`
+	ID                  string           `json:"id"`
 	HorizonDays         int              `json:"horizon_days"`
 	TotalDoorsEvaluated int              `json:"total_doors_evaluated"`
 	TotalDoorsAtRisk    int              `json:"total_doors_at_risk"`
@@ -33,8 +33,8 @@ type PredictionRun struct {
 }
 
 type PredictionItem struct {
-	ID          int64  `json:"id"`
-	RunID       int64  `json:"run_id"`
+	ID          string `json:"id"`
+	RunID       string `json:"run_id"`
 	StationCode string `json:"station_code"`
 	Platform    string `json:"platform"`
 	DoorNumber  int    `json:"door_number"`

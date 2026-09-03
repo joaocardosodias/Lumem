@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type IngestMaintenanceUseCase struct {
@@ -33,12 +34,12 @@ func NewIngestMaintenanceUseCase(
 	}
 }
 
-func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader, explicitOrderType string) (int64, error) {
+func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader, explicitOrderType string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(fileName))
 	pattern := "maint_upload_*" + ext
 	tmpFile, err := os.CreateTemp("", pattern)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer tmpFile.Close()
 
@@ -47,7 +48,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 
 	if _, err := io.Copy(tmpFile, tee); err != nil {
 		os.Remove(tmpFile.Name())
-		return 0, err
+		return "", err
 	}
 
 	hashStr := hex.EncodeToString(hasher.Sum(nil))
@@ -64,6 +65,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 	}
 
 	upload := &domain.FileUpload{
+		ID:       uuid.New().String(),
 		FileName: fileName,
 		FileType: fileType,
 		FileHash: hashStr,
@@ -72,7 +74,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 
 	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
 		os.Remove(tmpFile.Name())
-		return 0, err
+		return "", err
 	}
 
 	go uc.processFileAsync(upload.ID, tmpFile.Name(), ext, explicitOrderType)
@@ -80,7 +82,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 	return upload.ID, nil
 }
 
-func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID int64, filePath, ext, explicitOrderType string) {
+func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID string, filePath, ext, explicitOrderType string) {
 	defer os.Remove(filePath)
 
 	rows, err := uc.parser.ReadRows(filePath, ext)
@@ -135,9 +137,11 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID int64, filePath, e
 		}
 
 		event := &domain.MaintenanceEvent{
+			ID:        uuid.New().String(),
 			UploadID:  uploadID,
 			OrderType: orderType,
 			Source:    "spreadsheet",
+			CreatedAt: time.Now(),
 		}
 
 		if hasOrder && orderIdx < len(row) {
@@ -213,7 +217,7 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID int64, filePath, e
 	}
 }
 
-func (uc *IngestMaintenanceUseCase) failUpload(uploadID int64, reason string) {
+func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) {
 	bgCtx := context.Background()
 	now := time.Now()
 	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)

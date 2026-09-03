@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type CacheInvalidator interface {
@@ -25,14 +27,18 @@ func RegisterEventSubscribers(
 		}
 
 		if insRepo != nil {
-			notes := fmt.Sprintf("Ordem gerada automaticamente pela IA (Rodada #%d)", evt.RunID)
+			notes := fmt.Sprintf("Ordem gerada automaticamente pela IA (Rodada #%s)", evt.RunID)
+			now := time.Now()
 			ins := &domain.Inspection{
+				ID:          uuid.New().String(),
 				StationCode: evt.StationCode,
 				Platform:    evt.Platform,
 				DoorNumber:  evt.DoorNumber,
 				Status:      "pending",
 				Priority:    "critical",
 				Notes:       notes,
+				CreatedAt:   now,
+				UpdatedAt:   now,
 			}
 			_ = insRepo.Create(ctx, ins)
 		}
@@ -40,7 +46,7 @@ func RegisterEventSubscribers(
 		if logger != nil {
 			logger.Warn("alerta de risco critico de falha detectado pela ia",
 				slog.String("event", "DoorRiskDetected"),
-				slog.Int64("run_id", evt.RunID),
+				slog.String("run_id", evt.RunID),
 				slog.String("station", evt.StationCode),
 				slog.String("platform", evt.Platform),
 				slog.Int("door", evt.DoorNumber),
@@ -58,7 +64,7 @@ func RegisterEventSubscribers(
 			if ok {
 				logger.Info("rodada de predicao concluida",
 					slog.String("event", "PredictionRunCompleted"),
-					slog.Int64("run_id", evt.RunID),
+					slog.String("run_id", evt.RunID),
 					slog.Int("evaluated", evt.TotalEvaluated),
 					slog.Int("at_risk", evt.TotalAtRisk),
 				)

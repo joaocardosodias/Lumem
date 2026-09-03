@@ -18,7 +18,7 @@ type EventBus interface {
 }
 
 type DoorRiskDetectedEvent struct {
-	RunID       int64     `json:"run_id"`
+	RunID       string    `json:"run_id"`
 	StationCode string    `json:"station_code"`
 	Platform    string    `json:"platform"`
 	DoorNumber  int       `json:"door_number"`
@@ -34,7 +34,7 @@ func (e DoorRiskDetectedEvent) OccurredAt() time.Time {
 }
 
 type PredictionRunCompletedEvent struct {
-	RunID          int64     `json:"run_id"`
+	RunID          string    `json:"run_id"`
 	HorizonDays    int       `json:"horizon_days"`
 	TotalEvaluated int       `json:"total_evaluated"`
 	TotalAtRisk    int       `json:"total_at_risk"`
@@ -50,7 +50,7 @@ func (e PredictionRunCompletedEvent) OccurredAt() time.Time {
 }
 
 type FileUploadCompletedEvent struct {
-	UploadID      int64     `json:"upload_id"`
+	UploadID      string    `json:"upload_id"`
 	FileType      string    `json:"file_type"`
 	RowsProcessed int       `json:"rows_processed"`
 	RowsInserted  int       `json:"rows_inserted"`

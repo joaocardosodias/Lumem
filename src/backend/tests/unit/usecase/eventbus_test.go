@@ -43,6 +43,7 @@ func TestEventBus_PublishAndSubscribe(t *testing.T) {
 	})
 
 	bus.Publish(context.Background(), domain.DoorRiskDetectedEvent{
+		RunID:       "run-123",
 		StationCode: "FAL",
 		DoorNumber:  4,
 		Timestamp:   time.Now(),
@@ -66,7 +67,7 @@ func TestSubscribers_AutoInspectionOnDoorRisk(t *testing.T) {
 	usecase.RegisterEventSubscribers(bus, insRepo, cache, nil)
 
 	err := bus.PublishSync(context.Background(), domain.DoorRiskDetectedEvent{
-		RunID:       1,
+		RunID:       "run-123",
 		StationCode: "PIN",
 		Platform:    "P2",
 		DoorNumber:  8,
@@ -99,7 +100,7 @@ func TestSubscribers_CacheInvalidationOnPredictionRun(t *testing.T) {
 	usecase.RegisterEventSubscribers(bus, insRepo, cache, nil)
 
 	_ = bus.PublishSync(context.Background(), domain.PredictionRunCompletedEvent{
-		RunID:       10,
+		RunID:       "run-10",
 		HorizonDays: 7,
 		TotalAtRisk: 5,
 		Timestamp:   time.Now(),

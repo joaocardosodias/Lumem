@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type DashboardUseCase struct {
@@ -179,11 +180,18 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 	}
 
 	now := time.Now()
+	runID := uuid.New().String()
 	run := &domain.PredictionRun{
+		ID:                  runID,
 		HorizonDays:         horizonDays,
 		TotalDoorsEvaluated: len(doors),
 		TotalDoorsAtRisk:    doorsAtRisk,
 		CreatedAt:           now,
+	}
+
+	for i := range predictedItems {
+		predictedItems[i].ID = uuid.New().String()
+		predictedItems[i].RunID = runID
 	}
 
 	if err := uc.predRepo.SaveRun(ctx, run, predictedItems); err != nil {
@@ -194,6 +202,7 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 	for _, p := range predictedItems {
 		itemsDTO = append(itemsDTO, PredictionItemOutputDTO{
 			ID:          p.ID,
+			RunID:       p.RunID,
 			StationCode: p.StationCode,
 			Platform:    p.Platform,
 			DoorNumber:  p.DoorNumber,
@@ -241,6 +250,7 @@ func (uc *DashboardUseCase) GetLatestPredictions(ctx context.Context) (*Predicti
 	for _, p := range run.Predictions {
 		itemsDTO = append(itemsDTO, PredictionItemOutputDTO{
 			ID:          p.ID,
+			RunID:       p.RunID,
 			StationCode: p.StationCode,
 			Platform:    p.Platform,
 			DoorNumber:  p.DoorNumber,

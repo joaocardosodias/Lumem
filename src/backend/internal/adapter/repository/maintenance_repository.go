@@ -2,31 +2,33 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
-var _ domain.MaintenanceRepository = (*SQLiteMaintenanceRepository)(nil)
+var _ domain.MaintenanceRepository = (*PostgresMaintenanceRepository)(nil)
 
-type SQLiteMaintenanceRepository struct {
+type PostgresMaintenanceRepository struct {
 	db DBExecutor
 }
 
-func NewSQLiteMaintenanceRepository(db DBExecutor) *SQLiteMaintenanceRepository {
-	return &SQLiteMaintenanceRepository{db: db}
+func NewPostgresMaintenanceRepository(db DBExecutor) *PostgresMaintenanceRepository {
+	return &PostgresMaintenanceRepository{db: db}
 }
 
-func (r *SQLiteMaintenanceRepository) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {
+func (r *PostgresMaintenanceRepository) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {
 	if len(events) == 0 {
 		return nil
 	}
 
 	query := `
 		INSERT INTO maintenance_events (
-			upload_id, sap_order_number, order_type, installation_location,
+			id, upload_id, sap_order_number, order_type, installation_location,
 			station_code, start_timestamp, end_timestamp, duration_hours,
 			description, symptom, cause, action_taken, source
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -35,7 +37,11 @@ func (r *SQLiteMaintenanceRepository) BatchInsertMaintenance(ctx context.Context
 	defer stmt.Close()
 
 	for _, e := range events {
+		if e.ID == "" {
+			e.ID = uuid.New().String()
+		}
 		_, err := stmt.ExecContext(ctx,
+			e.ID,
 			e.UploadID,
 			e.SAPOrderNumber,
 			e.OrderType,
@@ -58,15 +64,20 @@ func (r *SQLiteMaintenanceRepository) BatchInsertMaintenance(ctx context.Context
 	return nil
 }
 
-func (r *SQLiteMaintenanceRepository) Create(ctx context.Context, event *domain.MaintenanceEvent) error {
+func (r *PostgresMaintenanceRepository) Create(ctx context.Context, event *domain.MaintenanceEvent) error {
+	if event.ID == "" {
+		event.ID = uuid.New().String()
+	}
+
 	query := `
 		INSERT INTO maintenance_events (
-			sap_order_number, order_type, installation_location,
+			id, sap_order_number, order_type, installation_location,
 			station_code, start_timestamp, end_timestamp, duration_hours,
 			description, symptom, cause, action_taken, source
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
-	res, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.ExecContext(ctx, query,
+		event.ID,
 		event.SAPOrderNumber,
 		event.OrderType,
 		event.InstallationLocation,
@@ -80,19 +91,10 @@ func (r *SQLiteMaintenanceRepository) Create(ctx context.Context, event *domain.
 		event.ActionTaken,
 		event.Source,
 	)
-	if err != nil {
-		return err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	event.ID = id
-	return nil
+	return err
 }
 
-func (r *SQLiteMaintenanceRepository) List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceEvent, error) {
+func (r *PostgresMaintenanceRepository) List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceEvent, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -101,12 +103,13 @@ func (r *SQLiteMaintenanceRepository) List(ctx context.Context, limit, offset in
 	}
 
 	query := `
-		SELECT id, upload_id, sap_order_number, order_type, installation_location,
-		       station_code, start_timestamp, end_timestamp, duration_hours,
-		       description, symptom, cause, action_taken, source, created_at
+		SELECT id, COALESCE(upload_id, ''), COALESCE(sap_order_number, ''), order_type, COALESCE(installation_location, ''),
+		       COALESCE(station_code, ''), start_timestamp, COALESCE(end_timestamp, ''), duration_hours,
+		       COALESCE(description, ''), COALESCE(symptom, ''), COALESCE(cause, ''), COALESCE(action_taken, ''),
+		       source, created_at
 		FROM maintenance_events
-		ORDER BY id DESC
-		LIMIT ? OFFSET ?
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
 	`
 	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
@@ -117,12 +120,11 @@ func (r *SQLiteMaintenanceRepository) List(ctx context.Context, limit, offset in
 	var list []*domain.MaintenanceEvent
 	for rows.Next() {
 		var e domain.MaintenanceEvent
-		var uploadID *int64
-		var createdAtStr string
+		var createdAt time.Time
 
 		err := rows.Scan(
 			&e.ID,
-			&uploadID,
+			&e.UploadID,
 			&e.SAPOrderNumber,
 			&e.OrderType,
 			&e.InstallationLocation,
@@ -135,16 +137,13 @@ func (r *SQLiteMaintenanceRepository) List(ctx context.Context, limit, offset in
 			&e.Cause,
 			&e.ActionTaken,
 			&e.Source,
-			&createdAtStr,
+			&createdAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		if uploadID != nil {
-			e.UploadID = *uploadID
-		}
-		e.CreatedAt = parseTime(createdAtStr)
+		e.CreatedAt = createdAt
 		list = append(list, &e)
 	}
 

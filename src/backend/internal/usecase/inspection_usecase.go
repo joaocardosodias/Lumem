@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type CreateInspectionInputDTO struct {
-	PredictionID *int64  `json:"prediction_id"`
 	StationCode  string  `json:"station_code"`
 	Platform     string  `json:"platform"`
 	DoorNumber   int     `json:"door_number"`
-	Priority     string  `json:"priority"`
-	AssignedTo   *string `json:"assigned_to"`
-	Notes        string  `json:"notes"`
 	ScheduledFor string  `json:"scheduled_for"`
+	Priority     string  `json:"priority"`
+	Notes        string  `json:"notes"`
+	PredictionID *string `json:"prediction_id"`
 }
 
 type UpdateInspectionStatusInputDTO struct {
@@ -26,19 +26,17 @@ type UpdateInspectionStatusInputDTO struct {
 }
 
 type InspectionOutputDTO struct {
-	ID           int64   `json:"id"`
-	PredictionID *int64  `json:"prediction_id,omitempty"`
-	StationCode  string  `json:"station_code"`
-	Platform     string  `json:"platform"`
-	DoorNumber   int     `json:"door_number"`
-	Status       string  `json:"status"`
-	Priority     string  `json:"priority"`
-	AssignedTo   *string `json:"assigned_to,omitempty"`
-	Notes        string  `json:"notes,omitempty"`
-	ScheduledFor string  `json:"scheduled_for,omitempty"`
-	CompletedAt  *string `json:"completed_at,omitempty"`
-	CreatedAt    string  `json:"created_at"`
-	UpdatedAt    string  `json:"updated_at"`
+	ID           string    `json:"id"`
+	StationCode  string    `json:"station_code"`
+	Platform     string    `json:"platform"`
+	DoorNumber   int       `json:"door_number"`
+	ScheduledFor string    `json:"scheduled_for,omitempty"`
+	Priority     string    `json:"priority"`
+	Status       string    `json:"status"`
+	Notes        string    `json:"notes,omitempty"`
+	CompletedAt  *string   `json:"completed_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type InspectionUseCase struct {
@@ -50,35 +48,41 @@ func NewInspectionUseCase(repo domain.InspectionRepository) *InspectionUseCase {
 }
 
 func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionInputDTO) (*InspectionOutputDTO, error) {
-	stationCode := strings.ToUpper(strings.TrimSpace(input.StationCode))
+	stationCode := strings.TrimSpace(strings.ToUpper(input.StationCode))
 	if stationCode == "" {
 		return nil, errors.New("o codigo da estacao (station_code) e obrigatorio")
 	}
 
-	platform := strings.ToUpper(strings.TrimSpace(input.Platform))
-	if platform == "" {
-		platform = "P1"
+	platform := strings.TrimSpace(strings.ToUpper(input.Platform))
+	if platform != "P1" && platform != "P2" {
+		return nil, errors.New("a plataforma deve ser P1 ou P2")
 	}
 
-	if input.DoorNumber <= 0 || input.DoorNumber > 24 {
+	if input.DoorNumber < 1 || input.DoorNumber > 24 {
 		return nil, errors.New("o numero da porta deve estar entre 1 e 24")
 	}
 
 	priority := strings.ToLower(strings.TrimSpace(input.Priority))
 	if priority == "" {
-		priority = "high"
+		priority = "normal"
+	}
+	if priority != "low" && priority != "normal" && priority != "high" && priority != "critical" {
+		return nil, errors.New("prioridade invalida (use: low, normal, high, critical)")
 	}
 
+	now := time.Now()
 	ins := &domain.Inspection{
+		ID:           uuid.New().String(),
 		PredictionID: input.PredictionID,
 		StationCode:  stationCode,
 		Platform:     platform,
 		DoorNumber:   input.DoorNumber,
-		Status:       "pending",
-		Priority:     priority,
-		AssignedTo:   input.AssignedTo,
-		Notes:        strings.TrimSpace(input.Notes),
 		ScheduledFor: strings.TrimSpace(input.ScheduledFor),
+		Priority:     priority,
+		Status:       "pending",
+		Notes:        strings.TrimSpace(input.Notes),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
 	if err := uc.repo.Create(ctx, ins); err != nil {
@@ -88,10 +92,20 @@ func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionI
 	return toInspectionDTO(ins), nil
 }
 
-func (uc *InspectionUseCase) UpdateStatus(ctx context.Context, id int64, input UpdateInspectionStatusInputDTO) (*InspectionOutputDTO, error) {
+func (uc *InspectionUseCase) UpdateStatus(ctx context.Context, id string, input UpdateInspectionStatusInputDTO) (*InspectionOutputDTO, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, errors.New("id da inspecao e obrigatorio")
+	}
+
 	status := strings.ToLower(strings.TrimSpace(input.Status))
 	if status != "pending" && status != "in_progress" && status != "completed" && status != "canceled" {
-		return nil, errors.New("status invalido (valores permitidos: pending, in_progress, completed, canceled)")
+		return nil, errors.New("status invalido (use: pending, in_progress, completed, canceled)")
+	}
+
+	ins, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
 	}
 
 	var completedAt *time.Time
@@ -100,59 +114,67 @@ func (uc *InspectionUseCase) UpdateStatus(ctx context.Context, id int64, input U
 		completedAt = &now
 	}
 
-	if err := uc.repo.UpdateStatus(ctx, id, status, strings.TrimSpace(input.Notes), completedAt); err != nil {
+	notes := ins.Notes
+	if strings.TrimSpace(input.Notes) != "" {
+		notes = strings.TrimSpace(input.Notes)
+	}
+
+	if err := uc.repo.UpdateStatus(ctx, id, status, notes, completedAt); err != nil {
 		return nil, err
+	}
+
+	ins.Status = status
+	ins.Notes = notes
+	ins.CompletedAt = completedAt
+	ins.UpdatedAt = time.Now()
+
+	return toInspectionDTO(ins), nil
+}
+
+func (uc *InspectionUseCase) List(ctx context.Context, limit, offset int, statusFilter string) ([]*InspectionOutputDTO, error) {
+	inspections, err := uc.repo.List(ctx, limit, offset, strings.TrimSpace(statusFilter))
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]*InspectionOutputDTO, 0, len(inspections))
+	for _, ins := range inspections {
+		dtos = append(dtos, toInspectionDTO(ins))
+	}
+	return dtos, nil
+}
+
+func (uc *InspectionUseCase) GetByID(ctx context.Context, id string) (*InspectionOutputDTO, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, errors.New("id da inspecao e obrigatorio")
 	}
 
 	ins, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
 	return toInspectionDTO(ins), nil
 }
 
-func (uc *InspectionUseCase) List(ctx context.Context, limit, offset int, status string) ([]*InspectionOutputDTO, error) {
-	items, err := uc.repo.List(ctx, limit, offset, strings.TrimSpace(status))
-	if err != nil {
-		return nil, err
-	}
-
-	dtos := make([]*InspectionOutputDTO, 0, len(items))
-	for _, item := range items {
-		dtos = append(dtos, toInspectionDTO(item))
-	}
-	return dtos, nil
-}
-
-func (uc *InspectionUseCase) GetByID(ctx context.Context, id int64) (*InspectionOutputDTO, error) {
-	item, err := uc.repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return toInspectionDTO(item), nil
-}
-
-func toInspectionDTO(i *domain.Inspection) *InspectionOutputDTO {
-	var completedStr *string
-	if i.CompletedAt != nil {
-		s := i.CompletedAt.Format("2006-01-02 15:04:05")
-		completedStr = &s
+func toInspectionDTO(ins *domain.Inspection) *InspectionOutputDTO {
+	var compStr *string
+	if ins.CompletedAt != nil {
+		s := ins.CompletedAt.Format("2006-01-02 15:04:05")
+		compStr = &s
 	}
 
 	return &InspectionOutputDTO{
-		ID:           i.ID,
-		PredictionID: i.PredictionID,
-		StationCode:  i.StationCode,
-		Platform:     i.Platform,
-		DoorNumber:   i.DoorNumber,
-		Status:       i.Status,
-		Priority:     i.Priority,
-		AssignedTo:   i.AssignedTo,
-		Notes:        i.Notes,
-		ScheduledFor: i.ScheduledFor,
-		CompletedAt:  completedStr,
-		CreatedAt:    i.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    i.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:           ins.ID,
+		StationCode:  ins.StationCode,
+		Platform:     ins.Platform,
+		DoorNumber:   ins.DoorNumber,
+		ScheduledFor: ins.ScheduledFor,
+		Priority:     ins.Priority,
+		Status:       ins.Status,
+		Notes:        ins.Notes,
+		CompletedAt:  compStr,
+		CreatedAt:    ins.CreatedAt,
+		UpdatedAt:    ins.UpdatedAt,
 	}
 }

@@ -2,26 +2,33 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
-var _ domain.AlarmRepository = (*SQLiteAlarmRepository)(nil)
+var _ domain.AlarmRepository = (*PostgresAlarmRepository)(nil)
 
-type SQLiteAlarmRepository struct {
+type PostgresAlarmRepository struct {
 	db DBExecutor
 }
 
-func NewSQLiteAlarmRepository(db DBExecutor) *SQLiteAlarmRepository {
-	return &SQLiteAlarmRepository{db: db}
+func NewPostgresAlarmRepository(db DBExecutor) *PostgresAlarmRepository {
+	return &PostgresAlarmRepository{db: db}
 }
 
-func (r *SQLiteAlarmRepository) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
+func (r *PostgresAlarmRepository) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
+	if upload.ID == "" {
+		upload.ID = uuid.New().String()
+	}
+
 	query := `
-		INSERT INTO file_uploads (file_name, file_type, file_hash, status, rows_processed, rows_inserted, error_log)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO file_uploads (id, file_name, file_type, file_hash, status, rows_processed, rows_inserted, error_log)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	res, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.ExecContext(ctx, query,
+		upload.ID,
 		upload.FileName,
 		upload.FileType,
 		upload.FileHash,
@@ -30,52 +37,37 @@ func (r *SQLiteAlarmRepository) CreateUpload(ctx context.Context, upload *domain
 		upload.RowsInserted,
 		upload.ErrorLog,
 	)
-	if err != nil {
-		return err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	upload.ID = id
-	return nil
+	return err
 }
 
-func (r *SQLiteAlarmRepository) UpdateUpload(ctx context.Context, upload *domain.FileUpload) error {
-	var completedAtStr *string
-	if upload.CompletedAt != nil {
-		s := upload.CompletedAt.Format("2006-01-02 15:04:05")
-		completedAtStr = &s
-	}
-
+func (r *PostgresAlarmRepository) UpdateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	query := `
 		UPDATE file_uploads
-		SET status = ?, rows_processed = ?, rows_inserted = ?, error_log = ?, completed_at = ?
-		WHERE id = ?
+		SET status = $1, rows_processed = $2, rows_inserted = $3, error_log = $4, completed_at = $5
+		WHERE id = $6
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		upload.Status,
 		upload.RowsProcessed,
 		upload.RowsInserted,
 		upload.ErrorLog,
-		completedAtStr,
+		upload.CompletedAt,
 		upload.ID,
 	)
 	return err
 }
 
-func (r *SQLiteAlarmRepository) GetUploadByID(ctx context.Context, id int64) (*domain.FileUpload, error) {
+func (r *PostgresAlarmRepository) GetUploadByID(ctx context.Context, id string) (*domain.FileUpload, error) {
 	query := `
-		SELECT id, file_name, file_type, file_hash, status, rows_processed, rows_inserted, error_log, created_at, completed_at
+		SELECT id, file_name, file_type, COALESCE(file_hash, ''), status, rows_processed, rows_inserted, COALESCE(error_log, ''), created_at, completed_at
 		FROM file_uploads
-		WHERE id = ?
+		WHERE id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var u domain.FileUpload
-	var createdAtStr string
-	var completedAtStr *string
+	var createdAt time.Time
+	var completedAt *time.Time
 
 	err := row.Scan(
 		&u.ID,
@@ -86,34 +78,30 @@ func (r *SQLiteAlarmRepository) GetUploadByID(ctx context.Context, id int64) (*d
 		&u.RowsProcessed,
 		&u.RowsInserted,
 		&u.ErrorLog,
-		&createdAtStr,
-		&completedAtStr,
+		&createdAt,
+		&completedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	u.CreatedAt = parseTime(createdAtStr)
-	if completedAtStr != nil {
-		t := parseTime(*completedAtStr)
-		u.CompletedAt = &t
-	}
-
+	u.CreatedAt = createdAt
+	u.CompletedAt = completedAt
 	return &u, nil
 }
 
-func (r *SQLiteAlarmRepository) GetUploadByHash(ctx context.Context, hash string) (*domain.FileUpload, error) {
+func (r *PostgresAlarmRepository) GetUploadByHash(ctx context.Context, hash string) (*domain.FileUpload, error) {
 	query := `
-		SELECT id, file_name, file_type, file_hash, status, rows_processed, rows_inserted, error_log, created_at, completed_at
+		SELECT id, file_name, file_type, COALESCE(file_hash, ''), status, rows_processed, rows_inserted, COALESCE(error_log, ''), created_at, completed_at
 		FROM file_uploads
-		WHERE file_hash = ?
+		WHERE file_hash = $1
 		LIMIT 1
 	`
 	row := r.db.QueryRowContext(ctx, query, hash)
 
 	var u domain.FileUpload
-	var createdAtStr string
-	var completedAtStr *string
+	var createdAt time.Time
+	var completedAt *time.Time
 
 	err := row.Scan(
 		&u.ID,
@@ -124,33 +112,29 @@ func (r *SQLiteAlarmRepository) GetUploadByHash(ctx context.Context, hash string
 		&u.RowsProcessed,
 		&u.RowsInserted,
 		&u.ErrorLog,
-		&createdAtStr,
-		&completedAtStr,
+		&createdAt,
+		&completedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	u.CreatedAt = parseTime(createdAtStr)
-	if completedAtStr != nil {
-		t := parseTime(*completedAtStr)
-		u.CompletedAt = &t
-	}
-
+	u.CreatedAt = createdAt
+	u.CompletedAt = completedAt
 	return &u, nil
 }
 
-func (r *SQLiteAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error {
+func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error {
 	if len(alarms) == 0 {
 		return nil
 	}
 
 	query := `
 		INSERT INTO telemetry_alarms (
-			upload_id, tag, station_code, platform, door_number,
+			id, upload_id, tag, station_code, platform, door_number,
 			alarm_type, duration_seconds, event_timestamp,
 			normalization_timestamp, source
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -159,7 +143,11 @@ func (r *SQLiteAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms []
 	defer stmt.Close()
 
 	for _, a := range alarms {
+		if a.ID == "" {
+			a.ID = uuid.New().String()
+		}
 		_, err := stmt.ExecContext(ctx,
+			a.ID,
 			a.UploadID,
 			a.Tag,
 			a.StationCode,

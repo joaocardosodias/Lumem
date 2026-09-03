@@ -5,24 +5,30 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
-var _ domain.InspectionRepository = (*SQLiteInspectionRepository)(nil)
+var _ domain.InspectionRepository = (*PostgresInspectionRepository)(nil)
 
-type SQLiteInspectionRepository struct {
+type PostgresInspectionRepository struct {
 	db DBExecutor
 }
 
-func NewSQLiteInspectionRepository(db DBExecutor) *SQLiteInspectionRepository {
-	return &SQLiteInspectionRepository{db: db}
+func NewPostgresInspectionRepository(db DBExecutor) *PostgresInspectionRepository {
+	return &PostgresInspectionRepository{db: db}
 }
 
-func (r *SQLiteInspectionRepository) Create(ctx context.Context, ins *domain.Inspection) error {
+func (r *PostgresInspectionRepository) Create(ctx context.Context, ins *domain.Inspection) error {
+	if ins.ID == "" {
+		ins.ID = uuid.New().String()
+	}
+
 	query := `
-		INSERT INTO inspections (station_code, platform, door_number, scheduled_for, priority, status, notes)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO inspections (id, station_code, platform, door_number, scheduled_for, priority, status, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	res, err := r.db.ExecContext(ctx, query,
+	_, err := r.db.ExecContext(ctx, query,
+		ins.ID,
 		ins.StationCode,
 		ins.Platform,
 		ins.DoorNumber,
@@ -31,44 +37,31 @@ func (r *SQLiteInspectionRepository) Create(ctx context.Context, ins *domain.Ins
 		ins.Status,
 		ins.Notes,
 	)
-	if err != nil {
-		return err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	ins.ID = id
-	return nil
-}
-
-func (r *SQLiteInspectionRepository) UpdateStatus(ctx context.Context, id int64, status, notes string, completedAt *time.Time) error {
-	var compStr *string
-	if completedAt != nil {
-		s := completedAt.Format("2006-01-02 15:04:05")
-		compStr = &s
-	}
-
-	query := `
-		UPDATE inspections
-		SET status = ?, notes = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?
-	`
-	_, err := r.db.ExecContext(ctx, query, status, notes, compStr, id)
 	return err
 }
 
-func (r *SQLiteInspectionRepository) GetByID(ctx context.Context, id int64) (*domain.Inspection, error) {
+func (r *PostgresInspectionRepository) UpdateStatus(ctx context.Context, id string, status, notes string, completedAt *time.Time) error {
+	query := `
+		UPDATE inspections
+		SET status = $1, notes = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $4
+	`
+	_, err := r.db.ExecContext(ctx, query, status, notes, completedAt, id)
+	return err
+}
+
+func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
 	query := `
 		SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
 		FROM inspections
-		WHERE id = ?
+		WHERE id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var ins domain.Inspection
-	var schedStr, notesStr, compStr, createStr, updateStr *string
+	var schedStr, notesStr *string
+	var completedAt *time.Time
+	var createdAt, updatedAt time.Time
 
 	err := row.Scan(
 		&ins.ID,
@@ -79,9 +72,9 @@ func (r *SQLiteInspectionRepository) GetByID(ctx context.Context, id int64) (*do
 		&ins.Priority,
 		&ins.Status,
 		&notesStr,
-		&compStr,
-		&createStr,
-		&updateStr,
+		&completedAt,
+		&createdAt,
+		&updatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -93,21 +86,14 @@ func (r *SQLiteInspectionRepository) GetByID(ctx context.Context, id int64) (*do
 	if notesStr != nil {
 		ins.Notes = *notesStr
 	}
-	if compStr != nil {
-		t := parseTime(*compStr)
-		ins.CompletedAt = &t
-	}
-	if createStr != nil {
-		ins.CreatedAt = parseTime(*createStr)
-	}
-	if updateStr != nil {
-		ins.UpdatedAt = parseTime(*updateStr)
-	}
+	ins.CompletedAt = completedAt
+	ins.CreatedAt = createdAt
+	ins.UpdatedAt = updatedAt
 
 	return &ins, nil
 }
 
-func (r *SQLiteInspectionRepository) List(ctx context.Context, limit, offset int, statusFilter string) ([]*domain.Inspection, error) {
+func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset int, statusFilter string) ([]*domain.Inspection, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -115,19 +101,25 @@ func (r *SQLiteInspectionRepository) List(ctx context.Context, limit, offset int
 		offset = 0
 	}
 
-	query := `
-		SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
-		FROM inspections
-	`
+	var query string
 	var args []any
 
 	if statusFilter != "" {
-		query += ` WHERE status = ?`
-		args = append(args, statusFilter)
+		query = `
+			SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			FROM inspections
+			WHERE status = $1
+			ORDER BY created_at DESC LIMIT $2 OFFSET $3
+		`
+		args = []any{statusFilter, limit, offset}
+	} else {
+		query = `
+			SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			FROM inspections
+			ORDER BY created_at DESC LIMIT $1 OFFSET $2
+		`
+		args = []any{limit, offset}
 	}
-
-	query += ` ORDER BY id DESC LIMIT ? OFFSET ?`
-	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -138,7 +130,9 @@ func (r *SQLiteInspectionRepository) List(ctx context.Context, limit, offset int
 	var list []*domain.Inspection
 	for rows.Next() {
 		var ins domain.Inspection
-		var schedStr, notesStr, compStr, createStr, updateStr *string
+		var schedStr, notesStr *string
+		var completedAt *time.Time
+		var createdAt, updatedAt time.Time
 
 		err := rows.Scan(
 			&ins.ID,
@@ -149,9 +143,9 @@ func (r *SQLiteInspectionRepository) List(ctx context.Context, limit, offset int
 			&ins.Priority,
 			&ins.Status,
 			&notesStr,
-			&compStr,
-			&createStr,
-			&updateStr,
+			&completedAt,
+			&createdAt,
+			&updatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -163,16 +157,9 @@ func (r *SQLiteInspectionRepository) List(ctx context.Context, limit, offset int
 		if notesStr != nil {
 			ins.Notes = *notesStr
 		}
-		if compStr != nil {
-			t := parseTime(*compStr)
-			ins.CompletedAt = &t
-		}
-		if createStr != nil {
-			ins.CreatedAt = parseTime(*createStr)
-		}
-		if updateStr != nil {
-			ins.UpdatedAt = parseTime(*updateStr)
-		}
+		ins.CompletedAt = completedAt
+		ins.CreatedAt = createdAt
+		ins.UpdatedAt = updatedAt
 
 		list = append(list, &ins)
 	}

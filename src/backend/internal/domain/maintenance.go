@@ -6,8 +6,8 @@ import (
 )
 
 type MaintenanceEvent struct {
-	ID                   int64     `json:"id"`
-	UploadID             int64     `json:"upload_id,omitempty"`
+	ID                   string    `json:"id"`
+	UploadID             string    `json:"upload_id,omitempty"`
 	SAPOrderNumber       string    `json:"sap_order_number,omitempty"`
 	OrderType            string    `json:"order_type"`
 	StationCode          string    `json:"station_code"`
