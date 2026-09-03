@@ -16,7 +16,9 @@ A análise considera dois cenários distintos, ambos projetados para um período
 
 O objetivo é estimar, de forma progressiva e justificada, todos os custos diretamente relacionados ao projeto e, posteriormente, os benefícios financeiros que a solução poderá gerar para a Motiva.
 
-A documentação será atualizada à medida que novos custos forem identificados e precificados, já que temos que perguntar para a Motiva algumas informações.
+Como esta é uma análise estimativa, todos os valores deverão ser acompanhados das premissas utilizadas para sua construção.
+
+A documentação será atualizada à medida que novos custos forem identificados e precificados.
 
 ---
 
@@ -59,30 +61,31 @@ Também não serão considerados custos de aquisição de hardware específico p
 A arquitetura prevista para a POC contempla:
 
 - modelo de Machine Learning já treinado;
-- disponibilização do modelo em ambiente de nuvem;
-- backend ou API responsável por executar a inferência;
-- frontend hospedado em uma plataforma como Vercel;
+- empacotamento do modelo e de suas dependências em um container Docker;
+- utilização de ambiente Red Hat para realizar o deploy e executar o container;
 - banco de dados utilizando Supabase;
 - utilização de dados operacionais da Motiva;
 - armazenamento das previsões geradas;
 - possibilidade de validação dos resultados ao longo do período.
+
+O frontend não será considerado no deploy da POC. Portanto, nesta etapa não haverá custo associado à hospedagem de interface web ou à Vercel.
 
 De forma simplificada:
 
 ```text
 Dados da Motiva
       ↓
-Banco de dados
    Supabase
       ↓
-Serviço/API
+ Ambiente Red Hat
       ↓
-Modelo de ML
+Container Docker
       ↓
-Predição
+Modelo de Machine Learning
       ↓
-Frontend
-   Vercel
+Predições
+      ↓
+   Supabase
 ```
 
 ---
@@ -111,15 +114,17 @@ Esses itens não representam desembolsos incrementais para a elaboração do pro
 Até o momento, foram identificadas as seguintes categorias com potencial de gerar custo durante os 12 meses:
 
 1. atualização e disponibilização de novos dados operacionais;
-2. hospedagem do modelo em nuvem;
-3. hospedagem do frontend;
-4. banco de dados;
-5. armazenamento de arquivos e modelos;
-6. logs e monitoramento da aplicação;
-7. transferência de dados;
-8. eventual armazenamento de imagem Docker ou artefatos de deploy;
+2. ambiente Red Hat utilizado para realizar o deploy do modelo;
+3. recursos computacionais necessários para executar o container;
+4. banco de dados Supabase;
+5. armazenamento de arquivos, modelos e previsões;
+6. armazenamento e execução do container Docker;
+7. logs e monitoramento da aplicação;
+8. transferência de dados;
 9. validação das previsões junto à Motiva;
-10. eventuais serviços pagos que ultrapassem os planos gratuitos utilizados na POC.
+10. eventuais serviços pagos que ultrapassem os planos gratuitos ou recursos disponíveis durante a POC.
+
+O frontend não será deployado durante a POC e, portanto, não será considerado como uma categoria de custo neste cenário.
 
 As principais bibliotecas de desenvolvimento e Machine Learning utilizadas no projeto são open source, portanto seu custo de licenciamento é considerado igual a zero.
 
@@ -134,6 +139,107 @@ Exemplos:
 - LightGBM;
 - Matplotlib;
 - Docker.
+
+O Docker será utilizado para empacotar o modelo, o código de inferência e suas dependências em um ambiente padronizado. Dessa forma, a aplicação poderá executar de maneira consistente em diferentes computadores e no ambiente de deploy.
+
+O uso do Docker em si não implica custo de licença para esta POC. Entretanto, recursos utilizados para armazenar, executar ou manter o container poderão gerar custo e serão analisados separadamente.
+
+---
+
+# 3.4. Arquitetura de deploy da POC
+
+A definição da arquitetura de deploy foi refinada durante a construção da análise financeira.
+
+Inicialmente foram consideradas alternativas em nuvem, como serviços serverless. Entretanto, para a POC foi definido que o modelo será empacotado utilizando **Docker** e executado em um ambiente **Red Hat**.
+
+Essa decisão tem dois objetivos principais:
+
+1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes ambientes;
+2. manter o deploy mais organizado e controlado durante a POC.
+
+O container deverá incluir, conforme necessário:
+
+```text
+Código de inferência
++
+Modelo treinado
++
+Python
++
+Bibliotecas de Machine Learning
++
+Dependências da aplicação
+```
+
+O fluxo esperado é:
+
+```text
+Dados operacionais
+       ↓
+    Supabase
+       ↓
+ Ambiente Red Hat
+       ↓
+Container Docker
+       ↓
+Modelo treinado
+       ↓
+   Predições
+       ↓
+    Supabase
+```
+
+## 3.4.1. Docker
+
+O Docker será utilizado como tecnologia de containerização.
+
+Seu papel não é hospedar o modelo, mas criar um ambiente padronizado contendo tudo o que é necessário para a execução.
+
+Para a POC:
+
+```text
+Custo de licença do Docker = R$ 0
+```
+
+Isso ocorre porque a tecnologia utilizada para criação e execução do container não exige, no escopo atual, uma licença adicional específica do projeto.
+
+Entretanto, o container utiliza recursos computacionais do ambiente em que é executado. Esses recursos poderão gerar custo e deverão ser considerados na precificação do deploy.
+
+## 3.4.2. Red Hat
+
+O ambiente Red Hat será utilizado para realizar o deploy e executar o container do modelo durante a POC.
+
+Como o ambiente será utilizado pelo próprio grupo, não será considerado, nesta etapa, que a Motiva disponibilizará infraestrutura própria.
+
+Também é possível que parte dos custos seja coberta pela faculdade. Entretanto, para fins da análise financeira, o custo será mapeado independentemente de quem efetivamente realizar o pagamento.
+
+Os componentes que ainda deverão ser precificados são:
+
+- eventual licença ou assinatura necessária para o ambiente Red Hat utilizado;
+- CPU disponibilizada ao container;
+- memória RAM;
+- armazenamento;
+- tempo de execução;
+- armazenamento de logs;
+- transferência de dados, caso aplicável;
+- eventual armazenamento da imagem do container.
+
+Esses valores ainda não foram definidos e serão pesquisados antes da consolidação do custo anual da POC.
+
+## 3.4.3. Itens removidos do escopo de deploy da POC
+
+Com a arquitetura atual, os seguintes itens não serão considerados:
+
+- AWS Lambda;
+- AWS API Gateway;
+- Amazon ECR;
+- AWS CloudWatch;
+- hospedagem do frontend;
+- Vercel.
+
+Esses componentes não fazem parte da arquitetura atualmente definida para a POC.
+
+O monitoramento e os logs serão avaliados de acordo com os recursos disponíveis no ambiente Red Hat escolhido.
 
 ---
 
@@ -404,3 +510,21 @@ O valor monetário final ainda depende da definição do custo/hora do profissio
 Os demais custos da POC ainda serão precificados individualmente.
 
 ---
+
+# 9. Próximas etapas
+
+Após finalizar o custo de disponibilização dos dados, a análise financeira da POC seguirá para:
+
+1. precificação do ambiente Red Hat utilizado no deploy;
+2. estimativa dos recursos computacionais necessários para executar o container Docker;
+3. custo do banco de dados Supabase;
+4. custos de armazenamento;
+5. custos de logs e monitoramento;
+6. custos de transferência de dados, caso aplicáveis;
+7. eventual custo de validação da solução;
+8. consolidação do custo-base anual da POC;
+9. aplicação dos cenários de contingência de 5% e 10%.
+
+O frontend não será deployado durante a POC e, portanto, não haverá custo de Vercel neste cenário.
+
+Após a conclusão da POC, será realizada a mesma lógica para o cenário de **projeto implementado durante 12 meses**, incluindo os custos adicionais necessários para transformar o protótipo em uma solução operacional.
