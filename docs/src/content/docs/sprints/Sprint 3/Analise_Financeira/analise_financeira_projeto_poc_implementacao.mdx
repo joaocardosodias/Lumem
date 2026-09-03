@@ -148,14 +148,14 @@ O uso do Docker em si não implica custo de licença para esta POC. Entretanto, 
 
 # 3.4. Arquitetura de deploy da POC
 
-A definição da arquitetura de deploy foi refinada durante a construção da análise financeira.
+A arquitetura de deploy da POC foi refinada para manter o menor custo possível sem perder a padronização do ambiente de execução.
 
-Inicialmente foram consideradas alternativas em nuvem, como serviços serverless. Entretanto, para a POC foi definido que o modelo será empacotado utilizando **Docker** e executado em um ambiente **Red Hat**.
+O modelo será empacotado utilizando **Docker** e executado em ambiente **Red Hat/OpenShift**.
 
-Essa decisão tem dois objetivos principais:
+Essa escolha tem dois objetivos principais:
 
-1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes ambientes;
-2. manter o deploy mais organizado e controlado durante a POC.
+1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes computadores;
+2. manter o ambiente de execução organizado e reproduzível durante a POC.
 
 O container deverá incluir, conforme necessário:
 
@@ -171,14 +171,14 @@ Bibliotecas de Machine Learning
 Dependências da aplicação
 ```
 
-O fluxo esperado é:
+O fluxo previsto para a POC é:
 
 ```text
 Dados operacionais
        ↓
     Supabase
        ↓
- Ambiente Red Hat
+ Red Hat / OpenShift
        ↓
 Container Docker
        ↓
@@ -189,11 +189,15 @@ Modelo treinado
     Supabase
 ```
 
+O frontend não será deployado durante a POC.
+
+Por esse motivo, não serão considerados custos de Vercel ou de disponibilização pública de uma interface web neste cenário.
+
 ## 3.4.1. Docker
 
-O Docker será utilizado como tecnologia de containerização.
+O Docker será utilizado para empacotar o modelo, o código de inferência e todas as dependências necessárias.
 
-Seu papel não é hospedar o modelo, mas criar um ambiente padronizado contendo tudo o que é necessário para a execução.
+Seu papel é garantir que o modelo funcione de forma consistente independentemente do computador ou ambiente utilizado.
 
 Para a POC:
 
@@ -201,30 +205,108 @@ Para a POC:
 Custo de licença do Docker = R$ 0
 ```
 
-Isso ocorre porque a tecnologia utilizada para criação e execução do container não exige, no escopo atual, uma licença adicional específica do projeto.
+A tecnologia de containerização não representa um custo direto para o projeto no escopo atual.
 
-Entretanto, o container utiliza recursos computacionais do ambiente em que é executado. Esses recursos poderão gerar custo e deverão ser considerados na precificação do deploy.
+Os recursos computacionais utilizados pelo container são analisados separadamente.
 
-## 3.4.2. Red Hat
+---
 
-O ambiente Red Hat será utilizado para realizar o deploy e executar o container do modelo durante a POC.
+## 3.4.2. Estratégia de menor custo com Red Hat/OpenShift
 
-Como o ambiente será utilizado pelo próprio grupo, não será considerado, nesta etapa, que a Motiva disponibilizará infraestrutura própria.
+Para reduzir o custo da POC, foi adotada uma estratégia dividida em duas etapas.
 
-Também é possível que parte dos custos seja coberta pela faculdade. Entretanto, para fins da análise financeira, o custo será mapeado independentemente de quem efetivamente realizar o pagamento.
+### Primeiro mês
 
-Os componentes que ainda deverão ser precificados são:
+Durante os primeiros 30 dias, será considerado o uso do **Red Hat Developer Sandbox**, ambiente disponibilizado gratuitamente pela Red Hat para desenvolvimento e testes.
 
-- eventual licença ou assinatura necessária para o ambiente Red Hat utilizado;
-- CPU disponibilizada ao container;
-- memória RAM;
-- armazenamento;
-- tempo de execução;
-- armazenamento de logs;
-- transferência de dados, caso aplicável;
-- eventual armazenamento da imagem do container.
+Premissa:
 
-Esses valores ainda não foram definidos e serão pesquisados antes da consolidação do custo anual da POC.
+```text
+Período: 30 dias
+Custo direto estimado: R$ 0
+```
+
+O Sandbox será utilizado como ambiente inicial para testar o container e validar o deploy.
+
+### Meses 2 a 12
+
+Após os primeiros 30 dias, será considerado o uso do **Red Hat OpenShift Local** em um computador já disponível para o projeto.
+
+O OpenShift Local permite executar um ambiente OpenShift localmente para desenvolvimento e testes.
+
+Como não está prevista a compra de uma nova máquina exclusivamente para a POC, será adotada a seguinte premissa:
+
+```text
+Aquisição adicional de hardware = R$ 0
+```
+
+Assim, para os 11 meses restantes:
+
+```text
+OpenShift Local
++
+hardware já disponível
+=
+custo incremental estimado de infraestrutura = R$ 0
+```
+
+Essa premissa considera que o computador disponível possui recursos suficientes para executar o ambiente.
+
+Caso durante a implementação seja identificado que a máquina existente não suporta adequadamente o OpenShift Local, o custo de infraestrutura deverá ser revisto.
+
+---
+
+## 3.4.3. Custo anual estimado do ambiente Red Hat
+
+Com a estratégia adotada:
+
+| Período | Ambiente | Custo direto estimado |
+|---|---|---:|
+| Mês 1 | Red Hat Developer Sandbox | R$ 0 |
+| Meses 2 a 12 | Red Hat OpenShift Local | R$ 0 incremental |
+| Docker | Containerização | R$ 0 |
+| **Total estimado em 12 meses** |  | **R$ 0** |
+
+O valor acima representa **custo incremental direto**.
+
+Isso não significa que a tecnologia ou o hardware não tenham valor econômico, mas sim que não está prevista uma contratação ou aquisição adicional especificamente para esta POC.
+
+---
+
+## 3.4.4. Recursos mínimos e capacidade do computador
+
+Mesmo sem custo incremental, o ambiente local consome recursos computacionais.
+
+Por isso, antes do deploy definitivo, deverá ser verificado se o computador utilizado possui capacidade suficiente para executar:
+
+- sistema operacional;
+- OpenShift Local;
+- container Docker;
+- modelo de Machine Learning;
+- conexão com o banco de dados;
+- processos auxiliares de execução.
+
+Como referência técnica, ambientes locais de OpenShift podem exigir quantidade relevante de memória RAM, CPU e armazenamento.
+
+Para a análise financeira atual, esses recursos não serão precificados separadamente porque serão utilizados equipamentos já disponíveis para o projeto.
+
+A capacidade da máquina, porém, deverá ser validada antes da implantação da POC.
+
+---
+
+## 3.4.7. Premissa financeira adotada
+
+A premissa financeira para o deploy da POC fica registrada da seguinte forma:
+
+> Nos primeiros 30 dias será utilizado o Red Hat Developer Sandbox, sem custo direto. Nos 11 meses restantes será considerado o uso do Red Hat OpenShift Local executado em hardware já disponível para o projeto. Dessa forma, não foi considerado custo incremental de contratação de infraestrutura Red Hat durante os 12 meses da POC.
+
+Essa premissa deverá ser reavaliada caso:
+
+- seja necessário contratar infraestrutura externa;
+- o computador disponível não possua capacidade suficiente;
+- o projeto exija disponibilidade contínua em nuvem;
+- seja necessário utilizar uma assinatura paga;
+- seja adotado algum serviço externo de armazenamento ou monitoramento.
 
 ---
 
