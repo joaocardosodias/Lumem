@@ -1,11 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -25,27 +23,20 @@ func NewUploadHandler(ingestAlarmsUC *usecase.IngestAlarmsUseCase, ingestMaintUC
 func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "arquivo obrigatorio no campo 'file'"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_MISSING_FILE", "Arquivo Obrigatorio", "O envio do arquivo no campo multipart 'file' e obrigatorio.")
 		return
 	}
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao abrir arquivo enviado"})
+		RespondProblem(c, http.StatusInternalServerError, "ERR_FILE_OPEN", "Falha ao Abrir Arquivo", err.Error())
 		return
 	}
 	defer file.Close()
 
 	uploadID, err := h.ingestAlarmsUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file)
 	if err != nil {
-		if errors.Is(err, domain.ErrDuplicateUpload) {
-			c.JSON(http.StatusConflict, gin.H{
-				"upload_id": uploadID,
-				"error":     "arquivo duplicado detectado (idempotencia sha-256). upload anterior reutilizado.",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -59,7 +50,7 @@ func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "arquivo obrigatorio no campo 'file'"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_MISSING_FILE", "Arquivo Obrigatorio", "O envio do arquivo no campo multipart 'file' e obrigatorio.")
 		return
 	}
 
@@ -67,22 +58,14 @@ func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao abrir arquivo enviado"})
+		RespondProblem(c, http.StatusInternalServerError, "ERR_FILE_OPEN", "Falha ao Abrir Arquivo", err.Error())
 		return
 	}
 	defer file.Close()
 
 	uploadID, err := h.ingestMaintUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file, orderType)
 	if err != nil {
-		if errors.Is(err, domain.ErrDuplicateUpload) {
-			c.JSON(http.StatusConflict, gin.H{
-				"upload_id":  uploadID,
-				"order_type": orderType,
-				"error":      "arquivo duplicado detectado (idempotencia sha-256). upload anterior reutilizado.",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -98,13 +81,13 @@ func (h *UploadHandler) GetUploadStatus(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id invalido"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
 		return
 	}
 
 	upload, err := h.ingestAlarmsUC.GetStatus(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "upload nao encontrado"})
+		RespondDomainError(c, err)
 		return
 	}
 

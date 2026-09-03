@@ -1,10 +1,8 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -19,22 +17,14 @@ func NewAuthHandler(loginUC *usecase.LoginUseCase) *AuthHandler {
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var input usecase.LoginInputDTO
-
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "formato de requisição inválido"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Requisicao Invalida", "Formato de dados JSON incorreto.")
 		return
 	}
 
 	output, err := h.loginUC.Execute(c.Request.Context(), input)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrInvalidCredentials):
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		case errors.Is(err, domain.ErrUserInactive):
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno do servidor"})
-		}
+		RespondDomainError(c, err)
 		return
 	}
 

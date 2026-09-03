@@ -87,9 +87,7 @@ func RateLimiterMiddleware(limiter *RateLimiter) gin.HandlerFunc {
 		ip := c.ClientIP()
 		if !limiter.allow(ip) {
 			c.Header("Retry-After", "1")
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "limite de requisicoes excedido (rate limit). tente novamente em breve.",
-			})
+			RespondProblem(c, http.StatusTooManyRequests, "ERR_RATE_LIMIT_EXCEEDED", "Limite de Requisicoes Excedido", "Voce ultrapassou a taxa permitida de requisicoes. Tente novamente em breve.")
 			return
 		}
 		c.Next()

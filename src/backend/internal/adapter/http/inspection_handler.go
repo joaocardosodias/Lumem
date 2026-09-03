@@ -19,13 +19,13 @@ func NewInspectionHandler(uc *usecase.InspectionUseCase) *InspectionHandler {
 func (h *InspectionHandler) Create(c *gin.Context) {
 	var input usecase.CreateInspectionInputDTO
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dados invalidos na requisicao"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Dados Invalidos", "Corpo da requisicao JSON incorreto.")
 		return
 	}
 
 	dto, err := h.uc.Create(c.Request.Context(), input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 		return
 	}
 
@@ -36,19 +36,19 @@ func (h *InspectionHandler) UpdateStatus(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id invalido"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
 		return
 	}
 
 	var input usecase.UpdateInspectionStatusInputDTO
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dados invalidos na requisicao"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Dados Invalidos", "Corpo da requisicao JSON incorreto.")
 		return
 	}
 
 	dto, err := h.uc.UpdateStatus(c.Request.Context(), id, input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 		return
 	}
 
@@ -65,7 +65,7 @@ func (h *InspectionHandler) List(c *gin.Context) {
 
 	dtos, err := h.uc.List(c.Request.Context(), limit, offset, status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao listar inspecoes"})
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -83,13 +83,13 @@ func (h *InspectionHandler) GetByID(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id invalido"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID deve ser um numero inteiro.")
 		return
 	}
 
 	dto, err := h.uc.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "inspecao nao encontrada"})
+		RespondProblem(c, http.StatusNotFound, "ERR_INSPECTION_NOT_FOUND", "Inspecao Nao Encontrada", "A inspecao solicitada nao foi localizada.")
 		return
 	}
 

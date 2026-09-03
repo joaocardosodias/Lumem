@@ -19,13 +19,13 @@ func NewMaintenanceHandler(createUC *usecase.CreateMaintenanceUseCase) *Maintena
 func (h *MaintenanceHandler) Create(c *gin.Context) {
 	var input usecase.CreateMaintenanceInputDTO
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dados invalidos na requisicao"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Dados Invalidos", "Corpo da requisicao JSON incorreto.")
 		return
 	}
 
 	dto, err := h.createUC.Execute(c.Request.Context(), input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h *MaintenanceHandler) List(c *gin.Context) {
 
 	dtos, err := h.createUC.List(c.Request.Context(), limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao listar manutencoes"})
+		RespondDomainError(c, err)
 		return
 	}
 

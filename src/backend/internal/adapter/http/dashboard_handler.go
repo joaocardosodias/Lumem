@@ -19,7 +19,7 @@ func NewDashboardHandler(uc *usecase.DashboardUseCase) *DashboardHandler {
 func (h *DashboardHandler) GetSummary(c *gin.Context) {
 	summary, err := h.uc.GetSummary(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao carregar resumo do dashboard"})
+		RespondDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, summary)
@@ -29,13 +29,13 @@ func (h *DashboardHandler) GetDoorTimeline(c *gin.Context) {
 	idParam := c.Param("id")
 	doorID, err := strconv.Atoi(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id de porta invalido"})
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID da porta deve ser um numero inteiro.")
 		return
 	}
 
 	timeline, err := h.uc.GetDoorTimeline(c.Request.Context(), doorID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "porta nao encontrada"})
+		RespondProblem(c, http.StatusNotFound, "ERR_DOOR_NOT_FOUND", "Porta Nao Encontrada", "A porta solicitada nao foi localizada.")
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *DashboardHandler) GetStationDoorsStatus(c *gin.Context) {
 	code := c.Param("code")
 	items, err := h.uc.GetStationDoorsStatus(c.Request.Context(), code)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 		return
 	}
 
@@ -65,7 +65,7 @@ func (h *DashboardHandler) TriggerPredictions(c *gin.Context) {
 
 	run, err := h.uc.TriggerPredictions(c.Request.Context(), input.HorizonDays)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *DashboardHandler) TriggerPredictions(c *gin.Context) {
 func (h *DashboardHandler) GetLatestPredictions(c *gin.Context) {
 	run, err := h.uc.GetLatestPredictions(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "nenhuma previsao encontrada"})
+		RespondProblem(c, http.StatusNotFound, "ERR_NO_PREDICTIONS", "Sem Previsoes", "Nenhuma rodada de previsao calculada ate o momento.")
 		return
 	}
 	c.JSON(http.StatusOK, run)
