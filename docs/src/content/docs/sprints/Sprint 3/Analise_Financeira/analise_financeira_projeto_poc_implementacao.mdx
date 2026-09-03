@@ -1,0 +1,406 @@
+---
+title: "Análise Financeira do Projeto"
+description: "Estrutura inicial da análise financeira da POC e da solução implementada, ambas projetadas para um período de 12 meses."
+---
+
+# Análise Financeira do Projeto
+
+## 1. Introdução
+
+Esta documentação apresenta a estrutura da análise financeira do projeto de manutenção preditiva desenvolvido em parceria com a Motiva.
+
+A análise considera dois cenários distintos, ambos projetados para um período mínimo de **12 meses**:
+
+1. **Prova de Conceito (POC)** — representa o protótipo desenvolvido pelos alunos do Inteli e mantido em funcionamento durante 12 meses.
+2. **Projeto implementado** — representa a evolução da POC para uma solução efetivamente incorporada ao ambiente operacional da Motiva e mantida em funcionamento durante 12 meses.
+
+O objetivo é estimar, de forma progressiva e justificada, todos os custos diretamente relacionados ao projeto e, posteriormente, os benefícios financeiros que a solução poderá gerar para a Motiva.
+
+A documentação será atualizada à medida que novos custos forem identificados e precificados, já que temos que perguntar para a Motiva algumas informações.
+
+---
+
+# 2. Critérios gerais da análise
+
+A análise financeira seguirá os seguintes critérios:
+
+- horizonte de **12 meses** para a POC;
+- horizonte de **12 meses** para o projeto implementado;
+- separação entre custos da POC e custos da solução implementada;
+- utilização, sempre que possível, de preços públicos ou informações fornecidas pela Motiva;
+- explicitação de todas as premissas utilizadas;
+- custos que não geram desembolso para a POC serão registrados como custo igual a zero ou descritos como fora do escopo;
+- os custos serão relacionados diretamente à arquitetura e ao funcionamento da solução;
+- quando não houver um valor exato disponível, serão utilizadas estimativas justificadas;
+- ao final, serão considerados diferentes cenários de contingência.
+
+Para os custos gerais do projeto serão considerados três cenários:
+
+| Cenário | Critério |
+|---|---:|
+| Base | custo estimado sem margem adicional |
+| Conservador | custo base acrescido de 5% |
+| Pior caso | custo base acrescido de 10% |
+
+As margens de 5% e 10% serão aplicadas apenas quando o custo-base de cada cenário estiver consolidado.
+
+---
+
+# 3. Cenário 1 — Prova de Conceito por 12 meses
+
+## 3.1. Definição da POC
+
+A Prova de Conceito corresponde à solução desenvolvida pelos alunos do Inteli para demonstrar a viabilidade técnica da previsão de falhas nas Portas de Plataforma (PSD).
+
+O desenvolvimento da POC é realizado pelos próprios alunos. Por esse motivo, **não será atribuído custo de mão de obra ao desenvolvimento realizado pelo grupo**.
+
+Também não serão considerados custos de aquisição de hardware específico para o protótipo, uma vez que o projeto utiliza a infraestrutura já disponível para os integrantes.
+
+A arquitetura prevista para a POC contempla:
+
+- modelo de Machine Learning já treinado;
+- disponibilização do modelo em ambiente de nuvem;
+- backend ou API responsável por executar a inferência;
+- frontend hospedado em uma plataforma como Vercel;
+- banco de dados utilizando Supabase;
+- utilização de dados operacionais da Motiva;
+- armazenamento das previsões geradas;
+- possibilidade de validação dos resultados ao longo do período.
+
+De forma simplificada:
+
+```text
+Dados da Motiva
+      ↓
+Banco de dados
+   Supabase
+      ↓
+Serviço/API
+      ↓
+Modelo de ML
+      ↓
+Predição
+      ↓
+Frontend
+   Vercel
+```
+
+---
+
+## 3.2. Itens que não representam custo de desenvolvimento da POC
+
+Nesta etapa, não serão considerados como custos:
+
+- remuneração dos alunos;
+- desenvolvimento inicial dos modelos;
+- engenharia de features realizada pelos alunos;
+- documentação produzida pelo grupo;
+- reuniões internas do grupo;
+- gestão acadêmica do projeto;
+- energia elétrica utilizada pelos alunos;
+- conexão à internet dos alunos;
+- aquisição de computadores;
+- contratação de desenvolvedores externos para construir a POC.
+
+Esses itens não representam desembolsos incrementais para a elaboração do protótipo no contexto atual.
+
+---
+
+## 3.3. Categorias de custo que serão analisadas na POC
+
+Até o momento, foram identificadas as seguintes categorias com potencial de gerar custo durante os 12 meses:
+
+1. atualização e disponibilização de novos dados operacionais;
+2. hospedagem do modelo em nuvem;
+3. hospedagem do frontend;
+4. banco de dados;
+5. armazenamento de arquivos e modelos;
+6. logs e monitoramento da aplicação;
+7. transferência de dados;
+8. eventual armazenamento de imagem Docker ou artefatos de deploy;
+9. validação das previsões junto à Motiva;
+10. eventuais serviços pagos que ultrapassem os planos gratuitos utilizados na POC.
+
+As principais bibliotecas de desenvolvimento e Machine Learning utilizadas no projeto são open source, portanto seu custo de licenciamento é considerado igual a zero.
+
+Exemplos:
+
+- Python;
+- Pandas;
+- NumPy;
+- Scikit-learn;
+- CatBoost;
+- XGBoost;
+- LightGBM;
+- Matplotlib;
+- Docker.
+
+---
+
+# 4. Cenário 2 — Projeto implementado por 12 meses
+
+## 4.1. Definição do projeto implementado
+
+O segundo cenário representa a evolução da POC para uma solução integrada à operação da Motiva.
+
+Nesse cenário, a aplicação deixa de ser apenas um protótipo demonstrativo e passa a necessitar de maior confiabilidade, disponibilidade, integração e manutenção.
+
+A solução implementada deverá ser analisada separadamente porque poderá exigir recursos que não são necessários durante a POC.
+
+Entre os custos que deverão ser avaliados futuramente estão:
+
+- aprimoramento da aplicação desenvolvida pelos alunos;
+- eventual contratação temporária de desenvolvedores;
+- integração automática com os sistemas da Motiva;
+- automação da entrada de novos dados;
+- infraestrutura de produção;
+- banco de dados em plano de produção;
+- monitoramento da aplicação;
+- monitoramento do modelo;
+- armazenamento e backup;
+- segurança e controle de acesso;
+- manutenção da solução;
+- suporte técnico;
+- atualização ou retreinamento futuro do modelo;
+- homologação e implantação.
+
+Foi considerada inicialmente a possibilidade de utilização de um ou dois desenvolvedores por um período curto, aproximadamente duas a três semanas, para aprimorar a POC antes de sua implementação definitiva.
+
+Esse custo **não será atribuído à POC**, mas poderá ser incluído posteriormente no cenário de projeto implementado.
+
+---
+
+# 5. Dados utilizados pelos modelos
+
+Os dois modelos considerados mais relevantes no projeto utilizam principalmente informações provenientes das seguintes fontes:
+
+- histórico de alarmes;
+- ZM01 — corretiva emergencial;
+- ZM02 — corretiva programada;
+- ZM03 — manutenção preventiva.
+
+Embora os modelos criem diversas features, a maior parte delas é derivada automaticamente dessas bases.
+
+Isso significa que a Motiva não precisa fornecer diretamente variáveis como:
+
+```text
+dias_desde_ultima_corretiva
+qtd_corretivas_emergenciais_30d
+duracao_maxima_alarme_7d
+intervalo_medio_zm01
+```
+
+Essas informações são calculadas pelo pipeline a partir dos dados brutos.
+
+O custo operacional relacionado aos dados, portanto, deve considerar principalmente a **disponibilização das fontes originais**, e não a quantidade total de features utilizadas pelo modelo.
+
+---
+
+# 6. Dados históricos já disponíveis
+
+Os dados utilizados para o treinamento inicial dos modelos já foram disponibilizados pela Motiva.
+
+Consequentemente, não existe necessidade de obter novas bases para finalizar o treinamento atual.
+
+Assim, para a construção inicial da POC:
+
+```text
+Custo adicional de aquisição dos dados históricos = R$ 0
+```
+
+Entretanto, novos dados passam a ser necessários caso a POC permaneça funcionando e gere previsões atualizadas ao longo dos 12 meses.
+
+Esses novos dados possuem três funções principais:
+
+1. alimentar o modelo com informações recentes para gerar novas previsões;
+2. permitir verificar posteriormente se as previsões estavam corretas;
+3. formar um novo histórico que poderá ser utilizado em futuros ciclos de retreinamento.
+
+Essas três funções utilizam o mesmo fluxo de atualização de dados e, portanto, não devem ser tratadas como três custos separados.
+
+---
+
+# 7. Primeiro custo mapeado — Atualização e disponibilização dos dados
+
+## 7.1. Definição do custo
+
+A Motiva já possui os dados em seus sistemas internos.
+
+Portanto, o custo não será tratado como "aquisição de dados", mas como:
+
+> **Custo de atualização e disponibilização dos dados operacionais.**
+
+Esse custo representa o tempo necessário para um profissional da Motiva acessar os sistemas, extrair as bases relevantes, realizar uma conferência básica e disponibilizar os arquivos para a POC.
+
+As quatro fontes consideradas inicialmente são:
+
+- histórico de alarmes;
+- ZM01;
+- ZM02;
+- ZM03.
+
+---
+
+## 7.2. Processo considerado
+
+O fluxo manual foi representado inicialmente da seguinte forma:
+
+```text
+Sistema de Alarmes
+        │
+ZM01 ───┤
+ZM02 ───┼──→ Profissional Motiva → Exportação → Disponibilização para a POC
+ZM03 ───┤
+        │
+```
+
+O custo financeiro desse processo será calculado a partir do tempo de trabalho do profissional responsável.
+
+---
+
+## 7.3. Fórmula de cálculo
+
+A fórmula utilizada será:
+
+```text
+Custo anual de atualização dos dados =
+tempo gasto por ciclo
+× quantidade de ciclos anuais
+× custo por hora do profissional
+```
+
+---
+
+## 7.4. Frequência inicial considerada
+
+Como os modelos trabalham com previsões de falha para períodos futuros curtos, é desejável que a aplicação tenha acesso a dados recentes.
+
+Para uma primeira estimativa da POC, será considerada uma atualização em cada dia útil.
+
+Premissa inicial:
+
+```text
+250 atualizações por ano
+```
+
+Esse valor representa aproximadamente a quantidade de dias úteis existentes em um período de 12 meses.
+
+A frequência poderá ser ajustada posteriormente caso a Motiva informe uma rotina diferente de atualização.
+
+---
+
+## 7.5. Estimativa inicial do tempo por atualização
+
+Como ainda não existe uma medição fornecida pela Motiva, foi adotada uma premissa inicial para representar o esforço manual.
+
+| Atividade | Tempo estimado |
+|---|---:|
+| Extração do histórico de alarmes | 15 minutos |
+| Extração da ZM01 | 10 minutos |
+| Extração da ZM02 | 5 minutos |
+| Extração da ZM03 | 5 minutos |
+| Conferência, exportação e disponibilização | 10 minutos |
+| **Total estimado por ciclo** | **45 minutos** |
+
+A premissa-base é, portanto:
+
+```text
+45 minutos por atualização
+```
+
+Convertendo para horas:
+
+```text
+45 minutos = 0,75 hora
+```
+
+---
+
+## 7.6. Horas anuais estimadas
+
+Considerando:
+
+```text
+0,75 hora por atualização
+×
+250 atualizações por ano
+```
+
+temos:
+
+```text
+187,5 horas por ano
+```
+
+Portanto, na premissa-base, a manutenção manual do fluxo de atualização de dados demandaria aproximadamente:
+
+> **187,5 horas anuais de um profissional da Motiva.**
+
+---
+
+## 7.7. Cenários de esforço operacional
+
+Como o tempo real ainda precisa ser validado com a Motiva, serão considerados inicialmente três níveis de esforço:
+
+| Cenário de extração | Tempo por ciclo | Ciclos por ano | Horas anuais |
+|---|---:|---:|---:|
+| Processo rápido | 30 min | 250 | 125 h |
+| **Premissa-base** | **45 min** | **250** | **187,5 h** |
+| Processo mais trabalhoso | 60 min | 250 | 250 h |
+
+Esses cenários permitem avaliar a sensibilidade do custo caso o processo de extração seja mais rápido ou mais demorado do que a premissa inicial.
+
+---
+
+## 7.8. Transformação das horas em custo financeiro
+
+Para finalizar essa linha de custo, ainda será necessário definir o custo por hora do profissional responsável pela extração.
+
+A fórmula será:
+
+```text
+Custo anual =
+horas anuais
+×
+custo por hora do profissional Motiva
+```
+
+Na premissa-base:
+
+```text
+Custo anual =
+187,5
+×
+custo por hora
+```
+
+Exemplo apenas para demonstrar a sensibilidade do cálculo:
+
+| Custo por hora | Custo anual estimado |
+|---:|---:|
+| R$ 40/h | R$ 7.500 |
+| R$ 60/h | R$ 11.250 |
+| R$ 80/h | R$ 15.000 |
+| R$ 100/h | R$ 18.750 |
+
+Os valores acima **não representam ainda o custo adotado oficialmente no projeto**.
+
+Eles servem apenas para demonstrar como o custo anual varia em função do valor/hora escolhido.
+
+O próximo passo será identificar qual perfil profissional da Motiva normalmente realiza essas extrações e definir uma referência adequada de custo/hora.
+
+---
+
+# 8. Resultado parcial da análise da POC
+
+Até este ponto, a primeira linha financeira estruturada é:
+
+| Categoria | Item | Premissa-base | Quantidade anual | Custo |
+|---|---|---|---:|---:|
+| Dados | Atualização e disponibilização de Alarmes + ZM01 + ZM02 + ZM03 | 45 min por dia útil | 187,5 h | 187,5 × custo/h |
+
+O valor monetário final ainda depende da definição do custo/hora do profissional da Motiva.
+
+Os demais custos da POC ainda serão precificados individualmente.
+
+---
