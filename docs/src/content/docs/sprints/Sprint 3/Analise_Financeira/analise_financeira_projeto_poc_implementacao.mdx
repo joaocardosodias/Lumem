@@ -226,21 +226,6 @@ Os componentes que ainda deverão ser precificados são:
 
 Esses valores ainda não foram definidos e serão pesquisados antes da consolidação do custo anual da POC.
 
-## 3.4.3. Itens removidos do escopo de deploy da POC
-
-Com a arquitetura atual, os seguintes itens não serão considerados:
-
-- AWS Lambda;
-- AWS API Gateway;
-- Amazon ECR;
-- AWS CloudWatch;
-- hospedagem do frontend;
-- Vercel.
-
-Esses componentes não fazem parte da arquitetura atualmente definida para a POC.
-
-O monitoramento e os logs serão avaliados de acordo com os recursos disponíveis no ambiente Red Hat escolhido.
-
 ---
 
 # 4. Cenário 2 — Projeto implementado por 12 meses
@@ -510,21 +495,3 @@ O valor monetário final ainda depende da definição do custo/hora do profissio
 Os demais custos da POC ainda serão precificados individualmente.
 
 ---
-
-# 9. Próximas etapas
-
-Após finalizar o custo de disponibilização dos dados, a análise financeira da POC seguirá para:
-
-1. precificação do ambiente Red Hat utilizado no deploy;
-2. estimativa dos recursos computacionais necessários para executar o container Docker;
-3. custo do banco de dados Supabase;
-4. custos de armazenamento;
-5. custos de logs e monitoramento;
-6. custos de transferência de dados, caso aplicáveis;
-7. eventual custo de validação da solução;
-8. consolidação do custo-base anual da POC;
-9. aplicação dos cenários de contingência de 5% e 10%.
-
-O frontend não será deployado durante a POC e, portanto, não haverá custo de Vercel neste cenário.
-
-Após a conclusão da POC, será realizada a mesma lógica para o cenário de **projeto implementado durante 12 meses**, incluindo os custos adicionais necessários para transformar o protótipo em uma solução operacional.
