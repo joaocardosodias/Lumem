@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -41,16 +41,31 @@ func runMigrations(dbPath, migrationsPath string) error {
 func main() {
 	cfg := config.LoadConfig()
 
-	log.Printf("Ambiente: %s | DB: %s", cfg.Environment, cfg.DBPath)
-	log.Printf("Aplicando migrações em %s a partir de %s...", cfg.DBPath, cfg.MigrationsPath)
+	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
+
+	logger.Info("inicializando aplicacao",
+		slog.String("environment", cfg.Environment),
+		slog.String("db_path", cfg.DBPath),
+	)
+
+	logger.Info("aplicando migracoes no banco de dados",
+		slog.String("db_path", cfg.DBPath),
+		slog.String("migrations_path", cfg.MigrationsPath),
+	)
 	if err := runMigrations(cfg.DBPath, cfg.MigrationsPath); err != nil {
-		log.Fatalf("Falha ao aplicar migrações: %v", err)
+		logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	log.Println("Migrações aplicadas com sucesso.")
+	logger.Info("migracoes aplicadas com sucesso")
 
 	db, err := sql.Open("sqlite3", cfg.DBPath)
 	if err != nil {
-		log.Fatalf("Falha ao conectar no SQLite: %v", err)
+		logger.Error("falha ao conectar no sqlite", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -82,15 +97,20 @@ func main() {
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.TestMode)
 	}
-	router := gin.Default()
 
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(httpAdapter.CorrelationIDMiddleware())
+	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
 	router.Use(httpAdapter.RateLimiterMiddleware(limiter))
 
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
@@ -147,9 +167,10 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Servidor backend iniciado na porta %s...", cfg.Port)
+		logger.Info("servidor backend iniciado", slog.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Erro inesperado no servidor: %v", err)
+			logger.Error("erro no servidor http", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
 	}()
 
@@ -157,14 +178,15 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Sinal de encerramento recebido. Desligando servidor graciosamente...")
+	logger.Info("sinal de encerramento recebido. desligando servidor graciosamente...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Forçando encerramento do servidor: %v", err)
+		logger.Error("forcando encerramento do servidor", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	log.Println("Servidor finalizado com sucesso.")
+	logger.Info("servidor finalizado com sucesso")
 }
