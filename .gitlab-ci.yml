@@ -2,7 +2,6 @@ stages:
   - lint
   - test
   - security
-  - build
   - deploy
 
 variables:
@@ -59,18 +58,21 @@ security_audit:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
-build_container:
-  stage: build
-  image: docker:24.0.5
-  services:
-    - docker:24.0.5-dind
+deploy_vps:
+  stage: deploy
+  image: alpine:latest
   before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
   script:
-    - docker build -t "$CI_REGISTRY_IMAGE:latest" src/backend
-    - docker push "$CI_REGISTRY_IMAGE:latest"
+    - ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "cd /home/ec07-g4/g/src && git pull && cd src/backend && docker compose up -d --build"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "feat/backend-GO"
 
 pages:
   stage: deploy
