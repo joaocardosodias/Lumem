@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 )
@@ -26,7 +27,8 @@ func (m *mockMaintRepo) BatchInsertMaintenance(ctx context.Context, events []*do
 func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 	maintRepo := &mockMaintRepo{}
 	uploadRepo := newMockAlarmRepo()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo)
+	sheetParser := parser.NewDefaultSpreadsheetParser()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, sheetParser)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -60,7 +62,8 @@ func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 func TestIngestMaintenanceUseCase_MissingDate(t *testing.T) {
 	maintRepo := &mockMaintRepo{}
 	uploadRepo := newMockAlarmRepo()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo)
+	sheetParser := parser.NewDefaultSpreadsheetParser()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, sheetParser)
 
 	csvData := `ordem,tipo_de_nota,sintoma
 53954586,ZM01,SEM DATA DE INICIO

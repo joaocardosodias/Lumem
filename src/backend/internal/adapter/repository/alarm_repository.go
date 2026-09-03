@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"time"
+	"errors"
 
 	"github.com/g04/backend/internal/domain"
 )
@@ -20,27 +20,13 @@ func NewSQLiteAlarmRepository(db *sql.DB) *SQLiteAlarmRepository {
 
 func (r *SQLiteAlarmRepository) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	query := `
-		INSERT INTO file_uploads (file_name, file_type, rows_processed, rows_inserted, status, created_at)
+		INSERT INTO file_uploads (file_name, file_type, file_hash, status, rows_processed, rows_inserted)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	now := time.Now()
-	upload.CreatedAt = now
-	upload.Status = "processing"
-
-	res, err := r.db.ExecContext(
-		ctx,
-		query,
-		upload.FileName,
-		upload.FileType,
-		upload.RowsProcessed,
-		upload.RowsInserted,
-		upload.Status,
-		now.Format("2006-01-02 15:04:05"),
-	)
+	res, err := r.db.ExecContext(ctx, query, upload.FileName, upload.FileType, upload.FileHash, upload.Status, upload.RowsProcessed, upload.RowsInserted)
 	if err != nil {
 		return err
 	}
-
 	id, err := res.LastInsertId()
 	if err != nil {
 		return err
@@ -52,7 +38,7 @@ func (r *SQLiteAlarmRepository) CreateUpload(ctx context.Context, upload *domain
 func (r *SQLiteAlarmRepository) UpdateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	query := `
 		UPDATE file_uploads
-		SET rows_processed = ?, rows_inserted = ?, status = ?, error_log = ?, completed_at = ?
+		SET status = ?, rows_processed = ?, rows_inserted = ?, error_log = ?, completed_at = ?
 		WHERE id = ?
 	`
 	var completedAtStr *string
@@ -61,69 +47,93 @@ func (r *SQLiteAlarmRepository) UpdateUpload(ctx context.Context, upload *domain
 		completedAtStr = &s
 	}
 
-	_, err := r.db.ExecContext(
-		ctx,
-		query,
-		upload.RowsProcessed,
-		upload.RowsInserted,
-		upload.Status,
-		upload.ErrorLog,
-		completedAtStr,
-		upload.ID,
-	)
+	_, err := r.db.ExecContext(ctx, query, upload.Status, upload.RowsProcessed, upload.RowsInserted, upload.ErrorLog, completedAtStr, upload.ID)
 	return err
-}
-
-func parseTime(raw string) time.Time {
-	formats := []string{
-		"2006-01-02 15:04:05",
-		time.RFC3339,
-		"2006-01-02T15:04:05Z07:00",
-	}
-	for _, f := range formats {
-		if t, err := time.Parse(f, raw); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
 }
 
 func (r *SQLiteAlarmRepository) GetUploadByID(ctx context.Context, id int64) (*domain.FileUpload, error) {
 	query := `
-		SELECT id, file_name, file_type, rows_processed, rows_inserted, status, IFNULL(error_log, ''), created_at, completed_at
+		SELECT id, file_name, file_type, IFNULL(file_hash, ''), status, rows_processed, rows_inserted, IFNULL(error_log, ''), created_at, completed_at
 		FROM file_uploads
 		WHERE id = ?
-		LIMIT 1
 	`
-	var upload domain.FileUpload
+	var u domain.FileUpload
 	var createdAtStr string
 	var completedAtStr sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&upload.ID,
-		&upload.FileName,
-		&upload.FileType,
-		&upload.RowsProcessed,
-		&upload.RowsInserted,
-		&upload.Status,
-		&upload.ErrorLog,
+		&u.ID,
+		&u.FileName,
+		&u.FileType,
+		&u.FileHash,
+		&u.Status,
+		&u.RowsProcessed,
+		&u.RowsInserted,
+		&u.ErrorLog,
 		&createdAtStr,
 		&completedAtStr,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
 		return nil, err
 	}
 
-	upload.CreatedAt = parseTime(createdAtStr)
-
+	u.CreatedAt = parseTime(createdAtStr)
 	if completedAtStr.Valid {
 		t := parseTime(completedAtStr.String)
 		if !t.IsZero() {
-			upload.CompletedAt = &t
+			u.CompletedAt = &t
 		}
 	}
 
-	return &upload, nil
+	return &u, nil
+}
+
+func (r *SQLiteAlarmRepository) GetUploadByHash(ctx context.Context, hash string) (*domain.FileUpload, error) {
+	if hash == "" {
+		return nil, domain.ErrUserNotFound
+	}
+
+	query := `
+		SELECT id, file_name, file_type, IFNULL(file_hash, ''), status, rows_processed, rows_inserted, IFNULL(error_log, ''), created_at, completed_at
+		FROM file_uploads
+		WHERE file_hash = ? AND status = 'completed'
+		LIMIT 1
+	`
+	var u domain.FileUpload
+	var createdAtStr string
+	var completedAtStr sql.NullString
+
+	err := r.db.QueryRowContext(ctx, query, hash).Scan(
+		&u.ID,
+		&u.FileName,
+		&u.FileType,
+		&u.FileHash,
+		&u.Status,
+		&u.RowsProcessed,
+		&u.RowsInserted,
+		&u.ErrorLog,
+		&createdAtStr,
+		&completedAtStr,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	u.CreatedAt = parseTime(createdAtStr)
+	if completedAtStr.Valid {
+		t := parseTime(completedAtStr.String)
+		if !t.IsZero() {
+			u.CompletedAt = &t
+		}
+	}
+
+	return &u, nil
 }
 
 func (r *SQLiteAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error {
@@ -140,7 +150,8 @@ func (r *SQLiteAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms []
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO telemetry_alarms (
 			upload_id, tag, station_code, platform, door_number,
-			alarm_type, duration_seconds, event_timestamp, normalization_timestamp, source
+			alarm_type, duration_seconds, event_timestamp,
+			normalization_timestamp, source
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {

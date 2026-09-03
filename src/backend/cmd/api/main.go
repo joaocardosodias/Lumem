@@ -13,6 +13,7 @@ import (
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/adapter/mlclient"
+	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/config"
 	"github.com/g04/backend/internal/usecase"
@@ -58,16 +59,18 @@ func main() {
 	maintRepo := repository.NewSQLiteMaintenanceRepository(db)
 	insRepo := repository.NewSQLiteInspectionRepository(db)
 	dashRepo := repository.NewSQLiteDashboardRepository(db)
+	cachedDashRepo := repository.NewCachedDashboardRepository(dashRepo, 30*time.Second)
 	predRepo := repository.NewSQLitePredictionRepository(db)
 
+	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
 	mlClient := mlclient.NewClient(cfg.VPSModelURL)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
-	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient)
+	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
@@ -75,10 +78,14 @@ func main() {
 	insHandler := httpAdapter.NewInspectionHandler(insUC)
 	dashHandler := httpAdapter.NewDashboardHandler(dashUC)
 
+	limiter := httpAdapter.NewRateLimiter(50, 100)
+
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.Default()
+
+	router.Use(httpAdapter.RateLimiterMiddleware(limiter))
 
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")

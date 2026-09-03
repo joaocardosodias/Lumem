@@ -2,7 +2,8 @@ package usecase
 
 import (
 	"context"
-	"encoding/csv"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"log"
 	"os"
@@ -12,18 +13,23 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
-	"github.com/xuri/excelize/v2"
 )
 
 type IngestMaintenanceUseCase struct {
 	maintRepo  domain.MaintenanceRepository
 	uploadRepo domain.AlarmRepository
+	parser     domain.SpreadsheetParser
 }
 
-func NewIngestMaintenanceUseCase(maintRepo domain.MaintenanceRepository, uploadRepo domain.AlarmRepository) *IngestMaintenanceUseCase {
+func NewIngestMaintenanceUseCase(
+	maintRepo domain.MaintenanceRepository,
+	uploadRepo domain.AlarmRepository,
+	parser domain.SpreadsheetParser,
+) *IngestMaintenanceUseCase {
 	return &IngestMaintenanceUseCase{
 		maintRepo:  maintRepo,
 		uploadRepo: uploadRepo,
+		parser:     parser,
 	}
 }
 
@@ -36,9 +42,20 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 	}
 	defer tmpFile.Close()
 
-	if _, err := io.Copy(tmpFile, reader); err != nil {
+	hasher := sha256.New()
+	tee := io.TeeReader(reader, hasher)
+
+	if _, err := io.Copy(tmpFile, tee); err != nil {
 		os.Remove(tmpFile.Name())
 		return 0, err
+	}
+
+	hashStr := hex.EncodeToString(hasher.Sum(nil))
+
+	existing, err := uc.uploadRepo.GetUploadByHash(ctx, hashStr)
+	if err == nil && existing != nil {
+		os.Remove(tmpFile.Name())
+		return existing.ID, domain.ErrDuplicateUpload
 	}
 
 	fileType := "maintenance"
@@ -49,6 +66,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 	upload := &domain.FileUpload{
 		FileName: fileName,
 		FileType: fileType,
+		FileHash: hashStr,
 		Status:   "processing",
 	}
 
@@ -65,15 +83,7 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID int64, filePath, ext, explicitOrderType string) {
 	defer os.Remove(filePath)
 
-	var rows [][]string
-	var err error
-
-	if ext == ".xlsx" || ext == ".xls" {
-		rows, err = uc.readExcelRows(filePath)
-	} else {
-		rows, err = uc.readCSVRows(filePath)
-	}
-
+	rows, err := uc.parser.ReadRows(filePath, ext)
 	if err != nil {
 		uc.failUpload(uploadID, err.Error())
 		return
@@ -201,36 +211,6 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID int64, filePath, e
 		upload.CompletedAt = &now
 		_ = uc.uploadRepo.UpdateUpload(bgCtx, upload)
 	}
-}
-
-func (uc *IngestMaintenanceUseCase) readExcelRows(filePath string) ([][]string, error) {
-	f, err := excelize.OpenFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	sheetName := f.GetSheetName(0)
-	if sheetName == "" {
-		sheetList := f.GetSheetList()
-		if len(sheetList) > 0 {
-			sheetName = sheetList[0]
-		}
-	}
-
-	return f.GetRows(sheetName)
-}
-
-func (uc *IngestMaintenanceUseCase) readCSVRows(filePath string) ([][]string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.LazyQuotes = true
-	return reader.ReadAll()
 }
 
 func (uc *IngestMaintenanceUseCase) failUpload(uploadID int64, reason string) {

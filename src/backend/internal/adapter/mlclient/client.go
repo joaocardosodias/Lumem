@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
 )
+
+var _ domain.MLClient = (*Client)(nil)
 
 type PredictionRequest struct {
 	StationCode string `json:"station_code"`
@@ -24,8 +27,9 @@ type PredictionResponse struct {
 }
 
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL        string
+	httpClient     *http.Client
+	circuitBreaker *CircuitBreaker
 }
 
 func NewClient(baseURL string) *Client {
@@ -34,6 +38,7 @@ func NewClient(baseURL string) *Client {
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		circuitBreaker: NewCircuitBreaker(3, 10*time.Second),
 	}
 }
 
@@ -52,20 +57,29 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domai
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/predict", bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		return c.fallbackPrediction(doors), nil
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return c.fallbackPrediction(doors), nil
-	}
-	defer resp.Body.Close()
-
 	var mlResp []PredictionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&mlResp); err != nil {
+
+	err = c.circuitBreaker.Execute(func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/predict", bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return errors.New("vps retornou codigo nao-ok")
+		}
+
+		return json.NewDecoder(resp.Body).Decode(&mlResp)
+	})
+
+	if err != nil {
 		return c.fallbackPrediction(doors), nil
 	}
 
@@ -93,4 +107,8 @@ func (c *Client) fallbackPrediction(doors []domain.Door) []domain.PredictionItem
 		}
 	}
 	return items
+}
+
+func (c *Client) CircuitState() State {
+	return c.circuitBreaker.State()
 }

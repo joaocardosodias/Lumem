@@ -51,6 +51,17 @@ func (m *mockAlarmRepo) GetUploadByID(ctx context.Context, id int64) (*domain.Fi
 	return u, nil
 }
 
+func (m *mockAlarmRepo) GetUploadByHash(ctx context.Context, hash string) (*domain.FileUpload, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, u := range m.uploads {
+		if u.FileHash == hash && u.Status == "completed" {
+			return u, nil
+		}
+	}
+	return nil, domain.ErrUserNotFound
+}
+
 func (m *mockAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -88,6 +99,30 @@ PSD_LUZ_LUZ1_PDM08_OBS,2026-05-12 08:15:09,LUZ,8.0,OBS,2026-05-12 08:15:10,1,LUZ
 
 	if len(repo.alarms) != 2 {
 		t.Errorf("esperava 2 alarmes no repositorio, obteve %d", len(repo.alarms))
+	}
+}
+
+func TestIngestAlarmsUseCase_IdempotencyDuplicate(t *testing.T) {
+	repo := newMockAlarmRepo()
+	uc := usecase.NewIngestAlarmsUseCase(repo)
+
+	csvData := `TAG,Horário do Alarme,Estação,Porta,Alarme,Horário da Normalizacao,tempo_normalizacao_seg,plataforma_extraida,porta_extraida
+PSD_FAL_FAL2_PDM09_OBS,2026-05-12 08:16:52,FAL,9.0,OBS,2026-05-12 08:16:53,1,FAL2,9.0
+`
+	uploadID1, err := uc.StartIngestion(context.Background(), "duplicado.csv", strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("falha ao iniciar primeira ingestao: %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	uploadID2, err := uc.StartIngestion(context.Background(), "duplicado.csv", strings.NewReader(csvData))
+	if err != domain.ErrDuplicateUpload {
+		t.Fatalf("esperava ErrDuplicateUpload, obteve: %v", err)
+	}
+
+	if uploadID2 != uploadID1 {
+		t.Errorf("deveria retornar o uploadID original %d, obteve %d", uploadID1, uploadID2)
 	}
 }
 

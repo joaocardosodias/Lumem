@@ -1,9 +1,11 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -36,6 +38,13 @@ func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 
 	uploadID, err := h.ingestAlarmsUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file)
 	if err != nil {
+		if errors.Is(err, domain.ErrDuplicateUpload) {
+			c.JSON(http.StatusConflict, gin.H{
+				"upload_id": uploadID,
+				"error":     "arquivo duplicado detectado (idempotencia sha-256). upload anterior reutilizado.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -65,6 +74,14 @@ func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 
 	uploadID, err := h.ingestMaintUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file, orderType)
 	if err != nil {
+		if errors.Is(err, domain.ErrDuplicateUpload) {
+			c.JSON(http.StatusConflict, gin.H{
+				"upload_id":  uploadID,
+				"order_type": orderType,
+				"error":      "arquivo duplicado detectado (idempotencia sha-256). upload anterior reutilizado.",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

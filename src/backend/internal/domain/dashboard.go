@@ -84,3 +84,7 @@ type PredictionRepository interface {
 	GetLatestRun(ctx context.Context) (*PredictionRun, error)
 	ListDoorsForInference(ctx context.Context) ([]Door, error)
 }
+
+type MLClient interface {
+	PredictBatch(ctx context.Context, doors []Door) ([]PredictionItem, error)
+}

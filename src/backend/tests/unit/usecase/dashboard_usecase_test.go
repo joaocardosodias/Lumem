@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 )
@@ -46,6 +45,26 @@ func (m *mockPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domai
 	return m.doors, nil
 }
 
+type mockMLClient struct {
+	items []domain.PredictionItem
+}
+
+func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+	if m.items != nil {
+		return m.items, nil
+	}
+	items := make([]domain.PredictionItem, len(doors))
+	for i, d := range doors {
+		items[i] = domain.PredictionItem{
+			StationCode: d.StationCode,
+			Platform:    d.Platform,
+			DoorNumber:  d.DoorNumber,
+			WillFail:    d.DoorNumber%7 == 0,
+		}
+	}
+	return items, nil
+}
+
 func TestDashboardUseCase_GetSummary(t *testing.T) {
 	dashRepo := &mockDashboardRepo{
 		summary: &domain.DashboardSummary{
@@ -55,7 +74,7 @@ func TestDashboardUseCase_GetSummary(t *testing.T) {
 		},
 	}
 	predRepo := &mockPredictionRepo{}
-	ml := mlclient.NewClient("http://localhost:8000")
+	ml := &mockMLClient{}
 	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
 
 	res, err := uc.GetSummary(context.Background())
@@ -82,7 +101,7 @@ func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
 		},
 	}
 	predRepo := &mockPredictionRepo{}
-	ml := mlclient.NewClient("http://localhost:8000")
+	ml := &mockMLClient{}
 	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
 
 	res, err := uc.GetDoorTimeline(context.Background(), 4)
@@ -108,7 +127,7 @@ func TestDashboardUseCase_GetStationDoorsStatus(t *testing.T) {
 		},
 	}
 	predRepo := &mockPredictionRepo{}
-	ml := mlclient.NewClient("http://localhost:8000")
+	ml := &mockMLClient{}
 	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
 
 	items, err := uc.GetStationDoorsStatus(context.Background(), "FAL")
@@ -134,7 +153,7 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 			{ID: 7, Platform: "P1", DoorNumber: 7},
 		},
 	}
-	ml := mlclient.NewClient("http://vps-offline:8000")
+	ml := &mockMLClient{}
 	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
 
 	run, err := uc.TriggerPredictions(context.Background(), 7)
@@ -146,7 +165,7 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 		t.Errorf("esperava 2 portas avaliadas, obteve %d", run.TotalDoorsEvaluated)
 	}
 
-	if run.CreatedAt.IsZero() {
+	if run.CreatedAt == "" {
 		t.Errorf("created_at deveria estar preenchido")
 	}
 }
