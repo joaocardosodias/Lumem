@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/eventbus"
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/parser"
@@ -69,6 +70,8 @@ func main() {
 	}
 	defer db.Close()
 
+	bus := eventbus.NewInMemoryEventBus(logger)
+
 	userRepo := repository.NewSQLiteUserRepository(db)
 	alarmRepo := repository.NewSQLiteAlarmRepository(db)
 	maintRepo := repository.NewSQLiteMaintenanceRepository(db)
@@ -76,6 +79,8 @@ func main() {
 	dashRepo := repository.NewSQLiteDashboardRepository(db)
 	cachedDashRepo := repository.NewCachedDashboardRepository(dashRepo, 30*time.Second)
 	predRepo := repository.NewSQLitePredictionRepository(db)
+
+	usecase.RegisterEventSubscribers(bus, insRepo, cachedDashRepo, logger)
 
 	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
 	mlClient := mlclient.NewClient(cfg.VPSModelURL)
@@ -85,7 +90,7 @@ func main() {
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
-	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient)
+	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)

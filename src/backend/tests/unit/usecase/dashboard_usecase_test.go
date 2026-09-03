@@ -75,7 +75,8 @@ func TestDashboardUseCase_GetSummary(t *testing.T) {
 	}
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
+	bus := &mockEventBus{}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
 
 	res, err := uc.GetSummary(context.Background())
 	if err != nil {
@@ -102,7 +103,8 @@ func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
 	}
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
+	bus := &mockEventBus{}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
 
 	res, err := uc.GetDoorTimeline(context.Background(), 4)
 	if err != nil {
@@ -128,7 +130,8 @@ func TestDashboardUseCase_GetStationDoorsStatus(t *testing.T) {
 	}
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
+	bus := &mockEventBus{}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
 
 	items, err := uc.GetStationDoorsStatus(context.Background(), "FAL")
 	if err != nil {
@@ -154,7 +157,8 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 		},
 	}
 	ml := &mockMLClient{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml)
+	bus := &mockEventBus{}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
 
 	run, err := uc.TriggerPredictions(context.Background(), 7)
 	if err != nil {
@@ -167,5 +171,9 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 
 	if run.CreatedAt == "" {
 		t.Errorf("created_at deveria estar preenchido")
+	}
+
+	if len(bus.published) < 2 {
+		t.Errorf("esperava pelo menos 2 eventos publicados (DoorRiskDetected + PredictionRunCompleted), obteve %d", len(bus.published))
 	}
 }

@@ -13,17 +13,20 @@ type DashboardUseCase struct {
 	dashRepo domain.DashboardRepository
 	predRepo domain.PredictionRepository
 	mlClient domain.MLClient
+	eventBus domain.EventBus
 }
 
 func NewDashboardUseCase(
 	dashRepo domain.DashboardRepository,
 	predRepo domain.PredictionRepository,
 	mlClient domain.MLClient,
+	eventBus domain.EventBus,
 ) *DashboardUseCase {
 	return &DashboardUseCase{
 		dashRepo: dashRepo,
 		predRepo: predRepo,
 		mlClient: mlClient,
+		eventBus: eventBus,
 	}
 }
 
@@ -195,6 +198,26 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 			Platform:    p.Platform,
 			DoorNumber:  p.DoorNumber,
 			WillFail:    p.WillFail,
+		})
+
+		if p.WillFail && uc.eventBus != nil {
+			uc.eventBus.Publish(ctx, domain.DoorRiskDetectedEvent{
+				RunID:       run.ID,
+				StationCode: p.StationCode,
+				Platform:    p.Platform,
+				DoorNumber:  p.DoorNumber,
+				Timestamp:   now,
+			})
+		}
+	}
+
+	if uc.eventBus != nil {
+		uc.eventBus.Publish(ctx, domain.PredictionRunCompletedEvent{
+			RunID:          run.ID,
+			HorizonDays:    run.HorizonDays,
+			TotalEvaluated: run.TotalDoorsEvaluated,
+			TotalAtRisk:    run.TotalDoorsAtRisk,
+			Timestamp:      now,
 		})
 	}
 
