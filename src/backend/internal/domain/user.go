@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrUserNotFound        = errors.New("usuário não encontrado")
+	ErrUserNotFound       = errors.New("usuário não encontrado")
 	ErrInvalidCredentials = errors.New("e-mail ou senha inválidos")
 	ErrUserInactive       = errors.New("usuário inativo")
 	ErrEmailAlreadyExists = errors.New("e-mail já cadastrado")
@@ -17,7 +17,7 @@ type User struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"` 
+	PasswordHash string    `json:"-"`
 	Role         string    `json:"role"`
 	IsActive     bool      `json:"is_active"`
 	CreatedAt    time.Time `json:"created_at"`

@@ -595,7 +595,7 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	}
 
 	var inspListResp struct {
-		Total int                           `json:"total"`
+		Total int                            `json:"total"`
 		Data  []*usecase.InspectionOutputDTO `json:"data"`
 	}
 	_ = json.Unmarshal(inspListW.Body.Bytes(), &inspListResp)

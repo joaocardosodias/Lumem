@@ -1,10 +1,80 @@
-image: node:lts
-
 stages:
+  - lint
+  - test
+  - security
+  - build
   - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+lint_format:
+  stage: lint
+  image: golang:alpine
+  before_script:
+    - cd src/backend
+  script:
+    - test -z "$(gofmt -l .)"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+lint_vet:
+  stage: lint
+  image: golang:alpine
+  before_script:
+    - cd src/backend
+  script:
+    - go vet ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+test_suite:
+  stage: test
+  image: golang:alpine
+  before_script:
+    - cd src/backend
+  script:
+    - go test -v -coverpkg=./internal/... -coverprofile=coverage.out ./tests/...
+    - go tool cover -func=coverage.out
+  coverage: '/total:\s+\(statements\)\s+(\d+.\d+\%)/'
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - src/backend/coverage.out
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+security_audit:
+  stage: security
+  image: golang:alpine
+  before_script:
+    - cd src/backend
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+  script:
+    - govulncheck ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+build_container:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE:latest" src/backend
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 pages:
   stage: deploy
+  image: node:lts
   script:
     - cd docs
     - npm ci

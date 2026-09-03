@@ -1,9 +1,9 @@
 services:
   backend:
+    image: ${BACKEND_IMAGE:-backend-linha4:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    image: backend-linha4:latest
     container_name: backend-linha4
     restart: unless-stopped
     ports:
@@ -16,3 +16,12 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json:ro
+    command: --interval 60 --cleanup --include-restarting

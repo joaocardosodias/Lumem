@@ -29,8 +29,8 @@ func (m *mockUnitOfWorkStore) Alarms() domain.AlarmRepository {
 }
 
 type mockUOW struct {
-	store     *mockUnitOfWorkStore
-	committed bool
+	store      *mockUnitOfWorkStore
+	committed  bool
 	rolledBack bool
 }
 
