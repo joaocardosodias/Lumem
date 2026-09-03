@@ -59,9 +59,11 @@ func main() {
 	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo)
+	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
+	maintHandler := httpAdapter.NewMaintenanceHandler(createMaintUC)
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -94,6 +96,8 @@ func main() {
 		v1.POST("/uploads/alarms", uploadHandler.UploadAlarms)
 		v1.POST("/uploads/maintenance", uploadHandler.UploadMaintenance)
 		v1.GET("/uploads/:id", uploadHandler.GetUploadStatus)
+		v1.GET("/maintenance", maintHandler.List)
+		v1.POST("/maintenance", maintHandler.Create)
 	}
 
 	protected := v1.Group("")
