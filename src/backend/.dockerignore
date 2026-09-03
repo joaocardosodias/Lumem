@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+bin/
+tmp/
+*.db
+*.db-journal
+*.log
+scratch/
+.vscode/
+.idea/
+tests/
