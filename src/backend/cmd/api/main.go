@@ -55,15 +55,18 @@ func main() {
 	userRepo := repository.NewSQLiteUserRepository(db)
 	alarmRepo := repository.NewSQLiteAlarmRepository(db)
 	maintRepo := repository.NewSQLiteMaintenanceRepository(db)
+	insRepo := repository.NewSQLiteInspectionRepository(db)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, cfg.JWTSecret, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
+	insUC := usecase.NewInspectionUseCase(insRepo)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
 	maintHandler := httpAdapter.NewMaintenanceHandler(createMaintUC)
+	insHandler := httpAdapter.NewInspectionHandler(insUC)
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -72,7 +75,7 @@ func main() {
 
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -98,6 +101,10 @@ func main() {
 		v1.GET("/uploads/:id", uploadHandler.GetUploadStatus)
 		v1.GET("/maintenance", maintHandler.List)
 		v1.POST("/maintenance", maintHandler.Create)
+		v1.POST("/inspections", insHandler.Create)
+		v1.GET("/inspections", insHandler.List)
+		v1.GET("/inspections/:id", insHandler.GetByID)
+		v1.PATCH("/inspections/:id/status", insHandler.UpdateStatus)
 	}
 
 	protected := v1.Group("")
