@@ -1,4 +1,4 @@
-set -euo pipefail
+set -eu
 
 TARGET_URL="${1:-${TARGET_URL:-http://localhost}}"
 echo "Iniciando bateria estilo Rinha de Backend contra: $TARGET_URL"

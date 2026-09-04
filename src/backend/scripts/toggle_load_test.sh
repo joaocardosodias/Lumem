@@ -1,7 +1,7 @@
-set -euo pipefail
+set -eu
 
 MODE="${1:-status}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [ -f "$BACKEND_DIR/.env" ]; then
