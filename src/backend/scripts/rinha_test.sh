@@ -1,11 +1,24 @@
 set -euo pipefail
 
-TARGET_URL="${1:-http://localhost:8080}"
+TARGET_URL="${1:-${TARGET_URL:-http://localhost}}"
 echo "Iniciando bateria estilo Rinha de Backend contra: $TARGET_URL"
 echo "Condicoes: Limite de 0.50 CPU, 256MB RAM, Rate Limiter DESATIVADO (0% de rejeicao por 429)"
 
-echo "Estado dos recursos antes do estresse:"
-docker stats backend-linha4 --no-stream
+which hey >/dev/null 2>&1 || {
+  echo "Instalando ferramenta hey..."
+  if which go >/dev/null 2>&1; then
+    go install github.com/rakyll/hey@latest
+    export PATH="$PATH:$(go env GOPATH)/bin"
+  elif which docker >/dev/null 2>&1; then
+    docker run --rm -v /tmp:/out golang:1.26-alpine sh -c "go install github.com/rakyll/hey@latest && cp /go/bin/hey /out/hey"
+    export PATH="$PATH:/tmp"
+  fi
+}
+
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^backend-linha4$"; then
+  echo "Estado dos recursos antes do estresse:"
+  docker stats backend-linha4 --no-stream
+fi
 
 echo "Fase 1: Aquecimento (Warm-up) - 1000 leituras concorrentes"
 hey -n 1000 -c 30 "$TARGET_URL/healthz/live"
@@ -29,8 +42,10 @@ hey -n 1000 -c 30 "$TARGET_URL/api/v1/inspections?limit=50"
 echo "Fase 5: Estresse Misto Simultaneo (Alta Carga de Leitura + Escrita)"
 hey -n 2000 -c 50 "$TARGET_URL/api/v1/dashboard/summary"
 
-echo "Estado dos recursos do container apos a Rinha:"
-docker stats backend-linha4 --no-stream
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^backend-linha4$"; then
+  echo "Estado dos recursos do container apos a Rinha:"
+  docker stats backend-linha4 --no-stream
+fi
 
 echo "Verificando se o backend continua vivo e responsivo:"
 curl -f "$TARGET_URL/healthz/live"
