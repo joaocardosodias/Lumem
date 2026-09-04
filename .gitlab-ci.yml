@@ -69,14 +69,13 @@ build_container:
     DOCKER_TLS_CERTDIR: ""
   script:
     - docker info
-    - docker build -t backend-linha4:$CI_COMMIT_SHORT_SHA src/backend
+    - docker build -t "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA" src/backend
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA"
     - |
-      if [ -n "$DOCKER_REGISTRY_USER" ] && [ -n "$DOCKER_REGISTRY_PASSWORD" ]; then
-        echo "$DOCKER_REGISTRY_PASSWORD" | docker login -u "$DOCKER_REGISTRY_USER" --password-stdin "$DOCKER_REGISTRY"
-        docker tag backend-linha4:$CI_COMMIT_SHORT_SHA "$DOCKER_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-        docker tag backend-linha4:$CI_COMMIT_SHORT_SHA "$DOCKER_REGISTRY_IMAGE:latest"
-        docker push "$DOCKER_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-        docker push "$DOCKER_REGISTRY_IMAGE:latest"
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        docker tag "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA" "$CI_REGISTRY_IMAGE/backend:latest"
+        docker push "$CI_REGISTRY_IMAGE/backend:latest"
       fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
