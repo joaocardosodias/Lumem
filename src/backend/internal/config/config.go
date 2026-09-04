@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,10 @@ type Config struct {
 	JWTExpiration      time.Duration
 	VPSModelURL        string
 	CORSAllowedOrigins string
+	EnableRateLimiter  bool
+	RateLimitRPS       int
+	RateLimitBurst     int
+	LoadTest           bool
 }
 
 func (c *Config) Validate() error {
@@ -70,6 +75,15 @@ func LoadConfig() *Config {
 	}
 
 	runMig := strings.ToLower(getEnv("RUN_MIGRATIONS", "true")) == "true"
+	enableRateLimiter := strings.ToLower(getEnv("ENABLE_RATE_LIMITER", "true")) == "true"
+	rps, _ := strconv.Atoi(getEnv("RATE_LIMIT_RPS", "50"))
+	if rps <= 0 {
+		rps = 50
+	}
+	burst, _ := strconv.Atoi(getEnv("RATE_LIMIT_BURST", "100"))
+	if burst <= 0 {
+		burst = 100
+	}
 
 	return &Config{
 		Port:               getEnv("PORT", "8080"),
@@ -89,6 +103,10 @@ func LoadConfig() *Config {
 		JWTExpiration:      24 * time.Hour,
 		VPSModelURL:        getEnv("VPS_MODEL_URL", "http://localhost:8000"),
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "*"),
+		EnableRateLimiter:  enableRateLimiter,
+		RateLimitRPS:       rps,
+		RateLimitBurst:     burst,
+		LoadTest:           strings.ToLower(getEnv("LOAD_TEST", "false")) == "true",
 	}
 }
 

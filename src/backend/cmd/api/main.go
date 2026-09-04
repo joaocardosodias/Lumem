@@ -140,8 +140,6 @@ func main() {
 	healthHandler := httpAdapter.NewHealthHandler(db)
 	docsHandler := httpAdapter.NewDocsHandler("docs/openapi.json")
 
-	limiter := httpAdapter.NewRateLimiter(50, 100)
-
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
@@ -152,8 +150,13 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(httpAdapter.CorrelationIDMiddleware())
 	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
-	router.Use(httpAdapter.RateLimiterMiddleware(limiter))
 	router.Use(httpAdapter.PrometheusMetricsMiddleware())
+	if cfg.LoadTest {
+		logger.Warn("modo LOAD_TEST ativado: rate limiter desativado para teste de carga")
+	} else if cfg.EnableRateLimiter {
+		limiter := httpAdapter.NewRateLimiter(float64(cfg.RateLimitRPS), cfg.RateLimitBurst)
+		router.Use(httpAdapter.RateLimiterMiddleware(limiter))
+	}
 
 	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
 	router.Use(func(c *gin.Context) {

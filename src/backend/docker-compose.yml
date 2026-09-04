@@ -9,6 +9,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    cpus: ${LOAD_TEST_CPUS:-0}
+    mem_limit: ${LOAD_TEST_MEMORY:-0}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz/live"]
       interval: 30s
