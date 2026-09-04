@@ -37,7 +37,7 @@ func LoadConfig() *Config {
 	dbPort := getEnv("DB_PORT", "5432")
 	dbName := getEnv("DB_NAME", "postgres")
 	dbUser := getEnv("DB_USER", "postgres.yqkcxaqorhekxbctewwj")
-	dbPass := getEnv("DB_PASSWORD", "souoprotagonistasigma")
+	dbPass := getEnv("DB_PASSWORD", "")
 	dbSSL := getEnv("DB_SSLMODE", "require")
 
 	defaultURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s",
@@ -71,7 +71,7 @@ func LoadConfig() *Config {
 		DatabaseURL:    rawURL,
 		DBPath:         getEnv("DB_PATH", "database.db"),
 		MigrationsPath: migrationsPath,
-		JWTSecret:      getEnv("JWT_SECRET", "42e4a580bed6d8706daa25995601237c41442170d08b8ed966fc91847a730c06"),
+		JWTSecret:      getEnv("JWT_SECRET", ""),
 		JWTExpiration:  24 * time.Hour,
 		VPSModelURL:    getEnv("VPS_MODEL_URL", "http://localhost:8000"),
 	}

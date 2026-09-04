@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type LoginInputDTO struct {
@@ -29,14 +27,21 @@ type LoginOutputDTO struct {
 
 type LoginUseCase struct {
 	userRepo      domain.UserRepository
-	jwtSecret     []byte
+	hasher        domain.PasswordHasher
+	tokenGen      domain.TokenGenerator
 	tokenDuration time.Duration
 }
 
-func NewLoginUseCase(userRepo domain.UserRepository, jwtSecret string, tokenDuration time.Duration) *LoginUseCase {
+func NewLoginUseCase(
+	userRepo domain.UserRepository,
+	hasher domain.PasswordHasher,
+	tokenGen domain.TokenGenerator,
+	tokenDuration time.Duration,
+) *LoginUseCase {
 	return &LoginUseCase{
 		userRepo:      userRepo,
-		jwtSecret:     []byte(jwtSecret),
+		hasher:        hasher,
+		tokenGen:      tokenGen,
 		tokenDuration: tokenDuration,
 	}
 }
@@ -58,23 +63,19 @@ func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInputDTO) (*Logi
 		return nil, domain.ErrUserInactive
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password))
+	err = uc.hasher.Compare(user.PasswordHash, input.Password)
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	now := time.Now()
-	claims := jwt.MapClaims{
+	claims := map[string]any{
 		"sub":   user.ID,
 		"name":  user.Name,
 		"email": user.Email,
 		"role":  user.Role,
-		"iat":   now.Unix(),
-		"exp":   now.Add(uc.tokenDuration).Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(uc.jwtSecret)
+	tokenString, err := uc.tokenGen.Generate(claims, uc.tokenDuration)
 	if err != nil {
 		return nil, err
 	}

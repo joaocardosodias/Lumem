@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/security"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +44,10 @@ func (m *mockUserRepo) Create(ctx context.Context, user *domain.User) error {
 
 func TestLoginUseCase_Success(t *testing.T) {
 	repo := newMockUserRepo()
-	hash, err := bcrypt.GenerateFromPassword([]byte("operador123"), bcrypt.MinCost)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	hash, err := hasher.Hash("operador123")
 	if err != nil {
 		t.Fatalf("falha ao gerar hash: %v", err)
 	}
@@ -52,12 +56,12 @@ func TestLoginUseCase_Success(t *testing.T) {
 		ID:           "usr_01",
 		Name:         "Operador Teste",
 		Email:        "operador@motiva.com.br",
-		PasswordHash: string(hash),
+		PasswordHash: hash,
 		Role:         "operator",
 		IsActive:     true,
 	}
 
-	uc := usecase.NewLoginUseCase(repo, "secret-key", time.Hour)
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 
 	input := usecase.LoginInputDTO{
 		Email:    "operador@motiva.com.br",
@@ -80,16 +84,19 @@ func TestLoginUseCase_Success(t *testing.T) {
 
 func TestLoginUseCase_WrongPassword(t *testing.T) {
 	repo := newMockUserRepo()
-	hash, _ := bcrypt.GenerateFromPassword([]byte("operador123"), bcrypt.MinCost)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	hash, _ := hasher.Hash("operador123")
 	repo.users["operador@motiva.com.br"] = &domain.User{
 		ID:           "usr_01",
 		Email:        "operador@motiva.com.br",
-		PasswordHash: string(hash),
+		PasswordHash: hash,
 		Role:         "operator",
 		IsActive:     true,
 	}
 
-	uc := usecase.NewLoginUseCase(repo, "secret-key", time.Hour)
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 
 	input := usecase.LoginInputDTO{
 		Email:    "operador@motiva.com.br",
@@ -104,7 +111,10 @@ func TestLoginUseCase_WrongPassword(t *testing.T) {
 
 func TestLoginUseCase_UserNotFound(t *testing.T) {
 	repo := newMockUserRepo()
-	uc := usecase.NewLoginUseCase(repo, "secret-key", time.Hour)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 
 	input := usecase.LoginInputDTO{
 		Email:    "naoexiste@motiva.com.br",
@@ -119,16 +129,19 @@ func TestLoginUseCase_UserNotFound(t *testing.T) {
 
 func TestLoginUseCase_InactiveUser(t *testing.T) {
 	repo := newMockUserRepo()
-	hash, _ := bcrypt.GenerateFromPassword([]byte("operador123"), bcrypt.MinCost)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	hash, _ := hasher.Hash("operador123")
 	repo.users["inativo@motiva.com.br"] = &domain.User{
 		ID:           "usr_02",
 		Email:        "inativo@motiva.com.br",
-		PasswordHash: string(hash),
+		PasswordHash: hash,
 		Role:         "operator",
 		IsActive:     false,
 	}
 
-	uc := usecase.NewLoginUseCase(repo, "secret-key", time.Hour)
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 
 	input := usecase.LoginInputDTO{
 		Email:    "inativo@motiva.com.br",
@@ -143,7 +156,10 @@ func TestLoginUseCase_InactiveUser(t *testing.T) {
 
 func TestLoginUseCase_EmptyFields(t *testing.T) {
 	repo := newMockUserRepo()
-	uc := usecase.NewLoginUseCase(repo, "secret-key", time.Hour)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 
 	input := usecase.LoginInputDTO{
 		Email:    "",

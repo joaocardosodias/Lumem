@@ -15,6 +15,7 @@ type DashboardUseCase struct {
 	predRepo domain.PredictionRepository
 	mlClient domain.MLClient
 	eventBus domain.EventBus
+	uow      domain.UnitOfWork
 }
 
 func NewDashboardUseCase(
@@ -22,12 +23,18 @@ func NewDashboardUseCase(
 	predRepo domain.PredictionRepository,
 	mlClient domain.MLClient,
 	eventBus domain.EventBus,
+	uow ...domain.UnitOfWork,
 ) *DashboardUseCase {
+	var u domain.UnitOfWork
+	if len(uow) > 0 {
+		u = uow[0]
+	}
 	return &DashboardUseCase{
 		dashRepo: dashRepo,
 		predRepo: predRepo,
 		mlClient: mlClient,
 		eventBus: eventBus,
+		uow:      u,
 	}
 }
 
@@ -194,8 +201,17 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 		predictedItems[i].RunID = runID
 	}
 
-	if err := uc.predRepo.SaveRun(ctx, run, predictedItems); err != nil {
-		return nil, err
+	if uc.uow != nil {
+		err := uc.uow.Do(ctx, func(store domain.UnitOfWorkStore) error {
+			return store.Predictions().SaveRun(ctx, run, predictedItems)
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := uc.predRepo.SaveRun(ctx, run, predictedItems); err != nil {
+			return nil, err
+		}
 	}
 
 	itemsDTO := make([]PredictionItemOutputDTO, 0, len(predictedItems))

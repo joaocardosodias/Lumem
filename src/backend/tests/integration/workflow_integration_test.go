@@ -17,6 +17,7 @@ import (
 	"github.com/g04/backend/internal/adapter/eventbus"
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/adapter/parser"
+	"github.com/g04/backend/internal/adapter/security"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -401,7 +402,9 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
 	mlClient := &intMLClient{}
 
-	loginUC := usecase.NewLoginUseCase(userRepo, jwtSecret, time.Hour)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator(jwtSecret)
+	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, time.Hour)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)

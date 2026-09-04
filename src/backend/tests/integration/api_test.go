@@ -10,6 +10,7 @@ import (
 	"time"
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
+	"github.com/g04/backend/internal/adapter/security"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -52,7 +53,9 @@ func setupIntegrationServer(jwtSecret string) *gin.Engine {
 		IsActive:     true,
 	}
 
-	uc := usecase.NewLoginUseCase(repo, jwtSecret, time.Hour)
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator(jwtSecret)
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
 	handler := httpAdapter.NewAuthHandler(uc)
 
 	r.GET("/health", func(c *gin.Context) {

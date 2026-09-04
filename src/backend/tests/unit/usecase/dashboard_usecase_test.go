@@ -179,3 +179,47 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 		t.Errorf("esperava pelo menos 2 eventos publicados (DoorRiskDetected + PredictionRunCompleted), obteve %d", len(bus.published))
 	}
 }
+
+type mockUOWStore struct {
+	predRepo domain.PredictionRepository
+}
+
+func (s *mockUOWStore) Predictions() domain.PredictionRepository   { return s.predRepo }
+func (s *mockUOWStore) Inspections() domain.InspectionRepository   { return nil }
+func (s *mockUOWStore) Maintenances() domain.MaintenanceRepository { return nil }
+func (s *mockUOWStore) Alarms() domain.AlarmRepository             { return nil }
+
+type mockUnitOfWork struct {
+	called bool
+	store  *mockUOWStore
+}
+
+func (u *mockUnitOfWork) Do(ctx context.Context, fn func(store domain.UnitOfWorkStore) error) error {
+	u.called = true
+	return fn(u.store)
+}
+
+func TestDashboardUseCase_TriggerPredictions_WithUnitOfWork(t *testing.T) {
+	dashRepo := &mockDashboardRepo{}
+	predRepo := &mockPredictionRepo{
+		doors: []domain.Door{
+			{ID: 1, Platform: "P1", DoorNumber: 1},
+		},
+	}
+	ml := &mockMLClient{}
+	bus := &mockEventBus{}
+	uow := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: predRepo},
+	}
+
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
+
+	_, err := uc.TriggerPredictions(context.Background(), 7)
+	if err != nil {
+		t.Fatalf("esperava sucesso na inferencia com UoW: %v", err)
+	}
+
+	if !uow.called {
+		t.Errorf("esperava que o UnitOfWork.Do fosse chamado durante TriggerPredictions")
+	}
+}
