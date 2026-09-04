@@ -1,0 +1,33 @@
+{
+  "formato_id_psd": "{ESTACAO}_P{PLATAFORMA}",
+  "formato_id_porta_pipeline": "{ESTACAO}_P{PLATAFORMA}_PDM{PORTA:02d}",
+  "quantidade_plataformas_modelo_7": 22,
+  "quantidade_plataformas_modelo_5": 20,
+  "quantidade_portas_mapeadas": 480,
+  "plataformas_sem_mapeamento": [
+    "FRE_P1",
+    "FRE_P2"
+  ],
+  "periodo_previsoes_modelo_7": {
+    "inicio": "2025-10-01",
+    "fim": "2026-03-21"
+  },
+  "periodo_features_modelo_5": {
+    "inicio": "2023-11-01",
+    "fim": "2025-10-31"
+  },
+  "quantidade_por_status": {
+    "alerta_sem_features_modelo_5": 2419,
+    "encaminhar_modelo_5": 530,
+    "sem_alerta_modelo_7": 491,
+    "alerta_sem_mapeamento_portas": 344
+  },
+  "pares_plataforma_data_encaminhados": 530,
+  "linhas_porta_encaminhadas": 12720,
+  "arquivos": {
+    "mapa_portas": "mapa_chaves_portas.csv",
+    "saida_modelo_7": "saida_intermediaria_modelo_7.csv",
+    "portas_encaminhadas": "portas_encaminhadas_modelo_5.csv"
+  },
+  "gerado_em_utc": "2026-09-04T00:07:24.156787+00:00"
+}

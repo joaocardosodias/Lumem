@@ -203,7 +203,7 @@ A saída lógica da primeira etapa, que servirá como filtro para a segunda, dev
 | `limiar_modelo_7` | Limiar utilizado na decisão |
 | `alerta_plataforma` | `1` quando o score atingir o limiar |
 
-O formato físico do arquivo será definido na etapa de implementação. Nesta task foi definido apenas o contrato lógico.
+Na Task 3, esse contrato passou a ser materializado no arquivo `saida_intermediaria_modelo_7.csv`. A saída também inclui indicadores de cobertura e um status de encaminhamento para impedir que plataformas ou datas sem features disponíveis sejam tratadas como se tivessem passado pelo Modelo 5.
 
 ## 11. Resultado da análise de compatibilidade
 
@@ -215,12 +215,14 @@ O contrato e a preparação do Modelo 5 já concluíram:
 2. o congelamento das 71 features do Modelo 5, sua ordem, seus tipos e seu novo limiar;
 3. a serialização do Random Forest e a criação de seu metadata.
 
-Ainda precisam ser implementados:
+Também foram concluídos na Task 3:
 
 1. a conversão das chaves entre os dois modelos;
-2. o tratamento das plataformas sem cobertura no Modelo 5;
-3. a execução sequencial, preservando a regra temporal original de cada modelo;
-4. a saída final com as portas priorizadas.
+2. o mapeamento das 480 portas para as 20 plataformas cobertas pelo Modelo 5;
+3. o tratamento explícito das plataformas e datas sem cobertura;
+4. a materialização da saída intermediária do Modelo 7.
+
+Ainda precisam ser implementadas a inferência do Modelo 5 sobre as portas encaminhadas e a saída final com as portas priorizadas.
 
 O alinhamento do target e do uso do dia `D` no Modelo 5 fica registrado como aprimoramento metodológico posterior. Ele será necessário caso o grupo queira avaliar os dois estágios como um único modelo com exatamente o mesmo target, mas não impede a construção do primeiro pipeline sequencial.
 
@@ -253,3 +255,34 @@ Os arquivos produzidos ficam isolados em `models/pipeline-sequencial/artefatos/`
 No teste temporal, o artefato obteve **14,51% de precisão**, **63,50% de recall**, **23,63% de F1**, **18,53% de PR-AUC** e **69,68% de ROC-AUC**. O modelo gerou 27.131 alertas, com 3.938 verdadeiros positivos e 2.264 falhas não detectadas.
 
 Por fim, o artefato foi recarregado do disco e suas probabilidades foram comparadas às produzidas antes da gravação. Os valores foram iguais, confirmando que o modelo pode ser carregado posteriormente pelo pipeline sem mudança nas previsões.
+
+## 13. Task 3 — Padronização das chaves e encaminhamento
+
+A Task 3 implementou a fronteira entre o nível de plataforma e o nível de porta. As chaves internas do Modelo 5 foram convertidas para o padrão canônico definido pelo contrato:
+
+```text
+BUT_1    → BUT_P1
+BUT_1_05 → BUT_P1_PDM05
+```
+
+O mapa resultante contém **480 portas**, distribuídas igualmente entre **20 plataformas**, com 24 portas por plataforma. As duas plataformas de `FRE` presentes no Modelo 7 não possuem portas no painel do Modelo 5 e permanecem identificadas como alertas sem detalhamento.
+
+Além da cobertura por plataforma, foi verificada a cobertura temporal. As previsões salvas do Modelo 7 vão de **01/10/2025 a 21/03/2026**, enquanto o painel disponível do Modelo 5 termina em **31/10/2025**. Portanto, o pipeline utiliza quatro status:
+
+| Status | Significado |
+|---|---|
+| `sem_alerta_modelo_7` | A plataforma não atingiu o limiar do CatBoost |
+| `alerta_sem_mapeamento_portas` | Existe alerta, mas não há portas dessa plataforma no Modelo 5 |
+| `alerta_sem_features_modelo_5` | Existe alerta e mapeamento, mas faltam features para a data |
+| `encaminhar_modelo_5` | O alerta possui plataforma e data cobertas |
+
+Foram encontrados **530 pares de plataforma e data elegíveis**, que correspondem a **12.720 linhas de porta** encaminhadas. Também ficaram registrados 344 alertas sem mapeamento de portas, 2.419 alertas fora da cobertura temporal do Modelo 5 e 491 casos sem alerta do Modelo 7.
+
+Os arquivos gerados em `models/pipeline-sequencial/artefatos/` são:
+
+- `mapa_chaves_portas.csv`: relação entre as chaves internas e canônicas;
+- `saida_intermediaria_modelo_7.csv`: resultados de plataforma e status de encaminhamento;
+- `portas_encaminhadas_modelo_5.csv`: portas elegíveis para a próxima inferência;
+- `metadata_integracao_chaves.json`: formatos, coberturas, períodos e contagens de auditoria.
+
+Essa etapa ainda não calcula o score das portas. Ela prepara e valida exatamente quais linhas poderão ser avaliadas pelo Random Forest na próxima task.
