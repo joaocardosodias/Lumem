@@ -1,17 +1,24 @@
 stages:
   - lint
   - test
-  - security
   - build
+  - security
   - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
+  GOPATH: "$CI_PROJECT_DIR/.go"
+
+cache:
+  key: go-mod-cache
+  paths:
+    - .go/pkg/mod
 
 lint_format:
   stage: lint
-  image: golang:alpine
+  image: golang:1.26-alpine3.21
   before_script:
+    - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
   script:
     - test -z "$(gofmt -l .)"
@@ -21,8 +28,9 @@ lint_format:
 
 lint_vet:
   stage: lint
-  image: golang:alpine
+  image: golang:1.26-alpine3.21
   before_script:
+    - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
   script:
     - go vet ./...
@@ -32,8 +40,9 @@ lint_vet:
 
 test_suite:
   stage: test
-  image: golang:alpine
+  image: golang:1.26-alpine3.21
   before_script:
+    - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
   script:
     - go test -v -coverpkg=./internal/... -coverprofile=coverage.out ./tests/...
@@ -47,14 +56,27 @@ test_suite:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
-security_audit:
-  stage: security
-  image: golang:alpine
+test_migrations:
+  stage: test
+  image: golang:1.26-alpine3.21
+  services:
+    - postgres:16-alpine
+  variables:
+    POSTGRES_DB: g04_test
+    POSTGRES_USER: test
+    POSTGRES_PASSWORD: test
+    POSTGRES_HOST_AUTH_METHOD: trust
+    DATABASE_URL: "postgresql://test:test@postgres:5432/g04_test?sslmode=disable"
   before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - apk add --no-cache postgresql-client
+    - until pg_isready -h postgres -p 5432 -U test; do sleep 1; done
     - cd src/backend
-    - go install golang.org/x/vuln/cmd/govulncheck@latest
+    - go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
   script:
-    - govulncheck ./...
+    - migrate -path migrations -database "$DATABASE_URL" up
+    - TEST_DATABASE_URL="$DATABASE_URL" go test -v -run TestPostgresRepositories ./tests/integration/...
+    - migrate -path migrations -database "$DATABASE_URL" down -all
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
@@ -69,13 +91,50 @@ build_container:
     DOCKER_TLS_CERTDIR: ""
   script:
     - docker info
-    - docker build -t "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA" src/backend
-    - echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-    - docker push "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
+    - docker build -t "backend-linha4:$CI_COMMIT_SHORT_SHA" src/backend
+    - docker save -o backend-image.tar "backend-linha4:$CI_COMMIT_SHORT_SHA"
     - |
-      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-        docker tag "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
-        docker push "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
+      if [ -n "$GHCR_TOKEN" ] && [ -n "$GHCR_USERNAME" ]; then
+        echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+        docker tag "backend-linha4:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
+        docker push "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+          docker tag "backend-linha4:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
+          docker push "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
+        fi
+      fi
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - backend-image.tar
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+security_audit:
+  stage: security
+  image: golang:1.26-alpine3.21
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - cd src/backend
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+  script:
+    - govulncheck ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+trivy_scan:
+  stage: security
+  image: aquasec/trivy:latest
+  dependencies:
+    - build_container
+  script:
+    - |
+      if [ -f backend-image.tar ]; then
+        trivy image --input backend-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+      elif [ -n "$GHCR_USERNAME" ]; then
+        trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
       fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -84,6 +143,7 @@ build_container:
 pages:
   stage: deploy
   image: node:lts
+  cache: []
   script:
     - cd docs
     - npm ci
