@@ -2,6 +2,7 @@ stages:
   - lint
   - test
   - security
+  - build
   - deploy
 
 variables:
@@ -54,6 +55,25 @@ security_audit:
     - go install golang.org/x/vuln/cmd/govulncheck@latest
   script:
     - govulncheck ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+build_container:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t backend-linha4:$CI_COMMIT_SHORT_SHA src/backend
+    - |
+      if [ -n "$DOCKER_REGISTRY_USER" ] && [ -n "$DOCKER_REGISTRY_PASSWORD" ]; then
+        echo "$DOCKER_REGISTRY_PASSWORD" | docker login -u "$DOCKER_REGISTRY_USER" --password-stdin "$DOCKER_REGISTRY"
+        docker tag backend-linha4:$CI_COMMIT_SHORT_SHA "$DOCKER_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+        docker tag backend-linha4:$CI_COMMIT_SHORT_SHA "$DOCKER_REGISTRY_IMAGE:latest"
+        docker push "$DOCKER_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+        docker push "$DOCKER_REGISTRY_IMAGE:latest"
+      fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
