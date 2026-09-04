@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -23,40 +25,43 @@ func (r *PostgresMaintenanceRepository) BatchInsertMaintenance(ctx context.Conte
 		return nil
 	}
 
-	query := `
-		INSERT INTO maintenance_events (
-			id, upload_id, sap_order_number, order_type, installation_location,
-			station_code, start_timestamp, end_timestamp, duration_hours,
-			description, symptom, cause, action_taken, source
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-	`
-	stmt, err := r.db.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	for _, e := range events {
-		if e.ID == "" {
-			e.ID = uuid.New().String()
+	const chunkSize = 50
+	for i := 0; i < len(events); i += chunkSize {
+		end := i + chunkSize
+		if end > len(events) {
+			end = len(events)
 		}
-		_, err := stmt.ExecContext(ctx,
-			e.ID,
-			e.UploadID,
-			e.SAPOrderNumber,
-			e.OrderType,
-			e.InstallationLocation,
-			e.StationCode,
-			e.StartTimestamp,
-			e.EndTimestamp,
-			e.DurationHours,
-			e.Description,
-			e.Symptom,
-			e.Cause,
-			e.ActionTaken,
-			e.Source,
-		)
-		if err != nil {
+		chunk := events[i:end]
+
+		var sb strings.Builder
+		sb.WriteString(`
+			INSERT INTO maintenance_events (
+				id, upload_id, sap_order_number, order_type, installation_location,
+				station_code, start_timestamp, end_timestamp, duration_hours,
+				description, symptom, cause, action_taken, source
+			) VALUES 
+		`)
+
+		vals := make([]any, 0, len(chunk)*14)
+		for j, e := range chunk {
+			if e.ID == "" {
+				e.ID = uuid.New().String()
+			}
+			if j > 0 {
+				sb.WriteString(", ")
+			}
+			idx := j * 14
+			fmt.Fprintf(&sb, "($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+				idx+1, idx+2, idx+3, idx+4, idx+5, idx+6, idx+7, idx+8, idx+9, idx+10, idx+11, idx+12, idx+13, idx+14)
+
+			vals = append(vals,
+				e.ID, e.UploadID, e.SAPOrderNumber, e.OrderType, e.InstallationLocation,
+				e.StationCode, e.StartTimestamp, e.EndTimestamp, e.DurationHours,
+				e.Description, e.Symptom, e.Cause, e.ActionTaken, e.Source,
+			)
+		}
+
+		if _, err := r.db.ExecContext(ctx, sb.String(), vals...); err != nil {
 			return err
 		}
 	}

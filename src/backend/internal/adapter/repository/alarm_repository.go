@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -129,37 +131,43 @@ func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms 
 		return nil
 	}
 
-	query := `
-		INSERT INTO telemetry_alarms (
-			id, upload_id, tag, station_code, platform, door_number,
-			alarm_type, duration_seconds, event_timestamp,
-			normalization_timestamp, source
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`
-	stmt, err := r.db.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	for _, a := range alarms {
-		if a.ID == "" {
-			a.ID = uuid.New().String()
+	const chunkSize = 50
+	for i := 0; i < len(alarms); i += chunkSize {
+		end := i + chunkSize
+		if end > len(alarms) {
+			end = len(alarms)
 		}
-		_, err := stmt.ExecContext(ctx,
-			a.ID,
-			a.UploadID,
-			a.Tag,
-			a.StationCode,
-			a.Platform,
-			a.DoorNumber,
-			a.AlarmType,
-			a.DurationSeconds,
-			a.EventTimestamp,
-			a.NormalizationTimestamp,
-			a.Source,
-		)
-		if err != nil {
+		chunk := alarms[i:end]
+
+		var sb strings.Builder
+		sb.WriteString(`
+			INSERT INTO telemetry_alarms (
+				id, upload_id, tag, station_code, platform, door_number,
+				alarm_type, duration_seconds, event_timestamp,
+				normalization_timestamp, source
+			) VALUES 
+		`)
+
+		vals := make([]any, 0, len(chunk)*11)
+		for j, a := range chunk {
+			if a.ID == "" {
+				a.ID = uuid.New().String()
+			}
+			if j > 0 {
+				sb.WriteString(", ")
+			}
+			idx := j * 11
+			fmt.Fprintf(&sb, "($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+				idx+1, idx+2, idx+3, idx+4, idx+5, idx+6, idx+7, idx+8, idx+9, idx+10, idx+11)
+
+			vals = append(vals,
+				a.ID, a.UploadID, a.Tag, a.StationCode, a.Platform, a.DoorNumber,
+				a.AlarmType, a.DurationSeconds, a.EventTimestamp,
+				a.NormalizationTimestamp, a.Source,
+			)
+		}
+
+		if _, err := r.db.ExecContext(ctx, sb.String(), vals...); err != nil {
 			return err
 		}
 	}

@@ -90,23 +90,14 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string
 		colMap[strings.ToLower(strings.TrimSpace(h))] = i
 	}
 
-	tagIdx, hasTag := colMap["tag"]
-	stationIdx, hasStation := colMap["estação"]
-	if !hasStation {
-		stationIdx, hasStation = colMap["estacao"]
-	}
-	doorIdx, hasDoor := colMap["porta"]
-	alarmIdx, hasAlarm := colMap["alarme"]
-	durIdx, hasDur := colMap["tempo_normalizacao_seg"]
-	normIdx, hasNorm := colMap["horário da normalizacao"]
-	if !hasNorm {
-		normIdx, hasNorm = colMap["horario da normalizacao"]
-	}
-	platIdx, hasPlat := colMap["plataforma_extraida"]
-	timeIdx, hasTime := colMap["horário do alarme"]
-	if !hasTime {
-		timeIdx, hasTime = colMap["horario do alarme"]
-	}
+	tagIdx, hasTag := getFirstIndex(colMap, "tag", "tag_alarme")
+	stationIdx, hasStation := getFirstIndex(colMap, "estação", "estacao", "estacao_original", "estacao_extraida")
+	doorIdx, hasDoor := getFirstIndex(colMap, "porta", "porta_original", "porta_extraida")
+	alarmIdx, hasAlarm := getFirstIndex(colMap, "alarme", "tipo_alarme", "tipo_evento", "tipo_evento_extraido")
+	durIdx, hasDur := getFirstIndex(colMap, "tempo_normalizacao_seg", "duracao_calculada_seg", "duracao_seg")
+	normIdx, hasNorm := getFirstIndex(colMap, "horário da normalizacao", "horario da normalizacao", "horario_normalizacao", "dt_normalizacao")
+	platIdx, hasPlat := getFirstIndex(colMap, "plataforma_extraida", "plataforma")
+	timeIdx, hasTime := getFirstIndex(colMap, "horário do alarme", "horario do alarme", "horario_alarme", "dt_alarme")
 
 	if !hasTag || !hasStation || !hasDoor || !hasAlarm || !hasTime {
 		uc.failUpload(uploadID, "colunas obrigatorias ausentes no arquivo CSV de alarmes")
@@ -133,7 +124,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string
 		doorNum, _ := strconv.Atoi(strings.TrimSpace(strings.Split(row[doorIdx], ".")[0]))
 		durSec := 0
 		if hasDur && durIdx < len(row) {
-			durSec, _ = strconv.Atoi(strings.TrimSpace(row[durIdx]))
+			durSec, _ = strconv.Atoi(strings.TrimSpace(strings.Split(row[durIdx], ".")[0]))
 		}
 
 		platform := ""
