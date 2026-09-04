@@ -27,7 +27,7 @@ Portas priorizadas para inspeção
 
 O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 é executado somente para detalhar o risco das portas pertencentes às plataformas selecionadas na primeira etapa. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
 
-Esta página começa pelo contrato de integração. Nesta etapa ainda não são implementadas a execução dos modelos nem a geração da lista final de portas.
+Esta página registra o contrato de integração e a preparação dos modelos para o pipeline. A Task 1 definiu como os modelos se conectam; a Task 2 preparou o artefato do Modelo 5 para inferência. A execução conjunta e a geração da lista final de portas pertencem às próximas etapas.
 
 ## 2. Papel de cada modelo
 
@@ -66,9 +66,9 @@ A tabela a seguir registra o estado atual dos dois modelos. As diferenças marca
 | Target | `target_falha_7d` | `y` | Os nomes podem diferir; a semântica deve ser igual |
 | Chave da plataforma | `id_psd`, como `BUT_P1` | `id_plat`, como `BUT_1` | Conversão obrigatória |
 | Chave da porta | Preservada nas fontes, mas não é a unidade prevista | `id_porta`, como `BUT_1_05` | Padronização obrigatória |
-| Features | 21 features registradas no metadata | 71 features selecionadas por SHAP | Cada modelo mantém seu próprio conjunto |
-| Limiar registrado | `0,317380` | `0,5183` no experimento de features selecionadas | Manter limiares separados |
-| Modelo serializado | `modelo_catboost.cbm` e `metadata_modelo.json` | Não existe artefato serializado no diretório atual | Ajuste obrigatório |
+| Features | 21 features registradas no metadata | 71 features selecionadas por SHAP e congeladas no novo metadata | Cada modelo mantém seu próprio conjunto |
+| Limiar registrado | `0,317380` | `0,488753` no artefato do pipeline | Manter limiares separados |
+| Modelo serializado | `modelo_catboost.cbm` e `metadata_modelo.json` | `modelo_5_random_forest.joblib` e `metadata_modelo_5.json` | Compatível |
 
 ## 4. Data de referência e horizonte
 
@@ -174,7 +174,7 @@ O experimento final manteve 71 das 83 features candidatas. Elas incluem:
 - estação, via e número da porta;
 - features de ciclo, como `dias_desde_ultima_corretiva`, `n_corretivas_historico_total`, `intervalo_medio_zm01` e `razao_atraso_zm01`.
 
-A lista ordenada das 71 features não está salva como metadata: ela existe apenas na variável `mantidas` durante a execução do notebook. Antes de usar o Modelo 5 no pipeline, a lista e a ordem exatas precisam ser congeladas junto com o modelo serializado.
+A Task 2 congelou no novo metadata a lista, a ordem e o tipo das 71 features. O conjunto corresponde às features mantidas pelo processo de seleção SHAP da Sprint 2. Para tornar a reconstrução determinística, a ordem final segue a ordem das colunas do painel, e o modelo serializado registra essa mesma ordem em `feature_names_in_`.
 
 ## 9. Limiar e regra de encaminhamento
 
@@ -182,8 +182,10 @@ Os limiares pertencem aos modelos e não devem ser confundidos:
 
 ```text
 Modelo 7: probabilidade >= 0,317380 → plataforma alertada
-Modelo 5: probabilidade >= 0,5183   → porta alertada
+Modelo 5: probabilidade >= 0,488753 → porta alertada
 ```
+
+O valor `0,5183` foi o limiar do experimento executado na Sprint 2. Como aquele objeto treinado não havia sido salvo, a Task 2 reconstruiu o modelo e selecionou novamente o limiar na validação, resultando em `0,488753`. O teste não participou dessa escolha.
 
 Somente as portas de plataformas alertadas pelo Modelo 7 serão avaliadas pelo Modelo 5. Uma plataforma abaixo do limiar encerra o fluxo naquela data. Dessa forma, o CatBoost ajuda o Random Forest ao restringir o conjunto de portas que precisam ser analisadas.
 
@@ -207,13 +209,18 @@ O formato físico do arquivo será definido na etapa de implementação. Nesta t
 
 Os modelos são **conceitualmente complementares e podem formar o pipeline proposto**. O Modelo 7 responde “em qual plataforma existe risco?” e o Modelo 5 responde “qual porta dessa plataforma deve ser priorizada?”. A granularidade diferente é justamente o mecanismo pelo qual um modelo ajuda o outro.
 
-Para automatizar a primeira versão, são necessários:
+O contrato e a preparação do Modelo 5 já concluíram:
 
-1. congelar as 71 features do Modelo 5, sua ordem, seus tipos e o limiar;
-2. serializar o Modelo 5 e criar seu metadata;
-3. implementar a conversão das chaves;
-4. definir o tratamento das plataformas sem cobertura no Modelo 5;
-5. preservar a regra temporal original de cada modelo durante a inferência.
+1. a definição do encadeamento Modelo 7 → Modelo 5;
+2. o congelamento das 71 features do Modelo 5, sua ordem, seus tipos e seu novo limiar;
+3. a serialização do Random Forest e a criação de seu metadata.
+
+Ainda precisam ser implementados:
+
+1. a conversão das chaves entre os dois modelos;
+2. o tratamento das plataformas sem cobertura no Modelo 5;
+3. a execução sequencial, preservando a regra temporal original de cada modelo;
+4. a saída final com as portas priorizadas.
 
 O alinhamento do target e do uso do dia `D` no Modelo 5 fica registrado como aprimoramento metodológico posterior. Ele será necessário caso o grupo queira avaliar os dois estágios como um único modelo com exatamente o mesmo target, mas não impede a construção do primeiro pipeline sequencial.
 
@@ -224,3 +231,25 @@ Modelo 7 — CatBoost por plataforma
               ↓ somente plataformas alertadas
 Modelo 5 — Random Forest por porta
 ```
+
+## 12. Task 2 — Preparação do Modelo 5 para inferência
+
+O notebook novo `models/pipeline-sequencial/pipeline_sequencial_modelos_7_5.ipynb` reconstrói o Modelo 5 exclusivamente a partir das bases existentes. Nenhum notebook, dado ou documento das sprints anteriores foi alterado.
+
+O processo realizado foi:
+
+1. carregar o painel diário já construído pelo Modelo 5;
+2. reproduzir as features adicionais criadas no notebook original;
+3. manter as mesmas 71 features selecionadas após a análise SHAP;
+4. respeitar a divisão temporal original entre treino, validação e teste;
+5. selecionar o limiar pela maior F1 na validação;
+6. treinar o Random Forest final e salvar o modelo e seu contrato de entrada.
+
+Os arquivos produzidos ficam isolados em `models/pipeline-sequencial/artefatos/`:
+
+- `modelo_5_random_forest.joblib`: Random Forest treinado;
+- `metadata_modelo_5.json`: features, tipos, ordem, limiar, hiperparâmetros, períodos e métricas.
+
+No teste temporal, o artefato obteve **14,51% de precisão**, **63,50% de recall**, **23,63% de F1**, **18,53% de PR-AUC** e **69,68% de ROC-AUC**. O modelo gerou 27.131 alertas, com 3.938 verdadeiros positivos e 2.264 falhas não detectadas.
+
+Por fim, o artefato foi recarregado do disco e suas probabilidades foram comparadas às produzidas antes da gravação. Os valores foram iguais, confirmando que o modelo pode ser carregado posteriormente pelo pipeline sem mudança nas previsões.
