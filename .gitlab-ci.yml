@@ -16,7 +16,7 @@ cache:
 
 lint_format:
   stage: lint
-  image: golang:1.26-alpine3.21
+  image: golang:1.26-alpine3.23
   before_script:
     - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
@@ -28,7 +28,7 @@ lint_format:
 
 lint_vet:
   stage: lint
-  image: golang:1.26-alpine3.21
+  image: golang:1.26-alpine3.23
   before_script:
     - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
@@ -40,7 +40,7 @@ lint_vet:
 
 test_suite:
   stage: test
-  image: golang:1.26-alpine3.21
+  image: golang:1.26-alpine3.23
   before_script:
     - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
@@ -58,7 +58,7 @@ test_suite:
 
 test_migrations:
   stage: test
-  image: golang:1.26-alpine3.21
+  image: golang:1.26-alpine3.23
   services:
     - postgres:16-alpine
   variables:
@@ -113,7 +113,7 @@ build_container:
 
 security_audit:
   stage: security
-  image: golang:1.26-alpine3.21
+  image: golang:1.26-alpine3.23
   before_script:
     - export PATH="$GOPATH/bin:$PATH"
     - cd src/backend
