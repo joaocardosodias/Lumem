@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -20,17 +21,24 @@ type IngestMaintenanceUseCase struct {
 	maintRepo  domain.MaintenanceRepository
 	uploadRepo domain.AlarmRepository
 	parser     domain.SpreadsheetParser
+	wg         *sync.WaitGroup
 }
 
 func NewIngestMaintenanceUseCase(
 	maintRepo domain.MaintenanceRepository,
 	uploadRepo domain.AlarmRepository,
 	parser domain.SpreadsheetParser,
+	wg ...*sync.WaitGroup,
 ) *IngestMaintenanceUseCase {
+	var w *sync.WaitGroup
+	if len(wg) > 0 {
+		w = wg[0]
+	}
 	return &IngestMaintenanceUseCase{
 		maintRepo:  maintRepo,
 		uploadRepo: uploadRepo,
 		parser:     parser,
+		wg:         w,
 	}
 }
 
@@ -77,7 +85,15 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 		return "", err
 	}
 
-	go uc.processFileAsync(upload.ID, tmpFile.Name(), ext, explicitOrderType)
+	if uc.wg != nil {
+		uc.wg.Add(1)
+	}
+	go func() {
+		if uc.wg != nil {
+			defer uc.wg.Done()
+		}
+		uc.processFileAsync(upload.ID, tmpFile.Name(), ext, explicitOrderType)
+	}()
 
 	return upload.ID, nil
 }

@@ -156,6 +156,18 @@ func (r *intAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.A
 	return nil
 }
 
+func (r *intAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
+	r.store.mu.Lock()
+	defer r.store.mu.Unlock()
+	for _, u := range r.store.uploads {
+		if u.Status == "processing" {
+			u.Status = "failed"
+			u.ErrorLog = "processo interrompido por reinicializacao do servidor"
+		}
+	}
+	return nil
+}
+
 type intMaintenanceRepo struct{ store *inMemoryStore }
 
 func (r *intMaintenanceRepo) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {

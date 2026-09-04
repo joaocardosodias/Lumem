@@ -174,3 +174,13 @@ func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms 
 
 	return nil
 }
+
+func (r *PostgresAlarmRepository) ReconcileStaleUploads(ctx context.Context) error {
+	query := `
+		UPDATE file_uploads
+		SET status = 'failed', error_log = 'processo interrompido por reinicializacao do servidor', completed_at = NOW()
+		WHERE status = 'processing'
+	`
+	_, err := r.db.ExecContext(ctx, query)
+	return err
+}

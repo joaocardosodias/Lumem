@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -19,10 +20,15 @@ import (
 
 type IngestAlarmsUseCase struct {
 	repo domain.AlarmRepository
+	wg   *sync.WaitGroup
 }
 
-func NewIngestAlarmsUseCase(repo domain.AlarmRepository) *IngestAlarmsUseCase {
-	return &IngestAlarmsUseCase{repo: repo}
+func NewIngestAlarmsUseCase(repo domain.AlarmRepository, wg ...*sync.WaitGroup) *IngestAlarmsUseCase {
+	var w *sync.WaitGroup
+	if len(wg) > 0 {
+		w = wg[0]
+	}
+	return &IngestAlarmsUseCase{repo: repo, wg: w}
 }
 
 func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader) (string, error) {
@@ -61,7 +67,15 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 		return "", err
 	}
 
-	go uc.processFileAsync(upload.ID, tmpFile.Name())
+	if uc.wg != nil {
+		uc.wg.Add(1)
+	}
+	go func() {
+		if uc.wg != nil {
+			defer uc.wg.Done()
+		}
+		uc.processFileAsync(upload.ID, tmpFile.Name())
+	}()
 
 	return upload.ID, nil
 }

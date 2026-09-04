@@ -30,6 +30,13 @@ func (m *mockEventBus) Publish(ctx context.Context, event domain.Event) {
 	m.published = append(m.published, event)
 }
 
+func (m *mockEventBus) PublishSync(ctx context.Context, event domain.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.published = append(m.published, event)
+	return nil
+}
+
 func (m *mockEventBus) Subscribe(eventName string, handler domain.EventHandler) {}
 
 func TestEventBus_PublishAndSubscribe(t *testing.T) {

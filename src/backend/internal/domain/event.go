@@ -14,6 +14,7 @@ type EventHandler func(ctx context.Context, event Event) error
 
 type EventBus interface {
 	Publish(ctx context.Context, event Event)
+	PublishSync(ctx context.Context, event Event) error
 	Subscribe(eventName string, handler EventHandler)
 }
 

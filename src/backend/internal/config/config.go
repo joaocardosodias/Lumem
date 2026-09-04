@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,22 +11,35 @@ import (
 )
 
 type Config struct {
-	Port           string
-	Environment    string
-	RunMigrations  bool
-	DBDriver       string
-	DBHost         string
-	DBPort         string
-	DBName         string
-	DBUser         string
-	DBPassword     string
-	DBSSLMode      string
-	DatabaseURL    string
-	DBPath         string
-	MigrationsPath string
-	JWTSecret      string
-	JWTExpiration  time.Duration
-	VPSModelURL    string
+	Port               string
+	Environment        string
+	RunMigrations      bool
+	DBDriver           string
+	DBHost             string
+	DBPort             string
+	DBName             string
+	DBUser             string
+	DBPassword         string
+	DBSSLMode          string
+	DatabaseURL        string
+	DBPath             string
+	MigrationsPath     string
+	JWTSecret          string
+	JWTExpiration      time.Duration
+	VPSModelURL        string
+	CORSAllowedOrigins string
+}
+
+func (c *Config) Validate() error {
+	if c.Environment == "production" {
+		if c.DBPassword == "" {
+			return errors.New("DB_PASSWORD e obrigatorio em ambiente de producao")
+		}
+		if c.JWTSecret == "" {
+			return errors.New("JWT_SECRET e obrigatorio em ambiente de producao")
+		}
+	}
+	return nil
 }
 
 func LoadConfig() *Config {
@@ -58,22 +72,23 @@ func LoadConfig() *Config {
 	runMig := strings.ToLower(getEnv("RUN_MIGRATIONS", "true")) == "true"
 
 	return &Config{
-		Port:           getEnv("PORT", "8080"),
-		Environment:    getEnv("ENV", "development"),
-		RunMigrations:  runMig,
-		DBDriver:       getEnv("DB_DRIVER", "postgres"),
-		DBHost:         dbHost,
-		DBPort:         dbPort,
-		DBName:         dbName,
-		DBUser:         dbUser,
-		DBPassword:     dbPass,
-		DBSSLMode:      dbSSL,
-		DatabaseURL:    rawURL,
-		DBPath:         getEnv("DB_PATH", "database.db"),
-		MigrationsPath: migrationsPath,
-		JWTSecret:      getEnv("JWT_SECRET", ""),
-		JWTExpiration:  24 * time.Hour,
-		VPSModelURL:    getEnv("VPS_MODEL_URL", "http://localhost:8000"),
+		Port:               getEnv("PORT", "8080"),
+		Environment:        getEnv("ENV", "development"),
+		RunMigrations:      runMig,
+		DBDriver:           getEnv("DB_DRIVER", "postgres"),
+		DBHost:             dbHost,
+		DBPort:             dbPort,
+		DBName:             dbName,
+		DBUser:             dbUser,
+		DBPassword:         dbPass,
+		DBSSLMode:          dbSSL,
+		DatabaseURL:        rawURL,
+		DBPath:             getEnv("DB_PATH", "database.db"),
+		MigrationsPath:     migrationsPath,
+		JWTSecret:          getEnv("JWT_SECRET", ""),
+		JWTExpiration:      24 * time.Hour,
+		VPSModelURL:        getEnv("VPS_MODEL_URL", "http://localhost:8000"),
+		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "*"),
 	}
 }
 

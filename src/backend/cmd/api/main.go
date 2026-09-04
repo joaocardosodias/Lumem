@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -51,6 +53,11 @@ func main() {
 	})
 	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
+
+	if err := cfg.Validate(); err != nil {
+		logger.Error("falha na validacao de configuracao de producao", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	logger.Info("inicializando aplicacao",
 		slog.String("environment", cfg.Environment),
@@ -102,6 +109,12 @@ func main() {
 	cachedDashRepo := repository.NewCachedDashboardRepository(dashRepo, 30*time.Second)
 	predRepo := repository.NewPostgresPredictionRepository(db)
 
+	if err := alarmRepo.ReconcileStaleUploads(context.Background()); err != nil {
+		logger.Warn("falha ao reconciliar uploads pendentes", slog.String("error", err.Error()))
+	} else {
+		logger.Info("reconciliacao de uploads pendentes executada com sucesso")
+	}
+
 	usecase.RegisterEventSubscribers(bus, insRepo, cachedDashRepo, logger)
 
 	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
@@ -110,9 +123,11 @@ func main() {
 	hasher := security.NewBcryptPasswordHasher(0)
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
+	uploadWG := &sync.WaitGroup{}
+
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, uploadWG)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser, uploadWG)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
@@ -138,9 +153,30 @@ func main() {
 	router.Use(httpAdapter.CorrelationIDMiddleware())
 	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
 	router.Use(httpAdapter.RateLimiterMiddleware(limiter))
+	router.Use(httpAdapter.PrometheusMetricsMiddleware())
 
+	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
 	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		allow := false
+		if cfg.CORSAllowedOrigins == "*" || cfg.Environment != "production" {
+			allow = true
+		} else {
+			for _, o := range allowedOrigins {
+				if strings.TrimSpace(o) == origin {
+					allow = true
+					break
+				}
+			}
+		}
+
+		if allow {
+			if origin != "" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		if c.Request.Method == "OPTIONS" {
@@ -157,6 +193,7 @@ func main() {
 	router.GET("/healthz/live", healthHandler.Live)
 	router.GET("/healthz/ready", healthHandler.Ready)
 	router.GET("/health", healthHandler.Ready)
+	router.GET("/metrics", httpAdapter.MetricsHandler())
 
 	v1 := router.Group("/api/v1")
 	{
@@ -210,6 +247,19 @@ func main() {
 	<-quit
 
 	logger.Info("sinal de encerramento recebido. desligando servidor graciosamente...")
+
+	uploadDone := make(chan struct{})
+	go func() {
+		uploadWG.Wait()
+		close(uploadDone)
+	}()
+
+	select {
+	case <-uploadDone:
+		logger.Info("todos os uploads assincronos foram concluidos")
+	case <-time.After(10 * time.Second):
+		logger.Warn("tempo limite atingido aguardando uploads pendentes")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -45,4 +45,5 @@ type AlarmRepository interface {
 	GetUploadByID(ctx context.Context, id string) (*FileUpload, error)
 	GetUploadByHash(ctx context.Context, hash string) (*FileUpload, error)
 	BatchInsertAlarms(ctx context.Context, alarms []*Alarm) error
+	ReconcileStaleUploads(ctx context.Context) error
 }

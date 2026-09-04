@@ -69,6 +69,18 @@ func (m *mockAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.
 	return nil
 }
 
+func (m *mockAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, u := range m.uploads {
+		if u.Status == "processing" {
+			u.Status = "failed"
+			u.ErrorLog = "processo interrompido por reinicializacao do servidor"
+		}
+	}
+	return nil
+}
+
 func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {
 	repo := newMockAlarmRepo()
 	uc := usecase.NewIngestAlarmsUseCase(repo)
@@ -116,5 +128,23 @@ SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
 
 	if id1 != id2 {
 		t.Errorf("esperava que id2 (%s) fosse igual a id1 (%s)", id2, id1)
+	}
+}
+
+func TestAlarmRepo_ReconcileStaleUploads(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.uploads["up_stale"] = &domain.FileUpload{
+		ID:       "up_stale",
+		FileName: "interrupted.csv",
+		Status:   "processing",
+	}
+
+	err := repo.ReconcileStaleUploads(context.Background())
+	if err != nil {
+		t.Fatalf("falha ao reconciliar: %v", err)
+	}
+
+	if repo.uploads["up_stale"].Status != "failed" {
+		t.Errorf("esperava status failed, obteve %s", repo.uploads["up_stale"].Status)
 	}
 }

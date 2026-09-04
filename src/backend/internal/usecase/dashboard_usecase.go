@@ -226,7 +226,7 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 		})
 
 		if p.WillFail && uc.eventBus != nil {
-			uc.eventBus.Publish(ctx, domain.DoorRiskDetectedEvent{
+			_ = uc.eventBus.PublishSync(ctx, domain.DoorRiskDetectedEvent{
 				RunID:       run.ID,
 				StationCode: p.StationCode,
 				Platform:    p.Platform,
