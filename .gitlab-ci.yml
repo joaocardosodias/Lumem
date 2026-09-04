@@ -1,8 +1,9 @@
 stages:
   - lint
   - test
-  - build
   - security
+  - build
+  - scan
   - deploy
 
 variables:
@@ -81,6 +82,19 @@ test_migrations:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
+security_audit:
+  stage: security
+  image: golang:1.26-alpine3.23
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - cd src/backend
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+  script:
+    - govulncheck ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
 build_container:
   stage: build
   image: docker:24.0.5
@@ -111,22 +125,12 @@ build_container:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
-security_audit:
-  stage: security
-  image: golang:1.26-alpine3.23
-  before_script:
-    - export PATH="$GOPATH/bin:$PATH"
-    - cd src/backend
-    - go install golang.org/x/vuln/cmd/govulncheck@latest
-  script:
-    - govulncheck ./...
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
-
 trivy_scan:
-  stage: security
-  image: aquasec/trivy:latest
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  cache: []
   dependencies:
     - build_container
   script:
