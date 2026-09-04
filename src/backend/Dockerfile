@@ -15,7 +15,8 @@ FROM alpine:3.23
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata curl && \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates tzdata curl && \
     adduser -D -u 10001 appuser
 
 COPY --from=builder /app/bin/api /app/api
