@@ -83,7 +83,7 @@ func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
 	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -122,7 +122,7 @@ func TestIngestMaintenanceUseCase_ValidXLSX(t *testing.T) {
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
 	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -162,7 +162,7 @@ func TestIngestMaintenanceUseCase_ShortRowNoPanic(t *testing.T) {
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
 	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01
@@ -194,7 +194,7 @@ func TestIngestMaintenanceUseCase_RollbackOnBatchFailure(t *testing.T) {
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
 	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -214,5 +214,30 @@ func TestIngestMaintenanceUseCase_RollbackOnBatchFailure(t *testing.T) {
 	}
 	if len(maintRepo.events) != 0 {
 		t.Errorf("esperava 0 eventos apos rollback da transacao, obteve %d", len(maintRepo.events))
+	}
+}
+
+func TestIngestMaintenanceUseCase_FailUploadErrorLogged(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	maintRepo.failBatchInsert = true
+	uploadRepo := newMockAlarmRepo()
+	uploadRepo.failUpdateUpload = true
+	logger := &mockLogger{}
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, logger)
+
+	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
+53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
+`
+	_, err := uc.StartIngestion(context.Background(), "falha_log.csv", strings.NewReader(csvData), "ZM01")
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	if len(logger.errors) == 0 {
+		t.Fatalf("esperava que erro de falha ao marcar upload como failed fosse registrado no logger")
 	}
 }

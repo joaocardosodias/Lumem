@@ -131,8 +131,8 @@ func main() {
 	jobRunner := scheduler.NewGoroutineJobRunner(uploadWG, logger)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, jobRunner, uow)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, jobRunner, uow)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, jobRunner, uow, logger)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, jobRunner, uow, logger)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)

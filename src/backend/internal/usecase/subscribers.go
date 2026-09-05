@@ -11,10 +11,7 @@ type CacheInvalidator interface {
 	Invalidate()
 }
 
-type EventLogger interface {
-	Warn(msg string, args ...any)
-	Info(msg string, args ...any)
-}
+type EventLogger = port.Logger
 
 func RegisterEventSubscribers(
 	bus port.EventBus,

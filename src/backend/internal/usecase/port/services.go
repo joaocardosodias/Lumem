@@ -83,3 +83,9 @@ type MaintenanceParser interface {
 type JobRunner interface {
 	Run(job func())
 }
+
+type Logger interface {
+	Error(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Info(msg string, args ...any)
+}

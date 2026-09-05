@@ -20,6 +20,7 @@ type IngestMaintenanceUseCase struct {
 	maintParser port.MaintenanceParser
 	runner      port.JobRunner
 	uow         port.UnitOfWork
+	logger      port.Logger
 }
 
 func NewIngestMaintenanceUseCase(
@@ -29,6 +30,7 @@ func NewIngestMaintenanceUseCase(
 	maintParser port.MaintenanceParser,
 	runner port.JobRunner,
 	uow port.UnitOfWork,
+	logger port.Logger,
 ) *IngestMaintenanceUseCase {
 	return &IngestMaintenanceUseCase{
 		maintRepo:   maintRepo,
@@ -37,6 +39,7 @@ func NewIngestMaintenanceUseCase(
 		maintParser: maintParser,
 		runner:      runner,
 		uow:         uow,
+		logger:      logger,
 	}
 }
 
@@ -48,7 +51,9 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 
 	existing, err := uc.uploadRepo.GetUploadByHash(ctx, fileHash)
 	if err == nil && existing != nil {
-		_ = uc.storage.Delete(ctx, storageKey)
+		if delErr := uc.storage.Delete(ctx, storageKey); delErr != nil && uc.logger != nil {
+			uc.logger.Warn("falha ao remover arquivo temporario de upload duplicado", "storage_key", storageKey, "error", delErr.Error())
+		}
 		return existing.ID, domain.ErrDuplicateUpload
 	}
 
@@ -66,7 +71,9 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 	}
 
 	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
-		_ = uc.storage.Delete(ctx, storageKey)
+		if delErr := uc.storage.Delete(ctx, storageKey); delErr != nil && uc.logger != nil {
+			uc.logger.Warn("falha ao remover arquivo temporario apos erro ao criar upload", "storage_key", storageKey, "error", delErr.Error())
+		}
 		return "", err
 	}
 
@@ -82,24 +89,32 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileN
 	defer cancel()
 
 	defer func() {
-		_ = uc.storage.Delete(bgCtx, storageKey)
+		if delErr := uc.storage.Delete(bgCtx, storageKey); delErr != nil && uc.logger != nil {
+			uc.logger.Warn("falha ao remover arquivo temporario", "storage_key", storageKey, "error", delErr.Error())
+		}
 	}()
 
 	rc, err := uc.storage.Open(bgCtx, storageKey)
 	if err != nil {
-		_ = uc.failUpload(uploadID, "falha ao abrir arquivo: "+err.Error())
+		if failErr := uc.failUpload(uploadID, "falha ao abrir arquivo: "+err.Error()); failErr != nil && uc.logger != nil {
+			uc.logger.Error("erro ao registrar falha de abertura do upload", "upload_id", uploadID, "error", failErr.Error())
+		}
 		return
 	}
 	defer rc.Close()
 
 	rawRecords, err := uc.maintParser.ParseMaintenance(rc, fileName, explicitOrderType)
 	if err != nil {
-		_ = uc.failUpload(uploadID, "falha ao analisar arquivo: "+err.Error())
+		if failErr := uc.failUpload(uploadID, "falha ao analisar arquivo: "+err.Error()); failErr != nil && uc.logger != nil {
+			uc.logger.Error("erro ao registrar falha de parsing do upload", "upload_id", uploadID, "error", failErr.Error())
+		}
 		return
 	}
 
 	if len(rawRecords) == 0 {
-		_ = uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados validas")
+		if failErr := uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados validas"); failErr != nil && uc.logger != nil {
+			uc.logger.Error("erro ao registrar falha de arquivo vazio no upload", "upload_id", uploadID, "error", failErr.Error())
+		}
 		return
 	}
 
@@ -167,7 +182,9 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileN
 	})
 
 	if err != nil {
-		_ = uc.failUpload(uploadID, err.Error())
+		if failErr := uc.failUpload(uploadID, err.Error()); failErr != nil && uc.logger != nil {
+			uc.logger.Error("erro ao registrar falha de insercao em lote no upload", "upload_id", uploadID, "error", failErr.Error())
+		}
 		return
 	}
 }
@@ -177,10 +194,19 @@ func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) e
 	now := time.Now()
 	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
 	if err != nil {
+		if uc.logger != nil {
+			uc.logger.Error("falha ao obter upload para marcar como failed", "upload_id", uploadID, "reason", reason, "error", err.Error())
+		}
 		return err
 	}
 	upload.Status = "failed"
 	upload.ErrorLog = reason
 	upload.CompletedAt = &now
-	return uc.uploadRepo.UpdateUpload(bgCtx, upload)
+	if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
+		if uc.logger != nil {
+			uc.logger.Error("falha ao persistir status failed do upload", "upload_id", uploadID, "reason", reason, "error", err.Error())
+		}
+		return err
+	}
+	return nil
 }

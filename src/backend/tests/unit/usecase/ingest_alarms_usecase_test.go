@@ -19,16 +19,42 @@ import (
 )
 
 type mockAlarmRepo struct {
-	mu              sync.Mutex
-	uploads         map[string]*domain.FileUpload
-	alarms          []*domain.Alarm
-	failBatchInsert bool
+	mu               sync.Mutex
+	uploads          map[string]*domain.FileUpload
+	alarms           []*domain.Alarm
+	failBatchInsert  bool
+	failUpdateUpload bool
 }
 
 func newMockAlarmRepo() *mockAlarmRepo {
 	return &mockAlarmRepo{
 		uploads: make(map[string]*domain.FileUpload),
 	}
+}
+
+type mockLogger struct {
+	mu     sync.Mutex
+	errors []string
+	warns  []string
+	infos  []string
+}
+
+func (m *mockLogger) Error(msg string, args ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.errors = append(m.errors, msg)
+}
+
+func (m *mockLogger) Warn(msg string, args ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.warns = append(m.warns, msg)
+}
+
+func (m *mockLogger) Info(msg string, args ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.infos = append(m.infos, msg)
 }
 
 func (m *mockAlarmRepo) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
@@ -44,6 +70,9 @@ func (m *mockAlarmRepo) CreateUpload(ctx context.Context, upload *domain.FileUpl
 func (m *mockAlarmRepo) UpdateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.failUpdateUpload {
+		return errors.New("falha forcada ao atualizar upload")
+	}
 	m.uploads[upload.ID] = upload
 	return nil
 }
@@ -134,7 +163,7 @@ func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -163,7 +192,7 @@ func TestIngestAlarmsUseCase_ValidXLSX(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -201,7 +230,7 @@ func TestIngestAlarmsUseCase_ShortRowNoPanic(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4
@@ -230,7 +259,7 @@ func TestIngestAlarmsUseCase_UnknownPlatformNoFallback(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -256,7 +285,7 @@ func TestIngestAlarmsUseCase_RollbackOnBatchFailure(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -284,7 +313,7 @@ func TestIngestAlarmsUseCase_IdempotencyDuplicate(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -319,5 +348,28 @@ func TestAlarmRepo_ReconcileStaleUploads(t *testing.T) {
 
 	if repo.uploads["up_stale"].Status != "failed" {
 		t.Errorf("esperava status failed, obteve %s", repo.uploads["up_stale"].Status)
+	}
+}
+
+func TestIngestAlarmsUseCase_FailUploadErrorLogged(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.failBatchInsert = true
+	repo.failUpdateUpload = true
+	logger := &mockLogger{}
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, logger)
+
+	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
+SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
+`
+	_, err := uc.StartIngestion(context.Background(), "falha_log.csv", strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	if len(logger.errors) == 0 {
+		t.Fatalf("esperava que erro de falha ao marcar upload como failed fosse registrado no logger")
 	}
 }
