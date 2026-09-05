@@ -75,7 +75,9 @@ func (m *customUOWStoreMock) Predictions() port.PredictionRepository   { return 
 func (m *customUOWStoreMock) Inspections() port.InspectionRepository   { return nil }
 func (m *customUOWStoreMock) Maintenances() port.MaintenanceRepository { return m.maintRepo }
 func (m *customUOWStoreMock) Alarms() port.AlarmRepository             { return m.alarmRepo }
-func (m *customUOWStoreMock) Uploads() port.UploadRepository           { return &customUploadRepoWrap{inner: m.alarmRepo, getIDErr: m.uowGetIDErr, updErr: m.uowUpdErr} }
+func (m *customUOWStoreMock) Uploads() port.UploadRepository {
+	return &customUploadRepoWrap{inner: m.alarmRepo, getIDErr: m.uowGetIDErr, updErr: m.uowUpdErr}
+}
 
 type customUploadRepoWrap struct {
 	inner    *mockAlarmRepo

@@ -138,7 +138,7 @@ type dummyTestEvent struct {
 	name string
 }
 
-func (d dummyTestEvent) EventName() string { return d.name }
+func (d dummyTestEvent) EventName() string     { return d.name }
 func (d dummyTestEvent) OccurredAt() time.Time { return time.Now() }
 
 func TestInMemoryEventBus_EdgeBranches(t *testing.T) {

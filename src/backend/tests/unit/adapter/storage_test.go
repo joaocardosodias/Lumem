@@ -86,4 +86,3 @@ func TestLocalTempStorage_StoreCreateTempError(t *testing.T) {
 		t.Fatalf("esperava erro ao criar arquivo temporario")
 	}
 }
-

@@ -110,4 +110,3 @@ func TestMLClient_PredictBatch_InvalidURL(t *testing.T) {
 		t.Fatalf("expected ErrPredictionServiceUnavailable on invalid url, got %v", err)
 	}
 }
-

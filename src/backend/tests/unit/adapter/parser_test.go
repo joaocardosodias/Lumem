@@ -164,4 +164,3 @@ func TestMaintenanceParser_CorruptedExcel(t *testing.T) {
 		t.Fatalf("esperava erro para excel corrompido em maintenance parser")
 	}
 }
-

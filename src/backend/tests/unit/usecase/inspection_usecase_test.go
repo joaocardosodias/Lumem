@@ -304,7 +304,7 @@ func TestInspectionUseCase_UpdateStatus_InvalidTransitions(t *testing.T) {
 }
 
 type errInspectionRepo struct {
-	mockInspectionRepo
+	*mockInspectionRepo
 	createErr       error
 	getErr          error
 	updateStatusErr error
@@ -315,32 +315,44 @@ func (r *errInspectionRepo) Create(ctx context.Context, ins *domain.Inspection) 
 	if r.createErr != nil {
 		return r.createErr
 	}
-	return r.mockInspectionRepo.Create(ctx, ins)
+	if r.mockInspectionRepo != nil {
+		return r.mockInspectionRepo.Create(ctx, ins)
+	}
+	return nil
 }
 
 func (r *errInspectionRepo) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
 	if r.getErr != nil {
 		return nil, r.getErr
 	}
-	return r.mockInspectionRepo.GetByID(ctx, id)
+	if r.mockInspectionRepo != nil {
+		return r.mockInspectionRepo.GetByID(ctx, id)
+	}
+	return nil, nil
 }
 
 func (r *errInspectionRepo) UpdateStatus(ctx context.Context, id string, status, notes string, completedAt *time.Time) error {
 	if r.updateStatusErr != nil {
 		return r.updateStatusErr
 	}
-	return r.mockInspectionRepo.UpdateStatus(ctx, id, status, notes, completedAt)
+	if r.mockInspectionRepo != nil {
+		return r.mockInspectionRepo.UpdateStatus(ctx, id, status, notes, completedAt)
+	}
+	return nil
 }
 
 func (r *errInspectionRepo) List(ctx context.Context, limit, offset int, statusFilter string) ([]*domain.Inspection, error) {
 	if r.listErr != nil {
 		return nil, r.listErr
 	}
-	return r.mockInspectionRepo.List(ctx, limit, offset, statusFilter)
+	if r.mockInspectionRepo != nil {
+		return r.mockInspectionRepo.List(ctx, limit, offset, statusFilter)
+	}
+	return nil, nil
 }
 
 func TestInspectionUseCase_ErrorPaths(t *testing.T) {
-	errRepo := &errInspectionRepo{createErr: errors.New("db create error")}
+	errRepo := &errInspectionRepo{mockInspectionRepo: newMockInspectionRepo(), createErr: errors.New("db create error")}
 	uc := usecase.NewInspectionUseCase(errRepo)
 
 	_, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
@@ -390,7 +402,7 @@ func TestInspectionUseCase_ErrorPaths(t *testing.T) {
 	})
 
 	failingUpdateRepo := &errInspectionRepo{
-		mockInspectionRepo: *validRepo,
+		mockInspectionRepo: validRepo,
 		updateStatusErr:    errors.New("update status error"),
 	}
 	failingUpdateUC := usecase.NewInspectionUseCase(failingUpdateRepo)
