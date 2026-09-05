@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
@@ -26,20 +25,14 @@ func NewIngestAlarmsUseCase(
 	uploadRepo port.UploadRepository,
 	storage port.IngestionStorage,
 	alarmParser port.AlarmParser,
-	runner ...port.JobRunner,
+	runner port.JobRunner,
 ) *IngestAlarmsUseCase {
-	var r port.JobRunner
-	if len(runner) > 0 && runner[0] != nil {
-		r = runner[0]
-	} else {
-		r = scheduler.NewGoroutineJobRunner(nil)
-	}
 	return &IngestAlarmsUseCase{
 		alarmRepo:   alarmRepo,
 		uploadRepo:  uploadRepo,
 		storage:     storage,
 		alarmParser: alarmParser,
-		runner:      r,
+		runner:      runner,
 	}
 }
 

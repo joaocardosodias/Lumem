@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
@@ -26,20 +25,14 @@ func NewIngestMaintenanceUseCase(
 	uploadRepo port.UploadRepository,
 	storage port.IngestionStorage,
 	maintParser port.MaintenanceParser,
-	runner ...port.JobRunner,
+	runner port.JobRunner,
 ) *IngestMaintenanceUseCase {
-	var r port.JobRunner
-	if len(runner) > 0 && runner[0] != nil {
-		r = runner[0]
-	} else {
-		r = scheduler.NewGoroutineJobRunner(nil)
-	}
 	return &IngestMaintenanceUseCase{
 		maintRepo:   maintRepo,
 		uploadRepo:  uploadRepo,
 		storage:     storage,
 		maintParser: maintParser,
-		runner:      r,
+		runner:      runner,
 	}
 }
 
