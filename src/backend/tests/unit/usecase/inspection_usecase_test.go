@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ func (m *mockInspectionRepo) UpdateStatus(ctx context.Context, id string, status
 	defer m.mu.Unlock()
 	ins, exists := m.inspections[id]
 	if !exists {
-		return domain.ErrUserNotFound
+		return domain.ErrInspectionNotFound
 	}
 	ins.Status = status
 	ins.Notes = notes
@@ -50,7 +51,7 @@ func (m *mockInspectionRepo) GetByID(ctx context.Context, id string) (*domain.In
 	defer m.mu.Unlock()
 	ins, exists := m.inspections[id]
 	if !exists {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrInspectionNotFound
 	}
 	return ins, nil
 }
@@ -117,5 +118,82 @@ func TestInspectionUseCase_UpdateStatus(t *testing.T) {
 	}
 	if updated.CompletedAt == nil {
 		t.Errorf("completed_at deveria estar preenchido apos conclusao")
+	}
+}
+
+func TestInspectionUseCase_ValidationErrors(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+
+	cases := []struct {
+		name        string
+		input       usecase.CreateInspectionInputDTO
+		expectedErr error
+	}{
+		{
+			name:        "missing station code",
+			input:       usecase.CreateInspectionInputDTO{StationCode: "", Platform: "P1", DoorNumber: 1},
+			expectedErr: domain.ErrStationCodeRequired,
+		},
+		{
+			name:        "invalid platform",
+			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P3", DoorNumber: 1},
+			expectedErr: domain.ErrInvalidPlatform,
+		},
+		{
+			name:        "invalid door number below range",
+			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P1", DoorNumber: 0},
+			expectedErr: domain.ErrInvalidDoorNumber,
+		},
+		{
+			name:        "invalid door number above range",
+			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P1", DoorNumber: 25},
+			expectedErr: domain.ErrInvalidDoorNumber,
+		},
+		{
+			name:        "invalid priority",
+			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P1", DoorNumber: 1, Priority: "extreme"},
+			expectedErr: domain.ErrInvalidPriority,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := uc.Create(context.Background(), tc.input)
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("esperava erro %v, obteve %v", tc.expectedErr, err)
+			}
+		})
+	}
+}
+
+func TestInspectionUseCase_UpdateStatus_InvalidStatus(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+
+	created, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  2,
+	})
+	if err != nil {
+		t.Fatalf("falha ao criar inspecao: %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "invalid_status",
+	})
+	if !errors.Is(err, domain.ErrInvalidInspectionStatus) {
+		t.Fatalf("esperava ErrInvalidInspectionStatus, obteve %v", err)
+	}
+}
+
+func TestInspectionUseCase_GetByID_NotFound(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+
+	_, err := uc.GetByID(context.Background(), "non-existent-id")
+	if !errors.Is(err, domain.ErrInspectionNotFound) {
+		t.Fatalf("esperava ErrInspectionNotFound, obteve %v", err)
 	}
 }

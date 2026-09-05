@@ -25,7 +25,7 @@ func (h *MaintenanceHandler) Create(c *gin.Context) {
 
 	dto, err := h.createUC.Execute(c.Request.Context(), input)
 	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
+		RespondDomainError(c, err)
 		return
 	}
 

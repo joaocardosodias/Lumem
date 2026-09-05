@@ -215,7 +215,7 @@ func (r *intInspectionRepo) UpdateStatus(ctx context.Context, id string, status,
 	defer r.store.mu.Unlock()
 	ins, exists := r.store.inspections[id]
 	if !exists {
-		return domain.ErrUserNotFound
+		return domain.ErrInspectionNotFound
 	}
 	ins.Status = status
 	ins.Notes = notes
@@ -228,7 +228,7 @@ func (r *intInspectionRepo) GetByID(ctx context.Context, id string) (*domain.Ins
 	defer r.store.mu.RUnlock()
 	ins, exists := r.store.inspections[id]
 	if !exists {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrInspectionNotFound
 	}
 	return ins, nil
 }
@@ -417,7 +417,7 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
 	tokenGen := security.NewJWTTokenGenerator(jwtSecret)
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, time.Hour)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, spreadsheetParser)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)

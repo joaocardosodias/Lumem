@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -46,8 +48,15 @@ func (r *PostgresInspectionRepository) UpdateStatus(ctx context.Context, id stri
 		SET status = $1, notes = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $4
 	`
-	_, err := r.db.ExecContext(ctx, query, status, notes, completedAt, id)
-	return err
+	res, err := r.db.ExecContext(ctx, query, status, notes, completedAt, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err == nil && rowsAffected == 0 {
+		return domain.ErrInspectionNotFound
+	}
+	return nil
 }
 
 func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
@@ -77,6 +86,9 @@ func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (
 		&updatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrInspectionNotFound
+		}
 		return nil, err
 	}
 

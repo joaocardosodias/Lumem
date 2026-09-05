@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/google/uuid"
@@ -83,7 +84,8 @@ func (m *mockAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 
 func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {
 	repo := newMockAlarmRepo()
-	uc := usecase.NewIngestAlarmsUseCase(repo)
+	sheetParser := parser.NewDefaultSpreadsheetParser()
+	uc := usecase.NewIngestAlarmsUseCase(repo, sheetParser)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -111,7 +113,8 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LAÇO DE PDM ABERTO,0,2025-11-14 07:00:00
 
 func TestIngestAlarmsUseCase_IdempotencyDuplicate(t *testing.T) {
 	repo := newMockAlarmRepo()
-	uc := usecase.NewIngestAlarmsUseCase(repo)
+	sheetParser := parser.NewDefaultSpreadsheetParser()
+	uc := usecase.NewIngestAlarmsUseCase(repo, sheetParser)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28

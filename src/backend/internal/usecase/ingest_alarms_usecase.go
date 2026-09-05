@@ -3,12 +3,11 @@ package usecase
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/csv"
 	"encoding/hex"
-	"errors"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,20 +18,26 @@ import (
 )
 
 type IngestAlarmsUseCase struct {
-	repo domain.AlarmRepository
-	wg   *sync.WaitGroup
+	repo   domain.AlarmRepository
+	parser domain.SpreadsheetParser
+	wg     *sync.WaitGroup
 }
 
-func NewIngestAlarmsUseCase(repo domain.AlarmRepository, wg ...*sync.WaitGroup) *IngestAlarmsUseCase {
+func NewIngestAlarmsUseCase(repo domain.AlarmRepository, parser domain.SpreadsheetParser, wg ...*sync.WaitGroup) *IngestAlarmsUseCase {
 	var w *sync.WaitGroup
 	if len(wg) > 0 {
 		w = wg[0]
 	}
-	return &IngestAlarmsUseCase{repo: repo, wg: w}
+	return &IngestAlarmsUseCase{repo: repo, parser: parser, wg: w}
 }
 
 func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader) (string, error) {
-	tmpFile, err := os.CreateTemp("", "alarm_upload_*.csv")
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext == "" {
+		ext = ".csv"
+	}
+	pattern := "alarm_upload_*" + ext
+	tmpFile, err := os.CreateTemp("", pattern)
 	if err != nil {
 		return "", err
 	}
@@ -74,31 +79,27 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 		if uc.wg != nil {
 			defer uc.wg.Done()
 		}
-		uc.processFileAsync(upload.ID, tmpFile.Name())
+		uc.processFileAsync(upload.ID, tmpFile.Name(), ext)
 	}()
 
 	return upload.ID, nil
 }
 
-func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string) {
+func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath, ext string) {
 	defer os.Remove(filePath)
 
-	file, err := os.Open(filePath)
+	rows, err := uc.parser.ReadRows(filePath, ext)
 	if err != nil {
-		uc.failUpload(uploadID, "falha ao abrir arquivo temporario: "+err.Error())
-		return
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.LazyQuotes = true
-
-	headers, err := reader.Read()
-	if err != nil {
-		uc.failUpload(uploadID, "falha ao ler cabecalho: "+err.Error())
+		uc.failUpload(uploadID, "falha ao ler arquivo: "+err.Error())
 		return
 	}
 
+	if len(rows) < 2 {
+		uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados")
+		return
+	}
+
+	headers := rows[0]
 	colMap := make(map[string]int)
 	for i, h := range headers {
 		colMap[strings.ToLower(strings.TrimSpace(h))] = i
@@ -114,7 +115,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string
 	timeIdx, hasTime := getFirstIndex(colMap, "horário do alarme", "horario do alarme", "horario_alarme", "dt_alarme")
 
 	if !hasTag || !hasStation || !hasDoor || !hasAlarm || !hasTime {
-		uc.failUpload(uploadID, "colunas obrigatorias ausentes no arquivo CSV de alarmes")
+		uc.failUpload(uploadID, "colunas obrigatorias ausentes no arquivo de alarmes")
 		return
 	}
 
@@ -124,15 +125,7 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath string
 	insertedCount := 0
 	bgCtx := context.Background()
 
-	for {
-		row, err := reader.Read()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			continue
-		}
-
+	for _, row := range rows[1:] {
 		processedCount++
 
 		doorNum, _ := strconv.Atoi(strings.TrimSpace(strings.Split(row[doorIdx], ".")[0]))

@@ -126,7 +126,7 @@ func main() {
 	uploadWG := &sync.WaitGroup{}
 
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, uploadWG)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, spreadsheetParser, uploadWG)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser, uploadWG)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)

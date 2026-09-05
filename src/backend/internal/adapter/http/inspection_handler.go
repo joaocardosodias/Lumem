@@ -26,7 +26,7 @@ func (h *InspectionHandler) Create(c *gin.Context) {
 
 	dto, err := h.uc.Create(c.Request.Context(), input)
 	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *InspectionHandler) UpdateStatus(c *gin.Context) {
 
 	dto, err := h.uc.UpdateStatus(c.Request.Context(), idParam, input)
 	if err != nil {
-		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
+		RespondDomainError(c, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *InspectionHandler) GetByID(c *gin.Context) {
 
 	dto, err := h.uc.GetByID(c.Request.Context(), idParam)
 	if err != nil {
-		RespondProblem(c, http.StatusNotFound, "ERR_INSPECTION_NOT_FOUND", "Inspecao Nao Encontrada", "A inspecao solicitada nao foi localizada.")
+		RespondDomainError(c, err)
 		return
 	}
 

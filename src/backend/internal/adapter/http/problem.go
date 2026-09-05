@@ -44,10 +44,24 @@ func RespondDomainError(c *gin.Context, err error) {
 		RespondProblem(c, http.StatusUnauthorized, "ERR_INVALID_CREDENTIALS", "Credenciais Invalidas", "Email ou senha incorretos.")
 	case errors.Is(err, domain.ErrUserNotFound):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Recurso Nao Encontrado", "O registro solicitado nao foi localizado.")
+	case errors.Is(err, domain.ErrInspectionNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Inspecao Nao Encontrada", "A inspecao solicitada nao foi localizada.")
+	case errors.Is(err, domain.ErrMaintenanceNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Manutencao Nao Encontrada", "O registro de manutencao solicitado nao foi localizado.")
 	case errors.Is(err, domain.ErrUserInactive):
 		RespondProblem(c, http.StatusForbidden, "ERR_USER_INACTIVE", "Usuario Inativo", "O operador esta desativado no sistema.")
 	case errors.Is(err, domain.ErrDuplicateUpload):
 		RespondProblem(c, http.StatusConflict, "ERR_DUPLICATE_UPLOAD", "Arquivo Duplicado", "Arquivo ja processado anteriormente pelo sistema (idempotencia sha-256).")
+	case errors.Is(err, domain.ErrStationCodeRequired),
+		errors.Is(err, domain.ErrInvalidPlatform),
+		errors.Is(err, domain.ErrInvalidDoorNumber),
+		errors.Is(err, domain.ErrInvalidPriority),
+		errors.Is(err, domain.ErrInvalidInspectionStatus),
+		errors.Is(err, domain.ErrInspectionIDRequired),
+		errors.Is(err, domain.ErrOrderTypeRequired),
+		errors.Is(err, domain.ErrMaintenanceStationRequired),
+		errors.Is(err, domain.ErrStartTimestampRequired):
+		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 	default:
 		RespondProblem(c, http.StatusInternalServerError, "ERR_INTERNAL_SERVER", "Erro Interno", err.Error())
 	}

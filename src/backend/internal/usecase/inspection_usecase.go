@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -48,41 +47,18 @@ func NewInspectionUseCase(repo domain.InspectionRepository) *InspectionUseCase {
 }
 
 func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionInputDTO) (*InspectionOutputDTO, error) {
-	stationCode := strings.TrimSpace(strings.ToUpper(input.StationCode))
-	if stationCode == "" {
-		return nil, errors.New("o codigo da estacao (station_code) e obrigatorio")
-	}
-
-	platform := strings.TrimSpace(strings.ToUpper(input.Platform))
-	if platform != "P1" && platform != "P2" {
-		return nil, errors.New("a plataforma deve ser P1 ou P2")
-	}
-
-	if input.DoorNumber < 1 || input.DoorNumber > 24 {
-		return nil, errors.New("o numero da porta deve estar entre 1 e 24")
-	}
-
-	priority := strings.ToLower(strings.TrimSpace(input.Priority))
-	if priority == "" {
-		priority = "normal"
-	}
-	if priority != "low" && priority != "normal" && priority != "high" && priority != "critical" {
-		return nil, errors.New("prioridade invalida (use: low, normal, high, critical)")
-	}
-
-	now := time.Now()
-	ins := &domain.Inspection{
-		ID:           uuid.New().String(),
-		PredictionID: input.PredictionID,
-		StationCode:  stationCode,
-		Platform:     platform,
-		DoorNumber:   input.DoorNumber,
-		ScheduledFor: strings.TrimSpace(input.ScheduledFor),
-		Priority:     priority,
-		Status:       "pending",
-		Notes:        strings.TrimSpace(input.Notes),
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	ins, err := domain.NewInspection(
+		uuid.New().String(),
+		input.PredictionID,
+		input.StationCode,
+		input.Platform,
+		input.DoorNumber,
+		input.ScheduledFor,
+		input.Priority,
+		input.Notes,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := uc.repo.Create(ctx, ins); err != nil {
@@ -95,12 +71,7 @@ func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionI
 func (uc *InspectionUseCase) UpdateStatus(ctx context.Context, id string, input UpdateInspectionStatusInputDTO) (*InspectionOutputDTO, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return nil, errors.New("id da inspecao e obrigatorio")
-	}
-
-	status := strings.ToLower(strings.TrimSpace(input.Status))
-	if status != "pending" && status != "in_progress" && status != "completed" && status != "canceled" {
-		return nil, errors.New("status invalido (use: pending, in_progress, completed, canceled)")
+		return nil, domain.ErrInspectionIDRequired
 	}
 
 	ins, err := uc.repo.GetByID(ctx, id)
@@ -108,25 +79,14 @@ func (uc *InspectionUseCase) UpdateStatus(ctx context.Context, id string, input 
 		return nil, err
 	}
 
-	var completedAt *time.Time
-	if status == "completed" {
-		now := time.Now()
-		completedAt = &now
-	}
-
-	notes := ins.Notes
-	if strings.TrimSpace(input.Notes) != "" {
-		notes = strings.TrimSpace(input.Notes)
-	}
-
-	if err := uc.repo.UpdateStatus(ctx, id, status, notes, completedAt); err != nil {
+	completedAt, err := ins.UpdateStatus(input.Status, input.Notes)
+	if err != nil {
 		return nil, err
 	}
 
-	ins.Status = status
-	ins.Notes = notes
-	ins.CompletedAt = completedAt
-	ins.UpdatedAt = time.Now()
+	if err := uc.repo.UpdateStatus(ctx, id, ins.Status, ins.Notes, completedAt); err != nil {
+		return nil, err
+	}
 
 	return toInspectionDTO(ins), nil
 }
@@ -147,7 +107,7 @@ func (uc *InspectionUseCase) List(ctx context.Context, limit, offset int, status
 func (uc *InspectionUseCase) GetByID(ctx context.Context, id string) (*InspectionOutputDTO, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return nil, errors.New("id da inspecao e obrigatorio")
+		return nil, domain.ErrInspectionIDRequired
 	}
 
 	ins, err := uc.repo.GetByID(ctx, id)

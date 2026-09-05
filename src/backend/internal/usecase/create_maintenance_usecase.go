@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"strings"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -50,36 +48,23 @@ func NewCreateMaintenanceUseCase(repo domain.MaintenanceRepository) *CreateMaint
 }
 
 func (uc *CreateMaintenanceUseCase) Execute(ctx context.Context, input CreateMaintenanceInputDTO) (*MaintenanceOutputDTO, error) {
-	orderType := strings.TrimSpace(strings.ToUpper(input.OrderType))
-	if orderType == "" {
-		return nil, errors.New("o tipo da ordem (order_type) e obrigatorio")
-	}
-
-	stationCode := strings.TrimSpace(strings.ToUpper(input.StationCode))
-	if stationCode == "" {
-		return nil, errors.New("o codigo da estacao (station_code) e obrigatorio")
-	}
-
-	startTimestamp := strings.TrimSpace(input.StartTimestamp)
-	if startTimestamp == "" {
-		return nil, errors.New("a data de inicio (start_timestamp) e obrigatoria")
-	}
-
-	event := &domain.MaintenanceEvent{
-		ID:                   uuid.New().String(),
-		SAPOrderNumber:       strings.TrimSpace(input.SAPOrderNumber),
-		OrderType:            orderType,
-		StationCode:          stationCode,
-		InstallationLocation: strings.TrimSpace(input.InstallationLocation),
-		StartTimestamp:       startTimestamp,
-		EndTimestamp:         strings.TrimSpace(input.EndTimestamp),
-		DurationHours:        input.DurationHours,
-		Description:          strings.TrimSpace(input.Description),
-		Symptom:              strings.TrimSpace(input.Symptom),
-		Cause:                strings.TrimSpace(input.Cause),
-		ActionTaken:          strings.TrimSpace(input.ActionTaken),
-		Source:               "manual_form",
-		CreatedAt:            time.Now(),
+	event, err := domain.NewMaintenanceEvent(
+		uuid.New().String(),
+		input.SAPOrderNumber,
+		input.OrderType,
+		input.StationCode,
+		input.InstallationLocation,
+		input.StartTimestamp,
+		input.EndTimestamp,
+		input.DurationHours,
+		input.Description,
+		input.Symptom,
+		input.Cause,
+		input.ActionTaken,
+		"manual_form",
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := uc.repo.Create(ctx, event); err != nil {
