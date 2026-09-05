@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	ErrDoorNotFound    = errors.New("porta nao encontrada")
-	ErrStationRequired = errors.New("codigo da estacao e obrigatorio")
-	ErrNoPredictions   = errors.New("nenhuma rodada de previsao calculada ate o momento")
-	ErrNoActiveDoors   = errors.New("nenhuma porta ativa encontrada para inferencia")
-	ErrInvalidDoorID                 = errors.New("o parametro ID da porta deve ser um numero inteiro positivo")
+	ErrDoorNotFound                 = errors.New("porta nao encontrada")
+	ErrStationRequired              = errors.New("codigo da estacao e obrigatorio")
+	ErrNoPredictions                = errors.New("nenhuma rodada de previsao calculada ate o momento")
+	ErrNoActiveDoors                = errors.New("nenhuma porta ativa encontrada para inferencia")
+	ErrInvalidDoorID                = errors.New("o parametro ID da porta deve ser um numero inteiro positivo")
 	ErrPredictionServiceUnavailable = errors.New("servico de predicao indisponivel")
 )
 
