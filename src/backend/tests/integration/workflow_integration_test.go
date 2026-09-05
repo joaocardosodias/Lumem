@@ -304,17 +304,49 @@ func (r *intDashboardRepo) GetSummary(ctx context.Context) (*domain.DashboardSum
 		},
 	}, nil
 }
+func findTargetDoor(doors []domain.Door, doorID int) *domain.Door {
+	for _, d := range doors {
+		if d.ID == doorID {
+			return &d
+		}
+	}
+	return nil
+}
+
+func filterDoorAlarms(alarms []*domain.Alarm, door *domain.Door) []*domain.Alarm {
+	var filtered []*domain.Alarm
+	for _, a := range alarms {
+		if a.DoorNumber == door.DoorNumber && a.StationCode == door.StationCode {
+			filtered = append(filtered, a)
+		}
+	}
+	return filtered
+}
+
+func filterDoorInspections(inspections map[string]*domain.Inspection, door *domain.Door) []*domain.Inspection {
+	var filtered []*domain.Inspection
+	for _, i := range inspections {
+		if i.DoorNumber == door.DoorNumber && i.StationCode == door.StationCode && i.Platform == door.Platform {
+			filtered = append(filtered, i)
+		}
+	}
+	return filtered
+}
+
+func findDoorPredictionRisk(predictions []domain.PredictionItem, door *domain.Door) bool {
+	for _, p := range predictions {
+		if p.DoorNumber == door.DoorNumber && p.StationCode == door.StationCode && p.Platform == door.Platform {
+			return p.WillFail
+		}
+	}
+	return false
+}
+
 func (r *intDashboardRepo) GetDoorTimeline(ctx context.Context, doorID int) (*domain.DoorTimeline, error) {
 	r.store.mu.RLock()
 	defer r.store.mu.RUnlock()
 
-	var targetDoor *domain.Door
-	for _, d := range r.store.doors {
-		if d.ID == doorID {
-			targetDoor = &d
-			break
-		}
-	}
+	targetDoor := findTargetDoor(r.store.doors, doorID)
 	if targetDoor == nil {
 		return nil, domain.ErrDoorNotFound
 	}
@@ -324,36 +356,14 @@ func (r *intDashboardRepo) GetDoorTimeline(ctx context.Context, doorID int) (*do
 		stationName = "Pinheiros"
 	}
 
-	var doorAlarms []*domain.Alarm
-	for _, a := range r.store.alarms {
-		if a.DoorNumber == targetDoor.DoorNumber && a.StationCode == targetDoor.StationCode {
-			doorAlarms = append(doorAlarms, a)
-		}
-	}
-
-	var doorInspections []*domain.Inspection
-	for _, i := range r.store.inspections {
-		if i.DoorNumber == targetDoor.DoorNumber && i.StationCode == targetDoor.StationCode && i.Platform == targetDoor.Platform {
-			doorInspections = append(doorInspections, i)
-		}
-	}
-
-	willFail := false
-	for _, p := range r.store.predictions {
-		if p.DoorNumber == targetDoor.DoorNumber && p.StationCode == targetDoor.StationCode && p.Platform == targetDoor.Platform {
-			willFail = p.WillFail
-			break
-		}
-	}
-
 	now := time.Now()
 	return &domain.DoorTimeline{
 		Door:            *targetDoor,
 		StationName:     stationName,
-		WillFail:        willFail,
-		RecentAlarms:    doorAlarms,
+		WillFail:        findDoorPredictionRisk(r.store.predictions, targetDoor),
+		RecentAlarms:    filterDoorAlarms(r.store.alarms, targetDoor),
 		Maintenances:    r.store.maintenances,
-		Inspections:     doorInspections,
+		Inspections:     filterDoorInspections(r.store.inspections, targetDoor),
 		LastEvaluatedAt: &now,
 	}, nil
 }
@@ -538,9 +548,7 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	return router, store
 }
 
-func TestIntegration_CompleteOperationalPipeline(t *testing.T) {
-	router, store := setupCompleteWorkflowApp()
-
+func testLoginStep(t *testing.T, router http.Handler) (string, string) {
 	loginPayload := map[string]string{
 		"email":    "operador@motiva.com.br",
 		"password": "operador123",
@@ -567,16 +575,21 @@ func TestIntegration_CompleteOperationalPipeline(t *testing.T) {
 	if authResp.Token == "" || authResp.User.Role != "operator" {
 		t.Fatalf("etapa 1 falhou: token invalido ou perfil incorreto")
 	}
+	return authResp.Token, authResp.User.ID
+}
 
+func testMeStep(t *testing.T, router http.Handler, token string) {
 	reqMe := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
-	reqMe.Header.Set("Authorization", "Bearer "+authResp.Token)
+	reqMe.Header.Set("Authorization", "Bearer "+token)
 	wMe := httptest.NewRecorder()
 	router.ServeHTTP(wMe, reqMe)
 
 	if wMe.Code != http.StatusOK {
 		t.Fatalf("etapa 2 falhou: acesso autenticado negado com codigo %d", wMe.Code)
 	}
+}
 
+func testAlarmUploadStep(t *testing.T, router http.Handler) string {
 	csvAlarmData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,22,2026-09-03 14:00:00
 SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
@@ -605,8 +618,11 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if uploadResp.UploadID == "" || uploadResp.Status != "processing" {
 		t.Fatalf("etapa 3 falhou: payload de resposta do upload invalido")
 	}
+	return uploadResp.UploadID
+}
 
-	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/uploads/"+uploadResp.UploadID, nil)
+func testUploadStatusStep(t *testing.T, router http.Handler, uploadID string) {
+	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/uploads/"+uploadID, nil)
 	statusW := httptest.NewRecorder()
 	router.ServeHTTP(statusW, statusReq)
 
@@ -624,7 +640,9 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if statusResp.Status != "completed" || statusResp.RowsInserted != 2 {
 		t.Fatalf("etapa 4 falhou: linhas nao processadas corretamente: %+v", statusResp)
 	}
+}
 
+func testCreateMaintenanceStep(t *testing.T, router http.Handler) {
 	maintPayload := httpAdapter.CreateMaintenanceRequest{
 		OrderType:            "ZM01",
 		StationCode:          "FAL",
@@ -644,7 +662,9 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if maintW.Code != http.StatusCreated {
 		t.Fatalf("etapa 5 falhou: criacao de manutencao falhou com status %d", maintW.Code)
 	}
+}
 
+func testTriggerPredictionStep(t *testing.T, router http.Handler) {
 	predReq := httptest.NewRequest(http.MethodPost, "/api/v1/predictions/trigger", bytes.NewReader([]byte(`{"horizon_days": 7}`)))
 	predReq.Header.Set("Content-Type", "application/json")
 	predW := httptest.NewRecorder()
@@ -660,7 +680,9 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if predResp.TotalDoorsAtRisk != 1 {
 		t.Fatalf("etapa 6 falhou: esperava 1 porta em risco (FAL P1 Door 4), obteve %d", predResp.TotalDoorsAtRisk)
 	}
+}
 
+func testListInspectionsStep(t *testing.T, router http.Handler) string {
 	inspListReq := httptest.NewRequest(http.MethodGet, "/api/v1/inspections?status=pending", nil)
 	inspListW := httptest.NewRecorder()
 	router.ServeHTTP(inspListW, inspListReq)
@@ -683,8 +705,10 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 7 falhou: prediction_id da inspecao deve estar preenchido: %+v", inspListResp.Data[0])
 	}
 
-	autoInspectionID := inspListResp.Data[0].ID
+	return inspListResp.Data[0].ID
+}
 
+func testUpdateInspectionStatusStep(t *testing.T, router http.Handler, autoInspectionID string) {
 	updateStatusReq := httptest.NewRequest(http.MethodPatch, "/api/v1/inspections/"+autoInspectionID+"/status", bytes.NewReader([]byte(`{
 		"status": "completed",
 		"notes": "Inspecao preventiva executada com sucesso pelo operador de campo"
@@ -696,15 +720,9 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if updateStatusW.Code != http.StatusOK {
 		t.Fatalf("etapa 8 falhou: atualizacao de status da inspecao falhou com status %d", updateStatusW.Code)
 	}
+}
 
-	var falDoor4ID int
-	for _, d := range store.doors {
-		if d.StationCode == "FAL" && d.Platform == "P1" && d.DoorNumber == 4 {
-			falDoor4ID = d.ID
-			break
-		}
-	}
-
+func testDoorTimelineStep(t *testing.T, router http.Handler, falDoor4ID int) {
 	timelineReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/doors/%d/timeline", falDoor4ID), nil)
 	timelineW := httptest.NewRecorder()
 	router.ServeHTTP(timelineW, timelineReq)
@@ -725,7 +743,9 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if len(timelineResp.Inspections) == 0 || timelineResp.Inspections[0].Status != "completed" {
 		t.Errorf("linha do tempo deveria consolidar a inspecao automatica concluida")
 	}
+}
 
+func testDashboardSummaryStep(t *testing.T, router http.Handler) {
 	summaryReq := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/summary", nil)
 	summaryW := httptest.NewRecorder()
 	router.ServeHTTP(summaryW, summaryReq)
@@ -743,6 +763,32 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	if summaryResp.CompletedInspections != 1 {
 		t.Errorf("resumo do dashboard deveria acusar 1 inspecao concluida, obteve %d", summaryResp.CompletedInspections)
 	}
+}
+
+func findDoorIDByLocation(doors []domain.Door, station, platform string, number int) int {
+	for _, d := range doors {
+		if d.StationCode == station && d.Platform == platform && d.DoorNumber == number {
+			return d.ID
+		}
+	}
+	return 0
+}
+
+func TestIntegration_CompleteOperationalPipeline(t *testing.T) {
+	router, store := setupCompleteWorkflowApp()
+
+	token, _ := testLoginStep(t, router)
+	testMeStep(t, router, token)
+	uploadID := testAlarmUploadStep(t, router)
+	testUploadStatusStep(t, router, uploadID)
+	testCreateMaintenanceStep(t, router)
+	testTriggerPredictionStep(t, router)
+	autoInspectionID := testListInspectionsStep(t, router)
+	testUpdateInspectionStatusStep(t, router, autoInspectionID)
+
+	falDoor4ID := findDoorIDByLocation(store.doors, "FAL", "P1", 4)
+	testDoorTimelineStep(t, router, falDoor4ID)
+	testDashboardSummaryStep(t, router)
 }
 
 func TestIntegration_SecurityAndProblemDetailsRFC7807(t *testing.T) {

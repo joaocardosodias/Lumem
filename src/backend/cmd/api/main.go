@@ -47,6 +47,210 @@ func runMigrations(db *sql.DB, migrationsPath string) error {
 	return nil
 }
 
+func isOriginAllowed(origin string, cfg *config.Config, allowedOrigins []string) bool {
+	if cfg.CORSAllowedOrigins == "*" || cfg.Environment != "production" {
+		return true
+	}
+	for _, o := range allowedOrigins {
+		if strings.TrimSpace(o) == origin {
+			return true
+		}
+	}
+	return false
+}
+
+func setupCORSMiddleware(cfg *config.Config) gin.HandlerFunc {
+	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		allow := isOriginAllowed(origin, cfg, allowedOrigins)
+
+		if allow {
+			if origin != "" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
+func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) {
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer pingCancel()
+
+	if err := db.PingContext(pingCtx); err != nil {
+		logger.Warn("aviso: conexao inicial com supabase indisponivel ou aguardando credenciais",
+			slog.String("error", err.Error()),
+		)
+		return
+	}
+
+	logger.Info("conexao com supabase postgres estabelecida com sucesso")
+	if !cfg.RunMigrations {
+		logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
+		return
+	}
+
+	logger.Info("aplicando migracoes no banco de dados", slog.String("migrations_path", cfg.MigrationsPath))
+	if err := runMigrations(db, cfg.MigrationsPath); err != nil {
+		logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
+		return
+	}
+	logger.Info("migracoes aplicadas com sucesso")
+}
+
+func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
+	db, err := sql.Open("pgx", cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("falha ao conectar no postgres/supabase", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	db.SetMaxOpenConns(20)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(10 * time.Minute)
+
+	checkDatabaseConnection(db, cfg, logger)
+	return db
+}
+
+type appHandlers struct {
+	auth      *httpAdapter.AuthHandler
+	upload    *httpAdapter.UploadHandler
+	maint     *httpAdapter.MaintenanceHandler
+	ins       *httpAdapter.InspectionHandler
+	dash      *httpAdapter.DashboardHandler
+	health    *httpAdapter.HealthHandler
+	docs      *httpAdapter.DocsHandler
+	jwtSecret string
+}
+
+func registerRoutes(router *gin.Engine, h appHandlers) {
+	router.GET("/openapi.json", h.docs.OpenAPISpec)
+	router.GET("/docs", h.docs.SwaggerUI)
+	router.GET("/swagger", h.docs.SwaggerUI)
+
+	router.GET("/healthz/live", h.health.Live)
+	router.GET("/healthz/ready", h.health.Ready)
+	router.GET("/health", h.health.Ready)
+	router.GET("/metrics", httpAdapter.MetricsHandler())
+
+	v1 := router.Group("/api/v1")
+	{
+		v1.POST("/auth/login", h.auth.Login)
+		v1.POST("/uploads/alarms", h.upload.UploadAlarms)
+		v1.POST("/uploads/maintenance", h.upload.UploadMaintenance)
+		v1.GET("/uploads/:id", h.upload.GetUploadStatus)
+
+		v1.GET("/maintenance", h.maint.List)
+		v1.POST("/maintenance", h.maint.Create)
+
+		v1.POST("/inspections", h.ins.Create)
+		v1.GET("/inspections", h.ins.List)
+		v1.GET("/inspections/:id", h.ins.GetByID)
+		v1.PATCH("/inspections/:id/status", h.ins.UpdateStatus)
+
+		v1.GET("/dashboard/summary", h.dash.GetSummary)
+		v1.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
+		v1.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
+		v1.POST("/predictions/trigger", h.dash.TriggerPredictions)
+		v1.GET("/predictions/latest", h.dash.GetLatestPredictions)
+	}
+
+	protected := v1.Group("")
+	protected.Use(httpAdapter.AuthMiddleware(h.jwtSecret))
+	{
+		protected.GET("/auth/me", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"id":    c.GetString("userID"),
+				"email": c.GetString("userEmail"),
+				"role":  c.GetString("userRole"),
+			})
+		})
+	}
+}
+
+func buildRouter(cfg *config.Config, logger *slog.Logger, h appHandlers) *gin.Engine {
+	if cfg.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.TestMode)
+	}
+
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(httpAdapter.CorrelationIDMiddleware())
+	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
+	router.Use(httpAdapter.PrometheusMetricsMiddleware())
+
+	if cfg.LoadTest {
+		logger.Warn("modo LOAD_TEST ativado: rate limiter desativado para teste de carga")
+	} else if cfg.EnableRateLimiter {
+		limiter := httpAdapter.NewRateLimiter(float64(cfg.RateLimitRPS), cfg.RateLimitBurst)
+		router.Use(httpAdapter.RateLimiterMiddleware(limiter))
+	}
+
+	router.Use(setupCORSMiddleware(cfg))
+	registerRoutes(router, h)
+	return router
+}
+
+func waitForUploads(uploadWG *sync.WaitGroup, logger *slog.Logger) {
+	uploadDone := make(chan struct{})
+	go func() {
+		uploadWG.Wait()
+		close(uploadDone)
+	}()
+
+	select {
+	case <-uploadDone:
+		logger.Info("todos os uploads assincronos foram concluidos")
+	case <-time.After(10 * time.Second):
+		logger.Warn("tempo limite atingido aguardando uploads pendentes")
+	}
+}
+
+func runGracefulServer(cfg *config.Config, router *gin.Engine, uploadWG *sync.WaitGroup, logger *slog.Logger) {
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+
+	go func() {
+		logger.Info("servidor backend iniciado", slog.String("port", cfg.Port))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("erro no servidor http", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Info("sinal de encerramento recebido. desligando servidor graciosamente...")
+
+	waitForUploads(uploadWG, logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("forcando encerramento do servidor", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	logger.Info("servidor finalizado com sucesso")
+}
+
 func main() {
 	cfg := config.LoadConfig()
 
@@ -69,36 +273,8 @@ func main() {
 		slog.String("db_name", cfg.DBName),
 	)
 
-	db, err := sql.Open("pgx", cfg.DatabaseURL)
-	if err != nil {
-		logger.Error("falha ao conectar no postgres/supabase", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
+	db := initDatabase(cfg, logger)
 	defer db.Close()
-
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(10 * time.Minute)
-
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	if err := db.PingContext(pingCtx); err != nil {
-		logger.Warn("aviso: conexao inicial com supabase indisponivel ou aguardando credenciais",
-			slog.String("error", err.Error()),
-		)
-	} else {
-		logger.Info("conexao com supabase postgres estabelecida com sucesso")
-		if cfg.RunMigrations {
-			logger.Info("aplicando migracoes no banco de dados", slog.String("migrations_path", cfg.MigrationsPath))
-			if err := runMigrations(db, cfg.MigrationsPath); err != nil {
-				logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
-			} else {
-				logger.Info("migracoes aplicadas com sucesso")
-			}
-		} else {
-			logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
-		}
-	}
-	pingCancel()
 
 	bus := eventbus.NewInMemoryEventBus(logger)
 	uow := repository.NewPostgresUnitOfWork(db)
@@ -137,145 +313,17 @@ func main() {
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
 
-	authHandler := httpAdapter.NewAuthHandler(loginUC)
-	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
-	maintHandler := httpAdapter.NewMaintenanceHandler(createMaintUC)
-	insHandler := httpAdapter.NewInspectionHandler(insUC)
-	dashHandler := httpAdapter.NewDashboardHandler(dashUC)
-	healthHandler := httpAdapter.NewHealthHandler(db)
-	docsHandler := httpAdapter.NewDocsHandler("docs/openapi.json")
-
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
-		gin.SetMode(gin.TestMode)
+	handlers := appHandlers{
+		auth:      httpAdapter.NewAuthHandler(loginUC),
+		upload:    httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC),
+		maint:     httpAdapter.NewMaintenanceHandler(createMaintUC),
+		ins:       httpAdapter.NewInspectionHandler(insUC),
+		dash:      httpAdapter.NewDashboardHandler(dashUC),
+		health:    httpAdapter.NewHealthHandler(db),
+		docs:      httpAdapter.NewDocsHandler("docs/openapi.json"),
+		jwtSecret: cfg.JWTSecret,
 	}
 
-	router := gin.New()
-	router.Use(gin.Recovery())
-	router.Use(httpAdapter.CorrelationIDMiddleware())
-	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
-	router.Use(httpAdapter.PrometheusMetricsMiddleware())
-	if cfg.LoadTest {
-		logger.Warn("modo LOAD_TEST ativado: rate limiter desativado para teste de carga")
-	} else if cfg.EnableRateLimiter {
-		limiter := httpAdapter.NewRateLimiter(float64(cfg.RateLimitRPS), cfg.RateLimitBurst)
-		router.Use(httpAdapter.RateLimiterMiddleware(limiter))
-	}
-
-	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
-	router.Use(func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		allow := false
-		if cfg.CORSAllowedOrigins == "*" || cfg.Environment != "production" {
-			allow = true
-		} else {
-			for _, o := range allowedOrigins {
-				if strings.TrimSpace(o) == origin {
-					allow = true
-					break
-				}
-			}
-		}
-
-		if allow {
-			if origin != "" {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			} else {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			}
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.Next()
-	})
-
-	router.GET("/openapi.json", docsHandler.OpenAPISpec)
-	router.GET("/docs", docsHandler.SwaggerUI)
-	router.GET("/swagger", docsHandler.SwaggerUI)
-
-	router.GET("/healthz/live", healthHandler.Live)
-	router.GET("/healthz/ready", healthHandler.Ready)
-	router.GET("/health", healthHandler.Ready)
-	router.GET("/metrics", httpAdapter.MetricsHandler())
-
-	v1 := router.Group("/api/v1")
-	{
-		v1.POST("/auth/login", authHandler.Login)
-		v1.POST("/uploads/alarms", uploadHandler.UploadAlarms)
-		v1.POST("/uploads/maintenance", uploadHandler.UploadMaintenance)
-		v1.GET("/uploads/:id", uploadHandler.GetUploadStatus)
-
-		v1.GET("/maintenance", maintHandler.List)
-		v1.POST("/maintenance", maintHandler.Create)
-
-		v1.POST("/inspections", insHandler.Create)
-		v1.GET("/inspections", insHandler.List)
-		v1.GET("/inspections/:id", insHandler.GetByID)
-		v1.PATCH("/inspections/:id/status", insHandler.UpdateStatus)
-
-		v1.GET("/dashboard/summary", dashHandler.GetSummary)
-		v1.GET("/doors/:id/timeline", dashHandler.GetDoorTimeline)
-		v1.GET("/stations/:code/doors/status", dashHandler.GetStationDoorsStatus)
-		v1.POST("/predictions/trigger", dashHandler.TriggerPredictions)
-		v1.GET("/predictions/latest", dashHandler.GetLatestPredictions)
-	}
-
-	protected := v1.Group("")
-	protected.Use(httpAdapter.AuthMiddleware(cfg.JWTSecret))
-	{
-		protected.GET("/auth/me", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"id":    c.GetString("userID"),
-				"email": c.GetString("userEmail"),
-				"role":  c.GetString("userRole"),
-			})
-		})
-	}
-
-	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: router,
-	}
-
-	go func() {
-		logger.Info("servidor backend iniciado", slog.String("port", cfg.Port))
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("erro no servidor http", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	logger.Info("sinal de encerramento recebido. desligando servidor graciosamente...")
-
-	uploadDone := make(chan struct{})
-	go func() {
-		uploadWG.Wait()
-		close(uploadDone)
-	}()
-
-	select {
-	case <-uploadDone:
-		logger.Info("todos os uploads assincronos foram concluidos")
-	case <-time.After(10 * time.Second):
-		logger.Warn("tempo limite atingido aguardando uploads pendentes")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("forcando encerramento do servidor", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-
-	logger.Info("servidor finalizado com sucesso")
+	router := buildRouter(cfg, logger, handlers)
+	runGracefulServer(cfg, router, uploadWG, logger)
 }

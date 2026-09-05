@@ -53,46 +53,83 @@ func (p *DefaultAlarmParser) ParseAlarms(r io.Reader, format string) (records []
 		return nil, errors.New("colunas obrigatorias ausentes no arquivo de alarmes")
 	}
 
+	cols := alarmColumnIndices{
+		tagIdx:     tagIdx,
+		stationIdx: stationIdx,
+		doorIdx:    doorIdx,
+		alarmIdx:   alarmIdx,
+		durIdx:     durIdx,
+		hasDur:     hasDur,
+		normIdx:    normIdx,
+		hasNorm:    hasNorm,
+		platIdx:    platIdx,
+		hasPlat:    hasPlat,
+		timeIdx:    timeIdx,
+	}
+
 	records = make([]port.RawAlarmRecord, 0, len(rows)-1)
 	for _, row := range rows[1:] {
-		doorRaw := safeGetCell(row, doorIdx)
-		doorNum, _ := strconv.Atoi(strings.TrimSpace(strings.Split(doorRaw, ".")[0]))
-
-		durSec := 0
-		if hasDur {
-			durRaw := safeGetCell(row, durIdx)
-			durSec, _ = strconv.Atoi(strings.TrimSpace(strings.Split(durRaw, ".")[0]))
-		}
-
-		tag := safeGetCell(row, tagIdx)
-		platform := ""
-		if hasPlat {
-			platform = safeGetCell(row, platIdx)
-		}
-		if platform == "" {
-			if strings.Contains(tag, "-P1-") || strings.Contains(tag, "-P1") {
-				platform = "P1"
-			} else if strings.Contains(tag, "-P2-") || strings.Contains(tag, "-P2") {
-				platform = "P2"
-			}
-		}
-
-		normTime := ""
-		if hasNorm {
-			normTime = safeGetCell(row, normIdx)
-		}
-
-		records = append(records, port.RawAlarmRecord{
-			Tag:                    tag,
-			StationCode:            safeGetCell(row, stationIdx),
-			Platform:               platform,
-			DoorNumber:             doorNum,
-			AlarmType:              safeGetCell(row, alarmIdx),
-			DurationSeconds:        durSec,
-			EventTimestamp:         safeGetCell(row, timeIdx),
-			NormalizationTimestamp: normTime,
-		})
+		records = append(records, parseAlarmRow(row, cols))
 	}
 
 	return records, nil
+}
+
+type alarmColumnIndices struct {
+	tagIdx     int
+	stationIdx int
+	doorIdx    int
+	alarmIdx   int
+	durIdx     int
+	hasDur     bool
+	normIdx    int
+	hasNorm    bool
+	platIdx    int
+	hasPlat    bool
+	timeIdx    int
+}
+
+func parseAlarmRow(row []string, cols alarmColumnIndices) port.RawAlarmRecord {
+	doorRaw := safeGetCell(row, cols.doorIdx)
+	doorNum, _ := strconv.Atoi(strings.TrimSpace(strings.Split(doorRaw, ".")[0]))
+
+	durSec := 0
+	if cols.hasDur {
+		durRaw := safeGetCell(row, cols.durIdx)
+		durSec, _ = strconv.Atoi(strings.TrimSpace(strings.Split(durRaw, ".")[0]))
+	}
+
+	tag := safeGetCell(row, cols.tagIdx)
+	platform := extractPlatform(row, tag, cols.platIdx, cols.hasPlat)
+
+	normTime := ""
+	if cols.hasNorm {
+		normTime = safeGetCell(row, cols.normIdx)
+	}
+
+	return port.RawAlarmRecord{
+		Tag:                    tag,
+		StationCode:            safeGetCell(row, cols.stationIdx),
+		Platform:               platform,
+		DoorNumber:             doorNum,
+		AlarmType:              safeGetCell(row, cols.alarmIdx),
+		DurationSeconds:        durSec,
+		EventTimestamp:         safeGetCell(row, cols.timeIdx),
+		NormalizationTimestamp: normTime,
+	}
+}
+
+func extractPlatform(row []string, tag string, platIdx int, hasPlat bool) string {
+	if hasPlat {
+		if plat := safeGetCell(row, platIdx); plat != "" {
+			return plat
+		}
+	}
+	if strings.Contains(tag, "-P1-") || strings.Contains(tag, "-P1") {
+		return "P1"
+	}
+	if strings.Contains(tag, "-P2-") || strings.Contains(tag, "-P2") {
+		return "P2"
+	}
+	return ""
 }

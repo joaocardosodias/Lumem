@@ -32,22 +32,33 @@ type Inspection struct {
 	UpdatedAt    time.Time
 }
 
-func NewInspection(id string, predictionID *string, stationCode, platform string, doorNumber int, scheduledFor, priority, notes string) (*Inspection, error) {
-	stationCode = strings.TrimSpace(strings.ToUpper(stationCode))
+type CreateInspectionParams struct {
+	ID           string
+	PredictionID *string
+	StationCode  string
+	Platform     string
+	DoorNumber   int
+	ScheduledFor string
+	Priority     string
+	Notes        string
+}
+
+func NewInspection(p CreateInspectionParams) (*Inspection, error) {
+	stationCode := strings.TrimSpace(strings.ToUpper(p.StationCode))
 	if stationCode == "" {
 		return nil, ErrStationCodeRequired
 	}
 
-	platform = strings.TrimSpace(strings.ToUpper(platform))
+	platform := strings.TrimSpace(strings.ToUpper(p.Platform))
 	if platform != "P1" && platform != "P2" {
 		return nil, ErrInvalidPlatform
 	}
 
-	if doorNumber < 1 || doorNumber > 24 {
+	if p.DoorNumber < 1 || p.DoorNumber > 24 {
 		return nil, ErrInvalidDoorNumber
 	}
 
-	priority = strings.ToLower(strings.TrimSpace(priority))
+	priority := strings.ToLower(strings.TrimSpace(p.Priority))
 	if priority == "" {
 		priority = "normal"
 	}
@@ -57,15 +68,15 @@ func NewInspection(id string, predictionID *string, stationCode, platform string
 
 	now := time.Now()
 	return &Inspection{
-		ID:           id,
-		PredictionID: predictionID,
+		ID:           p.ID,
+		PredictionID: p.PredictionID,
 		StationCode:  stationCode,
 		Platform:     platform,
-		DoorNumber:   doorNumber,
-		ScheduledFor: strings.TrimSpace(scheduledFor),
+		DoorNumber:   p.DoorNumber,
+		ScheduledFor: strings.TrimSpace(p.ScheduledFor),
 		Priority:     priority,
 		Status:       "pending",
-		Notes:        strings.TrimSpace(notes),
+		Notes:        strings.TrimSpace(p.Notes),
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}, nil

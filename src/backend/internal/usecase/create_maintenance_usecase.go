@@ -49,21 +49,21 @@ func NewCreateMaintenanceUseCase(repo port.MaintenanceRepository) *CreateMainten
 }
 
 func (uc *CreateMaintenanceUseCase) Execute(ctx context.Context, input CreateMaintenanceInputDTO) (*MaintenanceOutputDTO, error) {
-	event, err := domain.NewMaintenanceEvent(
-		uuid.New().String(),
-		input.SAPOrderNumber,
-		input.OrderType,
-		input.StationCode,
-		input.InstallationLocation,
-		input.StartTimestamp,
-		input.EndTimestamp,
-		input.DurationHours,
-		input.Description,
-		input.Symptom,
-		input.Cause,
-		input.ActionTaken,
-		"manual_form",
-	)
+	event, err := domain.NewMaintenanceEvent(domain.CreateMaintenanceParams{
+		ID:                   uuid.New().String(),
+		SAPOrderNumber:       input.SAPOrderNumber,
+		OrderType:            input.OrderType,
+		StationCode:          input.StationCode,
+		InstallationLocation: input.InstallationLocation,
+		StartTimestamp:       input.StartTimestamp,
+		EndTimestamp:         input.EndTimestamp,
+		DurationHours:        input.DurationHours,
+		Description:          input.Description,
+		Symptom:              input.Symptom,
+		Cause:                input.Cause,
+		ActionTaken:          input.ActionTaken,
+		Source:               "manual_form",
+	})
 	if err != nil {
 		return nil, err
 	}

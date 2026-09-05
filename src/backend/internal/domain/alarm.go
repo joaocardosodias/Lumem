@@ -32,63 +32,66 @@ type Alarm struct {
 	CreatedAt              time.Time
 }
 
-func NewAlarm(
-	id string,
-	uploadID string,
-	tag string,
-	stationCode string,
-	platform string,
-	doorNumber int,
-	alarmType string,
-	durationSeconds int,
-	eventTimestamp string,
-	normalizationTimestamp string,
-	source string,
-) (*Alarm, error) {
-	tag = strings.TrimSpace(tag)
+type CreateAlarmParams struct {
+	ID                     string
+	UploadID               string
+	Tag                    string
+	StationCode            string
+	Platform               string
+	DoorNumber             int
+	AlarmType              string
+	DurationSeconds        int
+	EventTimestamp         string
+	NormalizationTimestamp string
+	Source                 string
+}
+
+func NewAlarm(p CreateAlarmParams) (*Alarm, error) {
+	tag := strings.TrimSpace(p.Tag)
 	if tag == "" {
 		return nil, ErrAlarmTagRequired
 	}
 
-	stationCode = strings.TrimSpace(strings.ToUpper(stationCode))
+	stationCode := strings.TrimSpace(strings.ToUpper(p.StationCode))
 	if stationCode == "" {
 		return nil, ErrAlarmStationRequired
 	}
 
-	platform = strings.TrimSpace(strings.ToUpper(platform))
+	platform := strings.TrimSpace(strings.ToUpper(p.Platform))
 	if platform != "P1" && platform != "P2" {
 		return nil, ErrInvalidAlarmPlatform
 	}
 
-	if doorNumber < 1 || doorNumber > 24 {
+	if p.DoorNumber < 1 || p.DoorNumber > 24 {
 		return nil, ErrInvalidAlarmDoorNumber
 	}
 
-	alarmType = strings.TrimSpace(alarmType)
+	alarmType := strings.TrimSpace(p.AlarmType)
 	if alarmType == "" {
 		return nil, ErrAlarmTypeRequired
 	}
 
-	eventTimestamp = strings.TrimSpace(eventTimestamp)
+	eventTimestamp := strings.TrimSpace(p.EventTimestamp)
 	if eventTimestamp == "" {
 		return nil, ErrAlarmTimestampRequired
 	}
 
+	source := p.Source
 	if source == "" {
 		source = "telemetry"
 	}
 
 	return &Alarm{
-		ID:                     id,
-		UploadID:               uploadID,
+		ID:                     p.ID,
+		UploadID:               p.UploadID,
 		Tag:                    tag,
 		StationCode:            stationCode,
 		Platform:               platform,
-		DoorNumber:             doorNumber,
+		DoorNumber:             p.DoorNumber,
 		AlarmType:              alarmType,
-		DurationSeconds:        durationSeconds,
+		DurationSeconds:        p.DurationSeconds,
 		EventTimestamp:         eventTimestamp,
-		NormalizationTimestamp: strings.TrimSpace(normalizationTimestamp),
+		NormalizationTimestamp: strings.TrimSpace(p.NormalizationTimestamp),
 		Source:                 source,
 		CreatedAt:              time.Now(),
 	}, nil

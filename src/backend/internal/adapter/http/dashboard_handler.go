@@ -8,6 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const defaultDateTimeLayout = "2006-01-02 15:04:05"
+
 type StationRiskResponse struct {
 	StationCode string `json:"station_code"`
 	DoorsAtRisk int    `json:"doors_at_risk"`
@@ -119,7 +121,7 @@ func toDashboardSummaryResponse(s *usecase.DashboardSummaryOutputDTO) DashboardS
 func toDoorTimelineResponse(t *usecase.DoorTimelineOutputDTO) DoorTimelineResponse {
 	var evalStr *string
 	if t.LastEvaluatedAt != nil {
-		s := t.LastEvaluatedAt.Format("2006-01-02 15:04:05")
+		s := t.LastEvaluatedAt.Format(defaultDateTimeLayout)
 		evalStr = &s
 	}
 
@@ -153,7 +155,7 @@ func toDoorTimelineResponse(t *usecase.DoorTimelineOutputDTO) DoorTimelineRespon
 	for _, i := range t.Inspections {
 		var compStr *string
 		if i.CompletedAt != nil {
-			s := i.CompletedAt.Format("2006-01-02 15:04:05")
+			s := i.CompletedAt.Format(defaultDateTimeLayout)
 			compStr = &s
 		}
 		inspections = append(inspections, TimelineInspectionResponse{
@@ -199,7 +201,7 @@ func toPredictionRunResponse(r *usecase.PredictionRunOutputDTO) PredictionRunRes
 		HorizonDays:         r.HorizonDays,
 		TotalDoorsEvaluated: r.TotalDoorsEvaluated,
 		TotalDoorsAtRisk:    r.TotalDoorsAtRisk,
-		CreatedAt:           r.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:           r.CreatedAt.Format(defaultDateTimeLayout),
 		Predictions:         items,
 	}
 }

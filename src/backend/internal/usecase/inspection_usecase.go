@@ -49,16 +49,16 @@ func NewInspectionUseCase(repo port.InspectionRepository) *InspectionUseCase {
 }
 
 func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionInputDTO) (*InspectionOutputDTO, error) {
-	ins, err := domain.NewInspection(
-		uuid.New().String(),
-		input.PredictionID,
-		input.StationCode,
-		input.Platform,
-		input.DoorNumber,
-		input.ScheduledFor,
-		input.Priority,
-		input.Notes,
-	)
+	ins, err := domain.NewInspection(domain.CreateInspectionParams{
+		ID:           uuid.New().String(),
+		PredictionID: input.PredictionID,
+		StationCode:  input.StationCode,
+		Platform:     input.Platform,
+		DoorNumber:   input.DoorNumber,
+		ScheduledFor: input.ScheduledFor,
+		Priority:     input.Priority,
+		Notes:        input.Notes,
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -31,15 +31,31 @@ type MaintenanceEvent struct {
 	CreatedAt            time.Time
 }
 
-func NewMaintenanceEvent(id, sapOrderNumber, orderType, stationCode, installationLocation, startTimestamp, endTimestamp string, durationHours float64, description, symptom, cause, actionTaken, source string) (*MaintenanceEvent, error) {
-	orderType = strings.TrimSpace(strings.ToUpper(orderType))
+type CreateMaintenanceParams struct {
+	ID                   string
+	SAPOrderNumber       string
+	OrderType            string
+	StationCode          string
+	InstallationLocation string
+	StartTimestamp       string
+	EndTimestamp         string
+	DurationHours        float64
+	Description          string
+	Symptom              string
+	Cause                string
+	ActionTaken          string
+	Source               string
+}
+
+func NewMaintenanceEvent(p CreateMaintenanceParams) (*MaintenanceEvent, error) {
+	orderType := strings.TrimSpace(strings.ToUpper(p.OrderType))
 	if orderType == "" {
 		return nil, ErrOrderTypeRequired
 	}
 
-	stationCode = strings.TrimSpace(strings.ToUpper(stationCode))
-	if stationCode == "" && installationLocation != "" {
-		parts := strings.Split(installationLocation, "-")
+	stationCode := strings.TrimSpace(strings.ToUpper(p.StationCode))
+	if stationCode == "" && p.InstallationLocation != "" {
+		parts := strings.Split(p.InstallationLocation, "-")
 		if len(parts) >= 4 {
 			stationCode = strings.TrimSpace(strings.ToUpper(parts[3]))
 		}
@@ -48,25 +64,25 @@ func NewMaintenanceEvent(id, sapOrderNumber, orderType, stationCode, installatio
 		return nil, ErrMaintenanceStationRequired
 	}
 
-	startTimestamp = strings.TrimSpace(startTimestamp)
+	startTimestamp := strings.TrimSpace(p.StartTimestamp)
 	if startTimestamp == "" {
 		return nil, ErrStartTimestampRequired
 	}
 
 	return &MaintenanceEvent{
-		ID:                   id,
-		SAPOrderNumber:       strings.TrimSpace(sapOrderNumber),
+		ID:                   p.ID,
+		SAPOrderNumber:       strings.TrimSpace(p.SAPOrderNumber),
 		OrderType:            orderType,
 		StationCode:          stationCode,
-		InstallationLocation: strings.TrimSpace(installationLocation),
+		InstallationLocation: strings.TrimSpace(p.InstallationLocation),
 		StartTimestamp:       startTimestamp,
-		EndTimestamp:         strings.TrimSpace(endTimestamp),
-		DurationHours:        durationHours,
-		Description:          strings.TrimSpace(description),
-		Symptom:              strings.TrimSpace(symptom),
-		Cause:                strings.TrimSpace(cause),
-		ActionTaken:          strings.TrimSpace(actionTaken),
-		Source:               source,
+		EndTimestamp:         strings.TrimSpace(p.EndTimestamp),
+		DurationHours:        p.DurationHours,
+		Description:          strings.TrimSpace(p.Description),
+		Symptom:              strings.TrimSpace(p.Symptom),
+		Cause:                strings.TrimSpace(p.Cause),
+		ActionTaken:          strings.TrimSpace(p.ActionTaken),
+		Source:               p.Source,
 		CreatedAt:            time.Now(),
 	}, nil
 }

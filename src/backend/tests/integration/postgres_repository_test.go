@@ -14,25 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func TestPostgresRepositories(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set, skipping postgres repository tests")
-	}
-
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("failed to open postgres connection: %v", err)
-	}
-	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		t.Fatalf("failed to ping postgres: %v", err)
-	}
-
+func testUserRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 	userRepo := repository.NewPostgresUserRepository(db)
 	user, err := userRepo.GetByEmail(ctx, "operador@motiva.com.br")
 	if err != nil {
@@ -45,7 +27,9 @@ func TestPostgresRepositories(t *testing.T) {
 	if err != nil || userByID.ID != user.ID {
 		t.Fatalf("failed to get user by id: %v", err)
 	}
+}
 
+func testAlarmRepo(t *testing.T, ctx context.Context, db *sql.DB) string {
 	alarmRepo := repository.NewPostgresAlarmRepository(db)
 	uploadID := uuid.New().String()
 	upload := &domain.FileUpload{
@@ -97,6 +81,10 @@ func TestPostgresRepositories(t *testing.T) {
 		t.Fatalf("ReconcileStaleUploads failed: %v", err)
 	}
 
+	return uploadID
+}
+
+func testMaintenanceRepo(t *testing.T, ctx context.Context, db *sql.DB, uploadID string) {
 	maintRepo := repository.NewPostgresMaintenanceRepository(db)
 	maintID := uuid.New().String()
 	maints := []*domain.MaintenanceEvent{
@@ -116,6 +104,11 @@ func TestPostgresRepositories(t *testing.T) {
 	if err := maintRepo.BatchInsertMaintenance(ctx, maints); err != nil {
 		t.Fatalf("BatchInsertMaintenance failed: %v", err)
 	}
+}
+
+func testCleanupUploads(t *testing.T, ctx context.Context, db *sql.DB, uploadID string) {
+	alarmRepo := repository.NewPostgresAlarmRepository(db)
+	maintRepo := repository.NewPostgresMaintenanceRepository(db)
 
 	if err := alarmRepo.DeleteByUploadID(ctx, uploadID); err != nil {
 		t.Fatalf("alarmRepo.DeleteByUploadID failed: %v", err)
@@ -123,7 +116,9 @@ func TestPostgresRepositories(t *testing.T) {
 	if err := maintRepo.DeleteByUploadID(ctx, uploadID); err != nil {
 		t.Fatalf("maintRepo.DeleteByUploadID failed: %v", err)
 	}
+}
 
+func testPredictionUOW(t *testing.T, ctx context.Context, db *sql.DB) (string, string) {
 	uow := repository.NewPostgresUnitOfWork(db)
 	runID := uuid.New().String()
 	predID := uuid.New().String()
@@ -141,13 +136,16 @@ func TestPostgresRepositories(t *testing.T) {
 		DoorNumber:  1,
 		WillFail:    true,
 	}
-	err = uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+	err := uow.Do(ctx, func(store port.UnitOfWorkStore) error {
 		return store.Predictions().SaveRun(ctx, run, []domain.PredictionItem{item})
 	})
 	if err != nil {
 		t.Fatalf("uow.Do failed: %v", err)
 	}
+	return runID, predID
+}
 
+func testInspectionRepo(t *testing.T, ctx context.Context, db *sql.DB, predID string) {
 	inspRepo := repository.NewPostgresInspectionRepository(db)
 	inspID := uuid.New().String()
 	insp := &domain.Inspection{
@@ -187,7 +185,9 @@ func TestPostgresRepositories(t *testing.T) {
 	if err := inspRepo.UpdateStatus(ctx, inspID, "completed", "Finalizado com sucesso", &now); err != nil {
 		t.Fatalf("inspRepo.UpdateStatus failed: %v", err)
 	}
+}
 
+func testDashboardRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 	dashRepo := repository.NewPostgresDashboardRepository(db)
 	summary, err := dashRepo.GetSummary(ctx)
 	if err != nil {
@@ -209,4 +209,32 @@ func TestPostgresRepositories(t *testing.T) {
 	if err != nil || len(stationDoors) == 0 {
 		t.Fatalf("dashRepo.GetStationDoorsStatus failed: %v", err)
 	}
+}
+
+func TestPostgresRepositories(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set, skipping postgres repository tests")
+	}
+
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("failed to open postgres connection: %v", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatalf("failed to ping postgres: %v", err)
+	}
+
+	testUserRepo(t, ctx, db)
+	uploadID := testAlarmRepo(t, ctx, db)
+	testMaintenanceRepo(t, ctx, db, uploadID)
+	testCleanupUploads(t, ctx, db, uploadID)
+	_, predID := testPredictionUOW(t, ctx, db)
+	testInspectionRepo(t, ctx, db, predID)
+	testDashboardRepo(t, ctx, db)
 }
