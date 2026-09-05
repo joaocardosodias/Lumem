@@ -38,6 +38,10 @@ func (s *postgresUnitOfWorkStore) Alarms() port.AlarmRepository {
 	return NewPostgresAlarmRepository(s.tx)
 }
 
+func (s *postgresUnitOfWorkStore) Uploads() port.UploadRepository {
+	return NewPostgresAlarmRepository(s.tx)
+}
+
 func (u *PostgresUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
 	tx, err := u.db.BeginTx(ctx, nil)
 	if err != nil {

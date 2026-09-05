@@ -29,6 +29,10 @@ func (m *mockUnitOfWorkStore) Alarms() port.AlarmRepository {
 	return nil
 }
 
+func (m *mockUnitOfWorkStore) Uploads() port.UploadRepository {
+	return nil
+}
+
 type mockUOW struct {
 	store      *mockUnitOfWorkStore
 	committed  bool

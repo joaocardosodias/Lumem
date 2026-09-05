@@ -191,6 +191,7 @@ func (s *mockUOWStore) Predictions() port.PredictionRepository   { return s.pred
 func (s *mockUOWStore) Inspections() port.InspectionRepository   { return s.insRepo }
 func (s *mockUOWStore) Maintenances() port.MaintenanceRepository { return nil }
 func (s *mockUOWStore) Alarms() port.AlarmRepository             { return nil }
+func (s *mockUOWStore) Uploads() port.UploadRepository           { return nil }
 
 type mockUnitOfWork struct {
 	called bool

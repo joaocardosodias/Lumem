@@ -13,6 +13,7 @@ import (
 	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 )
@@ -103,12 +104,37 @@ func (m *mockAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 	return nil
 }
 
+func (m *mockAlarmRepo) Predictions() port.PredictionRepository   { return nil }
+func (m *mockAlarmRepo) Inspections() port.InspectionRepository   { return nil }
+func (m *mockAlarmRepo) Maintenances() port.MaintenanceRepository { return nil }
+func (m *mockAlarmRepo) Alarms() port.AlarmRepository             { return m }
+func (m *mockAlarmRepo) Uploads() port.UploadRepository           { return m }
+
+type mockAlarmUOW struct {
+	repo *mockAlarmRepo
+}
+
+func (u *mockAlarmUOW) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
+	u.repo.mu.Lock()
+	savedAlarms := make([]*domain.Alarm, len(u.repo.alarms))
+	copy(savedAlarms, u.repo.alarms)
+	u.repo.mu.Unlock()
+
+	if err := fn(u.repo); err != nil {
+		u.repo.mu.Lock()
+		u.repo.alarms = savedAlarms
+		u.repo.mu.Unlock()
+		return err
+	}
+	return nil
+}
+
 func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {
 	repo := newMockAlarmRepo()
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -137,7 +163,7 @@ func TestIngestAlarmsUseCase_ValidXLSX(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -175,7 +201,7 @@ func TestIngestAlarmsUseCase_ShortRowNoPanic(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4
@@ -204,7 +230,7 @@ func TestIngestAlarmsUseCase_UnknownPlatformNoFallback(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -230,7 +256,7 @@ func TestIngestAlarmsUseCase_RollbackOnBatchFailure(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -249,7 +275,7 @@ SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
 		t.Errorf("esperava status failed apos falha de lote, obteve %s", status.Status)
 	}
 	if len(repo.alarms) != 0 {
-		t.Errorf("esperava 0 alarmes no repositorio apos rollback via DeleteByUploadID, obteve %d", len(repo.alarms))
+		t.Errorf("esperava 0 alarmes no repositorio apos rollback da transacao, obteve %d", len(repo.alarms))
 	}
 }
 
@@ -258,7 +284,7 @@ func TestIngestAlarmsUseCase_IdempotencyDuplicate(t *testing.T) {
 	alarmStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo})
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28

@@ -13,6 +13,7 @@ import (
 	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -45,13 +46,44 @@ func (m *mockMaintRepo) DeleteByUploadID(ctx context.Context, uploadID string) e
 	return nil
 }
 
+type mockMaintStore struct {
+	maintRepo  *mockMaintRepo
+	uploadRepo *mockAlarmRepo
+}
+
+func (s *mockMaintStore) Predictions() port.PredictionRepository   { return nil }
+func (s *mockMaintStore) Inspections() port.InspectionRepository   { return nil }
+func (s *mockMaintStore) Maintenances() port.MaintenanceRepository { return s.maintRepo }
+func (s *mockMaintStore) Alarms() port.AlarmRepository             { return nil }
+func (s *mockMaintStore) Uploads() port.UploadRepository           { return s.uploadRepo }
+
+type mockMaintUOW struct {
+	store *mockMaintStore
+}
+
+func (u *mockMaintUOW) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
+	u.store.maintRepo.mu.Lock()
+	savedEvents := make([]*domain.MaintenanceEvent, len(u.store.maintRepo.events))
+	copy(savedEvents, u.store.maintRepo.events)
+	u.store.maintRepo.mu.Unlock()
+
+	if err := fn(u.store); err != nil {
+		u.store.maintRepo.mu.Lock()
+		u.store.maintRepo.events = savedEvents
+		u.store.maintRepo.mu.Unlock()
+		return err
+	}
+	return nil
+}
+
 func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 	maintRepo := &mockMaintRepo{}
 	uploadRepo := newMockAlarmRepo()
 	maintStorage := storage.NewLocalTempStorage()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -89,7 +121,8 @@ func TestIngestMaintenanceUseCase_ValidXLSX(t *testing.T) {
 	maintStorage := storage.NewLocalTempStorage()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -128,7 +161,8 @@ func TestIngestMaintenanceUseCase_ShortRowNoPanic(t *testing.T) {
 	maintStorage := storage.NewLocalTempStorage()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01
@@ -159,7 +193,8 @@ func TestIngestMaintenanceUseCase_RollbackOnBatchFailure(t *testing.T) {
 	maintStorage := storage.NewLocalTempStorage()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	runner := scheduler.NewSyncJobRunner()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -178,6 +213,6 @@ func TestIngestMaintenanceUseCase_RollbackOnBatchFailure(t *testing.T) {
 		t.Errorf("esperava status failed apos erro de lote, obteve %s", upload.Status)
 	}
 	if len(maintRepo.events) != 0 {
-		t.Errorf("esperava 0 eventos apos rollback via DeleteByUploadID, obteve %d", len(maintRepo.events))
+		t.Errorf("esperava 0 eventos apos rollback da transacao, obteve %d", len(maintRepo.events))
 	}
 }

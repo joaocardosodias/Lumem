@@ -25,6 +25,7 @@ type UnitOfWorkStore interface {
 	Inspections() InspectionRepository
 	Maintenances() MaintenanceRepository
 	Alarms() AlarmRepository
+	Uploads() UploadRepository
 }
 
 type UnitOfWork interface {

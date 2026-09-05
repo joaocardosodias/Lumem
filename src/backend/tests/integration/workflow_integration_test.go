@@ -426,16 +426,18 @@ func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]
 }
 
 type intUOWStore struct {
-	predRepo  port.PredictionRepository
-	insRepo   port.InspectionRepository
-	maintRepo port.MaintenanceRepository
-	alarmRepo port.AlarmRepository
+	predRepo   port.PredictionRepository
+	insRepo    port.InspectionRepository
+	maintRepo  port.MaintenanceRepository
+	alarmRepo  port.AlarmRepository
+	uploadRepo port.UploadRepository
 }
 
 func (s *intUOWStore) Predictions() port.PredictionRepository   { return s.predRepo }
 func (s *intUOWStore) Inspections() port.InspectionRepository   { return s.insRepo }
 func (s *intUOWStore) Maintenances() port.MaintenanceRepository { return s.maintRepo }
 func (s *intUOWStore) Alarms() port.AlarmRepository             { return s.alarmRepo }
+func (s *intUOWStore) Uploads() port.UploadRepository           { return s.uploadRepo }
 
 type intUnitOfWork struct {
 	store *intUOWStore
@@ -459,10 +461,11 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 
 	uow := &intUnitOfWork{
 		store: &intUOWStore{
-			predRepo:  predRepo,
-			insRepo:   insRepo,
-			maintRepo: maintRepo,
-			alarmRepo: alarmRepo,
+			predRepo:   predRepo,
+			insRepo:    insRepo,
+			maintRepo:  maintRepo,
+			alarmRepo:  alarmRepo,
+			uploadRepo: alarmRepo,
 		},
 	}
 
@@ -478,8 +481,8 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	tokenGen := security.NewJWTTokenGenerator(jwtSecret)
 	syncRunner := scheduler.NewSyncJobRunner()
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, time.Hour)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, syncRunner)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, syncRunner)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, syncRunner, uow)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, syncRunner, uow)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient, bus, uow)

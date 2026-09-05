@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ type IngestAlarmsUseCase struct {
 	storage     port.IngestionStorage
 	alarmParser port.AlarmParser
 	runner      port.JobRunner
+	uow         port.UnitOfWork
 }
 
 func NewIngestAlarmsUseCase(
@@ -26,6 +28,7 @@ func NewIngestAlarmsUseCase(
 	storage port.IngestionStorage,
 	alarmParser port.AlarmParser,
 	runner port.JobRunner,
+	uow port.UnitOfWork,
 ) *IngestAlarmsUseCase {
 	return &IngestAlarmsUseCase{
 		alarmRepo:   alarmRepo,
@@ -33,6 +36,7 @@ func NewIngestAlarmsUseCase(
 		storage:     storage,
 		alarmParser: alarmParser,
 		runner:      runner,
+		uow:         uow,
 	}
 }
 
@@ -101,14 +105,13 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID, storageKey, fileName s
 	}
 
 	const batchSize = 500
-	var batch []*domain.Alarm
 	processedCount := 0
-	insertedCount := 0
 	source := strings.TrimPrefix(strings.ToLower(filepath.Ext(fileName)), ".")
 	if source == "" {
 		source = "telemetry"
 	}
 
+	var allAlarms []*domain.Alarm
 	for _, raw := range rawRecords {
 		processedCount++
 
@@ -129,38 +132,41 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID, storageKey, fileName s
 			continue
 		}
 
-		batch = append(batch, alarm)
+		allAlarms = append(allAlarms, alarm)
+	}
 
-		if len(batch) >= batchSize {
-			if err := uc.alarmRepo.BatchInsertAlarms(bgCtx, batch); err != nil {
-				_ = uc.alarmRepo.DeleteByUploadID(bgCtx, uploadID)
-				_ = uc.failUpload(uploadID, "falha ao inserir lote de alarmes: "+err.Error())
-				return
+	insertedCount := 0
+	err = uc.uow.Do(bgCtx, func(store port.UnitOfWorkStore) error {
+		for i := 0; i < len(allAlarms); i += batchSize {
+			end := i + batchSize
+			if end > len(allAlarms) {
+				end = len(allAlarms)
 			}
-			insertedCount += len(batch)
-			batch = batch[:0]
+			chunk := allAlarms[i:end]
+			if err := store.Alarms().BatchInsertAlarms(bgCtx, chunk); err != nil {
+				return fmt.Errorf("falha ao inserir lote de alarmes: %w", err)
+			}
+			insertedCount += len(chunk)
 		}
-	}
 
-	if len(batch) > 0 {
-		if err := uc.alarmRepo.BatchInsertAlarms(bgCtx, batch); err != nil {
-			_ = uc.alarmRepo.DeleteByUploadID(bgCtx, uploadID)
-			_ = uc.failUpload(uploadID, "falha ao inserir lote final de alarmes: "+err.Error())
-			return
+		now := time.Now()
+		upload, err := store.Uploads().GetUploadByID(bgCtx, uploadID)
+		if err != nil {
+			return fmt.Errorf("falha ao obter upload: %w", err)
 		}
-		insertedCount += len(batch)
-	}
-
-	now := time.Now()
-	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
-	if err == nil {
 		upload.RowsProcessed = processedCount
 		upload.RowsInserted = insertedCount
 		upload.Status = "completed"
 		upload.CompletedAt = &now
-		if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
-			_ = uc.failUpload(uploadID, "falha ao atualizar status do upload: "+err.Error())
+		if err := store.Uploads().UpdateUpload(bgCtx, upload); err != nil {
+			return fmt.Errorf("falha ao atualizar status do upload: %w", err)
 		}
+		return nil
+	})
+
+	if err != nil {
+		_ = uc.failUpload(uploadID, err.Error())
+		return
 	}
 }
 
