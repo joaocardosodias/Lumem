@@ -60,6 +60,13 @@ func (m *mockLogger) Info(msg string, args ...any) {
 func (m *mockAlarmRepo) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if upload.FileHash != "" {
+		for _, u := range m.uploads {
+			if u.FileHash == upload.FileHash {
+				return domain.ErrDuplicateUpload
+			}
+		}
+	}
 	if upload.ID == "" {
 		upload.ID = uuid.New().String()
 	}
@@ -371,5 +378,55 @@ SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
 
 	if len(logger.errors) == 0 {
 		t.Fatalf("esperava que erro de falha ao marcar upload como failed fosse registrado no logger")
+	}
+}
+
+func TestIngestAlarmsUseCase_ConcurrentDuplicateUploads(t *testing.T) {
+	repo := newMockAlarmRepo()
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
+
+	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
+SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
+`
+	var wg sync.WaitGroup
+	results := make([]struct {
+		id  string
+		err error
+	}, 2)
+
+	for i := 0; i < 2; i++ {
+		idx := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			id, err := uc.StartIngestion(context.Background(), "concorrente.csv", strings.NewReader(csvData))
+			results[idx] = struct {
+				id  string
+				err error
+			}{id: id, err: err}
+		}()
+	}
+	wg.Wait()
+
+	successCount := 0
+	duplicateCount := 0
+	for _, res := range results {
+		if res.err == nil {
+			successCount++
+		} else if errors.Is(res.err, domain.ErrDuplicateUpload) {
+			duplicateCount++
+		}
+	}
+
+	if successCount != 1 || duplicateCount != 1 {
+		t.Fatalf("esperava 1 sucesso e 1 erro de duplicidade sob concorrencia, obteve %d sucessos e %d duplicatas (erros: %v, %v)",
+			successCount, duplicateCount, results[0].err, results[1].err)
+	}
+
+	if len(repo.uploads) != 1 {
+		t.Fatalf("esperava exatamente 1 upload persistido no repositorio, obteve %d", len(repo.uploads))
 	}
 }

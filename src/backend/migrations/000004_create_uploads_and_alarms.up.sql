@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS file_uploads (
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX IF NOT EXISTS idx_file_uploads_hash ON file_uploads(file_hash);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_file_uploads_hash ON file_uploads(file_hash);
 
 CREATE TABLE IF NOT EXISTS telemetry_alarms (
     id TEXT PRIMARY KEY,

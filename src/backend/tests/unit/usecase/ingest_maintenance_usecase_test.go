@@ -241,3 +241,55 @@ func TestIngestMaintenanceUseCase_FailUploadErrorLogged(t *testing.T) {
 		t.Fatalf("esperava que erro de falha ao marcar upload como failed fosse registrado no logger")
 	}
 }
+
+func TestIngestMaintenanceUseCase_ConcurrentDuplicateUploads(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	uploadRepo := newMockAlarmRepo()
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
+
+	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
+53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
+`
+	var wg sync.WaitGroup
+	results := make([]struct {
+		id  string
+		err error
+	}, 2)
+
+	for i := 0; i < 2; i++ {
+		idx := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			id, err := uc.StartIngestion(context.Background(), "concorrente_maint.csv", strings.NewReader(csvData), "ZM01")
+			results[idx] = struct {
+				id  string
+				err error
+			}{id: id, err: err}
+		}()
+	}
+	wg.Wait()
+
+	successCount := 0
+	duplicateCount := 0
+	for _, res := range results {
+		if res.err == nil {
+			successCount++
+		} else if errors.Is(res.err, domain.ErrDuplicateUpload) {
+			duplicateCount++
+		}
+	}
+
+	if successCount != 1 || duplicateCount != 1 {
+		t.Fatalf("esperava 1 sucesso e 1 erro de duplicidade sob concorrencia, obteve %d sucessos e %d duplicatas (erros: %v, %v)",
+			successCount, duplicateCount, results[0].err, results[1].err)
+	}
+
+	if len(uploadRepo.uploads) != 1 {
+		t.Fatalf("esperava exatamente 1 upload persistido no repositorio, obteve %d", len(uploadRepo.uploads))
+	}
+}

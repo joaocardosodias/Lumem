@@ -171,10 +171,16 @@ func TestPostgresRepositories(t *testing.T) {
 	if err != nil || fetchedInsp.Status != "pending" {
 		t.Fatalf("inspRepo.GetByID failed: %v", err)
 	}
+	if fetchedInsp.PredictionID == nil || *fetchedInsp.PredictionID != predID {
+		t.Fatalf("esperava PredictionID %s, obteve %v", predID, fetchedInsp.PredictionID)
+	}
 
 	list, err := inspRepo.List(ctx, 10, 0, "pending")
 	if err != nil || len(list) == 0 {
 		t.Fatalf("inspRepo.List failed: %v", err)
+	}
+	if list[0].PredictionID == nil || *list[0].PredictionID != predID {
+		t.Fatalf("esperava PredictionID %s na listagem, obteve %v", predID, list[0].PredictionID)
 	}
 
 	now := time.Now().UTC()

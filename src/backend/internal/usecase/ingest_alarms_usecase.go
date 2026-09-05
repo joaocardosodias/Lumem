@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -74,6 +75,13 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
 		if delErr := uc.storage.Delete(ctx, storageKey); delErr != nil && uc.logger != nil {
 			uc.logger.Warn("falha ao remover arquivo temporario apos erro ao criar upload", "storage_key", storageKey, "error", delErr.Error())
+		}
+		if errors.Is(err, domain.ErrDuplicateUpload) {
+			existingUpload, getErr := uc.uploadRepo.GetUploadByHash(ctx, fileHash)
+			if getErr == nil && existingUpload != nil {
+				return existingUpload.ID, domain.ErrDuplicateUpload
+			}
+			return "", domain.ErrDuplicateUpload
 		}
 		return "", err
 	}

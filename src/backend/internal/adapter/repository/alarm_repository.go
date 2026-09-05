@@ -11,6 +11,7 @@ import (
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var _ port.AlarmRepository = (*PostgresAlarmRepository)(nil)
@@ -43,7 +44,17 @@ func (r *PostgresAlarmRepository) CreateUpload(ctx context.Context, upload *doma
 		upload.RowsInserted,
 		upload.ErrorLog,
 	)
-	return err
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.ErrDuplicateUpload
+		}
+		if strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "idx_file_uploads_hash") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+			return domain.ErrDuplicateUpload
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresAlarmRepository) UpdateUpload(ctx context.Context, upload *domain.FileUpload) error {
