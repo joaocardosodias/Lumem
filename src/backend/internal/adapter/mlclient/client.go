@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
-var _ domain.MLClient = (*Client)(nil)
+var _ port.MLClient = (*Client)(nil)
 
 type PredictionRequest struct {
 	StationCode string `json:"station_code"`
@@ -80,7 +81,7 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domai
 	})
 
 	if err != nil {
-		return c.fallbackPrediction(doors), nil
+		return nil, domain.ErrPredictionServiceUnavailable
 	}
 
 	items := make([]domain.PredictionItem, len(mlResp))
@@ -93,20 +94,6 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domai
 		}
 	}
 	return items, nil
-}
-
-func (c *Client) fallbackPrediction(doors []domain.Door) []domain.PredictionItem {
-	items := make([]domain.PredictionItem, len(doors))
-	for i, d := range doors {
-		willFail := (d.DoorNumber%7 == 0)
-		items[i] = domain.PredictionItem{
-			StationCode: d.StationCode,
-			Platform:    d.Platform,
-			DoorNumber:  d.DoorNumber,
-			WillFail:    willFail,
-		}
-	}
-	return items
 }
 
 func (c *Client) CircuitState() State {

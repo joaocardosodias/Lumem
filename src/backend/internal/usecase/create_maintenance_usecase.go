@@ -5,45 +5,46 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
 type CreateMaintenanceInputDTO struct {
-	SAPOrderNumber       string  `json:"sap_order_number"`
-	OrderType            string  `json:"order_type"`
-	StationCode          string  `json:"station_code"`
-	InstallationLocation string  `json:"installation_location"`
-	StartTimestamp       string  `json:"start_timestamp"`
-	EndTimestamp         string  `json:"end_timestamp"`
-	DurationHours        float64 `json:"duration_hours"`
-	Description          string  `json:"description"`
-	Symptom              string  `json:"symptom"`
-	Cause                string  `json:"cause"`
-	ActionTaken          string  `json:"action_taken"`
+	SAPOrderNumber       string
+	OrderType            string
+	StationCode          string
+	InstallationLocation string
+	StartTimestamp       string
+	EndTimestamp         string
+	DurationHours        float64
+	Description          string
+	Symptom              string
+	Cause                string
+	ActionTaken          string
 }
 
 type MaintenanceOutputDTO struct {
-	ID                   string    `json:"id"`
-	SAPOrderNumber       string    `json:"sap_order_number,omitempty"`
-	OrderType            string    `json:"order_type"`
-	StationCode          string    `json:"station_code"`
-	InstallationLocation string    `json:"installation_location,omitempty"`
-	StartTimestamp       string    `json:"start_timestamp"`
-	EndTimestamp         string    `json:"end_timestamp,omitempty"`
-	DurationHours        float64   `json:"duration_hours,omitempty"`
-	Description          string    `json:"description,omitempty"`
-	Symptom              string    `json:"symptom,omitempty"`
-	Cause                string    `json:"cause,omitempty"`
-	ActionTaken          string    `json:"action_taken,omitempty"`
-	Source               string    `json:"source"`
-	CreatedAt            time.Time `json:"created_at"`
+	ID                   string
+	SAPOrderNumber       string
+	OrderType            string
+	StationCode          string
+	InstallationLocation string
+	StartTimestamp       string
+	EndTimestamp         string
+	DurationHours        float64
+	Description          string
+	Symptom              string
+	Cause                string
+	ActionTaken          string
+	Source               string
+	CreatedAt            time.Time
 }
 
 type CreateMaintenanceUseCase struct {
-	repo domain.MaintenanceRepository
+	repo port.MaintenanceRepository
 }
 
-func NewCreateMaintenanceUseCase(repo domain.MaintenanceRepository) *CreateMaintenanceUseCase {
+func NewCreateMaintenanceUseCase(repo port.MaintenanceRepository) *CreateMaintenanceUseCase {
 	return &CreateMaintenanceUseCase{repo: repo}
 }
 

@@ -1,34 +1,57 @@
 package usecase_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/g04/backend/internal/adapter/parser"
+	"github.com/g04/backend/internal/adapter/scheduler"
+	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/xuri/excelize/v2"
 )
 
 type mockMaintRepo struct {
-	mu     sync.Mutex
-	events []*domain.MaintenanceEvent
+	mu              sync.Mutex
+	events          []*domain.MaintenanceEvent
+	failBatchInsert bool
 }
 
 func (m *mockMaintRepo) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.failBatchInsert {
+		return errors.New("falha simulada no banco ao inserir manutencao")
+	}
 	m.events = append(m.events, events...)
+	return nil
+}
+
+func (m *mockMaintRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	filtered := m.events[:0]
+	for _, e := range m.events {
+		if e.UploadID != uploadID {
+			filtered = append(filtered, e)
+		}
+	}
+	m.events = filtered
 	return nil
 }
 
 func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 	maintRepo := &mockMaintRepo{}
 	uploadRepo := newMockAlarmRepo()
-	sheetParser := parser.NewDefaultSpreadsheetParser()
-	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, sheetParser)
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
 
 	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
 53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
@@ -39,8 +62,6 @@ func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 		t.Fatalf("falha ao iniciar ingestao: %v", err)
 	}
 
-	time.Sleep(50 * time.Millisecond)
-
 	upload, err := uploadRepo.GetUploadByID(context.Background(), uploadID)
 	if err != nil {
 		t.Fatalf("falha ao buscar status do upload: %v", err)
@@ -49,12 +70,114 @@ func TestIngestMaintenanceUseCase_ValidCSV(t *testing.T) {
 	if upload.Status != "completed" {
 		t.Errorf("esperava status completed, obteve %s", upload.Status)
 	}
-
 	if upload.RowsInserted != 2 {
 		t.Errorf("esperava 2 linhas inseridas, obteve %d", upload.RowsInserted)
 	}
-
 	if len(maintRepo.events) != 2 {
 		t.Errorf("esperava 2 eventos no repositorio, obteve %d", len(maintRepo.events))
+	}
+	for _, e := range maintRepo.events {
+		if e.UploadID != uploadID {
+			t.Errorf("esperava UploadID associado ao evento de manutencao, obteve %s", e.UploadID)
+		}
+	}
+}
+
+func TestIngestMaintenanceUseCase_ValidXLSX(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	uploadRepo := newMockAlarmRepo()
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+
+	f := excelize.NewFile()
+	defer f.Close()
+
+	sheet := f.GetSheetName(0)
+	_ = f.SetSheetRow(sheet, "A1", &[]any{"ordem", "tipo_de_ordem", "estacao", "inicio_avaria_datetime", "fim_avaria_datetime", "sintoma"})
+	_ = f.SetSheetRow(sheet, "A2", &[]any{"1001", "ZM01", "PIN", "2026-09-01 10:00:00", "2026-09-01 11:00:00", "OBSTACULO"})
+	_ = f.SetSheetRow(sheet, "A3", &[]any{"1002", "ZM01", "FAL", "2026-09-01 12:00:00", "2026-09-01 13:00:00", "TRAVA MECANICA"})
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatalf("falha ao gerar xlsx de manutencao: %v", err)
+	}
+
+	uploadID, err := uc.StartIngestion(context.Background(), "manutencao.xlsx", &buf, "ZM01")
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao xlsx: %v", err)
+	}
+
+	upload, err := uploadRepo.GetUploadByID(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar upload: %v", err)
+	}
+
+	if upload.Status != "completed" {
+		t.Errorf("esperava status completed para XLSX de manutencao, obteve %s (erro: %s)", upload.Status, upload.ErrorLog)
+	}
+	if upload.RowsInserted != 2 {
+		t.Errorf("esperava 2 linhas inseridas, obteve %d", upload.RowsInserted)
+	}
+}
+
+func TestIngestMaintenanceUseCase_ShortRowNoPanic(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	uploadRepo := newMockAlarmRepo()
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+
+	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
+53954586,ZM01
+53954587,ZM02,SP04-6-PSD-FAL,2025-11-15 10:00:00,2025-11-15 12:00:00,FALHA DE COMUNICACAO
+`
+	uploadID, err := uc.StartIngestion(context.Background(), "curto.csv", strings.NewReader(csvData), "ZM01")
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	upload, err := uploadRepo.GetUploadByID(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar upload: %v", err)
+	}
+
+	if upload.Status != "completed" {
+		t.Errorf("esperava status completed sem panico, obteve %s", upload.Status)
+	}
+	if upload.RowsInserted != 1 {
+		t.Errorf("esperava 1 linha inserida, obteve %d", upload.RowsInserted)
+	}
+}
+
+func TestIngestMaintenanceUseCase_RollbackOnBatchFailure(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	maintRepo.failBatchInsert = true
+	uploadRepo := newMockAlarmRepo()
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner)
+
+	csvData := `ordem,tipo_de_nota,local_de_instalacao,inicio_avaria_datetime,fim_avaria_datetime,sintoma
+53954586,ZM01,SP04-6-PSD-BUT,2025-11-14 06:35:28,2025-11-14 08:00:00,LAÇO DE PDM ABERTO
+`
+	uploadID, err := uc.StartIngestion(context.Background(), "falha.csv", strings.NewReader(csvData), "ZM01")
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	upload, err := uploadRepo.GetUploadByID(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar upload: %v", err)
+	}
+
+	if upload.Status != "failed" {
+		t.Errorf("esperava status failed apos erro de lote, obteve %s", upload.Status)
+	}
+	if len(maintRepo.events) != 0 {
+		t.Errorf("esperava 0 eventos apos rollback via DeleteByUploadID, obteve %d", len(maintRepo.events))
 	}
 }

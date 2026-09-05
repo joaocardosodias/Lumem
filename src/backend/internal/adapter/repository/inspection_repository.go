@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
-var _ domain.InspectionRepository = (*PostgresInspectionRepository)(nil)
+var _ port.InspectionRepository = (*PostgresInspectionRepository)(nil)
 
 type PostgresInspectionRepository struct {
 	db DBExecutor

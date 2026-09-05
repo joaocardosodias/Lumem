@@ -2,15 +2,19 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
-var _ domain.AlarmRepository = (*PostgresAlarmRepository)(nil)
+var _ port.AlarmRepository = (*PostgresAlarmRepository)(nil)
+var _ port.UploadRepository = (*PostgresAlarmRepository)(nil)
 
 type PostgresAlarmRepository struct {
 	db DBExecutor
@@ -84,6 +88,9 @@ func (r *PostgresAlarmRepository) GetUploadByID(ctx context.Context, id string) 
 		&completedAt,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUploadNotFound
+		}
 		return nil, err
 	}
 
@@ -173,6 +180,12 @@ func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms 
 	}
 
 	return nil
+}
+
+func (r *PostgresAlarmRepository) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	query := `DELETE FROM telemetry_alarms WHERE upload_id = $1`
+	_, err := r.db.ExecContext(ctx, query, uploadID)
+	return err
 }
 
 func (r *PostgresAlarmRepository) ReconcileStaleUploads(ctx context.Context) error {

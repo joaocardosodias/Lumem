@@ -167,7 +167,7 @@ func TestLoginUseCase_EmptyFields(t *testing.T) {
 	}
 
 	_, err := uc.Execute(context.Background(), input)
-	if err == nil {
-		t.Fatalf("esperava erro de campos obrigatorios, mas obteve sucesso")
+	if !errors.Is(err, domain.ErrEmailPasswordRequired) {
+		t.Fatalf("esperava ErrEmailPasswordRequired, mas obteve %v", err)
 	}
 }

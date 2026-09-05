@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"time"
@@ -18,18 +17,18 @@ var (
 )
 
 type Inspection struct {
-	ID           string     `json:"id"`
-	PredictionID *string    `json:"prediction_id,omitempty"`
-	StationCode  string     `json:"station_code"`
-	Platform     string     `json:"platform"`
-	DoorNumber   int        `json:"door_number"`
-	ScheduledFor string     `json:"scheduled_for,omitempty"`
-	Priority     string     `json:"priority"`
-	Status       string     `json:"status"`
-	Notes        string     `json:"notes,omitempty"`
-	CompletedAt  *time.Time `json:"completed_at,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID           string
+	PredictionID *string
+	StationCode  string
+	Platform     string
+	DoorNumber   int
+	ScheduledFor string
+	Priority     string
+	Status       string
+	Notes        string
+	CompletedAt  *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func NewInspection(id string, predictionID *string, stationCode, platform string, doorNumber int, scheduledFor, priority, notes string) (*Inspection, error) {
@@ -91,11 +90,4 @@ func (i *Inspection) UpdateStatus(status, notes string) (*time.Time, error) {
 
 	i.UpdatedAt = time.Now()
 	return completedAt, nil
-}
-
-type InspectionRepository interface {
-	Create(ctx context.Context, inspection *Inspection) error
-	UpdateStatus(ctx context.Context, id string, status, notes string, completedAt *time.Time) error
-	GetByID(ctx context.Context, id string) (*Inspection, error)
-	List(ctx context.Context, limit, offset int, statusFilter string) ([]*Inspection, error)
 }

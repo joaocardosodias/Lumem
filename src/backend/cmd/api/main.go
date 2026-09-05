@@ -18,7 +18,9 @@ import (
 	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/adapter/repository"
+	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/adapter/security"
+	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/config"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -117,17 +119,20 @@ func main() {
 
 	usecase.RegisterEventSubscribers(bus, insRepo, cachedDashRepo, logger)
 
-	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
+	ingestionStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	maintParser := parser.NewDefaultMaintenanceParser()
 	mlClient := mlclient.NewClient(cfg.VPSModelURL)
 
 	hasher := security.NewBcryptPasswordHasher(0)
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
 	uploadWG := &sync.WaitGroup{}
+	jobRunner := scheduler.NewGoroutineJobRunner(uploadWG, logger)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, spreadsheetParser, uploadWG)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser, uploadWG)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, jobRunner)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, jobRunner)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)

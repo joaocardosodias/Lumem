@@ -2,12 +2,15 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
-var _ domain.DashboardRepository = (*PostgresDashboardRepository)(nil)
+var _ port.DashboardRepository = (*PostgresDashboardRepository)(nil)
 
 type PostgresDashboardRepository struct {
 	db DBExecutor
@@ -87,6 +90,9 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 		&createdAt,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrDoorNotFound
+		}
 		return nil, err
 	}
 	door.CreatedAt = createdAt

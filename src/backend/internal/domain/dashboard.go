@@ -1,90 +1,83 @@
 package domain
 
 import (
-	"context"
+	"errors"
 	"time"
 )
 
+var (
+	ErrDoorNotFound    = errors.New("porta nao encontrada")
+	ErrStationRequired = errors.New("codigo da estacao e obrigatorio")
+	ErrNoPredictions   = errors.New("nenhuma rodada de previsao calculada ate o momento")
+	ErrNoActiveDoors   = errors.New("nenhuma porta ativa encontrada para inferencia")
+	ErrInvalidDoorID                 = errors.New("o parametro ID da porta deve ser um numero inteiro positivo")
+	ErrPredictionServiceUnavailable = errors.New("servico de predicao indisponivel")
+)
+
 type Station struct {
-	ID        int       `json:"id"`
-	Code      string    `json:"code"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int
+	Code      string
+	Name      string
+	CreatedAt time.Time
 }
 
 type Door struct {
-	ID          int       `json:"id"`
-	StationID   int       `json:"station_id"`
-	StationCode string    `json:"station_code,omitempty"`
-	Platform    string    `json:"platform"`
-	DoorNumber  int       `json:"door_number"`
-	SAPTag      string    `json:"sap_tag"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          int
+	StationID   int
+	StationCode string
+	Platform    string
+	DoorNumber  int
+	SAPTag      string
+	Status      string
+	CreatedAt   time.Time
 }
 
 type PredictionRun struct {
-	ID                  string           `json:"id"`
-	HorizonDays         int              `json:"horizon_days"`
-	TotalDoorsEvaluated int              `json:"total_doors_evaluated"`
-	TotalDoorsAtRisk    int              `json:"total_doors_at_risk"`
-	CreatedAt           time.Time        `json:"created_at"`
-	Predictions         []PredictionItem `json:"predictions,omitempty"`
+	ID                  string
+	HorizonDays         int
+	TotalDoorsEvaluated int
+	TotalDoorsAtRisk    int
+	CreatedAt           time.Time
+	Predictions         []PredictionItem
 }
 
 type PredictionItem struct {
-	ID          string `json:"id"`
-	RunID       string `json:"run_id"`
-	StationCode string `json:"station_code"`
-	Platform    string `json:"platform"`
-	DoorNumber  int    `json:"door_number"`
-	WillFail    bool   `json:"will_fail"`
+	ID          string
+	RunID       string
+	StationCode string
+	Platform    string
+	DoorNumber  int
+	WillFail    bool
 }
 
 type StationRiskSummary struct {
-	StationCode string `json:"station_code"`
-	DoorsAtRisk int    `json:"doors_at_risk"`
+	StationCode string
+	DoorsAtRisk int
 }
 
 type DashboardSummary struct {
-	TotalDoors           int                  `json:"total_doors"`
-	DoorsAtRisk          int                  `json:"doors_at_risk"`
-	PendingInspections   int                  `json:"pending_inspections"`
-	CompletedInspections int                  `json:"completed_inspections"`
-	CriticalStations     []StationRiskSummary `json:"critical_stations"`
+	TotalDoors           int
+	DoorsAtRisk          int
+	PendingInspections   int
+	CompletedInspections int
+	CriticalStations     []StationRiskSummary
 }
 
 type DoorTimeline struct {
-	Door            Door                `json:"door"`
-	StationName     string              `json:"station_name"`
-	WillFail        bool                `json:"will_fail"`
-	RecentAlarms    []*Alarm            `json:"recent_alarms"`
-	Maintenances    []*MaintenanceEvent `json:"maintenances"`
-	Inspections     []*Inspection       `json:"inspections"`
-	LastEvaluatedAt *time.Time          `json:"last_evaluated_at,omitempty"`
+	Door            Door
+	StationName     string
+	WillFail        bool
+	RecentAlarms    []*Alarm
+	Maintenances    []*MaintenanceEvent
+	Inspections     []*Inspection
+	LastEvaluatedAt *time.Time
 }
 
 type DoorStatusItem struct {
-	ID         int    `json:"id"`
-	Platform   string `json:"platform"`
-	DoorNumber int    `json:"door_number"`
-	SAPTag     string `json:"sap_tag"`
-	Status     string `json:"status"`
-	WillFail   bool   `json:"will_fail"`
-}
-
-type DashboardRepository interface {
-	GetSummary(ctx context.Context) (*DashboardSummary, error)
-	GetDoorTimeline(ctx context.Context, doorID int) (*DoorTimeline, error)
-	GetStationDoorsStatus(ctx context.Context, stationCode string) ([]*DoorStatusItem, error)
-}
-
-type PredictionRepository interface {
-	SaveRun(ctx context.Context, run *PredictionRun, items []PredictionItem) error
-	GetLatestRun(ctx context.Context) (*PredictionRun, error)
-	ListDoorsForInference(ctx context.Context) ([]Door, error)
-}
-
-type MLClient interface {
-	PredictBatch(ctx context.Context, doors []Door) ([]PredictionItem, error)
+	ID         int
+	Platform   string
+	DoorNumber int
+	SAPTag     string
+	Status     string
+	WillFail   bool
 }

@@ -2,68 +2,56 @@ package usecase
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
-	"log"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
 type IngestMaintenanceUseCase struct {
-	maintRepo  domain.MaintenanceRepository
-	uploadRepo domain.AlarmRepository
-	parser     domain.SpreadsheetParser
-	wg         *sync.WaitGroup
+	maintRepo   port.MaintenanceRepository
+	uploadRepo  port.UploadRepository
+	storage     port.IngestionStorage
+	maintParser port.MaintenanceParser
+	runner      port.JobRunner
 }
 
 func NewIngestMaintenanceUseCase(
-	maintRepo domain.MaintenanceRepository,
-	uploadRepo domain.AlarmRepository,
-	parser domain.SpreadsheetParser,
-	wg ...*sync.WaitGroup,
+	maintRepo port.MaintenanceRepository,
+	uploadRepo port.UploadRepository,
+	storage port.IngestionStorage,
+	maintParser port.MaintenanceParser,
+	runner ...port.JobRunner,
 ) *IngestMaintenanceUseCase {
-	var w *sync.WaitGroup
-	if len(wg) > 0 {
-		w = wg[0]
+	var r port.JobRunner
+	if len(runner) > 0 && runner[0] != nil {
+		r = runner[0]
+	} else {
+		r = scheduler.NewGoroutineJobRunner(nil)
 	}
 	return &IngestMaintenanceUseCase{
-		maintRepo:  maintRepo,
-		uploadRepo: uploadRepo,
-		parser:     parser,
-		wg:         w,
+		maintRepo:   maintRepo,
+		uploadRepo:  uploadRepo,
+		storage:     storage,
+		maintParser: maintParser,
+		runner:      r,
 	}
 }
 
 func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader, explicitOrderType string) (string, error) {
-	ext := strings.ToLower(filepath.Ext(fileName))
-	pattern := "maint_upload_*" + ext
-	tmpFile, err := os.CreateTemp("", pattern)
+	storageKey, fileHash, err := uc.storage.Store(ctx, fileName, reader)
 	if err != nil {
 		return "", err
 	}
-	defer tmpFile.Close()
 
-	hasher := sha256.New()
-	tee := io.TeeReader(reader, hasher)
-
-	if _, err := io.Copy(tmpFile, tee); err != nil {
-		os.Remove(tmpFile.Name())
-		return "", err
-	}
-
-	hashStr := hex.EncodeToString(hasher.Sum(nil))
-
-	existing, err := uc.uploadRepo.GetUploadByHash(ctx, hashStr)
+	existing, err := uc.uploadRepo.GetUploadByHash(ctx, fileHash)
 	if err == nil && existing != nil {
-		os.Remove(tmpFile.Name())
+		_ = uc.storage.Delete(ctx, storageKey)
 		return existing.ID, domain.ErrDuplicateUpload
 	}
 
@@ -76,62 +64,45 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 		ID:       uuid.New().String(),
 		FileName: fileName,
 		FileType: fileType,
-		FileHash: hashStr,
+		FileHash: fileHash,
 		Status:   "processing",
 	}
 
 	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
-		os.Remove(tmpFile.Name())
+		_ = uc.storage.Delete(ctx, storageKey)
 		return "", err
 	}
 
-	if uc.wg != nil {
-		uc.wg.Add(1)
-	}
-	go func() {
-		if uc.wg != nil {
-			defer uc.wg.Done()
-		}
-		uc.processFileAsync(upload.ID, tmpFile.Name(), ext, explicitOrderType)
-	}()
+	uc.runner.Run(func() {
+		uc.processFileAsync(upload.ID, storageKey, fileName, explicitOrderType)
+	})
 
 	return upload.ID, nil
 }
 
-func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID string, filePath, ext, explicitOrderType string) {
-	defer os.Remove(filePath)
+func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileName, explicitOrderType string) {
+	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
 
-	rows, err := uc.parser.ReadRows(filePath, ext)
+	defer func() {
+		_ = uc.storage.Delete(bgCtx, storageKey)
+	}()
+
+	rc, err := uc.storage.Open(bgCtx, storageKey)
 	if err != nil {
-		uc.failUpload(uploadID, err.Error())
+		_ = uc.failUpload(uploadID, "falha ao abrir arquivo: "+err.Error())
+		return
+	}
+	defer rc.Close()
+
+	rawRecords, err := uc.maintParser.ParseMaintenance(rc, fileName, explicitOrderType)
+	if err != nil {
+		_ = uc.failUpload(uploadID, "falha ao analisar arquivo: "+err.Error())
 		return
 	}
 
-	if len(rows) < 2 {
-		uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados")
-		return
-	}
-
-	headers := rows[0]
-	colMap := make(map[string]int)
-	for i, h := range headers {
-		colMap[strings.ToLower(strings.TrimSpace(h))] = i
-	}
-
-	orderIdx, hasOrder := getFirstIndex(colMap, "ordem")
-	typeIdx, hasType := getFirstIndex(colMap, "tipo de ordem", "tipo_de_nota", "tipo_de_ordem")
-	locIdx, hasLoc := getFirstIndex(colMap, "local de instalação", "local_de_instalacao")
-	stationIdx, hasStation := getFirstIndex(colMap, "estacao", "estação", "centro_de_trabalho_responsavel")
-	startIdx, hasStart := getFirstIndex(colMap, "inicio_avaria_datetime", "dt_inicio", "data-base do início")
-	endIdx, hasEnd := getFirstIndex(colMap, "fim_avaria_datetime", "dt_fim", "data-base do fim")
-	durIdx, hasDur := getFirstIndex(colMap, "duracao_avaria_horas", "duracao_h")
-	descIdx, hasDesc := getFirstIndex(colMap, "descricao", "texto breve", "texto_longo_da_ordem")
-	symptomIdx, hasSymptom := getFirstIndex(colMap, "sintoma")
-	causeIdx, hasCause := getFirstIndex(colMap, "causa")
-	actionIdx, hasAction := getFirstIndex(colMap, "acao", "ação")
-
-	if !hasStart {
-		uc.failUpload(uploadID, "coluna obrigatoria de data de inicio nao encontrada")
+	if len(rawRecords) == 0 {
+		_ = uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados validas")
 		return
 	}
 
@@ -139,87 +110,54 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID string, filePath, 
 	var batch []*domain.MaintenanceEvent
 	processedCount := 0
 	insertedCount := 0
-	bgCtx := context.Background()
+	source := strings.TrimPrefix(strings.ToLower(filepath.Ext(fileName)), ".")
+	if source == "" {
+		source = "maintenance"
+	}
 
-	for _, row := range rows[1:] {
+	for _, raw := range rawRecords {
 		processedCount++
 
-		orderType := explicitOrderType
-		if orderType == "" && hasType && typeIdx < len(row) {
-			orderType = strings.TrimSpace(row[typeIdx])
+		event, err := domain.NewMaintenanceEvent(
+			uuid.New().String(),
+			raw.SAPOrderNumber,
+			raw.OrderType,
+			raw.StationCode,
+			raw.InstallationLocation,
+			raw.StartTimestamp,
+			raw.EndTimestamp,
+			raw.DurationHours,
+			raw.Description,
+			raw.Symptom,
+			raw.Cause,
+			raw.ActionTaken,
+			source,
+		)
+		if err != nil {
+			continue
 		}
-		if orderType == "" {
-			orderType = "MANUTENCAO"
-		}
-
-		event := &domain.MaintenanceEvent{
-			ID:        uuid.New().String(),
-			UploadID:  uploadID,
-			OrderType: orderType,
-			Source:    "spreadsheet",
-			CreatedAt: time.Now(),
-		}
-
-		if hasOrder && orderIdx < len(row) {
-			event.SAPOrderNumber = strings.TrimSpace(row[orderIdx])
-		}
-
-		if hasLoc && locIdx < len(row) {
-			event.InstallationLocation = strings.TrimSpace(row[locIdx])
-		}
-
-		if hasStation && stationIdx < len(row) {
-			event.StationCode = strings.TrimSpace(row[stationIdx])
-		}
-
-		if startIdx < len(row) {
-			event.StartTimestamp = strings.TrimSpace(row[startIdx])
-		}
-
-		if hasEnd && endIdx < len(row) {
-			event.EndTimestamp = strings.TrimSpace(row[endIdx])
-		}
-
-		if hasDur && durIdx < len(row) {
-			if d, err := strconv.ParseFloat(strings.TrimSpace(row[durIdx]), 64); err == nil {
-				event.DurationHours = d
-			}
-		}
-
-		if hasDesc && descIdx < len(row) {
-			event.Description = strings.TrimSpace(row[descIdx])
-		}
-
-		if hasSymptom && symptomIdx < len(row) {
-			event.Symptom = strings.TrimSpace(row[symptomIdx])
-		}
-
-		if hasCause && causeIdx < len(row) {
-			event.Cause = strings.TrimSpace(row[causeIdx])
-		}
-
-		if hasAction && actionIdx < len(row) {
-			event.ActionTaken = strings.TrimSpace(row[actionIdx])
-		}
+		event.UploadID = uploadID
 
 		batch = append(batch, event)
 
 		if len(batch) >= batchSize {
 			if err := uc.maintRepo.BatchInsertMaintenance(bgCtx, batch); err != nil {
-				log.Printf("erro ao inserir lote de manutencao: %v", err)
-			} else {
-				insertedCount += len(batch)
+				_ = uc.maintRepo.DeleteByUploadID(bgCtx, uploadID)
+				_ = uc.failUpload(uploadID, "falha ao inserir lote de manutencao: "+err.Error())
+				return
 			}
+			insertedCount += len(batch)
 			batch = batch[:0]
 		}
 	}
 
 	if len(batch) > 0 {
 		if err := uc.maintRepo.BatchInsertMaintenance(bgCtx, batch); err != nil {
-			log.Printf("erro ao inserir lote final de manutencao: %v", err)
-		} else {
-			insertedCount += len(batch)
+			_ = uc.maintRepo.DeleteByUploadID(bgCtx, uploadID)
+			_ = uc.failUpload(uploadID, "falha ao inserir lote final de manutencao: "+err.Error())
+			return
 		}
+		insertedCount += len(batch)
 	}
 
 	now := time.Now()
@@ -229,27 +167,21 @@ func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID string, filePath, 
 		upload.RowsInserted = insertedCount
 		upload.Status = "completed"
 		upload.CompletedAt = &now
-		_ = uc.uploadRepo.UpdateUpload(bgCtx, upload)
+		if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
+			_ = uc.failUpload(uploadID, "falha ao atualizar status do upload: "+err.Error())
+		}
 	}
 }
 
-func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) {
+func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) error {
 	bgCtx := context.Background()
 	now := time.Now()
 	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
-	if err == nil {
-		upload.Status = "failed"
-		upload.ErrorLog = reason
-		upload.CompletedAt = &now
-		_ = uc.uploadRepo.UpdateUpload(bgCtx, upload)
+	if err != nil {
+		return err
 	}
-}
-
-func getFirstIndex(colMap map[string]int, names ...string) (int, bool) {
-	for _, n := range names {
-		if idx, exists := colMap[n]; exists {
-			return idx, true
-		}
-	}
-	return 0, false
+	upload.Status = "failed"
+	upload.ErrorLog = reason
+	upload.CompletedAt = &now
+	return uc.uploadRepo.UpdateUpload(bgCtx, upload)
 }

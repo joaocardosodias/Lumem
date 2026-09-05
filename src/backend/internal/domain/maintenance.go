@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"time"
@@ -15,21 +14,21 @@ var (
 )
 
 type MaintenanceEvent struct {
-	ID                   string    `json:"id"`
-	UploadID             string    `json:"upload_id,omitempty"`
-	SAPOrderNumber       string    `json:"sap_order_number,omitempty"`
-	OrderType            string    `json:"order_type"`
-	StationCode          string    `json:"station_code"`
-	InstallationLocation string    `json:"installation_location,omitempty"`
-	StartTimestamp       string    `json:"start_timestamp"`
-	EndTimestamp         string    `json:"end_timestamp,omitempty"`
-	DurationHours        float64   `json:"duration_hours,omitempty"`
-	Description          string    `json:"description,omitempty"`
-	Symptom              string    `json:"symptom,omitempty"`
-	Cause                string    `json:"cause,omitempty"`
-	ActionTaken          string    `json:"action_taken,omitempty"`
-	Source               string    `json:"source"`
-	CreatedAt            time.Time `json:"created_at"`
+	ID                   string
+	UploadID             string
+	SAPOrderNumber       string
+	OrderType            string
+	StationCode          string
+	InstallationLocation string
+	StartTimestamp       string
+	EndTimestamp         string
+	DurationHours        float64
+	Description          string
+	Symptom              string
+	Cause                string
+	ActionTaken          string
+	Source               string
+	CreatedAt            time.Time
 }
 
 func NewMaintenanceEvent(id, sapOrderNumber, orderType, stationCode, installationLocation, startTimestamp, endTimestamp string, durationHours float64, description, symptom, cause, actionTaken, source string) (*MaintenanceEvent, error) {
@@ -39,6 +38,12 @@ func NewMaintenanceEvent(id, sapOrderNumber, orderType, stationCode, installatio
 	}
 
 	stationCode = strings.TrimSpace(strings.ToUpper(stationCode))
+	if stationCode == "" && installationLocation != "" {
+		parts := strings.Split(installationLocation, "-")
+		if len(parts) >= 4 {
+			stationCode = strings.TrimSpace(strings.ToUpper(parts[3]))
+		}
+	}
 	if stationCode == "" {
 		return nil, ErrMaintenanceStationRequired
 	}
@@ -64,10 +69,4 @@ func NewMaintenanceEvent(id, sapOrderNumber, orderType, stationCode, installatio
 		Source:               source,
 		CreatedAt:            time.Now(),
 	}, nil
-}
-
-type MaintenanceRepository interface {
-	BatchInsertMaintenance(ctx context.Context, events []*MaintenanceEvent) error
-	Create(ctx context.Context, event *MaintenanceEvent) error
-	List(ctx context.Context, limit, offset int) ([]*MaintenanceEvent, error)
 }

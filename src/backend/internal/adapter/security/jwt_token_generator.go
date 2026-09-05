@@ -3,11 +3,11 @@ package security
 import (
 	"time"
 
-	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var _ domain.TokenGenerator = (*JWTTokenGenerator)(nil)
+var _ port.TokenGenerator = (*JWTTokenGenerator)(nil)
 
 type JWTTokenGenerator struct {
 	secret []byte

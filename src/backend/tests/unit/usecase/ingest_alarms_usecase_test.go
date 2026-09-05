@@ -1,22 +1,27 @@
 package usecase_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/g04/backend/internal/adapter/parser"
+	"github.com/g04/backend/internal/adapter/scheduler"
+	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 )
 
 type mockAlarmRepo struct {
-	mu      sync.Mutex
-	uploads map[string]*domain.FileUpload
-	alarms  []*domain.Alarm
+	mu              sync.Mutex
+	uploads         map[string]*domain.FileUpload
+	alarms          []*domain.Alarm
+	failBatchInsert bool
 }
 
 func newMockAlarmRepo() *mockAlarmRepo {
@@ -47,7 +52,7 @@ func (m *mockAlarmRepo) GetUploadByID(ctx context.Context, id string) (*domain.F
 	defer m.mu.Unlock()
 	u, exists := m.uploads[id]
 	if !exists {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrUploadNotFound
 	}
 	return u, nil
 }
@@ -66,7 +71,23 @@ func (m *mockAlarmRepo) GetUploadByHash(ctx context.Context, hash string) (*doma
 func (m *mockAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.failBatchInsert {
+		return errors.New("falha simulada no banco ao inserir lote")
+	}
 	m.alarms = append(m.alarms, alarms...)
+	return nil
+}
+
+func (m *mockAlarmRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	filtered := m.alarms[:0]
+	for _, a := range m.alarms {
+		if a.UploadID != uploadID {
+			filtered = append(filtered, a)
+		}
+	}
+	m.alarms = filtered
 	return nil
 }
 
@@ -84,8 +105,10 @@ func (m *mockAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 
 func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {
 	repo := newMockAlarmRepo()
-	sheetParser := parser.NewDefaultSpreadsheetParser()
-	uc := usecase.NewIngestAlarmsUseCase(repo, sheetParser)
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
@@ -95,8 +118,6 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LAÇO DE PDM ABERTO,0,2025-11-14 07:00:00
 	if err != nil {
 		t.Fatalf("falha ao iniciar ingestao: %v", err)
 	}
-
-	time.Sleep(50 * time.Millisecond)
 
 	status, err := uc.GetStatus(context.Background(), uploadID)
 	if err != nil {
@@ -111,10 +132,133 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LAÇO DE PDM ABERTO,0,2025-11-14 07:00:00
 	}
 }
 
+func TestIngestAlarmsUseCase_ValidXLSX(t *testing.T) {
+	repo := newMockAlarmRepo()
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+
+	f := excelize.NewFile()
+	defer f.Close()
+
+	sheet := f.GetSheetName(0)
+	_ = f.SetSheetRow(sheet, "A1", &[]any{"tag", "estacao", "plataforma", "porta", "alarme", "tempo_normalizacao_seg", "horario_alarme"})
+	_ = f.SetSheetRow(sheet, "A2", &[]any{"SP04-6-PSD-FAL-P1-PP01", "FAL", "P1", 1, "OBSTACULO", 5, "2026-09-01 10:00:00"})
+	_ = f.SetSheetRow(sheet, "A3", &[]any{"SP04-6-PSD-FAL-P2-PP02", "FAL", "P2", 2, "LACO DE PDM", 0, "2026-09-01 10:05:00"})
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatalf("falha ao gerar arquivo xlsx em memoria: %v", err)
+	}
+
+	uploadID, err := uc.StartIngestion(context.Background(), "telemetria.xlsx", &buf)
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao xlsx: %v", err)
+	}
+
+	status, err := uc.GetStatus(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar status do upload: %v", err)
+	}
+
+	if status.Status != "completed" {
+		t.Errorf("esperava status completed para XLSX, obteve %s (erro: %s)", status.Status, status.ErrorLog)
+	}
+	if status.RowsInserted != 2 {
+		t.Errorf("esperava 2 linhas inseridas a partir do XLSX, obteve %d", status.RowsInserted)
+	}
+}
+
+func TestIngestAlarmsUseCase_ShortRowNoPanic(t *testing.T) {
+	repo := newMockAlarmRepo()
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+
+	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
+SP04-6-PSD-FAL-P1-PP04,FAL,4
+SP04-6-PSD-PIN-P2-PP08,PIN,8,LAÇO DE PDM ABERTO,0,2025-11-14 07:00:00
+`
+	uploadID, err := uc.StartIngestion(context.Background(), "telemetria_curta.csv", strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	status, err := uc.GetStatus(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar status: %v", err)
+	}
+
+	if status.Status != "completed" {
+		t.Errorf("esperava status completed sem panico, obteve %s", status.Status)
+	}
+	if status.RowsInserted != 1 {
+		t.Errorf("esperava 1 linha valida inserida, obteve %d", status.RowsInserted)
+	}
+}
+
+func TestIngestAlarmsUseCase_UnknownPlatformNoFallback(t *testing.T) {
+	repo := newMockAlarmRepo()
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+
+	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
+SP04-6-PSD-FAL-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
+`
+	uploadID, err := uc.StartIngestion(context.Background(), "sem_plataforma.csv", strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	status, err := uc.GetStatus(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar status: %v", err)
+	}
+
+	if status.RowsInserted != 0 {
+		t.Errorf("esperava 0 insercoes pois plataforma desconhecida nao deve ter fallback para P1, obteve %d", status.RowsInserted)
+	}
+}
+
+func TestIngestAlarmsUseCase_RollbackOnBatchFailure(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.failBatchInsert = true
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
+
+	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
+SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
+`
+	uploadID, err := uc.StartIngestion(context.Background(), "falha.csv", strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("falha ao iniciar ingestao: %v", err)
+	}
+
+	status, err := uc.GetStatus(context.Background(), uploadID)
+	if err != nil {
+		t.Fatalf("falha ao buscar status: %v", err)
+	}
+
+	if status.Status != "failed" {
+		t.Errorf("esperava status failed apos falha de lote, obteve %s", status.Status)
+	}
+	if len(repo.alarms) != 0 {
+		t.Errorf("esperava 0 alarmes no repositorio apos rollback via DeleteByUploadID, obteve %d", len(repo.alarms))
+	}
+}
+
 func TestIngestAlarmsUseCase_IdempotencyDuplicate(t *testing.T) {
 	repo := newMockAlarmRepo()
-	sheetParser := parser.NewDefaultSpreadsheetParser()
-	uc := usecase.NewIngestAlarmsUseCase(repo, sheetParser)
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner)
 
 	csvData := `tag,estação,porta,alarme,tempo_normalizacao_seg,horário do alarme
 SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28

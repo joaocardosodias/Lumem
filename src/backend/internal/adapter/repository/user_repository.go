@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
-var _ domain.UserRepository = (*PostgresUserRepository)(nil)
+var _ port.UserRepository = (*PostgresUserRepository)(nil)
 
 type PostgresUserRepository struct {
 	db DBExecutor

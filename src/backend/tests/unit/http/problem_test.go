@@ -89,17 +89,22 @@ func TestRespondDomainError_NotFoundErrors(t *testing.T) {
 	r.GET("/maintenance-not-found", func(c *gin.Context) {
 		httpAdapter.RespondDomainError(c, domain.ErrMaintenanceNotFound)
 	})
+	r.GET("/upload-not-found", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrUploadNotFound)
+	})
+	r.GET("/door-not-found", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrDoorNotFound)
+	})
+	r.GET("/no-predictions", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrNoPredictions)
+	})
 
-	w1 := httptest.NewRecorder()
-	r.ServeHTTP(w1, httptest.NewRequest(http.MethodGet, "/inspection-not-found", nil))
-	if w1.Code != http.StatusNotFound {
-		t.Fatalf("esperava status 404 para ErrInspectionNotFound, obteve %d", w1.Code)
-	}
-
-	w2 := httptest.NewRecorder()
-	r.ServeHTTP(w2, httptest.NewRequest(http.MethodGet, "/maintenance-not-found", nil))
-	if w2.Code != http.StatusNotFound {
-		t.Fatalf("esperava status 404 para ErrMaintenanceNotFound, obteve %d", w2.Code)
+	for _, path := range []string{"/inspection-not-found", "/maintenance-not-found", "/upload-not-found", "/door-not-found", "/no-predictions"} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("esperava status 404 para %s, obteve %d", path, w.Code)
+		}
 	}
 }
 
@@ -107,20 +112,33 @@ func TestRespondDomainError_ValidationErrors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
-	r.GET("/validation", func(c *gin.Context) {
+	r.GET("/validation-platform", func(c *gin.Context) {
 		httpAdapter.RespondDomainError(c, domain.ErrInvalidPlatform)
 	})
+	r.GET("/validation-login", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrEmailPasswordRequired)
+	})
+	r.GET("/validation-station", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrStationRequired)
+	})
+	r.GET("/validation-door-id", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidDoorID)
+	})
+	r.GET("/validation-no-doors", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrNoActiveDoors)
+	})
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/validation", nil))
+	for _, path := range []string{"/validation-platform", "/validation-login", "/validation-station", "/validation-door-id", "/validation-no-doors"} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("esperava status 400 para %s, obteve %d", path, w.Code)
+		}
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("esperava status 400 para ErrInvalidPlatform, obteve %d", w.Code)
-	}
-
-	var p httpAdapter.ProblemDetails
-	_ = json.Unmarshal(w.Body.Bytes(), &p)
-	if p.Code != "ERR_VALIDATION" {
-		t.Errorf("esperava code ERR_VALIDATION, obteve %s", p.Code)
+		var p httpAdapter.ProblemDetails
+		_ = json.Unmarshal(w.Body.Bytes(), &p)
+		if p.Code != "ERR_VALIDATION" {
+			t.Errorf("esperava code ERR_VALIDATION para %s, obteve %s", path, p.Code)
+		}
 	}
 }

@@ -6,24 +6,25 @@ import (
 	"sync"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
-var _ domain.EventBus = (*InMemoryEventBus)(nil)
+var _ port.EventBus = (*InMemoryEventBus)(nil)
 
 type InMemoryEventBus struct {
 	mu       sync.RWMutex
-	handlers map[string][]domain.EventHandler
+	handlers map[string][]port.EventHandler
 	logger   *slog.Logger
 }
 
 func NewInMemoryEventBus(logger *slog.Logger) *InMemoryEventBus {
 	return &InMemoryEventBus{
-		handlers: make(map[string][]domain.EventHandler),
+		handlers: make(map[string][]port.EventHandler),
 		logger:   logger,
 	}
 }
 
-func (b *InMemoryEventBus) Subscribe(eventName string, handler domain.EventHandler) {
+func (b *InMemoryEventBus) Subscribe(eventName string, handler port.EventHandler) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.handlers[eventName] = append(b.handlers[eventName], handler)

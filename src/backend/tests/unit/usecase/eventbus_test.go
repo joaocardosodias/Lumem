@@ -9,6 +9,7 @@ import (
 	"github.com/g04/backend/internal/adapter/eventbus"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
 type mockCacheInvalidator struct {
@@ -37,7 +38,7 @@ func (m *mockEventBus) PublishSync(ctx context.Context, event domain.Event) erro
 	return nil
 }
 
-func (m *mockEventBus) Subscribe(eventName string, handler domain.EventHandler) {}
+func (m *mockEventBus) Subscribe(eventName string, handler port.EventHandler) {}
 
 func TestEventBus_PublishAndSubscribe(t *testing.T) {
 	bus := eventbus.NewInMemoryEventBus(nil)

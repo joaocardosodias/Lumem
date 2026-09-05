@@ -6,36 +6,37 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
 type LoginInputDTO struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string
+	Password string
 }
 
 type UserSummaryDTO struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	ID    string
+	Name  string
+	Email string
+	Role  string
 }
 
 type LoginOutputDTO struct {
-	Token string         `json:"token"`
-	User  UserSummaryDTO `json:"user"`
+	Token string
+	User  UserSummaryDTO
 }
 
 type LoginUseCase struct {
-	userRepo      domain.UserRepository
-	hasher        domain.PasswordHasher
-	tokenGen      domain.TokenGenerator
+	userRepo      port.UserRepository
+	hasher        port.PasswordHasher
+	tokenGen      port.TokenGenerator
 	tokenDuration time.Duration
 }
 
 func NewLoginUseCase(
-	userRepo domain.UserRepository,
-	hasher domain.PasswordHasher,
-	tokenGen domain.TokenGenerator,
+	userRepo port.UserRepository,
+	hasher port.PasswordHasher,
+	tokenGen port.TokenGenerator,
 	tokenDuration time.Duration,
 ) *LoginUseCase {
 	return &LoginUseCase{
@@ -48,7 +49,7 @@ func NewLoginUseCase(
 
 func (uc *LoginUseCase) Execute(ctx context.Context, input LoginInputDTO) (*LoginOutputDTO, error) {
 	if input.Email == "" || input.Password == "" {
-		return nil, errors.New("e-mail e senha são obrigatórios")
+		return nil, domain.ErrEmailPasswordRequired
 	}
 
 	user, err := uc.userRepo.GetByEmail(ctx, input.Email)

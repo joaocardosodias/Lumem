@@ -1,84 +1,86 @@
 package usecase
 
+import "time"
+
 type StationRiskOutputDTO struct {
-	StationCode string `json:"station_code"`
-	DoorsAtRisk int    `json:"doors_at_risk"`
+	StationCode string
+	DoorsAtRisk int
 }
 
 type DashboardSummaryOutputDTO struct {
-	TotalDoors           int                    `json:"total_doors"`
-	DoorsAtRisk          int                    `json:"doors_at_risk"`
-	PendingInspections   int                    `json:"pending_inspections"`
-	CompletedInspections int                    `json:"completed_inspections"`
-	CriticalStations     []StationRiskOutputDTO `json:"critical_stations"`
+	TotalDoors           int
+	DoorsAtRisk          int
+	PendingInspections   int
+	CompletedInspections int
+	CriticalStations     []StationRiskOutputDTO
 }
 
 type TimelineAlarmOutputDTO struct {
-	ID                     string `json:"id"`
-	Tag                    string `json:"tag"`
-	AlarmType              string `json:"alarm_type"`
-	DurationSeconds        int    `json:"duration_seconds"`
-	EventTimestamp         string `json:"event_timestamp"`
-	NormalizationTimestamp string `json:"normalization_timestamp,omitempty"`
+	ID                     string
+	Tag                    string
+	AlarmType              string
+	DurationSeconds        int
+	EventTimestamp         string
+	NormalizationTimestamp string
 }
 
 type TimelineMaintenanceOutputDTO struct {
-	ID             string  `json:"id"`
-	OrderType      string  `json:"order_type"`
-	SAPOrderNumber string  `json:"sap_order_number,omitempty"`
-	StartTimestamp string  `json:"start_timestamp"`
-	DurationHours  float64 `json:"duration_hours,omitempty"`
-	Description    string  `json:"description,omitempty"`
-	Symptom        string  `json:"symptom,omitempty"`
-	Source         string  `json:"source"`
+	ID             string
+	OrderType      string
+	SAPOrderNumber string
+	StartTimestamp string
+	DurationHours  float64
+	Description    string
+	Symptom        string
+	Source         string
 }
 
 type TimelineInspectionOutputDTO struct {
-	ID           string  `json:"id"`
-	Status       string  `json:"status"`
-	Priority     string  `json:"priority"`
-	Notes        string  `json:"notes,omitempty"`
-	ScheduledFor string  `json:"scheduled_for,omitempty"`
-	CompletedAt  *string `json:"completed_at,omitempty"`
+	ID           string
+	Status       string
+	Priority     string
+	Notes        string
+	ScheduledFor string
+	CompletedAt  *time.Time
 }
 
 type DoorTimelineOutputDTO struct {
-	DoorID          int                            `json:"door_id"`
-	StationName     string                         `json:"station_name"`
-	Platform        string                         `json:"platform"`
-	DoorNumber      int                            `json:"door_number"`
-	SAPTag          string                         `json:"sap_tag"`
-	Status          string                         `json:"status"`
-	WillFail        bool                           `json:"will_fail"`
-	LastEvaluatedAt *string                        `json:"last_evaluated_at,omitempty"`
-	RecentAlarms    []TimelineAlarmOutputDTO       `json:"recent_alarms"`
-	Maintenances    []TimelineMaintenanceOutputDTO `json:"maintenances"`
-	Inspections     []TimelineInspectionOutputDTO  `json:"inspections"`
+	DoorID          int
+	StationName     string
+	Platform        string
+	DoorNumber      int
+	SAPTag          string
+	Status          string
+	WillFail        bool
+	LastEvaluatedAt *time.Time
+	RecentAlarms    []TimelineAlarmOutputDTO
+	Maintenances    []TimelineMaintenanceOutputDTO
+	Inspections     []TimelineInspectionOutputDTO
 }
 
 type DoorStatusOutputDTO struct {
-	ID         int    `json:"id"`
-	Platform   string `json:"platform"`
-	DoorNumber int    `json:"door_number"`
-	SAPTag     string `json:"sap_tag"`
-	Status     string `json:"status"`
-	WillFail   bool   `json:"will_fail"`
+	ID         int
+	Platform   string
+	DoorNumber int
+	SAPTag     string
+	Status     string
+	WillFail   bool
 }
 
 type PredictionItemOutputDTO struct {
-	ID          string `json:"id"`
-	RunID       string `json:"run_id"`
-	StationCode string `json:"station_code"`
-	Platform    string `json:"platform"`
-	DoorNumber  int    `json:"door_number"`
-	WillFail    bool   `json:"will_fail"`
+	ID          string
+	RunID       string
+	StationCode string
+	Platform    string
+	DoorNumber  int
+	WillFail    bool
 }
 
 type PredictionRunOutputDTO struct {
-	ID                  string                    `json:"id"`
-	HorizonDays         int                       `json:"horizon_days"`
-	TotalDoorsEvaluated int                       `json:"total_doors_evaluated"`
-	TotalDoorsAtRisk    int                       `json:"total_doors_at_risk"`
-	CreatedAt           string                    `json:"created_at"`
-	Predictions         []PredictionItemOutputDTO `json:"predictions,omitempty"`
+	ID                  string
+	HorizonDays         int
+	TotalDoorsEvaluated int
+	TotalDoorsAtRisk    int
+	CreatedAt           time.Time
+	Predictions         []PredictionItemOutputDTO
 }

@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
-var _ domain.MaintenanceRepository = (*PostgresMaintenanceRepository)(nil)
+var _ port.MaintenanceRepository = (*PostgresMaintenanceRepository)(nil)
 
 type PostgresMaintenanceRepository struct {
 	db DBExecutor
@@ -67,6 +68,12 @@ func (r *PostgresMaintenanceRepository) BatchInsertMaintenance(ctx context.Conte
 	}
 
 	return nil
+}
+
+func (r *PostgresMaintenanceRepository) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	query := `DELETE FROM maintenance_events WHERE upload_id = $1`
+	_, err := r.db.ExecContext(ctx, query, uploadID)
+	return err
 }
 
 func (r *PostgresMaintenanceRepository) Create(ctx context.Context, event *domain.MaintenanceEvent) error {

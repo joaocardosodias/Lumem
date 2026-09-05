@@ -2,13 +2,16 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
-var _ domain.PredictionRepository = (*PostgresPredictionRepository)(nil)
+var _ port.PredictionRepository = (*PostgresPredictionRepository)(nil)
 
 type PostgresPredictionRepository struct {
 	db DBExecutor
@@ -107,6 +110,9 @@ func (r *PostgresPredictionRepository) GetLatestRun(ctx context.Context) (*domai
 		LIMIT 1
 	`).Scan(&run.ID, &run.HorizonDays, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &createdAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrNoPredictions
+		}
 		return nil, err
 	}
 	run.CreatedAt = createdAt

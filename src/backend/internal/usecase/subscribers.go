@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
@@ -15,8 +15,8 @@ type CacheInvalidator interface {
 }
 
 func RegisterEventSubscribers(
-	bus domain.EventBus,
-	insRepo domain.InspectionRepository,
+	bus port.EventBus,
+	insRepo port.InspectionRepository,
 	cache CacheInvalidator,
 	logger *slog.Logger,
 ) {
@@ -27,20 +27,39 @@ func RegisterEventSubscribers(
 		}
 
 		if insRepo != nil {
-			notes := fmt.Sprintf("Ordem gerada automaticamente pela IA (Rodada #%s)", evt.RunID)
-			now := time.Now()
-			ins := &domain.Inspection{
-				ID:          uuid.New().String(),
-				StationCode: evt.StationCode,
-				Platform:    evt.Platform,
-				DoorNumber:  evt.DoorNumber,
-				Status:      "pending",
-				Priority:    "critical",
-				Notes:       notes,
-				CreatedAt:   now,
-				UpdatedAt:   now,
+			existing, _ := insRepo.List(ctx, 50, 0, "")
+			alreadyExists := false
+			for _, item := range existing {
+				if item.PredictionID != nil && *item.PredictionID == evt.RunID && item.StationCode == evt.StationCode && item.DoorNumber == evt.DoorNumber {
+					alreadyExists = true
+					break
+				}
 			}
-			_ = insRepo.Create(ctx, ins)
+			if !alreadyExists {
+				notes := fmt.Sprintf("Ordem gerada automaticamente pela IA (Rodada #%s)", evt.RunID)
+				ins, err := domain.NewInspection(
+					uuid.New().String(),
+					&evt.RunID,
+					evt.StationCode,
+					evt.Platform,
+					evt.DoorNumber,
+					"",
+					"critical",
+					notes,
+				)
+				if err != nil {
+					if logger != nil {
+						logger.Error("falha ao instanciar inspecao de dominio", slog.String("error", err.Error()))
+					}
+					return err
+				}
+				if err := insRepo.Create(ctx, ins); err != nil {
+					if logger != nil {
+						logger.Error("falha ao persistir inspecao automatica", slog.String("error", err.Error()))
+					}
+					return err
+				}
+			}
 		}
 
 		if logger != nil {

@@ -6,43 +6,44 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
 type CreateInspectionInputDTO struct {
-	StationCode  string  `json:"station_code"`
-	Platform     string  `json:"platform"`
-	DoorNumber   int     `json:"door_number"`
-	ScheduledFor string  `json:"scheduled_for"`
-	Priority     string  `json:"priority"`
-	Notes        string  `json:"notes"`
-	PredictionID *string `json:"prediction_id"`
+	StationCode  string
+	Platform     string
+	DoorNumber   int
+	ScheduledFor string
+	Priority     string
+	Notes        string
+	PredictionID *string
 }
 
 type UpdateInspectionStatusInputDTO struct {
-	Status string `json:"status"`
-	Notes  string `json:"notes"`
+	Status string
+	Notes  string
 }
 
 type InspectionOutputDTO struct {
-	ID           string    `json:"id"`
-	StationCode  string    `json:"station_code"`
-	Platform     string    `json:"platform"`
-	DoorNumber   int       `json:"door_number"`
-	ScheduledFor string    `json:"scheduled_for,omitempty"`
-	Priority     string    `json:"priority"`
-	Status       string    `json:"status"`
-	Notes        string    `json:"notes,omitempty"`
-	CompletedAt  *string   `json:"completed_at,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string
+	StationCode  string
+	Platform     string
+	DoorNumber   int
+	ScheduledFor string
+	Priority     string
+	Status       string
+	Notes        string
+	CompletedAt  *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type InspectionUseCase struct {
-	repo domain.InspectionRepository
+	repo port.InspectionRepository
 }
 
-func NewInspectionUseCase(repo domain.InspectionRepository) *InspectionUseCase {
+func NewInspectionUseCase(repo port.InspectionRepository) *InspectionUseCase {
 	return &InspectionUseCase{repo: repo}
 }
 
@@ -118,12 +119,6 @@ func (uc *InspectionUseCase) GetByID(ctx context.Context, id string) (*Inspectio
 }
 
 func toInspectionDTO(ins *domain.Inspection) *InspectionOutputDTO {
-	var compStr *string
-	if ins.CompletedAt != nil {
-		s := ins.CompletedAt.Format("2006-01-02 15:04:05")
-		compStr = &s
-	}
-
 	return &InspectionOutputDTO{
 		ID:           ins.ID,
 		StationCode:  ins.StationCode,
@@ -133,7 +128,7 @@ func toInspectionDTO(ins *domain.Inspection) *InspectionOutputDTO {
 		Priority:     ins.Priority,
 		Status:       ins.Status,
 		Notes:        ins.Notes,
-		CompletedAt:  compStr,
+		CompletedAt:  ins.CompletedAt,
 		CreatedAt:    ins.CreatedAt,
 		UpdatedAt:    ins.UpdatedAt,
 	}

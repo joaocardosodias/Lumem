@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
-var _ domain.DashboardRepository = (*CachedDashboardRepository)(nil)
+var _ port.DashboardRepository = (*CachedDashboardRepository)(nil)
 
 type cacheItem struct {
 	data      any
@@ -16,13 +17,13 @@ type cacheItem struct {
 }
 
 type CachedDashboardRepository struct {
-	underlying domain.DashboardRepository
+	underlying port.DashboardRepository
 	ttl        time.Duration
 	mu         sync.RWMutex
 	cache      map[string]cacheItem
 }
 
-func NewCachedDashboardRepository(underlying domain.DashboardRepository, ttl time.Duration) *CachedDashboardRepository {
+func NewCachedDashboardRepository(underlying port.DashboardRepository, ttl time.Duration) *CachedDashboardRepository {
 	return &CachedDashboardRepository{
 		underlying: underlying,
 		ttl:        ttl,

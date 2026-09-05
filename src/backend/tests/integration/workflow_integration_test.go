@@ -17,7 +17,9 @@ import (
 	"github.com/g04/backend/internal/adapter/eventbus"
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/adapter/parser"
+	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/adapter/security"
+	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -135,7 +137,7 @@ func (r *intAlarmRepo) GetUploadByID(ctx context.Context, id string) (*domain.Fi
 	defer r.store.mu.RUnlock()
 	u, exists := r.store.uploads[id]
 	if !exists {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrUploadNotFound
 	}
 	return u, nil
 }
@@ -153,6 +155,19 @@ func (r *intAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.A
 	r.store.mu.Lock()
 	defer r.store.mu.Unlock()
 	r.store.alarms = append(r.store.alarms, alarms...)
+	return nil
+}
+
+func (r *intAlarmRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	r.store.mu.Lock()
+	defer r.store.mu.Unlock()
+	filtered := r.store.alarms[:0]
+	for _, a := range r.store.alarms {
+		if a.UploadID != uploadID {
+			filtered = append(filtered, a)
+		}
+	}
+	r.store.alarms = filtered
 	return nil
 }
 
@@ -174,6 +189,19 @@ func (r *intMaintenanceRepo) BatchInsertMaintenance(ctx context.Context, events 
 	r.store.mu.Lock()
 	defer r.store.mu.Unlock()
 	r.store.maintenances = append(r.store.maintenances, events...)
+	return nil
+}
+
+func (r *intMaintenanceRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
+	r.store.mu.Lock()
+	defer r.store.mu.Unlock()
+	filtered := r.store.maintenances[:0]
+	for _, m := range r.store.maintenances {
+		if m.UploadID != uploadID {
+			filtered = append(filtered, m)
+		}
+	}
+	r.store.maintenances = filtered
 	return nil
 }
 func (r *intMaintenanceRepo) Create(ctx context.Context, event *domain.MaintenanceEvent) error {
@@ -287,7 +315,7 @@ func (r *intDashboardRepo) GetDoorTimeline(ctx context.Context, doorID int) (*do
 		}
 	}
 	if targetDoor == nil {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrDoorNotFound
 	}
 
 	stationName := "Faria Lima"
@@ -368,7 +396,7 @@ func (r *intPredictionRepo) GetLatestRun(ctx context.Context) (*domain.Predictio
 	r.store.mu.RLock()
 	defer r.store.mu.RUnlock()
 	if len(r.store.runs) == 0 {
-		return nil, domain.ErrUserNotFound
+		return nil, domain.ErrNoPredictions
 	}
 	latest := r.store.runs[len(r.store.runs)-1]
 	latest.Predictions = r.store.predictions
@@ -411,14 +439,17 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	bus := eventbus.NewInMemoryEventBus(nil)
 	usecase.RegisterEventSubscribers(bus, insRepo, nil, nil)
 
-	spreadsheetParser := parser.NewDefaultSpreadsheetParser()
+	ingestionStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	maintParser := parser.NewDefaultMaintenanceParser()
 	mlClient := &intMLClient{}
 
 	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
 	tokenGen := security.NewJWTTokenGenerator(jwtSecret)
+	syncRunner := scheduler.NewSyncJobRunner()
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, time.Hour)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, spreadsheetParser)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, spreadsheetParser)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, syncRunner)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, syncRunner)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient, bus)
@@ -542,8 +573,6 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 3 falhou: payload de resposta do upload invalido")
 	}
 
-	time.Sleep(100 * time.Millisecond)
-
 	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/uploads/"+uploadResp.UploadID, nil)
 	statusW := httptest.NewRecorder()
 	router.ServeHTTP(statusW, statusReq)
@@ -563,7 +592,7 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 4 falhou: linhas nao processadas corretamente: %+v", statusResp)
 	}
 
-	maintPayload := usecase.CreateMaintenanceInputDTO{
+	maintPayload := httpAdapter.CreateMaintenanceRequest{
 		OrderType:            "ZM01",
 		StationCode:          "FAL",
 		InstallationLocation: "SP04-6-PSD-FAL-P1-PP04",
@@ -592,14 +621,12 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 6 falhou: disparo de inferencia falhou com status %d", predW.Code)
 	}
 
-	var predResp usecase.PredictionRunOutputDTO
+	var predResp httpAdapter.PredictionRunResponse
 	_ = json.Unmarshal(predW.Body.Bytes(), &predResp)
 
 	if predResp.TotalDoorsAtRisk != 1 {
 		t.Fatalf("etapa 6 falhou: esperava 1 porta em risco (FAL P1 Door 4), obteve %d", predResp.TotalDoorsAtRisk)
 	}
-
-	time.Sleep(50 * time.Millisecond)
 
 	inspListReq := httptest.NewRequest(http.MethodGet, "/api/v1/inspections?status=pending", nil)
 	inspListW := httptest.NewRecorder()
@@ -610,8 +637,8 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	}
 
 	var inspListResp struct {
-		Total int                            `json:"total"`
-		Data  []*usecase.InspectionOutputDTO `json:"data"`
+		Total int                              `json:"total"`
+		Data  []httpAdapter.InspectionResponse `json:"data"`
 	}
 	_ = json.Unmarshal(inspListW.Body.Bytes(), &inspListResp)
 
@@ -649,7 +676,7 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 9 falhou: consulta da linha do tempo falhou com status %d", timelineW.Code)
 	}
 
-	var timelineResp usecase.DoorTimelineOutputDTO
+	var timelineResp httpAdapter.DoorTimelineResponse
 	_ = json.Unmarshal(timelineW.Body.Bytes(), &timelineResp)
 
 	if !timelineResp.WillFail {
@@ -670,7 +697,7 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 		t.Fatalf("etapa 10 falhou: resumo do dashboard falhou com status %d", summaryW.Code)
 	}
 
-	var summaryResp usecase.DashboardSummaryOutputDTO
+	var summaryResp httpAdapter.DashboardSummaryResponse
 	_ = json.Unmarshal(summaryW.Body.Bytes(), &summaryResp)
 
 	if summaryResp.DoorsAtRisk != 1 {

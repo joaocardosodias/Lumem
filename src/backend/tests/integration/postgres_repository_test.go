@@ -9,6 +9,7 @@ import (
 
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -116,6 +117,13 @@ func TestPostgresRepositories(t *testing.T) {
 		t.Fatalf("BatchInsertMaintenance failed: %v", err)
 	}
 
+	if err := alarmRepo.DeleteByUploadID(ctx, uploadID); err != nil {
+		t.Fatalf("alarmRepo.DeleteByUploadID failed: %v", err)
+	}
+	if err := maintRepo.DeleteByUploadID(ctx, uploadID); err != nil {
+		t.Fatalf("maintRepo.DeleteByUploadID failed: %v", err)
+	}
+
 	uow := repository.NewPostgresUnitOfWork(db)
 	runID := uuid.New().String()
 	predID := uuid.New().String()
@@ -133,7 +141,7 @@ func TestPostgresRepositories(t *testing.T) {
 		DoorNumber:  1,
 		WillFail:    true,
 	}
-	err = uow.Do(ctx, func(store domain.UnitOfWorkStore) error {
+	err = uow.Do(ctx, func(store port.UnitOfWorkStore) error {
 		return store.Predictions().SaveRun(ctx, run, []domain.PredictionItem{item})
 	})
 	if err != nil {

@@ -6,25 +6,26 @@ import (
 	"testing"
 
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 )
 
 type mockUnitOfWorkStore struct {
-	insRepo domain.InspectionRepository
+	insRepo port.InspectionRepository
 }
 
-func (m *mockUnitOfWorkStore) Predictions() domain.PredictionRepository {
+func (m *mockUnitOfWorkStore) Predictions() port.PredictionRepository {
 	return nil
 }
 
-func (m *mockUnitOfWorkStore) Inspections() domain.InspectionRepository {
+func (m *mockUnitOfWorkStore) Inspections() port.InspectionRepository {
 	return m.insRepo
 }
 
-func (m *mockUnitOfWorkStore) Maintenances() domain.MaintenanceRepository {
+func (m *mockUnitOfWorkStore) Maintenances() port.MaintenanceRepository {
 	return nil
 }
 
-func (m *mockUnitOfWorkStore) Alarms() domain.AlarmRepository {
+func (m *mockUnitOfWorkStore) Alarms() port.AlarmRepository {
 	return nil
 }
 
@@ -34,7 +35,7 @@ type mockUOW struct {
 	rolledBack bool
 }
 
-func (m *mockUOW) Do(ctx context.Context, fn func(store domain.UnitOfWorkStore) error) error {
+func (m *mockUOW) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
 	if err := fn(m.store); err != nil {
 		m.rolledBack = true
 		return err
@@ -48,7 +49,7 @@ func TestUnitOfWork_CommitOnSuccess(t *testing.T) {
 	store := &mockUnitOfWorkStore{insRepo: insRepo}
 	uow := &mockUOW{store: store}
 
-	err := uow.Do(context.Background(), func(s domain.UnitOfWorkStore) error {
+	err := uow.Do(context.Background(), func(s port.UnitOfWorkStore) error {
 		ins := &domain.Inspection{
 			StationCode: "FAL",
 			Platform:    "P1",
@@ -79,7 +80,7 @@ func TestUnitOfWork_RollbackOnError(t *testing.T) {
 	uow := &mockUOW{store: store}
 	expectedErr := errors.New("falha simulada")
 
-	err := uow.Do(context.Background(), func(s domain.UnitOfWorkStore) error {
+	err := uow.Do(context.Background(), func(s port.UnitOfWorkStore) error {
 		return expectedErr
 	})
 

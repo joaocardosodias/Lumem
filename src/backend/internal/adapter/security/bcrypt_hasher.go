@@ -1,11 +1,11 @@
 package security
 
 import (
-	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var _ domain.PasswordHasher = (*BcryptPasswordHasher)(nil)
+var _ port.PasswordHasher = (*BcryptPasswordHasher)(nil)
 
 type BcryptPasswordHasher struct {
 	cost int

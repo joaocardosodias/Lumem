@@ -42,17 +42,29 @@ func RespondDomainError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		RespondProblem(c, http.StatusUnauthorized, "ERR_INVALID_CREDENTIALS", "Credenciais Invalidas", "Email ou senha incorretos.")
+	case errors.Is(err, domain.ErrPredictionServiceUnavailable):
+		RespondProblem(c, http.StatusServiceUnavailable, "ERR_PREDICTION_UNAVAILABLE", "Servico de Predicao Indisponivel", "O servico de inferencia preditiva esta indisponivel.")
 	case errors.Is(err, domain.ErrUserNotFound):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Recurso Nao Encontrado", "O registro solicitado nao foi localizado.")
 	case errors.Is(err, domain.ErrInspectionNotFound):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Inspecao Nao Encontrada", "A inspecao solicitada nao foi localizada.")
 	case errors.Is(err, domain.ErrMaintenanceNotFound):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Manutencao Nao Encontrada", "O registro de manutencao solicitado nao foi localizado.")
+	case errors.Is(err, domain.ErrUploadNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Upload Nao Encontrado", "O upload solicitado nao foi localizado.")
+	case errors.Is(err, domain.ErrDoorNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Porta Nao Encontrada", "A porta solicitada nao foi localizada.")
+	case errors.Is(err, domain.ErrNoPredictions):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Sem Previsoes", "Nenhuma rodada de previsao calculada ate o momento.")
 	case errors.Is(err, domain.ErrUserInactive):
 		RespondProblem(c, http.StatusForbidden, "ERR_USER_INACTIVE", "Usuario Inativo", "O operador esta desativado no sistema.")
 	case errors.Is(err, domain.ErrDuplicateUpload):
-		RespondProblem(c, http.StatusConflict, "ERR_DUPLICATE_UPLOAD", "Arquivo Duplicado", "Arquivo ja processado anteriormente pelo sistema (idempotencia sha-256).")
-	case errors.Is(err, domain.ErrStationCodeRequired),
+		RespondProblem(c, http.StatusConflict, "ERR_DUPLICATE_UPLOAD", "Arquivo Duplicado", "Arquivo ja processado anteriormente pelo sistema.")
+	case errors.Is(err, domain.ErrEmailPasswordRequired),
+		errors.Is(err, domain.ErrStationRequired),
+		errors.Is(err, domain.ErrInvalidDoorID),
+		errors.Is(err, domain.ErrNoActiveDoors),
+		errors.Is(err, domain.ErrStationCodeRequired),
 		errors.Is(err, domain.ErrInvalidPlatform),
 		errors.Is(err, domain.ErrInvalidDoorNumber),
 		errors.Is(err, domain.ErrInvalidPriority),

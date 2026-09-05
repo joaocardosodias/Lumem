@@ -77,6 +77,18 @@ func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 	})
 }
 
+type UploadStatusResponse struct {
+	ID            string  `json:"id"`
+	FileName      string  `json:"file_name"`
+	FileType      string  `json:"file_type"`
+	Status        string  `json:"status"`
+	RowsProcessed int     `json:"rows_processed"`
+	RowsInserted  int     `json:"rows_inserted"`
+	ErrorLog      string  `json:"error_log,omitempty"`
+	CreatedAt     string  `json:"created_at"`
+	CompletedAt   *string `json:"completed_at,omitempty"`
+}
+
 func (h *UploadHandler) GetUploadStatus(c *gin.Context) {
 	idParam := strings.TrimSpace(c.Param("id"))
 	if idParam == "" {
@@ -90,5 +102,21 @@ func (h *UploadHandler) GetUploadStatus(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, upload)
+	var completedStr *string
+	if upload.CompletedAt != nil {
+		s := upload.CompletedAt.Format("2006-01-02 15:04:05")
+		completedStr = &s
+	}
+
+	c.JSON(http.StatusOK, UploadStatusResponse{
+		ID:            upload.ID,
+		FileName:      upload.FileName,
+		FileType:      upload.FileType,
+		Status:        upload.Status,
+		RowsProcessed: upload.RowsProcessed,
+		RowsInserted:  upload.RowsInserted,
+		ErrorLog:      upload.ErrorLog,
+		CreatedAt:     upload.CreatedAt.Format("2006-01-02 15:04:05"),
+		CompletedAt:   completedStr,
+	})
 }

@@ -2,120 +2,108 @@ package usecase
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
-	"log"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/google/uuid"
 )
 
 type IngestAlarmsUseCase struct {
-	repo   domain.AlarmRepository
-	parser domain.SpreadsheetParser
-	wg     *sync.WaitGroup
+	alarmRepo   port.AlarmRepository
+	uploadRepo  port.UploadRepository
+	storage     port.IngestionStorage
+	alarmParser port.AlarmParser
+	runner      port.JobRunner
 }
 
-func NewIngestAlarmsUseCase(repo domain.AlarmRepository, parser domain.SpreadsheetParser, wg ...*sync.WaitGroup) *IngestAlarmsUseCase {
-	var w *sync.WaitGroup
-	if len(wg) > 0 {
-		w = wg[0]
+func NewIngestAlarmsUseCase(
+	alarmRepo port.AlarmRepository,
+	uploadRepo port.UploadRepository,
+	storage port.IngestionStorage,
+	alarmParser port.AlarmParser,
+	runner ...port.JobRunner,
+) *IngestAlarmsUseCase {
+	var r port.JobRunner
+	if len(runner) > 0 && runner[0] != nil {
+		r = runner[0]
+	} else {
+		r = scheduler.NewGoroutineJobRunner(nil)
 	}
-	return &IngestAlarmsUseCase{repo: repo, parser: parser, wg: w}
+	return &IngestAlarmsUseCase{
+		alarmRepo:   alarmRepo,
+		uploadRepo:  uploadRepo,
+		storage:     storage,
+		alarmParser: alarmParser,
+		runner:      r,
+	}
 }
 
 func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName string, reader io.Reader) (string, error) {
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext == "" {
-		ext = ".csv"
-	}
-	pattern := "alarm_upload_*" + ext
-	tmpFile, err := os.CreateTemp("", pattern)
+	storageKey, fileHash, err := uc.storage.Store(ctx, fileName, reader)
 	if err != nil {
 		return "", err
 	}
-	defer tmpFile.Close()
 
-	hasher := sha256.New()
-	tee := io.TeeReader(reader, hasher)
-
-	if _, err := io.Copy(tmpFile, tee); err != nil {
-		os.Remove(tmpFile.Name())
-		return "", err
+	existing, err := uc.uploadRepo.GetUploadByHash(ctx, fileHash)
+	if err == nil && existing != nil {
+		_ = uc.storage.Delete(ctx, storageKey)
+		return existing.ID, domain.ErrDuplicateUpload
 	}
 
-	hashStr := hex.EncodeToString(hasher.Sum(nil))
-
-	existing, err := uc.repo.GetUploadByHash(ctx, hashStr)
-	if err == nil && existing != nil {
-		os.Remove(tmpFile.Name())
-		return existing.ID, domain.ErrDuplicateUpload
+	ext := strings.ToLower(filepath.Ext(fileName))
+	fileType := "alarms_csv"
+	if ext == ".xlsx" || ext == ".xls" {
+		fileType = "alarms_xlsx"
 	}
 
 	upload := &domain.FileUpload{
 		ID:       uuid.New().String(),
 		FileName: fileName,
-		FileType: "alarms_csv",
-		FileHash: hashStr,
+		FileType: fileType,
+		FileHash: fileHash,
 		Status:   "processing",
 	}
 
-	if err := uc.repo.CreateUpload(ctx, upload); err != nil {
-		os.Remove(tmpFile.Name())
+	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
+		_ = uc.storage.Delete(ctx, storageKey)
 		return "", err
 	}
 
-	if uc.wg != nil {
-		uc.wg.Add(1)
-	}
-	go func() {
-		if uc.wg != nil {
-			defer uc.wg.Done()
-		}
-		uc.processFileAsync(upload.ID, tmpFile.Name(), ext)
-	}()
+	uc.runner.Run(func() {
+		uc.processFileAsync(upload.ID, storageKey, fileName)
+	})
 
 	return upload.ID, nil
 }
 
-func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath, ext string) {
-	defer os.Remove(filePath)
+func (uc *IngestAlarmsUseCase) processFileAsync(uploadID, storageKey, fileName string) {
+	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
 
-	rows, err := uc.parser.ReadRows(filePath, ext)
+	defer func() {
+		_ = uc.storage.Delete(bgCtx, storageKey)
+	}()
+
+	rc, err := uc.storage.Open(bgCtx, storageKey)
 	if err != nil {
-		uc.failUpload(uploadID, "falha ao ler arquivo: "+err.Error())
+		_ = uc.failUpload(uploadID, "falha ao abrir arquivo: "+err.Error())
+		return
+	}
+	defer rc.Close()
+
+	rawRecords, err := uc.alarmParser.ParseAlarms(rc, fileName)
+	if err != nil {
+		_ = uc.failUpload(uploadID, "falha ao analisar arquivo: "+err.Error())
 		return
 	}
 
-	if len(rows) < 2 {
-		uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados")
-		return
-	}
-
-	headers := rows[0]
-	colMap := make(map[string]int)
-	for i, h := range headers {
-		colMap[strings.ToLower(strings.TrimSpace(h))] = i
-	}
-
-	tagIdx, hasTag := getFirstIndex(colMap, "tag", "tag_alarme")
-	stationIdx, hasStation := getFirstIndex(colMap, "estação", "estacao", "estacao_original", "estacao_extraida")
-	doorIdx, hasDoor := getFirstIndex(colMap, "porta", "porta_original", "porta_extraida")
-	alarmIdx, hasAlarm := getFirstIndex(colMap, "alarme", "tipo_alarme", "tipo_evento", "tipo_evento_extraido")
-	durIdx, hasDur := getFirstIndex(colMap, "tempo_normalizacao_seg", "duracao_calculada_seg", "duracao_seg")
-	normIdx, hasNorm := getFirstIndex(colMap, "horário da normalizacao", "horario da normalizacao", "horario_normalizacao", "dt_normalizacao")
-	platIdx, hasPlat := getFirstIndex(colMap, "plataforma_extraida", "plataforma")
-	timeIdx, hasTime := getFirstIndex(colMap, "horário do alarme", "horario do alarme", "horario_alarme", "dt_alarme")
-
-	if !hasTag || !hasStation || !hasDoor || !hasAlarm || !hasTime {
-		uc.failUpload(uploadID, "colunas obrigatorias ausentes no arquivo de alarmes")
+	if len(rawRecords) == 0 {
+		_ = uc.failUpload(uploadID, "arquivo vazio ou sem linhas de dados validas")
 		return
 	}
 
@@ -123,95 +111,83 @@ func (uc *IngestAlarmsUseCase) processFileAsync(uploadID string, filePath, ext s
 	var batch []*domain.Alarm
 	processedCount := 0
 	insertedCount := 0
-	bgCtx := context.Background()
+	source := strings.TrimPrefix(strings.ToLower(filepath.Ext(fileName)), ".")
+	if source == "" {
+		source = "telemetry"
+	}
 
-	for _, row := range rows[1:] {
+	for _, raw := range rawRecords {
 		processedCount++
 
-		doorNum, _ := strconv.Atoi(strings.TrimSpace(strings.Split(row[doorIdx], ".")[0]))
-		durSec := 0
-		if hasDur && durIdx < len(row) {
-			durSec, _ = strconv.Atoi(strings.TrimSpace(strings.Split(row[durIdx], ".")[0]))
-		}
-
-		platform := ""
-		if hasPlat && platIdx < len(row) {
-			platform = strings.TrimSpace(row[platIdx])
-		}
-
-		normTime := ""
-		if hasNorm && normIdx < len(row) {
-			normTime = strings.TrimSpace(row[normIdx])
-		}
-
-		alarm := &domain.Alarm{
-			ID:                     uuid.New().String(),
-			UploadID:               uploadID,
-			Tag:                    strings.TrimSpace(row[tagIdx]),
-			StationCode:            strings.TrimSpace(row[stationIdx]),
-			Platform:               platform,
-			DoorNumber:             doorNum,
-			AlarmType:              strings.TrimSpace(row[alarmIdx]),
-			DurationSeconds:        durSec,
-			EventTimestamp:         strings.TrimSpace(row[timeIdx]),
-			NormalizationTimestamp: normTime,
-			Source:                 "csv",
-			CreatedAt:              time.Now(),
+		alarm, err := domain.NewAlarm(
+			uuid.New().String(),
+			uploadID,
+			raw.Tag,
+			raw.StationCode,
+			raw.Platform,
+			raw.DoorNumber,
+			raw.AlarmType,
+			raw.DurationSeconds,
+			raw.EventTimestamp,
+			raw.NormalizationTimestamp,
+			source,
+		)
+		if err != nil {
+			continue
 		}
 
 		batch = append(batch, alarm)
 
 		if len(batch) >= batchSize {
-			if err := uc.repo.BatchInsertAlarms(bgCtx, batch); err != nil {
-				log.Printf("erro ao inserir lote: %v", err)
-			} else {
-				insertedCount += len(batch)
+			if err := uc.alarmRepo.BatchInsertAlarms(bgCtx, batch); err != nil {
+				_ = uc.alarmRepo.DeleteByUploadID(bgCtx, uploadID)
+				_ = uc.failUpload(uploadID, "falha ao inserir lote de alarmes: "+err.Error())
+				return
 			}
+			insertedCount += len(batch)
 			batch = batch[:0]
 		}
 	}
 
 	if len(batch) > 0 {
-		if err := uc.repo.BatchInsertAlarms(bgCtx, batch); err != nil {
-			log.Printf("erro ao inserir lote final: %v", err)
-		} else {
-			insertedCount += len(batch)
+		if err := uc.alarmRepo.BatchInsertAlarms(bgCtx, batch); err != nil {
+			_ = uc.alarmRepo.DeleteByUploadID(bgCtx, uploadID)
+			_ = uc.failUpload(uploadID, "falha ao inserir lote final de alarmes: "+err.Error())
+			return
 		}
+		insertedCount += len(batch)
 	}
 
 	now := time.Now()
-	upload, err := uc.repo.GetUploadByID(bgCtx, uploadID)
+	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
 	if err == nil {
 		upload.RowsProcessed = processedCount
 		upload.RowsInserted = insertedCount
 		upload.Status = "completed"
 		upload.CompletedAt = &now
-		_ = uc.repo.UpdateUpload(bgCtx, upload)
+		if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
+			_ = uc.failUpload(uploadID, "falha ao atualizar status do upload: "+err.Error())
+		}
 	}
 }
 
-func (uc *IngestAlarmsUseCase) failUpload(uploadID string, reason string) {
+func (uc *IngestAlarmsUseCase) failUpload(uploadID string, reason string) error {
 	bgCtx := context.Background()
 	now := time.Now()
-	upload, err := uc.repo.GetUploadByID(bgCtx, uploadID)
-	if err == nil {
-		upload.Status = "failed"
-		upload.ErrorLog = reason
-		upload.CompletedAt = &now
-		_ = uc.repo.UpdateUpload(bgCtx, upload)
+	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
+	if err != nil {
+		return err
 	}
+	upload.Status = "failed"
+	upload.ErrorLog = reason
+	upload.CompletedAt = &now
+	return uc.uploadRepo.UpdateUpload(bgCtx, upload)
 }
 
 func (uc *IngestAlarmsUseCase) GetStatus(ctx context.Context, uploadID string) (*UploadStatusOutputDTO, error) {
-	u, err := uc.repo.GetUploadByID(ctx, uploadID)
+	u, err := uc.uploadRepo.GetUploadByID(ctx, uploadID)
 	if err != nil {
 		return nil, err
-	}
-
-	var completedStr *string
-	if u.CompletedAt != nil {
-		s := u.CompletedAt.Format("2006-01-02 15:04:05")
-		completedStr = &s
 	}
 
 	return &UploadStatusOutputDTO{
@@ -222,7 +198,7 @@ func (uc *IngestAlarmsUseCase) GetStatus(ctx context.Context, uploadID string) (
 		RowsProcessed: u.RowsProcessed,
 		RowsInserted:  u.RowsInserted,
 		ErrorLog:      u.ErrorLog,
-		CreatedAt:     u.CreatedAt.Format("2006-01-02 15:04:05"),
-		CompletedAt:   completedStr,
+		CreatedAt:     u.CreatedAt,
+		CompletedAt:   u.CompletedAt,
 	}, nil
 }

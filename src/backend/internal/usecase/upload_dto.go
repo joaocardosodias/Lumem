@@ -1,13 +1,15 @@
 package usecase
 
+import "time"
+
 type UploadStatusOutputDTO struct {
-	ID            string  `json:"id"`
-	FileName      string  `json:"file_name"`
-	FileType      string  `json:"file_type"`
-	Status        string  `json:"status"`
-	RowsProcessed int     `json:"rows_processed"`
-	RowsInserted  int     `json:"rows_inserted"`
-	ErrorLog      string  `json:"error_log,omitempty"`
-	CreatedAt     string  `json:"created_at"`
-	CompletedAt   *string `json:"completed_at,omitempty"`
+	ID            string
+	FileName      string
+	FileType      string
+	Status        string
+	RowsProcessed int
+	RowsInserted  int
+	ErrorLog      string
+	CreatedAt     time.Time
+	CompletedAt   *time.Time
 }
