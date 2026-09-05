@@ -197,3 +197,108 @@ func TestInspectionUseCase_GetByID_NotFound(t *testing.T) {
 		t.Fatalf("esperava ErrInspectionNotFound, obteve %v", err)
 	}
 }
+
+func TestInspectionUseCase_UpdateStatus_ReopenFromCompletedClearsCompletedAt(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+
+	created, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  2,
+	})
+	if err != nil {
+		t.Fatalf("falha ao criar inspecao: %v", err)
+	}
+
+	completed, err := uc.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "completed",
+		Notes:  "Concluida primeira vez",
+	})
+	if err != nil {
+		t.Fatalf("falha ao completar inspecao: %v", err)
+	}
+	if completed.CompletedAt == nil {
+		t.Fatalf("esperava completed_at preenchido")
+	}
+
+	reopened, err := uc.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "in_progress",
+		Notes:  "Reaberta para calibracao adicional",
+	})
+	if err != nil {
+		t.Fatalf("falha ao reabrir inspecao: %v", err)
+	}
+	if reopened.Status != "in_progress" {
+		t.Errorf("esperava status in_progress, obteve %s", reopened.Status)
+	}
+	if reopened.CompletedAt != nil {
+		t.Errorf("esperava completed_at nulo apos reabrir inspecao, obteve %s", *reopened.CompletedAt)
+	}
+
+	fetched, err := uc.GetByID(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("falha ao buscar inspecao: %v", err)
+	}
+	if fetched.CompletedAt != nil {
+		t.Errorf("esperava completed_at nulo no repositorio/DTO, obteve %s", *fetched.CompletedAt)
+	}
+}
+
+func TestInspectionUseCase_UpdateStatus_InvalidTransitions(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+
+	created, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  2,
+	})
+	if err != nil {
+		t.Fatalf("falha ao criar inspecao: %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "completed",
+	})
+	if err != nil {
+		t.Fatalf("falha ao completar: %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "canceled",
+	})
+	if !errors.Is(err, domain.ErrInvalidStatusTransition) {
+		t.Fatalf("esperava ErrInvalidStatusTransition ao tentar cancelar inspecao completed, obteve %v", err)
+	}
+
+	canceledIns, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "FAL",
+		Platform:    "P2",
+		DoorNumber:  5,
+	})
+	if err != nil {
+		t.Fatalf("falha ao criar inspecao: %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), canceledIns.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "canceled",
+	})
+	if err != nil {
+		t.Fatalf("falha ao cancelar inspecao: %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), canceledIns.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "in_progress",
+	})
+	if !errors.Is(err, domain.ErrInvalidStatusTransition) {
+		t.Fatalf("esperava ErrInvalidStatusTransition ao tentar reabrir inspecao canceled, obteve %v", err)
+	}
+
+	_, err = uc.UpdateStatus(context.Background(), canceledIns.ID, usecase.UpdateInspectionStatusInputDTO{
+		Status: "completed",
+	})
+	if !errors.Is(err, domain.ErrInvalidStatusTransition) {
+		t.Fatalf("esperava ErrInvalidStatusTransition ao tentar completar inspecao canceled, obteve %v", err)
+	}
+}

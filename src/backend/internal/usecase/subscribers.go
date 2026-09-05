@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
@@ -12,10 +11,15 @@ type CacheInvalidator interface {
 	Invalidate()
 }
 
+type EventLogger interface {
+	Warn(msg string, args ...any)
+	Info(msg string, args ...any)
+}
+
 func RegisterEventSubscribers(
 	bus port.EventBus,
 	cache CacheInvalidator,
-	logger *slog.Logger,
+	logger EventLogger,
 ) {
 	bus.Subscribe("DoorRiskDetected", func(ctx context.Context, e domain.Event) error {
 		evt, ok := e.(domain.DoorRiskDetectedEvent)
@@ -25,11 +29,11 @@ func RegisterEventSubscribers(
 
 		if logger != nil {
 			logger.Warn("alerta de risco critico de falha detectado pela ia",
-				slog.String("event", "DoorRiskDetected"),
-				slog.String("run_id", evt.RunID),
-				slog.String("station", evt.StationCode),
-				slog.String("platform", evt.Platform),
-				slog.Int("door", evt.DoorNumber),
+				"event", "DoorRiskDetected",
+				"run_id", evt.RunID,
+				"station", evt.StationCode,
+				"platform", evt.Platform,
+				"door", evt.DoorNumber,
 			)
 		}
 		return nil
@@ -43,10 +47,10 @@ func RegisterEventSubscribers(
 			evt, ok := e.(domain.PredictionRunCompletedEvent)
 			if ok {
 				logger.Info("rodada de predicao concluida",
-					slog.String("event", "PredictionRunCompleted"),
-					slog.String("run_id", evt.RunID),
-					slog.Int("evaluated", evt.TotalEvaluated),
-					slog.Int("at_risk", evt.TotalAtRisk),
+					"event", "PredictionRunCompleted",
+					"run_id", evt.RunID,
+					"evaluated", evt.TotalEvaluated,
+					"at_risk", evt.TotalAtRisk,
 				)
 			}
 		}

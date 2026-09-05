@@ -127,8 +127,11 @@ func TestRespondDomainError_ValidationErrors(t *testing.T) {
 	r.GET("/validation-no-doors", func(c *gin.Context) {
 		httpAdapter.RespondDomainError(c, domain.ErrNoActiveDoors)
 	})
+	r.GET("/validation-transition", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidStatusTransition)
+	})
 
-	for _, path := range []string{"/validation-platform", "/validation-login", "/validation-station", "/validation-door-id", "/validation-no-doors"} {
+	for _, path := range []string{"/validation-platform", "/validation-login", "/validation-station", "/validation-door-id", "/validation-no-doors", "/validation-transition"} {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		if w.Code != http.StatusBadRequest {

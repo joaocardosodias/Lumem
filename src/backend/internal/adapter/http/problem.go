@@ -72,7 +72,8 @@ func RespondDomainError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrInspectionIDRequired),
 		errors.Is(err, domain.ErrOrderTypeRequired),
 		errors.Is(err, domain.ErrMaintenanceStationRequired),
-		errors.Is(err, domain.ErrStartTimestampRequired):
+		errors.Is(err, domain.ErrStartTimestampRequired),
+		errors.Is(err, domain.ErrInvalidStatusTransition):
 		RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Falha de Validacao", err.Error())
 	default:
 		RespondProblem(c, http.StatusInternalServerError, "ERR_INTERNAL_SERVER", "Erro Interno", err.Error())

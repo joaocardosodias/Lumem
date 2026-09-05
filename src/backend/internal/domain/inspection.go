@@ -14,6 +14,7 @@ var (
 	ErrInvalidPriority         = errors.New("prioridade invalida (use: low, normal, high, critical)")
 	ErrInvalidInspectionStatus = errors.New("status invalido (use: pending, in_progress, completed, canceled)")
 	ErrInspectionIDRequired    = errors.New("id da inspecao e obrigatorio")
+	ErrInvalidStatusTransition = errors.New("transicao de status invalida")
 )
 
 type Inspection struct {
@@ -70,10 +71,32 @@ func NewInspection(id string, predictionID *string, stationCode, platform string
 	}, nil
 }
 
+func canTransitionInspectionStatus(current, next string) bool {
+	if current == "" || current == next {
+		return true
+	}
+	switch current {
+	case "pending":
+		return next == "in_progress" || next == "completed" || next == "canceled"
+	case "in_progress":
+		return next == "completed" || next == "pending" || next == "canceled"
+	case "completed":
+		return next == "in_progress" || next == "pending"
+	case "canceled":
+		return false
+	default:
+		return false
+	}
+}
+
 func (i *Inspection) UpdateStatus(status, notes string) (*time.Time, error) {
 	status = strings.ToLower(strings.TrimSpace(status))
 	if status != "pending" && status != "in_progress" && status != "completed" && status != "canceled" {
 		return nil, ErrInvalidInspectionStatus
+	}
+
+	if !canTransitionInspectionStatus(i.Status, status) {
+		return nil, ErrInvalidStatusTransition
 	}
 
 	i.Status = status
@@ -81,13 +104,15 @@ func (i *Inspection) UpdateStatus(status, notes string) (*time.Time, error) {
 		i.Notes = strings.TrimSpace(notes)
 	}
 
-	var completedAt *time.Time
 	if status == "completed" {
-		now := time.Now()
-		completedAt = &now
-		i.CompletedAt = completedAt
+		if i.CompletedAt == nil {
+			now := time.Now()
+			i.CompletedAt = &now
+		}
+	} else {
+		i.CompletedAt = nil
 	}
 
 	i.UpdatedAt = time.Now()
-	return completedAt, nil
+	return i.CompletedAt, nil
 }
