@@ -69,6 +69,27 @@ func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([
 	return items, nil
 }
 
+type mockUOWStore struct {
+	predRepo port.PredictionRepository
+	insRepo  port.InspectionRepository
+}
+
+func (s *mockUOWStore) Predictions() port.PredictionRepository   { return s.predRepo }
+func (s *mockUOWStore) Inspections() port.InspectionRepository   { return s.insRepo }
+func (s *mockUOWStore) Maintenances() port.MaintenanceRepository { return nil }
+func (s *mockUOWStore) Alarms() port.AlarmRepository             { return nil }
+func (s *mockUOWStore) Uploads() port.UploadRepository           { return nil }
+
+type mockUnitOfWork struct {
+	called bool
+	store  *mockUOWStore
+}
+
+func (u *mockUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
+	u.called = true
+	return fn(u.store)
+}
+
 func TestDashboardUseCase_GetSummary(t *testing.T) {
 	dashRepo := &mockDashboardRepo{
 		summary: &domain.DashboardSummary{
@@ -80,7 +101,8 @@ func TestDashboardUseCase_GetSummary(t *testing.T) {
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
+	uow := &mockUnitOfWork{store: &mockUOWStore{}}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
 
 	res, err := uc.GetSummary(context.Background())
 	if err != nil {
@@ -108,7 +130,8 @@ func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
+	uow := &mockUnitOfWork{store: &mockUOWStore{}}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
 
 	res, err := uc.GetDoorTimeline(context.Background(), 4)
 	if err != nil {
@@ -135,7 +158,8 @@ func TestDashboardUseCase_GetStationDoorsStatus(t *testing.T) {
 	predRepo := &mockPredictionRepo{}
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
+	uow := &mockUnitOfWork{store: &mockUOWStore{}}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
 
 	items, err := uc.GetStationDoorsStatus(context.Background(), "FAL")
 	if err != nil {
@@ -156,13 +180,17 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 	dashRepo := &mockDashboardRepo{}
 	predRepo := &mockPredictionRepo{
 		doors: []domain.Door{
-			{ID: 1, Platform: "P1", DoorNumber: 1},
-			{ID: 7, Platform: "P1", DoorNumber: 7},
+			{ID: 1, StationCode: "FAL", Platform: "P1", DoorNumber: 1},
+			{ID: 7, StationCode: "FAL", Platform: "P1", DoorNumber: 7},
 		},
 	}
+	insRepo := newMockInspectionRepo()
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
+	uow := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: predRepo, insRepo: insRepo},
+	}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
 
 	run, err := uc.TriggerPredictions(context.Background(), 7)
 	if err != nil {
@@ -180,27 +208,14 @@ func TestDashboardUseCase_TriggerPredictions(t *testing.T) {
 	if len(bus.published) < 2 {
 		t.Errorf("esperava pelo menos 2 eventos publicados (DoorRiskDetected + PredictionRunCompleted), obteve %d", len(bus.published))
 	}
-}
 
-type mockUOWStore struct {
-	predRepo port.PredictionRepository
-	insRepo  port.InspectionRepository
-}
-
-func (s *mockUOWStore) Predictions() port.PredictionRepository   { return s.predRepo }
-func (s *mockUOWStore) Inspections() port.InspectionRepository   { return s.insRepo }
-func (s *mockUOWStore) Maintenances() port.MaintenanceRepository { return nil }
-func (s *mockUOWStore) Alarms() port.AlarmRepository             { return nil }
-func (s *mockUOWStore) Uploads() port.UploadRepository           { return nil }
-
-type mockUnitOfWork struct {
-	called bool
-	store  *mockUOWStore
-}
-
-func (u *mockUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
-	u.called = true
-	return fn(u.store)
+	inspections, err := insRepo.List(context.Background(), 10, 0, "")
+	if err != nil {
+		t.Fatalf("falha ao listar inspecoes: %v", err)
+	}
+	if len(inspections) != 1 {
+		t.Errorf("esperava 1 inspecao gerada para porta com risco, obteve %d", len(inspections))
+	}
 }
 
 func TestDashboardUseCase_TriggerPredictions_WithUnitOfWork(t *testing.T) {
@@ -272,7 +287,8 @@ func TestDashboardUseCase_TriggerPredictions_NoActiveDoors(t *testing.T) {
 	predRepo := &mockPredictionRepo{doors: []domain.Door{}}
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus)
+	uow := &mockUnitOfWork{store: &mockUOWStore{}}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
 
 	_, err := uc.TriggerPredictions(context.Background(), 7)
 	if !errors.Is(err, domain.ErrNoActiveDoors) {
@@ -285,7 +301,8 @@ func TestDashboardUseCase_GetLatestPredictions_NoPredictions(t *testing.T) {
 	mockNotFoundRepo := &mockPredictionRepoNotFound{}
 	ml := &mockMLClient{}
 	bus := &mockEventBus{}
-	ucNotFound := usecase.NewDashboardUseCase(dashRepo, mockNotFoundRepo, ml, bus)
+	uow := &mockUnitOfWork{store: &mockUOWStore{}}
+	ucNotFound := usecase.NewDashboardUseCase(dashRepo, mockNotFoundRepo, ml, bus, uow)
 
 	_, err := ucNotFound.GetLatestPredictions(context.Background())
 	if !errors.Is(err, domain.ErrNoPredictions) {

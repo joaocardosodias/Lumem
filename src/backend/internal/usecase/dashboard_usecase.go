@@ -19,13 +19,13 @@ func NewDashboardUseCase(
 	predRepo port.PredictionRepository,
 	mlClient port.MLClient,
 	eventBus port.EventBus,
-	uow ...port.UnitOfWork,
+	uow port.UnitOfWork,
 ) *DashboardUseCase {
 	return &DashboardUseCase{
 		summaryUC:     NewGetDashboardSummaryUseCase(dashRepo),
 		timelineUC:    NewGetDoorTimelineUseCase(dashRepo),
 		statusUC:      NewGetStationDoorsStatusUseCase(dashRepo),
-		triggerPredUC: NewTriggerPredictionsUseCase(predRepo, mlClient, eventBus, uow...),
+		triggerPredUC: NewTriggerPredictionsUseCase(predRepo, mlClient, eventBus, uow),
 		latestPredUC:  NewGetLatestPredictionsUseCase(predRepo),
 	}
 }

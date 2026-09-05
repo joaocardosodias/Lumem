@@ -20,17 +20,13 @@ func NewTriggerPredictionsUseCase(
 	predRepo port.PredictionRepository,
 	mlClient port.MLClient,
 	eventBus port.EventBus,
-	uow ...port.UnitOfWork,
+	uow port.UnitOfWork,
 ) *TriggerPredictionsUseCase {
-	var u port.UnitOfWork
-	if len(uow) > 0 {
-		u = uow[0]
-	}
 	return &TriggerPredictionsUseCase{
 		predRepo: predRepo,
 		mlClient: mlClient,
 		eventBus: eventBus,
-		uow:      u,
+		uow:      uow,
 	}
 }
 
@@ -75,42 +71,36 @@ func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays in
 		predictedItems[i].RunID = runID
 	}
 
-	if uc.uow != nil {
-		err := uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
-			if err := store.Predictions().SaveRun(ctx, run, predictedItems); err != nil {
-				return err
-			}
-			for _, p := range predictedItems {
-				if p.WillFail {
-					notes := "Ordem gerada automaticamente pela IA (Rodada #" + run.ID + ")"
-					predID := p.ID
-					ins, err := domain.NewInspection(
-						uuid.New().String(),
-						&predID,
-						p.StationCode,
-						p.Platform,
-						p.DoorNumber,
-						"",
-						"critical",
-						notes,
-					)
-					if err != nil {
-						return err
-					}
-					if err := store.Inspections().Create(ctx, ins); err != nil {
-						return err
-					}
+	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+		if err := store.Predictions().SaveRun(ctx, run, predictedItems); err != nil {
+			return err
+		}
+		for _, p := range predictedItems {
+			if p.WillFail {
+				notes := "Ordem gerada automaticamente pela IA (Rodada #" + run.ID + ")"
+				predID := p.ID
+				ins, err := domain.NewInspection(
+					uuid.New().String(),
+					&predID,
+					p.StationCode,
+					p.Platform,
+					p.DoorNumber,
+					"",
+					"critical",
+					notes,
+				)
+				if err != nil {
+					return err
+				}
+				if err := store.Inspections().Create(ctx, ins); err != nil {
+					return err
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
 		}
-	} else {
-		if err := uc.predRepo.SaveRun(ctx, run, predictedItems); err != nil {
-			return nil, err
-		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	itemsDTO := make([]PredictionItemOutputDTO, 0, len(predictedItems))
