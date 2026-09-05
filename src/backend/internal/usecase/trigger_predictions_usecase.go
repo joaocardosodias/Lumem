@@ -83,9 +83,10 @@ func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays in
 			for _, p := range predictedItems {
 				if p.WillFail {
 					notes := "Ordem gerada automaticamente pela IA (Rodada #" + run.ID + ")"
+					predID := p.ID
 					ins, err := domain.NewInspection(
 						uuid.New().String(),
-						&run.ID,
+						&predID,
 						p.StationCode,
 						p.Platform,
 						p.DoorNumber,

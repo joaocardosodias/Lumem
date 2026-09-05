@@ -2,12 +2,10 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
-	"github.com/google/uuid"
 )
 
 type CacheInvalidator interface {
@@ -16,7 +14,6 @@ type CacheInvalidator interface {
 
 func RegisterEventSubscribers(
 	bus port.EventBus,
-	insRepo port.InspectionRepository,
 	cache CacheInvalidator,
 	logger *slog.Logger,
 ) {
@@ -24,42 +21,6 @@ func RegisterEventSubscribers(
 		evt, ok := e.(domain.DoorRiskDetectedEvent)
 		if !ok {
 			return nil
-		}
-
-		if insRepo != nil {
-			existing, _ := insRepo.List(ctx, 50, 0, "")
-			alreadyExists := false
-			for _, item := range existing {
-				if item.PredictionID != nil && *item.PredictionID == evt.RunID && item.StationCode == evt.StationCode && item.DoorNumber == evt.DoorNumber {
-					alreadyExists = true
-					break
-				}
-			}
-			if !alreadyExists {
-				notes := fmt.Sprintf("Ordem gerada automaticamente pela IA (Rodada #%s)", evt.RunID)
-				ins, err := domain.NewInspection(
-					uuid.New().String(),
-					&evt.RunID,
-					evt.StationCode,
-					evt.Platform,
-					evt.DoorNumber,
-					"",
-					"critical",
-					notes,
-				)
-				if err != nil {
-					if logger != nil {
-						logger.Error("falha ao instanciar inspecao de dominio", slog.String("error", err.Error()))
-					}
-					return err
-				}
-				if err := insRepo.Create(ctx, ins); err != nil {
-					if logger != nil {
-						logger.Error("falha ao persistir inspecao automatica", slog.String("error", err.Error()))
-					}
-					return err
-				}
-			}
 		}
 
 		if logger != nil {

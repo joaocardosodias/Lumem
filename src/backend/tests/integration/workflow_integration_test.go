@@ -22,6 +22,7 @@ import (
 	"github.com/g04/backend/internal/adapter/storage"
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -424,6 +425,26 @@ func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]
 	return items, nil
 }
 
+type intUOWStore struct {
+	predRepo  port.PredictionRepository
+	insRepo   port.InspectionRepository
+	maintRepo port.MaintenanceRepository
+	alarmRepo port.AlarmRepository
+}
+
+func (s *intUOWStore) Predictions() port.PredictionRepository   { return s.predRepo }
+func (s *intUOWStore) Inspections() port.InspectionRepository   { return s.insRepo }
+func (s *intUOWStore) Maintenances() port.MaintenanceRepository { return s.maintRepo }
+func (s *intUOWStore) Alarms() port.AlarmRepository             { return s.alarmRepo }
+
+type intUnitOfWork struct {
+	store *intUOWStore
+}
+
+func (u *intUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
+	return fn(u.store)
+}
+
 func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	gin.SetMode(gin.TestMode)
 	jwtSecret := "segredo-super-seguro-de-teste-de-integracao-123"
@@ -436,8 +457,17 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	dashRepo := &intDashboardRepo{store: store}
 	predRepo := &intPredictionRepo{store: store}
 
+	uow := &intUnitOfWork{
+		store: &intUOWStore{
+			predRepo:  predRepo,
+			insRepo:   insRepo,
+			maintRepo: maintRepo,
+			alarmRepo: alarmRepo,
+		},
+	}
+
 	bus := eventbus.NewInMemoryEventBus(nil)
-	usecase.RegisterEventSubscribers(bus, insRepo, nil, nil)
+	usecase.RegisterEventSubscribers(bus, nil, nil)
 
 	ingestionStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()
@@ -452,7 +482,7 @@ func setupCompleteWorkflowApp() (*gin.Engine, *inMemoryStore) {
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, syncRunner)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
-	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient, bus)
+	dashUC := usecase.NewDashboardUseCase(dashRepo, predRepo, mlClient, bus, uow)
 
 	authHandler := httpAdapter.NewAuthHandler(loginUC)
 	uploadHandler := httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC)
@@ -643,7 +673,11 @@ SP04-6-PSD-PIN-P2-PP08,PIN,8,LACO ABERTO,10,2026-09-03 14:10:00
 	_ = json.Unmarshal(inspListW.Body.Bytes(), &inspListResp)
 
 	if inspListResp.Total != 1 || inspListResp.Data[0].Priority != "critical" {
-		t.Fatalf("etapa 7 falhou: inspecao critica nao gerada pelo subscriber do event bus: %+v", inspListResp)
+		t.Fatalf("etapa 7 falhou: inspecao critica automatica nao gerada: %+v", inspListResp)
+	}
+
+	if inspListResp.Data[0].PredictionID == nil || *inspListResp.Data[0].PredictionID == "" {
+		t.Fatalf("etapa 7 falhou: prediction_id da inspecao deve estar preenchido: %+v", inspListResp.Data[0])
 	}
 
 	autoInspectionID := inspListResp.Data[0].ID

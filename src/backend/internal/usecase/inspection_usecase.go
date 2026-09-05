@@ -27,6 +27,7 @@ type UpdateInspectionStatusInputDTO struct {
 
 type InspectionOutputDTO struct {
 	ID           string
+	PredictionID *string
 	StationCode  string
 	Platform     string
 	DoorNumber   int
@@ -121,6 +122,7 @@ func (uc *InspectionUseCase) GetByID(ctx context.Context, id string) (*Inspectio
 func toInspectionDTO(ins *domain.Inspection) *InspectionOutputDTO {
 	return &InspectionOutputDTO{
 		ID:           ins.ID,
+		PredictionID: ins.PredictionID,
 		StationCode:  ins.StationCode,
 		Platform:     ins.Platform,
 		DoorNumber:   ins.DoorNumber,

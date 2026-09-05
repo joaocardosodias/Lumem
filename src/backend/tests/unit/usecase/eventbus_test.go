@@ -67,12 +67,11 @@ func TestEventBus_PublishAndSubscribe(t *testing.T) {
 	}
 }
 
-func TestSubscribers_AutoInspectionOnDoorRisk(t *testing.T) {
+func TestSubscribers_DoorRiskAlertReceived(t *testing.T) {
 	bus := eventbus.NewInMemoryEventBus(nil)
-	insRepo := newMockInspectionRepo()
 	cache := &mockCacheInvalidator{}
 
-	usecase.RegisterEventSubscribers(bus, insRepo, cache, nil)
+	usecase.RegisterEventSubscribers(bus, cache, nil)
 
 	err := bus.PublishSync(context.Background(), domain.DoorRiskDetectedEvent{
 		RunID:       "run-123",
@@ -84,28 +83,13 @@ func TestSubscribers_AutoInspectionOnDoorRisk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("erro ao publicar evento: %v", err)
 	}
-
-	inspections, err := insRepo.List(context.Background(), 10, 0, "")
-	if err != nil {
-		t.Fatalf("erro ao listar inspecoes: %v", err)
-	}
-
-	if len(inspections) != 1 {
-		t.Fatalf("esperava 1 inspecao gerada automaticamente, obteve %d", len(inspections))
-	}
-
-	ins := inspections[0]
-	if ins.StationCode != "PIN" || ins.DoorNumber != 8 || ins.Priority != "critical" {
-		t.Errorf("dados da inspecao incorretos: %+v", ins)
-	}
 }
 
 func TestSubscribers_CacheInvalidationOnPredictionRun(t *testing.T) {
 	bus := eventbus.NewInMemoryEventBus(nil)
-	insRepo := newMockInspectionRepo()
 	cache := &mockCacheInvalidator{}
 
-	usecase.RegisterEventSubscribers(bus, insRepo, cache, nil)
+	usecase.RegisterEventSubscribers(bus, cache, nil)
 
 	_ = bus.PublishSync(context.Background(), domain.PredictionRunCompletedEvent{
 		RunID:       "run-10",

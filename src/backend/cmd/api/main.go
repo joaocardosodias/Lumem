@@ -117,7 +117,7 @@ func main() {
 		logger.Info("reconciliacao de uploads pendentes executada com sucesso")
 	}
 
-	usecase.RegisterEventSubscribers(bus, insRepo, cachedDashRepo, logger)
+	usecase.RegisterEventSubscribers(bus, cachedDashRepo, logger)
 
 	ingestionStorage := storage.NewLocalTempStorage()
 	alarmParser := parser.NewDefaultAlarmParser()

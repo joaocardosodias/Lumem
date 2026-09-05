@@ -27,11 +27,12 @@ func (r *PostgresInspectionRepository) Create(ctx context.Context, ins *domain.I
 	}
 
 	query := `
-		INSERT INTO inspections (id, station_code, platform, door_number, scheduled_for, priority, status, notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO inspections (id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		ins.ID,
+		ins.PredictionID,
 		ins.StationCode,
 		ins.Platform,
 		ins.DoorNumber,
@@ -62,7 +63,7 @@ func (r *PostgresInspectionRepository) UpdateStatus(ctx context.Context, id stri
 
 func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
 	query := `
-		SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+		SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
 		FROM inspections
 		WHERE id = $1
 	`
@@ -75,6 +76,7 @@ func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (
 
 	err := row.Scan(
 		&ins.ID,
+		&ins.PredictionID,
 		&ins.StationCode,
 		&ins.Platform,
 		&ins.DoorNumber,
@@ -119,7 +121,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 
 	if statusFilter != "" {
 		query = `
-			SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
 			FROM inspections
 			WHERE status = $1
 			ORDER BY created_at DESC LIMIT $2 OFFSET $3
@@ -127,7 +129,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 		args = []any{statusFilter, limit, offset}
 	} else {
 		query = `
-			SELECT id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
 			FROM inspections
 			ORDER BY created_at DESC LIMIT $1 OFFSET $2
 		`
@@ -149,6 +151,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 
 		err := rows.Scan(
 			&ins.ID,
+			&ins.PredictionID,
 			&ins.StationCode,
 			&ins.Platform,
 			&ins.DoorNumber,

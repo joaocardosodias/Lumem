@@ -27,6 +27,7 @@ type UpdateInspectionStatusRequest struct {
 
 type InspectionResponse struct {
 	ID           string    `json:"id"`
+	PredictionID *string   `json:"prediction_id,omitempty"`
 	StationCode  string    `json:"station_code"`
 	Platform     string    `json:"platform"`
 	DoorNumber   int       `json:"door_number"`
@@ -56,6 +57,7 @@ func toInspectionResponse(dto *usecase.InspectionOutputDTO) InspectionResponse {
 
 	return InspectionResponse{
 		ID:           dto.ID,
+		PredictionID: dto.PredictionID,
 		StationCode:  dto.StationCode,
 		Platform:     dto.Platform,
 		DoorNumber:   dto.DoorNumber,
