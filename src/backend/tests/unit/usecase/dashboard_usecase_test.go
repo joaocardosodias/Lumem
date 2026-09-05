@@ -317,3 +317,47 @@ type mockPredictionRepoNotFound struct {
 func (m *mockPredictionRepoNotFound) GetLatestRun(ctx context.Context) (*domain.PredictionRun, error) {
 	return nil, domain.ErrNoPredictions
 }
+
+type failingSyncEventBus struct {
+	mockEventBus
+	publishSyncCalls int
+}
+
+func (f *failingSyncEventBus) PublishSync(ctx context.Context, event domain.Event) error {
+	f.publishSyncCalls++
+	return errors.New("falha no publish sync")
+}
+
+func TestDashboardUseCase_TriggerPredictions_AsyncEventPublishingDoesNotFail(t *testing.T) {
+	dashRepo := &mockDashboardRepo{}
+	predRepo := &mockPredictionRepo{
+		doors: []domain.Door{
+			{ID: 7, StationCode: "FAL", Platform: "P1", DoorNumber: 7},
+		},
+	}
+	insRepo := newMockInspectionRepo()
+	ml := &mockMLClient{}
+	bus := &failingSyncEventBus{}
+	uow := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: predRepo, insRepo: insRepo},
+	}
+
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, bus, uow)
+
+	run, err := uc.TriggerPredictions(context.Background(), 7)
+	if err != nil {
+		t.Fatalf("esperava sucesso na inferencia mesmo com falha no publish sync: %v", err)
+	}
+
+	if run == nil {
+		t.Fatalf("esperava retorno da rodada de predicao preenchido")
+	}
+
+	if bus.publishSyncCalls != 0 {
+		t.Errorf("esperava 0 chamadas a PublishSync, obteve %d", bus.publishSyncCalls)
+	}
+
+	if len(bus.published) < 2 {
+		t.Errorf("esperava eventos publicados assincronamente via Publish, obteve %d", len(bus.published))
+	}
+}

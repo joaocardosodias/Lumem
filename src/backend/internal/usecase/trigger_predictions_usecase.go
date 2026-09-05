@@ -115,15 +115,13 @@ func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays in
 		})
 
 		if p.WillFail && uc.eventBus != nil {
-			if err := uc.eventBus.PublishSync(ctx, domain.DoorRiskDetectedEvent{
+			uc.eventBus.Publish(ctx, domain.DoorRiskDetectedEvent{
 				RunID:       run.ID,
 				StationCode: p.StationCode,
 				Platform:    p.Platform,
 				DoorNumber:  p.DoorNumber,
 				Timestamp:   now,
-			}); err != nil {
-				return nil, err
-			}
+			})
 		}
 	}
 
