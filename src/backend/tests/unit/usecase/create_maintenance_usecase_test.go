@@ -87,3 +87,62 @@ func TestCreateMaintenanceUseCase_MissingStationCode(t *testing.T) {
 		t.Fatalf("esperava erro para station_code vazio")
 	}
 }
+
+type errMaintRepo struct {
+	mockMaintRepo
+	createErr error
+	listErr   error
+}
+
+func (r *errMaintRepo) Create(ctx context.Context, event *domain.MaintenanceEvent) error {
+	if r.createErr != nil {
+		return r.createErr
+	}
+	return r.mockMaintRepo.Create(ctx, event)
+}
+
+func (r *errMaintRepo) List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceEvent, error) {
+	if r.listErr != nil {
+		return nil, r.listErr
+	}
+	return r.mockMaintRepo.List(ctx, limit, offset)
+}
+
+func TestCreateMaintenanceUseCase_RepoCreateError(t *testing.T) {
+	repo := &errMaintRepo{createErr: domain.ErrMaintenanceNotFound}
+	uc := usecase.NewCreateMaintenanceUseCase(repo)
+
+	input := usecase.CreateMaintenanceInputDTO{
+		OrderType:      "ZM01",
+		StationCode:    "FAL",
+		StartTimestamp: "2026-09-02 14:30:00",
+	}
+
+	_, err := uc.Execute(context.Background(), input)
+	if err != domain.ErrMaintenanceNotFound {
+		t.Fatalf("expected ErrMaintenanceNotFound, got %v", err)
+	}
+}
+
+func TestCreateMaintenanceUseCase_List(t *testing.T) {
+	repo := &mockMaintRepo{}
+	uc := usecase.NewCreateMaintenanceUseCase(repo)
+
+	_, _ = uc.Execute(context.Background(), usecase.CreateMaintenanceInputDTO{
+		OrderType:      "ZM01",
+		StationCode:    "FAL",
+		StartTimestamp: "2026-09-02 14:30:00",
+	})
+
+	list, err := uc.List(context.Background(), 10, 0)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("expected 1 maintenance event in list, got %v", err)
+	}
+
+	errRepo := &errMaintRepo{listErr: domain.ErrMaintenanceNotFound}
+	errUc := usecase.NewCreateMaintenanceUseCase(errRepo)
+	_, err = errUc.List(context.Background(), 10, 0)
+	if err != domain.ErrMaintenanceNotFound {
+		t.Fatalf("expected list error, got %v", err)
+	}
+}

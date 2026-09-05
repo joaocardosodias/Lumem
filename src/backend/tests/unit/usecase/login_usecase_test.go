@@ -171,3 +171,51 @@ func TestLoginUseCase_EmptyFields(t *testing.T) {
 		t.Fatalf("esperava ErrEmailPasswordRequired, mas obteve %v", err)
 	}
 }
+
+type errTokenGen struct{}
+
+func (e *errTokenGen) Generate(claims map[string]any, duration time.Duration) (string, error) {
+	return "", errors.New("jwt signing failed")
+}
+
+type errUserRepo struct {
+	mockUserRepo
+	err error
+}
+
+func (r *errUserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.mockUserRepo.GetByEmail(ctx, email)
+}
+
+func TestLoginUseCase_DBError(t *testing.T) {
+	repo := &errUserRepo{err: errors.New("db connection failure")}
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	tokenGen := security.NewJWTTokenGenerator("secret-key")
+
+	uc := usecase.NewLoginUseCase(repo, hasher, tokenGen, time.Hour)
+	_, err := uc.Execute(context.Background(), usecase.LoginInputDTO{Email: "a@b.com", Password: "pass"})
+	if err == nil || err.Error() != "db connection failure" {
+		t.Fatalf("expected db connection failure, got %v", err)
+	}
+}
+
+func TestLoginUseCase_TokenGenError(t *testing.T) {
+	repo := newMockUserRepo()
+	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
+	hash, _ := hasher.Hash("pass")
+	repo.users["valid@test.com"] = &domain.User{
+		ID:           "u1",
+		Email:        "valid@test.com",
+		PasswordHash: hash,
+		IsActive:     true,
+	}
+
+	uc := usecase.NewLoginUseCase(repo, hasher, &errTokenGen{}, time.Hour)
+	_, err := uc.Execute(context.Background(), usecase.LoginInputDTO{Email: "valid@test.com", Password: "pass"})
+	if err == nil || err.Error() != "jwt signing failed" {
+		t.Fatalf("expected jwt signing failed, got %v", err)
+	}
+}

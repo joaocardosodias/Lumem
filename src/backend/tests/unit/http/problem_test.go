@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -142,6 +143,75 @@ func TestRespondDomainError_ValidationErrors(t *testing.T) {
 		_ = json.Unmarshal(w.Body.Bytes(), &p)
 		if p.Code != "ERR_VALIDATION" {
 			t.Errorf("esperava code ERR_VALIDATION para %s, obteve %s", path, p.Code)
+		}
+	}
+}
+
+func TestRespondDomainError_RemainingErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	r.GET("/unauth", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidCredentials)
+	})
+	r.GET("/unavailable", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrPredictionServiceUnavailable)
+	})
+	r.GET("/user-not-found", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrUserNotFound)
+	})
+	r.GET("/inactive", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrUserInactive)
+	})
+	r.GET("/validation-extra", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrStationCodeRequired)
+	})
+	r.GET("/validation-door-num", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidDoorNumber)
+	})
+	r.GET("/validation-priority", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidPriority)
+	})
+	r.GET("/validation-status", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInvalidInspectionStatus)
+	})
+	r.GET("/validation-insp-id", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrInspectionIDRequired)
+	})
+	r.GET("/validation-order-type", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrOrderTypeRequired)
+	})
+	r.GET("/validation-maint-station", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrMaintenanceStationRequired)
+	})
+	r.GET("/validation-start-ts", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, domain.ErrStartTimestampRequired)
+	})
+	r.GET("/internal", func(c *gin.Context) {
+		httpAdapter.RespondDomainError(c, errors.New("something totally unexpected"))
+	})
+
+	expectedStatuses := map[string]int{
+		"/unauth":                   http.StatusUnauthorized,
+		"/unavailable":              http.StatusServiceUnavailable,
+		"/user-not-found":           http.StatusNotFound,
+		"/inactive":                 http.StatusForbidden,
+		"/validation-extra":         http.StatusBadRequest,
+		"/validation-door-num":      http.StatusBadRequest,
+		"/validation-priority":      http.StatusBadRequest,
+		"/validation-status":        http.StatusBadRequest,
+		"/validation-insp-id":       http.StatusBadRequest,
+		"/validation-order-type":    http.StatusBadRequest,
+		"/validation-maint-station": http.StatusBadRequest,
+		"/validation-start-ts":      http.StatusBadRequest,
+		"/internal":                 http.StatusInternalServerError,
+	}
+
+	for path, expectedCode := range expectedStatuses {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != expectedCode {
+			t.Fatalf("expected status %d for %s, got %d", expectedCode, path, w.Code)
 		}
 	}
 }

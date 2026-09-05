@@ -302,3 +302,120 @@ func TestInspectionUseCase_UpdateStatus_InvalidTransitions(t *testing.T) {
 		t.Fatalf("esperava ErrInvalidStatusTransition ao tentar completar inspecao canceled, obteve %v", err)
 	}
 }
+
+type errInspectionRepo struct {
+	mockInspectionRepo
+	createErr       error
+	getErr          error
+	updateStatusErr error
+	listErr         error
+}
+
+func (r *errInspectionRepo) Create(ctx context.Context, ins *domain.Inspection) error {
+	if r.createErr != nil {
+		return r.createErr
+	}
+	return r.mockInspectionRepo.Create(ctx, ins)
+}
+
+func (r *errInspectionRepo) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
+	if r.getErr != nil {
+		return nil, r.getErr
+	}
+	return r.mockInspectionRepo.GetByID(ctx, id)
+}
+
+func (r *errInspectionRepo) UpdateStatus(ctx context.Context, id string, status, notes string, completedAt *time.Time) error {
+	if r.updateStatusErr != nil {
+		return r.updateStatusErr
+	}
+	return r.mockInspectionRepo.UpdateStatus(ctx, id, status, notes, completedAt)
+}
+
+func (r *errInspectionRepo) List(ctx context.Context, limit, offset int, statusFilter string) ([]*domain.Inspection, error) {
+	if r.listErr != nil {
+		return nil, r.listErr
+	}
+	return r.mockInspectionRepo.List(ctx, limit, offset, statusFilter)
+}
+
+func TestInspectionUseCase_ErrorPaths(t *testing.T) {
+	errRepo := &errInspectionRepo{createErr: errors.New("db create error")}
+	uc := usecase.NewInspectionUseCase(errRepo)
+
+	_, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "FAL",
+		Platform:    "P1",
+		DoorNumber:  1,
+	})
+	if err == nil || err.Error() != "db create error" {
+		t.Fatalf("expected db create error")
+	}
+
+	_, err = uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "",
+	})
+	if !errors.Is(err, domain.ErrStationCodeRequired) {
+		t.Fatalf("expected ErrStationCodeRequired")
+	}
+
+	if _, err := uc.UpdateStatus(context.Background(), "  ", usecase.UpdateInspectionStatusInputDTO{}); !errors.Is(err, domain.ErrInspectionIDRequired) {
+		t.Fatalf("expected ErrInspectionIDRequired on empty id")
+	}
+
+	errRepo.getErr = domain.ErrInspectionNotFound
+	if _, err := uc.UpdateStatus(context.Background(), "some-id", usecase.UpdateInspectionStatusInputDTO{}); !errors.Is(err, domain.ErrInspectionNotFound) {
+		t.Fatalf("expected ErrInspectionNotFound")
+	}
+
+	if _, err := uc.GetByID(context.Background(), ""); !errors.Is(err, domain.ErrInspectionIDRequired) {
+		t.Fatalf("expected ErrInspectionIDRequired on GetByID with empty id")
+	}
+
+	if _, err := uc.GetByID(context.Background(), "some-id"); !errors.Is(err, domain.ErrInspectionNotFound) {
+		t.Fatalf("expected ErrInspectionNotFound on GetByID")
+	}
+
+	errRepo.listErr = errors.New("list failed")
+	if _, err := uc.List(context.Background(), 10, 0, ""); err == nil {
+		t.Fatalf("expected list error")
+	}
+
+	validRepo := newMockInspectionRepo()
+	validUC := usecase.NewInspectionUseCase(validRepo)
+	created, _ := validUC.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "FAL",
+		Platform:    "P1",
+		DoorNumber:  1,
+	})
+
+	failingUpdateRepo := &errInspectionRepo{
+		mockInspectionRepo: *validRepo,
+		updateStatusErr:    errors.New("update status error"),
+	}
+	failingUpdateUC := usecase.NewInspectionUseCase(failingUpdateRepo)
+	if _, err := failingUpdateUC.UpdateStatus(context.Background(), created.ID, usecase.UpdateInspectionStatusInputDTO{Status: "in_progress"}); err == nil {
+		t.Fatalf("expected update status error")
+	}
+}
+
+func TestInspectionUseCase_List_Success(t *testing.T) {
+	repo := newMockInspectionRepo()
+	uc := usecase.NewInspectionUseCase(repo)
+	_, err := uc.Create(context.Background(), usecase.CreateInspectionInputDTO{
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  2,
+	})
+	if err != nil {
+		t.Fatalf("falha ao criar: %v", err)
+	}
+
+	list, err := uc.List(context.Background(), 10, 0, "")
+	if err != nil {
+		t.Fatalf("falha ao listar: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("esperava 1 item na lista, obteve %d", len(list))
+	}
+}

@@ -91,3 +91,23 @@ func TestAuthMiddleware_WrongSecret(t *testing.T) {
 		t.Fatalf("esperava status 401 para assinatura adulterada, obteve %d", w.Code)
 	}
 }
+
+func TestAuthMiddleware_UnexpectedSigningMethod(t *testing.T) {
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+		"sub":   "usr_123",
+		"email": "teste@motiva.com.br",
+		"role":  "operator",
+	})
+	tokenStr, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+
+	router := setupTestRouter("secret")
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenStr)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("esperava status 401 para metodo none, obteve %d", w.Code)
+	}
+}

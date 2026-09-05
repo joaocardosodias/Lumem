@@ -21,15 +21,9 @@ func NewUploadHandler(ingestAlarmsUC *usecase.IngestAlarmsUseCase, ingestMaintUC
 }
 
 func (h *UploadHandler) UploadAlarms(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
+	file, fileHeader, err := c.Request.FormFile("file")
 	if err != nil {
 		RespondProblem(c, http.StatusBadRequest, "ERR_MISSING_FILE", "Arquivo Obrigatorio", "O envio do arquivo no campo multipart 'file' e obrigatorio.")
-		return
-	}
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		RespondProblem(c, http.StatusInternalServerError, "ERR_FILE_OPEN", "Falha ao Abrir Arquivo", err.Error())
 		return
 	}
 	defer file.Close()
@@ -48,20 +42,14 @@ func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 }
 
 func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
+	file, fileHeader, err := c.Request.FormFile("file")
 	if err != nil {
 		RespondProblem(c, http.StatusBadRequest, "ERR_MISSING_FILE", "Arquivo Obrigatorio", "O envio do arquivo no campo multipart 'file' e obrigatorio.")
 		return
 	}
+	defer file.Close()
 
 	orderType := c.DefaultPostForm("order_type", "")
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		RespondProblem(c, http.StatusInternalServerError, "ERR_FILE_OPEN", "Falha ao Abrir Arquivo", err.Error())
-		return
-	}
-	defer file.Close()
 
 	uploadID, err := h.ingestMaintUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file, orderType)
 	if err != nil {

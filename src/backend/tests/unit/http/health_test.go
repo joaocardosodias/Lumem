@@ -70,3 +70,36 @@ func TestHealthHandler_Ready_DatabaseDown(t *testing.T) {
 		t.Fatalf("esperava status 503 quando banco esta inativo, obteve %d", w.Code)
 	}
 }
+
+func TestHealthHandler_Ready_NilDatabase(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := httpAdapter.NewHealthHandler(nil)
+
+	r := gin.New()
+	r.GET("/healthz/ready", h.Ready)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz/ready", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("esperava status 503 quando banco e nil, obteve %d", w.Code)
+	}
+}
+
+func TestHealthHandler_Ready_StorageDown(t *testing.T) {
+	t.Setenv("TMPDIR", "/nonexistent_dir_for_test")
+	gin.SetMode(gin.TestMode)
+	h := httpAdapter.NewHealthHandler(&mockHealthyDB{})
+
+	r := gin.New()
+	r.GET("/healthz/ready", h.Ready)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz/ready", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("esperava status 503 quando storage temporario falha, obteve %d", w.Code)
+	}
+}

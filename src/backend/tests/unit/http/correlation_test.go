@@ -3,6 +3,7 @@ package http_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -93,5 +94,62 @@ func TestStructuredLoggerMiddleware_LogsJSON(t *testing.T) {
 
 	if !bytes.Contains(logBuf.Bytes(), []byte("latency_ms")) {
 		t.Fatalf("log deveria conter campo latency_ms, obteve: %s", logOutput)
+	}
+}
+
+func TestGetRequestID_NilAndEmpty(t *testing.T) {
+	if got := httpAdapter.GetRequestID(nil); got != "" {
+		t.Fatalf("esperava vazio para context nil, obteve %s", got)
+	}
+	if got := httpAdapter.GetRequestID(context.Background()); got != "" {
+		t.Fatalf("esperava vazio para context sem valor, obteve %s", got)
+	}
+}
+
+func TestStructuredLoggerMiddleware_WarnAndErrorLogs(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var logBuf bytes.Buffer
+	handler := slog.NewJSONHandler(&logBuf, nil)
+	logger := slog.New(handler)
+
+	r := gin.New()
+	r.Use(httpAdapter.CorrelationIDMiddleware())
+	r.Use(httpAdapter.StructuredLoggerMiddleware(logger))
+
+	r.GET("/client-err", func(c *gin.Context) {
+		_ = c.Error(errors.New("client error occurred"))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad request"})
+	})
+	r.GET("/server-err", func(c *gin.Context) {
+		_ = c.Error(errors.New("server error occurred"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+	})
+
+	req1 := httptest.NewRequest(http.MethodGet, "/client-err?foo=bar", nil)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+
+	if w1.Code != http.StatusBadRequest {
+		t.Fatalf("esperava status 400, obteve %d", w1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/server-err", nil)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusInternalServerError {
+		t.Fatalf("esperava status 500, obteve %d", w2.Code)
+	}
+
+	logStr := logBuf.String()
+	if !bytes.Contains(logBuf.Bytes(), []byte("requisicao finalizada com erro de cliente")) {
+		t.Fatalf("esperava log de warn para 400, obteve %s", logStr)
+	}
+	if !bytes.Contains(logBuf.Bytes(), []byte("requisicao finalizada com erro de servidor")) {
+		t.Fatalf("esperava log de error para 500, obteve %s", logStr)
+	}
+	if !bytes.Contains(logBuf.Bytes(), []byte("foo=bar")) {
+		t.Fatalf("esperava query no log, obteve %s", logStr)
 	}
 }

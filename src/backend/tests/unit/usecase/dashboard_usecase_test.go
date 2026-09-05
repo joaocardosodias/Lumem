@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
@@ -11,47 +12,75 @@ import (
 )
 
 type mockDashboardRepo struct {
-	summary  *domain.DashboardSummary
-	timeline *domain.DoorTimeline
-	status   []*domain.DoorStatusItem
+	summary     *domain.DashboardSummary
+	timeline    *domain.DoorTimeline
+	status      []*domain.DoorStatusItem
+	summaryErr  error
+	timelineErr error
+	statusErr   error
 }
 
 func (m *mockDashboardRepo) GetSummary(ctx context.Context) (*domain.DashboardSummary, error) {
+	if m.summaryErr != nil {
+		return nil, m.summaryErr
+	}
 	return m.summary, nil
 }
 
 func (m *mockDashboardRepo) GetDoorTimeline(ctx context.Context, doorID int) (*domain.DoorTimeline, error) {
+	if m.timelineErr != nil {
+		return nil, m.timelineErr
+	}
 	return m.timeline, nil
 }
 
 func (m *mockDashboardRepo) GetStationDoorsStatus(ctx context.Context, stationCode string) ([]*domain.DoorStatusItem, error) {
+	if m.statusErr != nil {
+		return nil, m.statusErr
+	}
 	return m.status, nil
 }
 
 type mockPredictionRepo struct {
-	latestRun *domain.PredictionRun
-	doors     []domain.Door
+	latestRun  *domain.PredictionRun
+	doors      []domain.Door
+	runErr     error
+	doorsErr   error
+	saveRunErr error
 }
 
 func (m *mockPredictionRepo) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
+	if m.saveRunErr != nil {
+		return m.saveRunErr
+	}
 	run.ID = "run-test-123"
 	m.latestRun = run
 	return nil
 }
 
 func (m *mockPredictionRepo) GetLatestRun(ctx context.Context) (*domain.PredictionRun, error) {
+	if m.runErr != nil {
+		return nil, m.runErr
+	}
 	return m.latestRun, nil
 }
 
 func (m *mockPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
+	if m.doorsErr != nil {
+		return nil, m.doorsErr
+	}
 	return m.doors, nil
 }
 
 type mockMLClient struct {
 	items []domain.PredictionItem
+	err   error
 }
 
 func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
 	if m.items != nil {
 		return m.items, nil
 	}
@@ -96,6 +125,9 @@ func TestDashboardUseCase_GetSummary(t *testing.T) {
 			TotalDoors:         526,
 			DoorsAtRisk:        12,
 			PendingInspections: 3,
+			CriticalStations: []domain.StationRiskSummary{
+				{StationCode: "FAL", DoorsAtRisk: 5},
+			},
 		},
 	}
 	predRepo := &mockPredictionRepo{}
@@ -115,6 +147,7 @@ func TestDashboardUseCase_GetSummary(t *testing.T) {
 }
 
 func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
+	now := time.Now()
 	dashRepo := &mockDashboardRepo{
 		timeline: &domain.DoorTimeline{
 			Door: domain.Door{
@@ -123,8 +156,18 @@ func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
 				DoorNumber: 4,
 				SAPTag:     "SP04-6-PSD-FAL-PLT1-PP04",
 			},
-			StationName: "Faria Lima",
-			WillFail:    true,
+			StationName:     "Faria Lima",
+			WillFail:        true,
+			LastEvaluatedAt: &now,
+			RecentAlarms: []*domain.Alarm{
+				{ID: "alm-1", Tag: "TAG-1", AlarmType: "CRITICAL", DurationSeconds: 10, EventTimestamp: "2026-09-05 10:00:00"},
+			},
+			Maintenances: []*domain.MaintenanceEvent{
+				{ID: "mnt-1", OrderType: "CORRETIVA", SAPOrderNumber: "ORD-1", StartTimestamp: "2026-09-05 10:00:00", DurationHours: 1.0, Description: "Fix", Source: "manual"},
+			},
+			Inspections: []*domain.Inspection{
+				{ID: "ins-1", Status: "completed", Priority: "high", ScheduledFor: "2026-09-05 10:00:00", CompletedAt: &now},
+			},
 		},
 	}
 	predRepo := &mockPredictionRepo{}
@@ -310,6 +353,36 @@ func TestDashboardUseCase_GetLatestPredictions_NoPredictions(t *testing.T) {
 	}
 }
 
+func TestDashboardUseCase_GetLatestPredictions_Success(t *testing.T) {
+	predRepo := &mockPredictionRepo{
+		latestRun: &domain.PredictionRun{
+			ID:                  "run-latest-1",
+			HorizonDays:         15,
+			TotalDoorsEvaluated: 10,
+			TotalDoorsAtRisk:    1,
+			CreatedAt:           time.Now(),
+			Predictions: []domain.PredictionItem{
+				{
+					ID:          "p-1",
+					RunID:       "run-latest-1",
+					StationCode: "HIG",
+					Platform:    "P1",
+					DoorNumber:  3,
+					WillFail:    true,
+				},
+			},
+		},
+	}
+	uc := usecase.NewGetLatestPredictionsUseCase(predRepo)
+	res, err := uc.Execute(context.Background())
+	if err != nil {
+		t.Fatalf("esperava sucesso, obteve %v", err)
+	}
+	if res.ID != "run-latest-1" || len(res.Predictions) != 1 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+}
+
 type mockPredictionRepoNotFound struct {
 	mockPredictionRepo
 }
@@ -359,5 +432,107 @@ func TestDashboardUseCase_TriggerPredictions_AsyncEventPublishingDoesNotFail(t *
 
 	if len(bus.published) < 2 {
 		t.Errorf("esperava eventos publicados assincronamente via Publish, obteve %d", len(bus.published))
+	}
+}
+
+func TestDashboardUseCase_GetLatestPredictions_Error(t *testing.T) {
+	predRepo := &mockPredictionRepo{runErr: errors.New("db error")}
+	uc := usecase.NewGetLatestPredictionsUseCase(predRepo)
+
+	_, err := uc.Execute(context.Background())
+	if err == nil {
+		t.Fatalf("expected error from GetLatestPredictions")
+	}
+}
+
+func TestGetDashboardSummaryUseCase_Error(t *testing.T) {
+	dashRepo := &mockDashboardRepo{summaryErr: errors.New("summary failed")}
+	uc := usecase.NewGetDashboardSummaryUseCase(dashRepo)
+
+	_, err := uc.Execute(context.Background())
+	if err == nil {
+		t.Fatalf("expected summary error")
+	}
+}
+
+func TestGetDoorTimelineUseCase_Error(t *testing.T) {
+	dashRepo := &mockDashboardRepo{timelineErr: errors.New("timeline failed")}
+	uc := usecase.NewGetDoorTimelineUseCase(dashRepo)
+
+	_, err := uc.Execute(context.Background(), 1)
+	if err == nil {
+		t.Fatalf("expected timeline error")
+	}
+}
+
+func TestGetStationDoorsStatusUseCase_Error(t *testing.T) {
+	dashRepo := &mockDashboardRepo{statusErr: errors.New("station status failed")}
+	uc := usecase.NewGetStationDoorsStatusUseCase(dashRepo)
+
+	_, err := uc.Execute(context.Background(), "FAL")
+	if err == nil {
+		t.Fatalf("expected station status error")
+	}
+}
+
+func TestTriggerPredictionsUseCase_Errors(t *testing.T) {
+	errRepo := &mockPredictionRepo{doorsErr: errors.New("doors error")}
+	uow := &mockUnitOfWork{}
+	uc1 := usecase.NewTriggerPredictionsUseCase(errRepo, &mockMLClient{}, nil, uow)
+	if _, err := uc1.Execute(context.Background(), 0); err == nil {
+		t.Fatalf("expected error on list doors")
+	}
+
+	emptyRepo := &mockPredictionRepo{doors: []domain.Door{}}
+	uc2 := usecase.NewTriggerPredictionsUseCase(emptyRepo, &mockMLClient{}, nil, uow)
+	if _, err := uc2.Execute(context.Background(), 7); !errors.Is(err, domain.ErrNoActiveDoors) {
+		t.Fatalf("expected ErrNoActiveDoors")
+	}
+
+	doors := []domain.Door{{StationCode: "FAL", Platform: "P1", DoorNumber: 1}}
+	validRepo := &mockPredictionRepo{doors: doors}
+	errML := &mockMLClient{err: errors.New("ml failed")}
+	uc3 := usecase.NewTriggerPredictionsUseCase(validRepo, errML, nil, uow)
+	if _, err := uc3.Execute(context.Background(), 7); err == nil {
+		t.Fatalf("expected error on predict batch")
+	}
+
+	saveErrRepo := &mockPredictionRepo{doors: doors, saveRunErr: errors.New("save failed")}
+	uowSaveErr := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: saveErrRepo, insRepo: newMockInspectionRepo()},
+	}
+	uc4 := usecase.NewTriggerPredictionsUseCase(saveErrRepo, &mockMLClient{}, nil, uowSaveErr)
+	if _, err := uc4.Execute(context.Background(), 7); err == nil {
+		t.Fatalf("expected error on save run")
+	}
+
+	invalidItemRepo := &mockPredictionRepo{doors: doors}
+	uowNormal := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: invalidItemRepo, insRepo: newMockInspectionRepo()},
+	}
+	invalidML := &mockMLClient{
+		items: []domain.PredictionItem{
+			{StationCode: "FAL", Platform: "INVALID_PLATFORM", DoorNumber: 1, WillFail: true},
+		},
+	}
+	uc5 := usecase.NewTriggerPredictionsUseCase(invalidItemRepo, invalidML, nil, uowNormal)
+	if _, err := uc5.Execute(context.Background(), 7); err == nil {
+		t.Fatalf("expected error on invalid inspection creation")
+	}
+
+	uc6 := usecase.NewTriggerPredictionsUseCase(invalidItemRepo, &mockMLClient{
+		items: []domain.PredictionItem{
+			{StationCode: "FAL", Platform: "P1", DoorNumber: 1, WillFail: true},
+		},
+	}, nil, &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: invalidItemRepo, insRepo: &failingInspectionRepo{InspectionRepository: newMockInspectionRepo()}},
+	})
+	if _, err := uc6.Execute(context.Background(), 7); err == nil {
+		t.Fatalf("expected error on inspection repository failure")
+	}
+
+	ucNilBus := usecase.NewTriggerPredictionsUseCase(invalidItemRepo, &mockMLClient{}, nil, uowNormal)
+	if _, err := ucNilBus.Execute(context.Background(), 7); err != nil {
+		t.Fatalf("expected success with nil event bus, got %v", err)
 	}
 }

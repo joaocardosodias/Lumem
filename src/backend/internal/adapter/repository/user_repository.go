@@ -95,13 +95,17 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *domain.User) 
 		INSERT INTO users (id, name, email, password_hash, role, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
+	isActive := 0
+	if user.IsActive {
+		isActive = 1
+	}
 	_, err := r.db.ExecContext(ctx, query,
 		user.ID,
 		user.Name,
 		user.Email,
 		user.PasswordHash,
 		user.Role,
-		user.IsActive,
+		isActive,
 		user.CreatedAt,
 		user.UpdatedAt,
 	)

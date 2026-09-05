@@ -2,6 +2,9 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
+	"log/slog"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -88,8 +91,9 @@ func TestSubscribers_DoorRiskAlertReceived(t *testing.T) {
 func TestSubscribers_CacheInvalidationOnPredictionRun(t *testing.T) {
 	bus := eventbus.NewInMemoryEventBus(nil)
 	cache := &mockCacheInvalidator{}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	usecase.RegisterEventSubscribers(bus, cache, nil)
+	usecase.RegisterEventSubscribers(bus, cache, logger)
 
 	_ = bus.PublishSync(context.Background(), domain.PredictionRunCompletedEvent{
 		RunID:       "run-10",
@@ -101,4 +105,70 @@ func TestSubscribers_CacheInvalidationOnPredictionRun(t *testing.T) {
 	if !cache.invalidated {
 		t.Fatalf("esperava que o cache tivesse sido invalidado pelo subscriber")
 	}
+
+	_ = bus.PublishSync(context.Background(), domain.DoorRiskDetectedEvent{
+		RunID:       "run-11",
+		StationCode: "FAL",
+		Platform:    "P1",
+		DoorNumber:  4,
+		Timestamp:   time.Now(),
+	})
+
+	_ = bus.PublishSync(context.Background(), dummyTestEvent{name: "DoorRiskDetected"})
+	_ = bus.PublishSync(context.Background(), dummyTestEvent{name: "PredictionRunCompleted"})
+}
+
+func TestSubscribers_FileUploadCompleted(t *testing.T) {
+	bus := eventbus.NewInMemoryEventBus(nil)
+	cache := &mockCacheInvalidator{}
+
+	usecase.RegisterEventSubscribers(bus, cache, nil)
+
+	_ = bus.PublishSync(context.Background(), domain.FileUploadCompletedEvent{
+		UploadID:  "up-123",
+		Timestamp: time.Now(),
+	})
+
+	if !cache.invalidated {
+		t.Fatalf("expected cache invalidation on file upload completed")
+	}
+}
+
+type dummyTestEvent struct {
+	name string
+}
+
+func (d dummyTestEvent) EventName() string { return d.name }
+func (d dummyTestEvent) OccurredAt() time.Time { return time.Now() }
+
+func TestInMemoryEventBus_EdgeBranches(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	bus := eventbus.NewInMemoryEventBus(logger)
+
+	bus.Publish(context.Background(), dummyTestEvent{name: "NoHandlers"})
+
+	if err := bus.PublishSync(context.Background(), dummyTestEvent{name: "NoHandlers"}); err != nil {
+		t.Fatalf("esperava nil ao publicar sync sem handlers: %v", err)
+	}
+
+	bus.Subscribe("PanicTopic", func(ctx context.Context, e domain.Event) error {
+		panic("erro simulado em subscriber")
+	})
+
+	bus.Subscribe("ErrorTopic", func(ctx context.Context, e domain.Event) error {
+		return errors.New("falha no handler async")
+	})
+
+	bus.Subscribe("SyncErrorTopic", func(ctx context.Context, e domain.Event) error {
+		return errors.New("falha sync")
+	})
+
+	bus.Publish(context.Background(), dummyTestEvent{name: "PanicTopic"})
+	bus.Publish(context.Background(), dummyTestEvent{name: "ErrorTopic"})
+
+	if err := bus.PublishSync(context.Background(), dummyTestEvent{name: "SyncErrorTopic"}); err == nil {
+		t.Fatalf("esperava erro no PublishSync")
+	}
+
+	time.Sleep(50 * time.Millisecond)
 }

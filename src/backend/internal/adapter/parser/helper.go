@@ -37,12 +37,10 @@ func readRowsFromReader(r io.Reader, format string) ([][]string, error) {
 		}
 		defer f.Close()
 
-		sheetName := f.GetSheetName(0)
-		if sheetName == "" {
-			sheetList := f.GetSheetList()
-			if len(sheetList) > 0 {
-				sheetName = sheetList[0]
-			}
+		sheetList := f.GetSheetList()
+		var sheetName string
+		if len(sheetList) > 0 {
+			sheetName = sheetList[0]
 		}
 
 		return f.GetRows(sheetName)

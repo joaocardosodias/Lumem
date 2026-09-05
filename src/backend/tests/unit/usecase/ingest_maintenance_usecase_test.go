@@ -293,3 +293,36 @@ func TestIngestMaintenanceUseCase_ConcurrentDuplicateUploads(t *testing.T) {
 		t.Fatalf("esperava exatamente 1 upload persistido no repositorio, obteve %d", len(uploadRepo.uploads))
 	}
 }
+
+func TestIngestMaintenanceUseCase_CreateUploadGeneralError(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	uploadRepo := newMockAlarmRepo()
+	uploadRepo.createUploadErr = errors.New("db error")
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	logger := &mockLogger{}
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, logger)
+
+	_, err := uc.StartIngestion(context.Background(), "test.csv", strings.NewReader("data"), "")
+	if err == nil || err.Error() != "db error" {
+		t.Fatalf("expected db error")
+	}
+}
+
+func TestIngestMaintenanceUseCase_CreateUploadDuplicateError(t *testing.T) {
+	maintRepo := &mockMaintRepo{}
+	uploadRepo := newMockAlarmRepo()
+	uploadRepo.createUploadErr = domain.ErrDuplicateUpload
+	maintStorage := storage.NewLocalTempStorage()
+	maintParser := parser.NewDefaultMaintenanceParser()
+	runner := scheduler.NewSyncJobRunner()
+	uow := &mockMaintUOW{store: &mockMaintStore{maintRepo: maintRepo, uploadRepo: uploadRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, maintStorage, maintParser, runner, uow, nil)
+
+	_, err := uc.StartIngestion(context.Background(), "test.csv", strings.NewReader("data"), "ZM01")
+	if !errors.Is(err, domain.ErrDuplicateUpload) {
+		t.Fatalf("expected ErrDuplicateUpload")
+	}
+}

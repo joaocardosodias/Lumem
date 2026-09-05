@@ -51,4 +51,16 @@ func TestCircuitBreaker_StateTransitions(t *testing.T) {
 	if cb.State() != mlclient.StateClosed {
 		t.Fatalf("esperava StateClosed apos sucesso em half-open, obteve %v", cb.State())
 	}
+
+	_ = cb.Execute(func() error { return errors.New("falha 1") })
+	_ = cb.Execute(func() error { return errors.New("falha 2") })
+	if cb.State() != mlclient.StateOpen {
+		t.Fatalf("esperava StateOpen")
+	}
+	time.Sleep(60 * time.Millisecond)
+
+	_ = cb.Execute(func() error { return errors.New("falha em half-open") })
+	if cb.State() != mlclient.StateOpen {
+		t.Fatalf("esperava retorno imediato a StateOpen apos falha em half-open, obteve %v", cb.State())
+	}
 }

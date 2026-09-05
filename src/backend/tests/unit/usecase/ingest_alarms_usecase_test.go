@@ -19,11 +19,14 @@ import (
 )
 
 type mockAlarmRepo struct {
-	mu               sync.Mutex
-	uploads          map[string]*domain.FileUpload
-	alarms           []*domain.Alarm
-	failBatchInsert  bool
-	failUpdateUpload bool
+	mu                 sync.Mutex
+	uploads            map[string]*domain.FileUpload
+	alarms             []*domain.Alarm
+	failBatchInsert    bool
+	failUpdateUpload   bool
+	createUploadErr    error
+	getUploadByHashErr error
+	getUploadByIDErr   error
 }
 
 func newMockAlarmRepo() *mockAlarmRepo {
@@ -60,6 +63,9 @@ func (m *mockLogger) Info(msg string, args ...any) {
 func (m *mockAlarmRepo) CreateUpload(ctx context.Context, upload *domain.FileUpload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.createUploadErr != nil {
+		return m.createUploadErr
+	}
 	if upload.FileHash != "" {
 		for _, u := range m.uploads {
 			if u.FileHash == upload.FileHash {
@@ -87,6 +93,9 @@ func (m *mockAlarmRepo) UpdateUpload(ctx context.Context, upload *domain.FileUpl
 func (m *mockAlarmRepo) GetUploadByID(ctx context.Context, id string) (*domain.FileUpload, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getUploadByIDErr != nil {
+		return nil, m.getUploadByIDErr
+	}
 	u, exists := m.uploads[id]
 	if !exists {
 		return nil, domain.ErrUploadNotFound
@@ -97,6 +106,9 @@ func (m *mockAlarmRepo) GetUploadByID(ctx context.Context, id string) (*domain.F
 func (m *mockAlarmRepo) GetUploadByHash(ctx context.Context, hash string) (*domain.FileUpload, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getUploadByHashErr != nil {
+		return nil, m.getUploadByHashErr
+	}
 	for _, u := range m.uploads {
 		if u.FileHash == hash {
 			return u, nil
@@ -428,5 +440,52 @@ SP04-6-PSD-FAL-P1-PP04,FAL,4,FALHA DE COMUNICACAO,12,2025-11-14 06:35:28
 
 	if len(repo.uploads) != 1 {
 		t.Fatalf("esperava exatamente 1 upload persistido no repositorio, obteve %d", len(repo.uploads))
+	}
+}
+
+func TestIngestAlarmsUseCase_CreateUploadGeneralError(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.createUploadErr = errors.New("db write failure")
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	logger := &mockLogger{}
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, logger)
+
+	_, err := uc.StartIngestion(context.Background(), "test.csv", strings.NewReader("some data"))
+	if err == nil || err.Error() != "db write failure" {
+		t.Fatalf("expected db write failure, got %v", err)
+	}
+}
+
+func TestIngestAlarmsUseCase_CreateUploadDuplicateError_HashFound(t *testing.T) {
+	repo := newMockAlarmRepo()
+	existingID := uuid.New().String()
+	hash := "somehash"
+	repo.uploads[existingID] = &domain.FileUpload{ID: existingID, FileHash: hash}
+	repo.createUploadErr = domain.ErrDuplicateUpload
+
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
+
+	id, err := uc.StartIngestion(context.Background(), "test.xlsx", strings.NewReader("excel data"))
+	if !errors.Is(err, domain.ErrDuplicateUpload) || id != "" {
+		t.Fatalf("expected ErrDuplicateUpload, got id=%s, err=%v", id, err)
+	}
+}
+
+func TestIngestAlarmsUseCase_GetStatus_Error(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.getUploadByIDErr = errors.New("not found")
+	alarmStorage := storage.NewLocalTempStorage()
+	alarmParser := parser.NewDefaultAlarmParser()
+	runner := scheduler.NewSyncJobRunner()
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, alarmStorage, alarmParser, runner, &mockAlarmUOW{repo: repo}, nil)
+
+	_, err := uc.GetStatus(context.Background(), "invalid-id")
+	if err == nil {
+		t.Fatalf("expected error on GetStatus")
 	}
 }

@@ -46,10 +46,7 @@ func (r *PostgresAlarmRepository) CreateUpload(ctx context.Context, upload *doma
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return domain.ErrDuplicateUpload
-		}
-		if strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "idx_file_uploads_hash") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+		if (errors.As(err, &pgErr) && pgErr.Code == "23505") || strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "idx_file_uploads_hash") {
 			return domain.ErrDuplicateUpload
 		}
 		return err

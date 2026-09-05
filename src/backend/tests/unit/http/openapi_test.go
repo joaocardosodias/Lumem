@@ -70,3 +70,19 @@ func TestDocsHandler_SwaggerUI(t *testing.T) {
 		t.Fatalf("pagina deveria carregar o script SwaggerUIBundle")
 	}
 }
+
+func TestDocsHandler_OpenAPISpec_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := httpAdapter.NewDocsHandler("non-existent-spec-file.json")
+
+	r := gin.New()
+	r.GET("/openapi.json", handler.OpenAPISpec)
+
+	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("esperava status 404 para arquivo inexistente, obteve %d", w.Code)
+	}
+}
