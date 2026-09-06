@@ -50,16 +50,20 @@ type Config struct {
 	OTelWorkerName     string
 }
 
-func (c *Config) Validate() error {
-	if c.Environment == "production" {
-		if c.DBPassword == "" {
-			return errors.New("DB_PASSWORD e obrigatorio em ambiente de producao")
-		}
-		if c.JWTSecret == "" {
-			return errors.New("JWT_SECRET e obrigatorio em ambiente de producao")
-		}
+func (c *Config) validateProduction() error {
+	if c.Environment != "production" {
+		return nil
 	}
+	if c.DBPassword == "" {
+		return errors.New("DB_PASSWORD e obrigatorio em ambiente de producao")
+	}
+	if c.JWTSecret == "" {
+		return errors.New("JWT_SECRET e obrigatorio em ambiente de producao")
+	}
+	return nil
+}
 
+func (c *Config) validateStorage() error {
 	storageDriver := strings.ToLower(strings.TrimSpace(c.StorageDriver))
 	if storageDriver == "" {
 		storageDriver = "local"
@@ -67,36 +71,52 @@ func (c *Config) Validate() error {
 	if storageDriver != "local" && storageDriver != "s3" {
 		return errors.New("STORAGE_DRIVER deve ser local ou s3")
 	}
-	if storageDriver == "s3" {
-		missing := make([]string, 0, 5)
-		required := []struct {
-			name  string
-			value string
-		}{
-			{name: "S3_ENDPOINT", value: c.S3Endpoint},
-			{name: "S3_REGION", value: c.S3Region},
-			{name: "S3_BUCKET", value: c.S3Bucket},
-			{name: "S3_ACCESS_KEY_ID", value: c.S3AccessKeyID},
-			{name: "S3_SECRET_ACCESS_KEY", value: c.S3SecretAccessKey},
-		}
-		for _, field := range required {
-			if strings.TrimSpace(field.value) == "" {
-				missing = append(missing, field.name)
-			}
-		}
-		if len(missing) > 0 {
-			return fmt.Errorf("configuracao S3 incompleta; variaveis obrigatorias: %s", strings.Join(missing, ", "))
+	if storageDriver != "s3" {
+		return nil
+	}
+	missing := make([]string, 0, 5)
+	required := []struct {
+		name  string
+		value string
+	}{
+		{name: "S3_ENDPOINT", value: c.S3Endpoint},
+		{name: "S3_REGION", value: c.S3Region},
+		{name: "S3_BUCKET", value: c.S3Bucket},
+		{name: "S3_ACCESS_KEY_ID", value: c.S3AccessKeyID},
+		{name: "S3_SECRET_ACCESS_KEY", value: c.S3SecretAccessKey},
+	}
+	for _, field := range required {
+		if strings.TrimSpace(field.value) == "" {
+			missing = append(missing, field.name)
 		}
 	}
-	if c.OTelEnabled {
-		if strings.TrimSpace(c.OTelEndpoint) == "" {
-			return errors.New("OTEL_EXPORTER_OTLP_ENDPOINT e obrigatorio quando OTEL_ENABLED=true")
-		}
-		if strings.TrimSpace(c.OTelServiceName) == "" || strings.TrimSpace(c.OTelWorkerName) == "" {
-			return errors.New("OTEL_SERVICE_NAME e OTEL_WORKER_SERVICE_NAME sao obrigatorios quando OTEL_ENABLED=true")
-		}
+	if len(missing) > 0 {
+		return fmt.Errorf("configuracao S3 incompleta; variaveis obrigatorias: %s", strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+func (c *Config) validateTelemetry() error {
+	if !c.OTelEnabled {
+		return nil
+	}
+	if strings.TrimSpace(c.OTelEndpoint) == "" {
+		return errors.New("OTEL_EXPORTER_OTLP_ENDPOINT e obrigatorio quando OTEL_ENABLED=true")
+	}
+	if strings.TrimSpace(c.OTelServiceName) == "" || strings.TrimSpace(c.OTelWorkerName) == "" {
+		return errors.New("OTEL_SERVICE_NAME e OTEL_WORKER_SERVICE_NAME sao obrigatorios quando OTEL_ENABLED=true")
+	}
+	return nil
+}
+
+func (c *Config) Validate() error {
+	if err := c.validateProduction(); err != nil {
+		return err
+	}
+	if err := c.validateStorage(); err != nil {
+		return err
+	}
+	return c.validateTelemetry()
 }
 
 func LoadConfig() *Config {

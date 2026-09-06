@@ -18,9 +18,10 @@ import (
 )
 
 type mockMaintRepo struct {
-	mu              sync.Mutex
-	events          []*domain.MaintenanceEvent
-	failBatchInsert bool
+	mu                   sync.Mutex
+	events               []*domain.MaintenanceEvent
+	failBatchInsert      bool
+	failDeleteByUploadID bool
 }
 
 func (m *mockMaintRepo) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {
@@ -36,6 +37,9 @@ func (m *mockMaintRepo) BatchInsertMaintenance(ctx context.Context, events []*do
 func (m *mockMaintRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.failDeleteByUploadID {
+		return errors.New("falha simulada no banco ao deletar manutencao")
+	}
 	filtered := m.events[:0]
 	for _, e := range m.events {
 		if e.UploadID != uploadID {

@@ -780,3 +780,276 @@ func TestIngestMaintenance_ProcessFileAsync_StorageDeleteError(t *testing.T) {
 		t.Fatalf("esperava warning registrado no logger ao falhar delete")
 	}
 }
+
+func TestIngestAlarms_ProcessJob_And_FailJob(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.uploads["test-upload"] = &domain.FileUpload{ID: "test-upload", Status: "pending"}
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customAlarmParserMock{
+		records: []port.RawAlarmRecord{
+			{
+				Tag:             "SP04-6-PSD-FAL-P1-PP01",
+				StationCode:     "FAL",
+				Platform:        "P1",
+				DoorNumber:      1,
+				AlarmType:       "Falha",
+				DurationSeconds: 10,
+				EventTimestamp:  "2026-09-01 10:00:00",
+			},
+		},
+	}
+	runner := scheduler.NewSyncJobRunner()
+	logger := &mockLogger{}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
+
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, stor, parserMock, runner, uow, logger)
+	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: "test-upload", StorageKey: "key1", FileName: "test.csv"}
+
+	stor.openErr = errors.New("disco com falha")
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "falha ao abrir arquivo") {
+		t.Fatalf("esperava erro transiente de disco, obteve %v", err)
+	}
+
+	stor.openErr = nil
+	parserMock.err = errors.New("sintaxe invalida")
+	repo.getUploadByIDErr = errors.New("falha no banco")
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "registrar falha permanente do upload") {
+		t.Fatalf("esperava erro ao falhar marcacao no banco, obteve %v", err)
+	}
+
+	repo.getUploadByIDErr = nil
+	if err := uc.ProcessJob(context.Background(), job); err != nil {
+		t.Fatalf("esperava sucesso ao encerrar permanente, obteve %v", err)
+	}
+	if repo.uploads["test-upload"].Status != "failed" {
+		t.Fatalf("esperava status failed")
+	}
+
+	parserMock.err = nil
+	repo.uploads["test-upload"].Status = "pending"
+	if err := uc.ProcessJob(context.Background(), job); err != nil {
+		t.Fatalf("esperava sucesso no ProcessJob, obteve %v", err)
+	}
+	if repo.uploads["test-upload"].Status != "completed" {
+		t.Fatalf("esperava status completed")
+	}
+
+	if err := uc.FailJob(context.Background(), job, "falha manual"); err != nil {
+		t.Fatalf("esperava sucesso no FailJob, obteve %v", err)
+	}
+	if repo.uploads["test-upload"].Status != "failed" {
+		t.Fatalf("esperava status failed apos FailJob")
+	}
+
+	repo.getUploadByIDErr = errors.New("falha no banco")
+	if err := uc.FailJob(context.Background(), job, "falha com erro"); err == nil {
+		t.Fatalf("esperava erro no FailJob ao falhar repo")
+	}
+}
+
+func TestIngestMaintenance_ProcessJob_And_FailJob(t *testing.T) {
+	uploadRepo := newMockAlarmRepo()
+	uploadRepo.uploads["maint-upload"] = &domain.FileUpload{ID: "maint-upload", Status: "pending"}
+	maintRepo := &mockMaintRepo{}
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customMaintParserMock{
+		records: []port.RawMaintenanceRecord{
+			{
+				SAPOrderNumber:       "ORD-001",
+				OrderType:            "ZM01",
+				StationCode:          "FAL",
+				InstallationLocation: "PLATAFORMA 1",
+				StartTimestamp:       "2026-09-01 10:00:00",
+				EndTimestamp:         "2026-09-01 11:00:00",
+				DurationHours:        1.0,
+				Description:          "Troca de mola",
+			},
+		},
+	}
+	runner := scheduler.NewSyncJobRunner()
+	logger := &mockLogger{}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: uploadRepo, maintRepo: maintRepo}}
+
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, stor, parserMock, runner, uow, logger)
+	job := port.IngestionJob{Type: port.IngestionJobMaintenance, UploadID: "maint-upload", StorageKey: "key1", FileName: "test.csv"}
+
+	stor.openErr = errors.New("disco com falha")
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "falha ao abrir arquivo") {
+		t.Fatalf("esperava erro transiente de disco, obteve %v", err)
+	}
+
+	stor.openErr = nil
+	parserMock.err = errors.New("sintaxe invalida")
+	uploadRepo.getUploadByIDErr = errors.New("falha no banco")
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "registrar falha permanente do upload") {
+		t.Fatalf("esperava erro ao falhar marcacao no banco, obteve %v", err)
+	}
+
+	uploadRepo.getUploadByIDErr = nil
+	if err := uc.ProcessJob(context.Background(), job); err != nil {
+		t.Fatalf("esperava sucesso ao encerrar permanente, obteve %v", err)
+	}
+	if uploadRepo.uploads["maint-upload"].Status != "failed" {
+		t.Fatalf("esperava status failed")
+	}
+
+	parserMock.err = nil
+	uploadRepo.uploads["maint-upload"].Status = "pending"
+	if err := uc.ProcessJob(context.Background(), job); err != nil {
+		t.Fatalf("esperava sucesso no ProcessJob, obteve %v", err)
+	}
+	if uploadRepo.uploads["maint-upload"].Status != "completed" {
+		t.Fatalf("esperava status completed")
+	}
+
+	if err := uc.FailJob(context.Background(), job, "falha manual"); err != nil {
+		t.Fatalf("esperava sucesso no FailJob, obteve %v", err)
+	}
+	if uploadRepo.uploads["maint-upload"].Status != "failed" {
+		t.Fatalf("esperava status failed apos FailJob")
+	}
+
+	uploadRepo.getUploadByIDErr = errors.New("falha no banco")
+	if err := uc.FailJob(context.Background(), job, "falha com erro"); err == nil {
+		t.Fatalf("esperava erro no FailJob ao falhar repo")
+	}
+}
+
+type mockJobQueue struct {
+	enqueueErr error
+	enqueued   []port.IngestionJob
+}
+
+func (q *mockJobQueue) Enqueue(_ context.Context, _ *domain.FileUpload, job port.IngestionJob) error {
+	if q.enqueueErr != nil {
+		return q.enqueueErr
+	}
+	q.enqueued = append(q.enqueued, job)
+	return nil
+}
+
+func TestIngestAlarms_WithQueue_SuccessAndError(t *testing.T) {
+	repo := newMockAlarmRepo()
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customAlarmParserMock{}
+	queue := &mockJobQueue{}
+	logger := &mockLogger{}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
+
+	uc := usecase.NewIngestAlarmsUseCaseWithQueue(repo, repo, stor, parserMock, queue, uow, logger)
+	id, err := uc.StartIngestion(context.Background(), "alarmes.csv", strings.NewReader("data"))
+	if err != nil || id == "" || len(queue.enqueued) != 1 {
+		t.Fatalf("esperava sucesso ao enfileirar job de alarmes: err=%v id=%s len=%d", err, id, len(queue.enqueued))
+	}
+
+	queue.enqueueErr = errors.New("falha na fila")
+	stor.storeHash = "hash2"
+	stor.storeKey = "key2"
+	_, err = uc.StartIngestion(context.Background(), "alarmes.csv", strings.NewReader("data2"))
+	if err == nil || !strings.Contains(err.Error(), "falha na fila") {
+		t.Fatalf("esperava erro ao enfileirar na fila: %v", err)
+	}
+}
+
+func TestIngestMaintenance_WithQueue_SuccessAndError(t *testing.T) {
+	uploadRepo := newMockAlarmRepo()
+	maintRepo := &mockMaintRepo{}
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customMaintParserMock{}
+	queue := &mockJobQueue{}
+	logger := &mockLogger{}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: uploadRepo, maintRepo: maintRepo}}
+
+	uc := usecase.NewIngestMaintenanceUseCaseWithQueue(maintRepo, uploadRepo, stor, parserMock, queue, uow, logger)
+	id, err := uc.StartIngestion(context.Background(), "manutencao.csv", strings.NewReader("data"), "ZM01")
+	if err != nil || id == "" || len(queue.enqueued) != 1 {
+		t.Fatalf("esperava sucesso ao enfileirar job de manutencao: err=%v id=%s len=%d", err, id, len(queue.enqueued))
+	}
+
+	queue.enqueueErr = errors.New("falha na fila")
+	stor.storeHash = "hash2"
+	stor.storeKey = "key2"
+	_, err = uc.StartIngestion(context.Background(), "manutencao.csv", strings.NewReader("data2"), "ZM01")
+	if err == nil || !strings.Contains(err.Error(), "falha na fila") {
+		t.Fatalf("esperava erro ao enfileirar na fila: %v", err)
+	}
+}
+
+func TestIngestAlarms_ProcessJob_BatchInsertError(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.failBatchInsert = true
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customAlarmParserMock{
+		records: []port.RawAlarmRecord{
+			{
+				Tag:             "SP04-6-PSD-FAL-P1-PP01",
+				StationCode:     "FAL",
+				Platform:        "P1",
+				DoorNumber:      1,
+				AlarmType:       "Falha",
+				DurationSeconds: 10,
+				EventTimestamp:  "2026-09-01 10:00:00",
+			},
+		},
+	}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, stor, parserMock, nil, uow, nil)
+	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: "up-batch-err", StorageKey: "key1", FileName: "alarmes.csv"}
+
+	err := uc.ProcessJob(context.Background(), job)
+	if err == nil || !strings.Contains(err.Error(), "falha ao inserir lote de alarmes") {
+		t.Fatalf("esperava erro ao inserir lote de alarmes, obteve %v", err)
+	}
+}
+
+func TestIngestMaintenance_ProcessJob_DeleteByUploadIDError(t *testing.T) {
+	uploadRepo := newMockAlarmRepo()
+	maintRepo := &mockMaintRepo{failDeleteByUploadID: true}
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customMaintParserMock{
+		records: []port.RawMaintenanceRecord{
+			{
+				SAPOrderNumber: "ORD-001",
+				OrderType:      "ZM01",
+				StationCode:    "FAL",
+				StartTimestamp: "2026-09-01 10:00:00",
+				DurationHours:  1.0,
+			},
+		},
+	}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: uploadRepo, maintRepo: maintRepo}}
+	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, stor, parserMock, nil, uow, nil)
+	job := port.IngestionJob{Type: port.IngestionJobMaintenance, UploadID: "maint-del-err", StorageKey: "key1", FileName: "maint.csv"}
+
+	err := uc.ProcessJob(context.Background(), job)
+	if err == nil || !strings.Contains(err.Error(), "falha ao preparar nova tentativa de manutencao") {
+		t.Fatalf("esperava erro ao deletar tentativa anterior, obteve %v", err)
+	}
+}
+
+func TestIngestAlarms_ProcessJob_DeleteByUploadIDError(t *testing.T) {
+	repo := newMockAlarmRepo()
+	repo.failDeleteByUploadID = true
+	stor := &customStorageMock{storeKey: "key1", storeHash: "hash1"}
+	parserMock := &customAlarmParserMock{
+		records: []port.RawAlarmRecord{
+			{
+				Tag:             "SP04-6-PSD-FAL-P1-PP01",
+				StationCode:     "FAL",
+				Platform:        "P1",
+				DoorNumber:      1,
+				AlarmType:       "Falha",
+				DurationSeconds: 10,
+				EventTimestamp:  "2026-09-01 10:00:00",
+			},
+		},
+	}
+	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
+	uc := usecase.NewIngestAlarmsUseCase(repo, repo, stor, parserMock, nil, uow, nil)
+	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: "alarm-del-err", StorageKey: "key1", FileName: "alarm.csv"}
+
+	err := uc.ProcessJob(context.Background(), job)
+	if err == nil || !strings.Contains(err.Error(), "falha ao preparar nova tentativa de alarmes") {
+		t.Fatalf("esperava erro ao deletar tentativa anterior, obteve %v", err)
+	}
+}

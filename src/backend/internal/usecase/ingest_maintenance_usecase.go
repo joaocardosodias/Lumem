@@ -241,9 +241,6 @@ func (uc *IngestMaintenanceUseCase) deleteStoredFile(ctx context.Context, storag
 	return nil
 }
 
-// ProcessJob processa uma tentativa de ingestao. Erros de infraestrutura sao
-// devolvidos para que a fila possa tentar novamente; arquivos invalidos sao
-// encerrados de forma definitiva.
 func (uc *IngestMaintenanceUseCase) ProcessJob(ctx context.Context, job port.IngestionJob) error {
 	rawRecords, err := uc.readAndParseMaintenance(ctx, job.StorageKey, job.FileName, job.OrderType)
 	if err != nil {

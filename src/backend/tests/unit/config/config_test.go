@@ -82,6 +82,24 @@ func TestConfigValidateTelemetry(t *testing.T) {
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("expected complete telemetry configuration to be valid: %v", err)
 	}
+
+	missingService := &config.Config{
+		OTelEnabled:    true,
+		OTelEndpoint:   "collector:4317",
+		OTelWorkerName: "worker",
+	}
+	if err := missingService.Validate(); err == nil {
+		t.Fatal("expected missing service name to fail validation")
+	}
+
+	missingWorker := &config.Config{
+		OTelEnabled:     true,
+		OTelEndpoint:    "collector:4317",
+		OTelServiceName: "api",
+	}
+	if err := missingWorker.Validate(); err == nil {
+		t.Fatal("expected missing worker name to fail validation")
+	}
 }
 
 func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
@@ -153,5 +171,22 @@ func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
 	cfgFallback := config.LoadConfig()
 	if cfgFallback.MigrationsPath != "src/backend/migrations" {
 		t.Fatalf("expected migrations path src/backend/migrations, got %s", cfgFallback.MigrationsPath)
+	}
+}
+
+func TestConfig_LoadConfig_InvalidRiverNumbers(t *testing.T) {
+	os.Setenv("RIVER_MAX_WORKERS", "invalido")
+	os.Setenv("RIVER_MAX_ATTEMPTS", "invalido")
+	defer func() {
+		os.Unsetenv("RIVER_MAX_WORKERS")
+		os.Unsetenv("RIVER_MAX_ATTEMPTS")
+	}()
+
+	cfg := config.LoadConfig()
+	if cfg.RiverMaxWorkers != 2 {
+		t.Fatalf("esperava fallback RiverMaxWorkers 2, obteve %d", cfg.RiverMaxWorkers)
+	}
+	if cfg.RiverMaxAttempts != 5 {
+		t.Fatalf("esperava fallback RiverMaxAttempts 5, obteve %d", cfg.RiverMaxAttempts)
 	}
 }

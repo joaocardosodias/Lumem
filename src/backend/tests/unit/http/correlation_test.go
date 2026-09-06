@@ -11,6 +11,7 @@ import (
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestCorrelationIDMiddleware_GeneratesNewID(t *testing.T) {
@@ -151,5 +152,40 @@ func TestStructuredLoggerMiddleware_WarnAndErrorLogs(t *testing.T) {
 	}
 	if !bytes.Contains(logBuf.Bytes(), []byte("foo=bar")) {
 		t.Fatalf("esperava query no log, obteve %s", logStr)
+	}
+}
+
+func TestStructuredLoggerMiddleware_WithTraceSpan(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var logBuf bytes.Buffer
+	handler := slog.NewJSONHandler(&logBuf, nil)
+	logger := slog.New(handler)
+
+	r := gin.New()
+	r.Use(httpAdapter.CorrelationIDMiddleware())
+	r.Use(httpAdapter.StructuredLoggerMiddleware(logger))
+
+	r.GET("/traced", func(c *gin.Context) {
+		c.String(http.StatusOK, "traced")
+	})
+
+	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	req := httptest.NewRequest(http.MethodGet, "/traced", nil)
+	req = req.WithContext(trace.ContextWithSpanContext(req.Context(), spanContext))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava status 200, obteve %d", w.Code)
+	}
+	logStr := logBuf.String()
+	if !bytes.Contains(logBuf.Bytes(), []byte("trace_id")) || !bytes.Contains(logBuf.Bytes(), []byte("span_id")) {
+		t.Fatalf("esperava trace_id e span_id no log, obteve: %s", logStr)
 	}
 }

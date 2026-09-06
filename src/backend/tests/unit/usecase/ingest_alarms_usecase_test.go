@@ -19,14 +19,15 @@ import (
 )
 
 type mockAlarmRepo struct {
-	mu                 sync.Mutex
-	uploads            map[string]*domain.FileUpload
-	alarms             []*domain.Alarm
-	failBatchInsert    bool
-	failUpdateUpload   bool
-	createUploadErr    error
-	getUploadByHashErr error
-	getUploadByIDErr   error
+	mu                   sync.Mutex
+	uploads              map[string]*domain.FileUpload
+	alarms               []*domain.Alarm
+	failBatchInsert      bool
+	failDeleteByUploadID bool
+	failUpdateUpload     bool
+	createUploadErr      error
+	getUploadByHashErr   error
+	getUploadByIDErr     error
 }
 
 func newMockAlarmRepo() *mockAlarmRepo {
@@ -130,6 +131,9 @@ func (m *mockAlarmRepo) BatchInsertAlarms(ctx context.Context, alarms []*domain.
 func (m *mockAlarmRepo) DeleteByUploadID(ctx context.Context, uploadID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.failDeleteByUploadID {
+		return errors.New("falha simulada no banco ao deletar alarmes")
+	}
 	filtered := m.alarms[:0]
 	for _, a := range m.alarms {
 		if a.UploadID != uploadID {

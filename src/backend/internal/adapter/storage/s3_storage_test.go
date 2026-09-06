@@ -132,4 +132,48 @@ func TestS3StoragePropagatesClientErrors(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "enviar arquivo para S3") {
 		t.Fatalf("esperava erro contextualizado do S3: %v", err)
 	}
+
+	_, _, err = store.Store(context.Background(), "alarmes.csv", brokenReader{})
+	if err == nil || !strings.Contains(err.Error(), "preparar upload S3") {
+		t.Fatalf("esperava erro ao preparar upload S3: %v", err)
+	}
+
+	client.getErr = errors.New("get falhou")
+	if _, err := store.Open(context.Background(), "arquivo.csv"); err == nil || !strings.Contains(err.Error(), "baixar arquivo do S3") {
+		t.Fatalf("esperava erro contextualizado ao baixar: %v", err)
+	}
+
+	client.deleteErr = errors.New("delete falhou")
+	if err := store.Delete(context.Background(), "arquivo.csv"); err == nil || !strings.Contains(err.Error(), "remover arquivo do S3") {
+		t.Fatalf("esperava erro contextualizado ao deletar: %v", err)
+	}
+}
+
+type brokenReader struct{}
+
+func (brokenReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("falha de leitura")
+}
+
+func TestNewS3Storage(t *testing.T) {
+	_, err := NewS3Storage(context.Background(), S3Config{})
+	if err == nil || !strings.Contains(err.Error(), "configuracao S3 incompleta") {
+		t.Fatalf("esperava erro de configuracao incompleta, obteve: %v", err)
+	}
+
+	cfg := S3Config{
+		Endpoint:        "http://localhost:9000",
+		Region:          "us-east-1",
+		Bucket:          "test-bucket",
+		AccessKeyID:     "test-key",
+		SecretAccessKey: "test-secret",
+		Prefix:          "uploads",
+	}
+	st, err := NewS3Storage(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("esperava sucesso ao criar S3Storage: %v", err)
+	}
+	if st == nil || st.bucket != "test-bucket" || st.prefix != "uploads" {
+		t.Fatalf("estado incorreto do S3Storage: %+v", st)
+	}
 }
