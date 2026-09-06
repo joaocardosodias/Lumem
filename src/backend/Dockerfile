@@ -10,6 +10,7 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app/bin/api cmd/api/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app/bin/worker cmd/worker/main.go
 
 FROM alpine:3.23
 
@@ -20,6 +21,7 @@ RUN apk update && apk upgrade --no-cache && \
     adduser -D -u 10001 appuser
 
 COPY --from=builder /app/bin/api /app/api
+COPY --from=builder /app/bin/worker /app/worker
 COPY --from=builder /app/migrations /app/migrations
 COPY --from=builder /app/docs/openapi.json /app/docs/openapi.json
 

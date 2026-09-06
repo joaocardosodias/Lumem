@@ -20,8 +20,29 @@ type IngestMaintenanceUseCase struct {
 	storage     port.IngestionStorage
 	maintParser port.MaintenanceParser
 	runner      port.JobRunner
+	queue       port.IngestionJobQueue
 	uow         port.UnitOfWork
 	logger      port.Logger
+}
+
+func NewIngestMaintenanceUseCaseWithQueue(
+	maintRepo port.MaintenanceRepository,
+	uploadRepo port.UploadRepository,
+	storage port.IngestionStorage,
+	maintParser port.MaintenanceParser,
+	queue port.IngestionJobQueue,
+	uow port.UnitOfWork,
+	logger port.Logger,
+) *IngestMaintenanceUseCase {
+	return &IngestMaintenanceUseCase{
+		maintRepo:   maintRepo,
+		uploadRepo:  uploadRepo,
+		storage:     storage,
+		maintParser: maintParser,
+		queue:       queue,
+		uow:         uow,
+		logger:      logger,
+	}
 }
 
 func NewIngestMaintenanceUseCase(
@@ -94,13 +115,25 @@ func (uc *IngestMaintenanceUseCase) StartIngestion(ctx context.Context, fileName
 		Status:   "processing",
 	}
 
-	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
-		return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+	job := port.IngestionJob{
+		Type:       port.IngestionJobMaintenance,
+		UploadID:   upload.ID,
+		StorageKey: storageKey,
+		FileName:   fileName,
+		OrderType:  explicitOrderType,
 	}
-
-	uc.runner.Run(func() {
-		uc.processFileAsync(upload.ID, storageKey, fileName, explicitOrderType)
-	})
+	if uc.queue != nil {
+		if err := uc.queue.Enqueue(ctx, upload, job); err != nil {
+			return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+		}
+	} else {
+		if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
+			return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+		}
+		uc.runner.Run(func() {
+			uc.processFileAsync(upload.ID, storageKey, fileName, explicitOrderType)
+		})
+	}
 
 	return upload.ID, nil
 }
@@ -115,26 +148,23 @@ func (uc *IngestMaintenanceUseCase) recordFailure(uploadID, reason, logMsg strin
 	}
 }
 
-func (uc *IngestMaintenanceUseCase) readAndParseMaintenance(ctx context.Context, storageKey, fileName, uploadID, explicitOrderType string) ([]port.RawMaintenanceRecord, bool) {
+func (uc *IngestMaintenanceUseCase) readAndParseMaintenance(ctx context.Context, storageKey, fileName, explicitOrderType string) ([]port.RawMaintenanceRecord, error) {
 	rc, err := uc.storage.Open(ctx, storageKey)
 	if err != nil {
-		uc.recordFailure(uploadID, "falha ao abrir arquivo", "erro ao registrar falha de abertura do upload", err)
-		return nil, false
+		return nil, fmt.Errorf("falha ao abrir arquivo: %w", err)
 	}
 	defer rc.Close()
 
 	rawRecords, err := uc.maintParser.ParseMaintenance(rc, fileName, explicitOrderType)
 	if err != nil {
-		uc.recordFailure(uploadID, "falha ao analisar arquivo", "erro ao registrar falha de parsing do upload", err)
-		return nil, false
+		return nil, permanentIngestionFailure("falha ao analisar arquivo: %w", err)
 	}
 
 	if len(rawRecords) == 0 {
-		uc.recordFailure(uploadID, "arquivo vazio ou sem linhas de dados validas", "erro ao registrar falha de arquivo vazio no upload", nil)
-		return nil, false
+		return nil, permanentIngestionFailure("arquivo vazio ou sem linhas de dados validas")
 	}
 
-	return rawRecords, true
+	return rawRecords, nil
 }
 
 func convertRawMaintenanceEvents(rawRecords []port.RawMaintenanceRecord, uploadID, fileName string) ([]*domain.MaintenanceEvent, int) {
@@ -201,41 +231,78 @@ func finalizeMaintenanceUpload(ctx context.Context, store port.UnitOfWorkStore, 
 	return nil
 }
 
-func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileName, explicitOrderType string) {
-	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
-
-	defer func() {
-		if delErr := uc.storage.Delete(bgCtx, storageKey); delErr != nil && uc.logger != nil {
-			uc.logger.Warn("falha ao remover arquivo temporario", "storage_key", storageKey, "error", delErr.Error())
+func (uc *IngestMaintenanceUseCase) deleteStoredFile(ctx context.Context, storageKey string) error {
+	if err := uc.storage.Delete(ctx, storageKey); err != nil {
+		if uc.logger != nil {
+			uc.logger.Warn("falha ao remover arquivo de ingestao", "storage_key", storageKey, "error", err.Error())
 		}
-	}()
+		return err
+	}
+	return nil
+}
 
-	rawRecords, ok := uc.readAndParseMaintenance(bgCtx, storageKey, fileName, uploadID, explicitOrderType)
-	if !ok {
-		return
+// ProcessJob processa uma tentativa de ingestao. Erros de infraestrutura sao
+// devolvidos para que a fila possa tentar novamente; arquivos invalidos sao
+// encerrados de forma definitiva.
+func (uc *IngestMaintenanceUseCase) ProcessJob(ctx context.Context, job port.IngestionJob) error {
+	rawRecords, err := uc.readAndParseMaintenance(ctx, job.StorageKey, job.FileName, job.OrderType)
+	if err != nil {
+		var permanentErr *permanentIngestionError
+		if errors.As(err, &permanentErr) {
+			if failErr := uc.failUploadContext(ctx, job.UploadID, err.Error()); failErr != nil {
+				return fmt.Errorf("registrar falha permanente do upload: %w", failErr)
+			}
+			_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+			return nil
+		}
+		return err
 	}
 
-	allEvents, processedCount := convertRawMaintenanceEvents(rawRecords, uploadID, fileName)
+	allEvents, processedCount := convertRawMaintenanceEvents(rawRecords, job.UploadID, job.FileName)
 	const batchSize = 500
 
-	err := uc.uow.Do(bgCtx, func(store port.UnitOfWorkStore) error {
-		insertedCount, err := insertMaintenanceBatches(bgCtx, store, allEvents, batchSize)
+	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+		if err := store.Maintenances().DeleteByUploadID(ctx, job.UploadID); err != nil {
+			return fmt.Errorf("falha ao preparar nova tentativa de manutencao: %w", err)
+		}
+		insertedCount, err := insertMaintenanceBatches(ctx, store, allEvents, batchSize)
 		if err != nil {
 			return err
 		}
-		return finalizeMaintenanceUpload(bgCtx, store, uploadID, processedCount, insertedCount)
+		return finalizeMaintenanceUpload(ctx, store, job.UploadID, processedCount, insertedCount)
 	})
-
 	if err != nil {
-		uc.recordFailure(uploadID, err.Error(), "erro ao registrar falha de insercao em lote no upload", nil)
+		return err
+	}
+
+	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+	return nil
+}
+
+func (uc *IngestMaintenanceUseCase) FailJob(ctx context.Context, job port.IngestionJob, reason string) error {
+	if err := uc.failUploadContext(ctx, job.UploadID, reason); err != nil {
+		return err
+	}
+	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+	return nil
+}
+
+func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileName, explicitOrderType string) {
+	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	job := port.IngestionJob{Type: port.IngestionJobMaintenance, UploadID: uploadID, StorageKey: storageKey, FileName: fileName, OrderType: explicitOrderType}
+	if err := uc.ProcessJob(bgCtx, job); err != nil {
+		_ = uc.FailJob(context.Background(), job, err.Error())
 	}
 }
 
 func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) error {
-	bgCtx := context.Background()
+	return uc.failUploadContext(context.Background(), uploadID, reason)
+}
+
+func (uc *IngestMaintenanceUseCase) failUploadContext(ctx context.Context, uploadID string, reason string) error {
 	now := time.Now()
-	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
+	upload, err := uc.uploadRepo.GetUploadByID(ctx, uploadID)
 	if err != nil {
 		if uc.logger != nil {
 			uc.logger.Error("falha ao obter upload para marcar como failed", "upload_id", uploadID, "reason", reason, "error", err.Error())
@@ -245,7 +312,7 @@ func (uc *IngestMaintenanceUseCase) failUpload(uploadID string, reason string) e
 	upload.Status = "failed"
 	upload.ErrorLog = reason
 	upload.CompletedAt = &now
-	if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
+	if err := uc.uploadRepo.UpdateUpload(ctx, upload); err != nil {
 		if uc.logger != nil {
 			uc.logger.Error("falha ao persistir status failed do upload", "upload_id", uploadID, "reason", reason, "error", err.Error())
 		}

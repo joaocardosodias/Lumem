@@ -20,8 +20,29 @@ type IngestAlarmsUseCase struct {
 	storage     port.IngestionStorage
 	alarmParser port.AlarmParser
 	runner      port.JobRunner
+	queue       port.IngestionJobQueue
 	uow         port.UnitOfWork
 	logger      port.Logger
+}
+
+func NewIngestAlarmsUseCaseWithQueue(
+	alarmRepo port.AlarmRepository,
+	uploadRepo port.UploadRepository,
+	storage port.IngestionStorage,
+	alarmParser port.AlarmParser,
+	queue port.IngestionJobQueue,
+	uow port.UnitOfWork,
+	logger port.Logger,
+) *IngestAlarmsUseCase {
+	return &IngestAlarmsUseCase{
+		alarmRepo:   alarmRepo,
+		uploadRepo:  uploadRepo,
+		storage:     storage,
+		alarmParser: alarmParser,
+		queue:       queue,
+		uow:         uow,
+		logger:      logger,
+	}
 }
 
 func NewIngestAlarmsUseCase(
@@ -95,13 +116,24 @@ func (uc *IngestAlarmsUseCase) StartIngestion(ctx context.Context, fileName stri
 		Status:   "processing",
 	}
 
-	if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
-		return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+	job := port.IngestionJob{
+		Type:       port.IngestionJobAlarms,
+		UploadID:   upload.ID,
+		StorageKey: storageKey,
+		FileName:   fileName,
 	}
-
-	uc.runner.Run(func() {
-		uc.processFileAsync(upload.ID, storageKey, fileName)
-	})
+	if uc.queue != nil {
+		if err := uc.queue.Enqueue(ctx, upload, job); err != nil {
+			return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+		}
+	} else {
+		if err := uc.uploadRepo.CreateUpload(ctx, upload); err != nil {
+			return uc.handleCreateUploadError(ctx, storageKey, fileHash, err)
+		}
+		uc.runner.Run(func() {
+			uc.processFileAsync(upload.ID, storageKey, fileName)
+		})
+	}
 
 	return upload.ID, nil
 }
@@ -116,26 +148,23 @@ func (uc *IngestAlarmsUseCase) recordFailure(uploadID, reason, logMsg string, ca
 	}
 }
 
-func (uc *IngestAlarmsUseCase) readAndParseAlarms(ctx context.Context, storageKey, fileName, uploadID string) ([]port.RawAlarmRecord, bool) {
+func (uc *IngestAlarmsUseCase) readAndParseAlarms(ctx context.Context, storageKey, fileName string) ([]port.RawAlarmRecord, error) {
 	rc, err := uc.storage.Open(ctx, storageKey)
 	if err != nil {
-		uc.recordFailure(uploadID, "falha ao abrir arquivo", "erro ao registrar falha de abertura do upload", err)
-		return nil, false
+		return nil, fmt.Errorf("falha ao abrir arquivo: %w", err)
 	}
 	defer rc.Close()
 
 	rawRecords, err := uc.alarmParser.ParseAlarms(rc, fileName)
 	if err != nil {
-		uc.recordFailure(uploadID, "falha ao analisar arquivo", "erro ao registrar falha de parsing do upload", err)
-		return nil, false
+		return nil, permanentIngestionFailure("falha ao analisar arquivo: %w", err)
 	}
 
 	if len(rawRecords) == 0 {
-		uc.recordFailure(uploadID, "arquivo vazio ou sem linhas de dados validas", "erro ao registrar falha de arquivo vazio no upload", nil)
-		return nil, false
+		return nil, permanentIngestionFailure("arquivo vazio ou sem linhas de dados validas")
 	}
 
-	return rawRecords, true
+	return rawRecords, nil
 }
 
 func convertRawAlarms(rawRecords []port.RawAlarmRecord, uploadID, fileName string) ([]*domain.Alarm, int) {
@@ -199,41 +228,78 @@ func finalizeAlarmUpload(ctx context.Context, store port.UnitOfWorkStore, upload
 	return nil
 }
 
-func (uc *IngestAlarmsUseCase) processFileAsync(uploadID, storageKey, fileName string) {
-	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
-
-	defer func() {
-		if delErr := uc.storage.Delete(bgCtx, storageKey); delErr != nil && uc.logger != nil {
-			uc.logger.Warn("falha ao remover arquivo temporario", "storage_key", storageKey, "error", delErr.Error())
+func (uc *IngestAlarmsUseCase) deleteStoredFile(ctx context.Context, storageKey string) error {
+	if err := uc.storage.Delete(ctx, storageKey); err != nil {
+		if uc.logger != nil {
+			uc.logger.Warn("falha ao remover arquivo de ingestao", "storage_key", storageKey, "error", err.Error())
 		}
-	}()
+		return err
+	}
+	return nil
+}
 
-	rawRecords, ok := uc.readAndParseAlarms(bgCtx, storageKey, fileName, uploadID)
-	if !ok {
-		return
+// ProcessJob processa uma tentativa de ingestao. Erros de infraestrutura sao
+// devolvidos para que a fila possa tentar novamente; arquivos invalidos sao
+// encerrados de forma definitiva.
+func (uc *IngestAlarmsUseCase) ProcessJob(ctx context.Context, job port.IngestionJob) error {
+	rawRecords, err := uc.readAndParseAlarms(ctx, job.StorageKey, job.FileName)
+	if err != nil {
+		var permanentErr *permanentIngestionError
+		if errors.As(err, &permanentErr) {
+			if failErr := uc.failUploadContext(ctx, job.UploadID, err.Error()); failErr != nil {
+				return fmt.Errorf("registrar falha permanente do upload: %w", failErr)
+			}
+			_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+			return nil
+		}
+		return err
 	}
 
-	allAlarms, processedCount := convertRawAlarms(rawRecords, uploadID, fileName)
+	allAlarms, processedCount := convertRawAlarms(rawRecords, job.UploadID, job.FileName)
 	const batchSize = 500
 
-	err := uc.uow.Do(bgCtx, func(store port.UnitOfWorkStore) error {
-		insertedCount, err := insertAlarmBatches(bgCtx, store, allAlarms, batchSize)
+	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+		if err := store.Alarms().DeleteByUploadID(ctx, job.UploadID); err != nil {
+			return fmt.Errorf("falha ao preparar nova tentativa de alarmes: %w", err)
+		}
+		insertedCount, err := insertAlarmBatches(ctx, store, allAlarms, batchSize)
 		if err != nil {
 			return err
 		}
-		return finalizeAlarmUpload(bgCtx, store, uploadID, processedCount, insertedCount)
+		return finalizeAlarmUpload(ctx, store, job.UploadID, processedCount, insertedCount)
 	})
-
 	if err != nil {
-		uc.recordFailure(uploadID, err.Error(), "erro ao registrar falha de insercao em lote no upload", nil)
+		return err
+	}
+
+	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+	return nil
+}
+
+func (uc *IngestAlarmsUseCase) FailJob(ctx context.Context, job port.IngestionJob, reason string) error {
+	if err := uc.failUploadContext(ctx, job.UploadID, reason); err != nil {
+		return err
+	}
+	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+	return nil
+}
+
+func (uc *IngestAlarmsUseCase) processFileAsync(uploadID, storageKey, fileName string) {
+	bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: uploadID, StorageKey: storageKey, FileName: fileName}
+	if err := uc.ProcessJob(bgCtx, job); err != nil {
+		_ = uc.FailJob(context.Background(), job, err.Error())
 	}
 }
 
 func (uc *IngestAlarmsUseCase) failUpload(uploadID string, reason string) error {
-	bgCtx := context.Background()
+	return uc.failUploadContext(context.Background(), uploadID, reason)
+}
+
+func (uc *IngestAlarmsUseCase) failUploadContext(ctx context.Context, uploadID string, reason string) error {
 	now := time.Now()
-	upload, err := uc.uploadRepo.GetUploadByID(bgCtx, uploadID)
+	upload, err := uc.uploadRepo.GetUploadByID(ctx, uploadID)
 	if err != nil {
 		if uc.logger != nil {
 			uc.logger.Error("falha ao obter upload para marcar como failed", "upload_id", uploadID, "reason", reason, "error", err.Error())
@@ -243,7 +309,7 @@ func (uc *IngestAlarmsUseCase) failUpload(uploadID string, reason string) error 
 	upload.Status = "failed"
 	upload.ErrorLog = reason
 	upload.CompletedAt = &now
-	if err := uc.uploadRepo.UpdateUpload(bgCtx, upload); err != nil {
+	if err := uc.uploadRepo.UpdateUpload(ctx, upload); err != nil {
 		if uc.logger != nil {
 			uc.logger.Error("falha ao persistir status failed do upload", "upload_id", uploadID, "reason", reason, "error", err.Error())
 		}

@@ -162,6 +162,18 @@ type mockAlarmUOW struct {
 	repo *mockAlarmRepo
 }
 
+type ingestionQueueSpy struct {
+	uploads []*domain.FileUpload
+	jobs    []port.IngestionJob
+	err     error
+}
+
+func (q *ingestionQueueSpy) Enqueue(_ context.Context, upload *domain.FileUpload, job port.IngestionJob) error {
+	q.uploads = append(q.uploads, upload)
+	q.jobs = append(q.jobs, job)
+	return q.err
+}
+
 func (u *mockAlarmUOW) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
 	u.repo.mu.Lock()
 	savedAlarms := make([]*domain.Alarm, len(u.repo.alarms))
@@ -175,6 +187,37 @@ func (u *mockAlarmUOW) Do(ctx context.Context, fn func(store port.UnitOfWorkStor
 		return err
 	}
 	return nil
+}
+
+func TestIngestAlarmsUseCase_EnqueuesDurableJob(t *testing.T) {
+	repo := newMockAlarmRepo()
+	alarmStorage := storage.NewLocalTempStorage()
+	queue := &ingestionQueueSpy{}
+	uc := usecase.NewIngestAlarmsUseCaseWithQueue(
+		repo,
+		repo,
+		alarmStorage,
+		parser.NewDefaultAlarmParser(),
+		queue,
+		&mockAlarmUOW{repo: repo},
+		nil,
+	)
+
+	uploadID, err := uc.StartIngestion(context.Background(), "telemetria.csv", strings.NewReader("tag\nvalue\n"))
+	if err != nil {
+		t.Fatalf("falha ao enfileirar ingestao: %v", err)
+	}
+	if len(queue.jobs) != 1 {
+		t.Fatalf("esperava um job, obteve %d", len(queue.jobs))
+	}
+	job := queue.jobs[0]
+	defer alarmStorage.Delete(context.Background(), job.StorageKey)
+	if job.Type != port.IngestionJobAlarms || job.UploadID != uploadID || job.FileName != "telemetria.csv" {
+		t.Fatalf("job enfileirado incorretamente: %+v", job)
+	}
+	if len(queue.uploads) != 1 || queue.uploads[0].ID != uploadID || queue.uploads[0].Status != "processing" {
+		t.Fatalf("upload nao foi enviado atomicamente para a fila: %+v", queue.uploads)
+	}
 }
 
 func TestIngestAlarmsUseCase_ValidCSV(t *testing.T) {

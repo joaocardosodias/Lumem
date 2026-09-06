@@ -15,19 +15,22 @@ import (
 
 	"github.com/g04/backend/internal/adapter/eventbus"
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
+	"github.com/g04/backend/internal/adapter/jobqueue"
 	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/adapter/repository"
-	"github.com/g04/backend/internal/adapter/scheduler"
 	"github.com/g04/backend/internal/adapter/security"
 	"github.com/g04/backend/internal/adapter/storage"
+	"github.com/g04/backend/internal/adapter/telemetry"
 	"github.com/g04/backend/internal/config"
 	"github.com/g04/backend/internal/usecase"
+	"github.com/g04/backend/internal/usecase/port"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func runMigrations(db *sql.DB, migrationsPath string) error {
@@ -122,6 +125,21 @@ func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
 	return db
 }
 
+func initIngestionStorage(ctx context.Context, cfg *config.Config) (port.IngestionStorage, error) {
+	if cfg.StorageDriver != "s3" {
+		return storage.NewLocalTempStorage(), nil
+	}
+
+	return storage.NewS3Storage(ctx, storage.S3Config{
+		Endpoint:        cfg.S3Endpoint,
+		Region:          cfg.S3Region,
+		Bucket:          cfg.S3Bucket,
+		AccessKeyID:     cfg.S3AccessKeyID,
+		SecretAccessKey: cfg.S3SecretAccessKey,
+		Prefix:          cfg.S3Prefix,
+	})
+}
+
 type appHandlers struct {
 	auth      *httpAdapter.AuthHandler
 	upload    *httpAdapter.UploadHandler
@@ -187,6 +205,9 @@ func buildRouter(cfg *config.Config, logger *slog.Logger, h appHandlers) *gin.En
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	if cfg.OTelEnabled {
+		router.Use(otelgin.Middleware(cfg.OTelServiceName))
+	}
 	router.Use(httpAdapter.CorrelationIDMiddleware())
 	router.Use(httpAdapter.StructuredLoggerMiddleware(logger))
 	router.Use(httpAdapter.PrometheusMetricsMiddleware())
@@ -218,7 +239,7 @@ func waitForUploads(uploadWG *sync.WaitGroup, logger *slog.Logger) {
 	}
 }
 
-func runGracefulServer(cfg *config.Config, router *gin.Engine, uploadWG *sync.WaitGroup, logger *slog.Logger) {
+func runGracefulServer(cfg *config.Config, router *gin.Engine, logger *slog.Logger) {
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
@@ -237,8 +258,6 @@ func runGracefulServer(cfg *config.Config, router *gin.Engine, uploadWG *sync.Wa
 	<-quit
 
 	logger.Info("sinal de encerramento recebido. desligando servidor graciosamente...")
-
-	waitForUploads(uploadWG, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -265,6 +284,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	telemetryShutdown, err := telemetry.Init(context.Background(), telemetry.Config{
+		Enabled:     cfg.OTelEnabled,
+		Endpoint:    cfg.OTelEndpoint,
+		ServiceName: cfg.OTelServiceName,
+		Environment: cfg.Environment,
+		Insecure:    cfg.OTelInsecure,
+	})
+	if err != nil {
+		logger.Error("falha ao inicializar OpenTelemetry", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := telemetryShutdown(shutdownCtx); err != nil {
+			logger.Error("falha ao encerrar OpenTelemetry", slog.String("error", err.Error()))
+		}
+	}()
+
 	logger.Info("inicializando aplicacao",
 		slog.String("environment", cfg.Environment),
 		slog.Bool("run_migrations", cfg.RunMigrations),
@@ -275,6 +313,22 @@ func main() {
 
 	db := initDatabase(cfg, logger)
 	defer db.Close()
+
+	if cfg.RunMigrations {
+		migrationCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		if err := jobqueue.MigrateSQL(migrationCtx, db, logger); err != nil {
+			cancel()
+			logger.Error("falha ao aplicar migracoes do River", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		cancel()
+	}
+	riverClient, err := jobqueue.NewInsertClient(db, logger)
+	if err != nil {
+		logger.Error("falha ao inicializar cliente River", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	ingestionQueue := jobqueue.NewRiverQueue(db, riverClient, cfg.RiverMaxAttempts)
 
 	bus := eventbus.NewInMemoryEventBus(logger)
 	uow := repository.NewPostgresUnitOfWork(db)
@@ -287,15 +341,17 @@ func main() {
 	cachedDashRepo := repository.NewCachedDashboardRepository(dashRepo, 30*time.Second)
 	predRepo := repository.NewPostgresPredictionRepository(db)
 
-	if err := alarmRepo.ReconcileStaleUploads(context.Background()); err != nil {
-		logger.Warn("falha ao reconciliar uploads pendentes", slog.String("error", err.Error()))
-	} else {
-		logger.Info("reconciliacao de uploads pendentes executada com sucesso")
-	}
-
 	usecase.RegisterEventSubscribers(bus, cachedDashRepo, logger)
 
-	ingestionStorage := storage.NewLocalTempStorage()
+	ingestionStorage, err := initIngestionStorage(context.Background(), cfg)
+	if err != nil {
+		logger.Error("falha ao inicializar armazenamento de uploads", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	logger.Info("armazenamento de uploads inicializado",
+		slog.String("driver", cfg.StorageDriver),
+		slog.String("bucket", cfg.S3Bucket),
+	)
 	alarmParser := parser.NewDefaultAlarmParser()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	mlClient := mlclient.NewClient(cfg.VPSModelURL)
@@ -303,12 +359,9 @@ func main() {
 	hasher := security.NewBcryptPasswordHasher(0)
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
-	uploadWG := &sync.WaitGroup{}
-	jobRunner := scheduler.NewGoroutineJobRunner(uploadWG, logger)
-
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
-	ingestAlarmsUC := usecase.NewIngestAlarmsUseCase(alarmRepo, alarmRepo, ingestionStorage, alarmParser, jobRunner, uow, logger)
-	ingestMaintUC := usecase.NewIngestMaintenanceUseCase(maintRepo, alarmRepo, ingestionStorage, maintParser, jobRunner, uow, logger)
+	ingestAlarmsUC := usecase.NewIngestAlarmsUseCaseWithQueue(alarmRepo, alarmRepo, ingestionStorage, alarmParser, ingestionQueue, uow, logger)
+	ingestMaintUC := usecase.NewIngestMaintenanceUseCaseWithQueue(maintRepo, alarmRepo, ingestionStorage, maintParser, ingestionQueue, uow, logger)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
@@ -325,5 +378,5 @@ func main() {
 	}
 
 	router := buildRouter(cfg, logger, handlers)
-	runGracefulServer(cfg, router, uploadWG, logger)
+	runGracefulServer(cfg, router, logger)
 }

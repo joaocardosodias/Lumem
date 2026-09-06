@@ -7,12 +7,44 @@ services:
       - "8080"
     env_file:
       - .env
+    environment:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+    volumes:
+      - ingestion-tmp:/tmp
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz/live"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  worker:
+    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend:latest
+    container_name: worker-linha4
+    restart: unless-stopped
+    entrypoint: ["/app/worker"]
+    env_file:
+      - .env
+    environment:
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+    volumes:
+      - ingestion-tmp:/tmp
+    depends_on:
+      backend:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     logging:
@@ -32,7 +64,7 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_ROLLING_RESTART=true
-    command: backend
+    command: backend-linha4 worker-linha4
     logging:
       driver: "json-file"
       options:
@@ -95,6 +127,7 @@ services:
     depends_on:
       - prometheus
       - loki
+      - tempo
     logging:
       driver: "json-file"
       options:
@@ -135,6 +168,41 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo-linha4
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    expose:
+      - "3200"
+      - "4317"
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo/tempo.yml:ro
+      - tempo-storage:/var/tempo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector-linha4
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
+    expose:
+      - "4317"
+      - "4318"
+    volumes:
+      - ./otel-collector/otel-collector-config.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      - tempo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   nginx:
     image: nginx:alpine
     container_name: nginx-linha4
@@ -155,3 +223,5 @@ services:
 volumes:
   grafana-storage:
   loki-storage:
+  tempo-storage:
+  ingestion-tmp:

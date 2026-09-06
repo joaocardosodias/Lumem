@@ -84,6 +84,26 @@ type JobRunner interface {
 	Run(job func())
 }
 
+type IngestionJobType string
+
+const (
+	IngestionJobAlarms      IngestionJobType = "alarms"
+	IngestionJobMaintenance IngestionJobType = "maintenance"
+)
+
+type IngestionJob struct {
+	Type         IngestionJobType
+	UploadID     string
+	StorageKey   string
+	FileName     string
+	OrderType    string
+	TraceContext map[string]string
+}
+
+type IngestionJobQueue interface {
+	Enqueue(ctx context.Context, upload *domain.FileUpload, job IngestionJob) error
+}
+
 type Logger interface {
 	Error(msg string, args ...any)
 	Warn(msg string, args ...any)

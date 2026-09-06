@@ -43,6 +43,47 @@ func TestConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestConfigValidateStorage(t *testing.T) {
+	invalidDriver := &config.Config{StorageDriver: "ftp"}
+	if err := invalidDriver.Validate(); err == nil {
+		t.Fatal("expected invalid storage driver to fail validation")
+	}
+
+	incompleteS3 := &config.Config{StorageDriver: "s3", S3Bucket: "ingestion-uploads"}
+	if err := incompleteS3.Validate(); err == nil {
+		t.Fatal("expected incomplete S3 configuration to fail validation")
+	}
+
+	validS3 := &config.Config{
+		StorageDriver:     "s3",
+		S3Endpoint:        "https://project.storage.supabase.co/storage/v1/s3",
+		S3Region:          "us-east-1",
+		S3Bucket:          "ingestion-uploads",
+		S3AccessKeyID:     "access-key",
+		S3SecretAccessKey: "secret-key",
+	}
+	if err := validS3.Validate(); err != nil {
+		t.Fatalf("expected complete S3 configuration to be valid: %v", err)
+	}
+}
+
+func TestConfigValidateTelemetry(t *testing.T) {
+	missingEndpoint := &config.Config{OTelEnabled: true, OTelServiceName: "api", OTelWorkerName: "worker"}
+	if err := missingEndpoint.Validate(); err == nil {
+		t.Fatal("expected enabled telemetry without endpoint to fail validation")
+	}
+
+	valid := &config.Config{
+		OTelEnabled:     true,
+		OTelEndpoint:    "collector:4317",
+		OTelServiceName: "api",
+		OTelWorkerName:  "worker",
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("expected complete telemetry configuration to be valid: %v", err)
+	}
+}
+
 func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
 	cfg := config.LoadConfig()
 	if cfg == nil {
@@ -58,6 +99,11 @@ func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
 	os.Setenv("RATE_LIMIT_RPS", "-5")
 	os.Setenv("RATE_LIMIT_BURST", "0")
 	os.Setenv("LOAD_TEST", "true")
+	os.Setenv("RIVER_POLL_ONLY", "false")
+	os.Setenv("RIVER_MAX_WORKERS", "4")
+	os.Setenv("RIVER_MAX_ATTEMPTS", "8")
+	os.Setenv("OTEL_ENABLED", "true")
+	os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "collector:4317")
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("ENV")
@@ -68,6 +114,11 @@ func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
 		os.Unsetenv("RATE_LIMIT_RPS")
 		os.Unsetenv("RATE_LIMIT_BURST")
 		os.Unsetenv("LOAD_TEST")
+		os.Unsetenv("RIVER_POLL_ONLY")
+		os.Unsetenv("RIVER_MAX_WORKERS")
+		os.Unsetenv("RIVER_MAX_ATTEMPTS")
+		os.Unsetenv("OTEL_ENABLED")
+		os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	}()
 
 	customCfg := config.LoadConfig()
@@ -88,6 +139,12 @@ func TestConfig_LoadConfig_DefaultsAndEnv(t *testing.T) {
 	}
 	if customCfg.DatabaseURL != "postgres://user:supersecret@host:5432/db" {
 		t.Fatalf("expected replaced password in database url, got %s", customCfg.DatabaseURL)
+	}
+	if customCfg.RiverPollOnly || customCfg.RiverMaxWorkers != 4 || customCfg.RiverMaxAttempts != 8 {
+		t.Fatalf("unexpected River configuration: poll_only=%v workers=%d attempts=%d", customCfg.RiverPollOnly, customCfg.RiverMaxWorkers, customCfg.RiverMaxAttempts)
+	}
+	if !customCfg.OTelEnabled || customCfg.OTelEndpoint != "collector:4317" {
+		t.Fatalf("unexpected OpenTelemetry configuration: enabled=%v endpoint=%q", customCfg.OTelEnabled, customCfg.OTelEndpoint)
 	}
 
 	os.Setenv("MIGRATIONS_PATH", "nonexistent_dir_for_test")
