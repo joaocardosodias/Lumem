@@ -1,0 +1,141 @@
+---
+title: Testes Automatizados e CI
+description: Pirâmide de testes, doubles manuais sem frameworks reflexivos, detector de corrida de dados (-race) e pipeline GitLab CI/CD.
+---
+
+import { Image } from 'astro:assets';
+import testesPiramide from '../../../../assets/backend/testes-piramide.png';
+import gitlabCiAprovada from '../../../../assets/backend/gitlab-ci-aprovada.png';
+
+A confiabilidade do backend construído na Sprint 3 fundamenta-se em uma estratégia rigorosa de testes automatizados, desenhada desde o primeiro momento para validar regras de negócio, transações ACID, concorrência e integrações externas.
+
+Esta página detalha a composição da suíte de **245 testes automatizados**, a metodologia de test doubles em Go, a prevenção de concorrência com o race detector e o pipeline de integração contínua (CI).
+
+## 1. Pirâmide de testes do backend
+
+A suíte de testes foi desenhada segundo a pirâmide de automação: a base é composta por testes unitários rápidos e determinísticos, com testes de integração e componentes exercitando os pontos críticos de persistência:
+
+| Nível | Escopo | Isolamento | Velocidade típica | Exemplos no repositório |
+|---|---|---|---|---|
+| **Domínio** | `internal/domain` | Isolamento total (memória pura, sem I/O) | < 1 ms | Validação de invariantes em `NewAlarm`, `NewInspection` e transições de status |
+| **Casos de Uso** | `internal/usecase` | Portas substituídas por test doubles explícitos | < 5 ms | Testes de `IngestAlarmsUseCase`, `CreateInspectionUseCase`, autenticação e hashing |
+| **Adaptadores** | `internal/adapter` | Testa conversão de protocolos e SDKs | 5 - 20 ms | Parsing de arquivos, estados do Circuit Breaker, tradução RFC 7807 e S3Storage |
+| **Integração** | `tests/integration` | PostgreSQL 16 real em contêiner | 50 - 200 ms | Validação de constraints, integridade referencial, `PostgresUnitOfWork` e `RiverQueue` |
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={testesPiramide}
+    alt="Diagrama visual da pirâmide de testes do backend Go em 4 níveis: Domínio, Casos de Uso, Adaptadores e Integração."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Pirâmide de testes do backend Go detalhando os 4 níveis de cobertura.
+  </figcaption>
+</figure>
+
+## 2. Metodologia: Test Doubles manuais sem reflexão
+
+Em muitas bases de código, equipes utilizam frameworks de mock reflexivos (como pacotes que geram mocks dinâmicos com asserções em strings). No ecossistema Go profissional, isso costuma introduzir fragilidade e lentidão.
+
+No backend da Linha 4, foi adotado o padrão de **Test Doubles Explícitos (Fakes e Spies)**:
+
+```go
+type fakeStorage struct {
+	files   map[string][]byte
+	failPut bool
+}
+
+func newFakeStorage() *fakeStorage {
+	return &fakeStorage{files: make(map[string][]byte)}
+}
+
+func (f *fakeStorage) Store(ctx context.Context, name string, r io.Reader) (string, string, error) {
+	if f.failPut {
+		return "", "", errors.New("falha simulada de conexao com bucket")
+	}
+	data, _ := io.ReadAll(r)
+	hash := sha256.Sum256(data)
+	key := "test/" + name
+	f.files[key] = data
+	return key, hex.EncodeToString(hash[:]), nil
+}
+
+func (f *fakeStorage) Open(ctx context.Context, key string) (io.ReadCloser, error) {
+	data, ok := f.files[key]
+	if !ok {
+		return nil, errors.New("objeto nao encontrado")
+	}
+	return io.NopCloser(bytes.NewReader(data)), nil
+}
+
+func (f *fakeStorage) Delete(ctx context.Context, key string) error {
+	delete(f.files, key)
+	return nil
+}
+```
+
+**Vantagens da abordagem:**
+- **Refatoração segura:** se a assinatura de um método na porta mudar, o compilador Go acusa o erro imediatamente no fake, sem falhas misteriosas em tempo de execução;
+- **Clareza de intenção:** qualquer desenvolvedor pode inspecionar o fake e entender exatamente como ele responde a falhas.
+
+## 3. Detecção de condições de corrida (`-race`)
+
+A execução paralela de testes e o processamento concorrente no worker e no Circuit Breaker exigem garantia absoluta de que não há corridas de dados (data races) em memória.
+
+A suíte completa é validada com a flag `-race`, que utiliza a biblioteca ThreadSanitizer embutida no compilador Go:
+
+```bash
+cd src/backend
+go test -race ./...
+```
+
+**Resultado:** Em **6 de setembro de 2026**, `go test -race ./...` reportou **245 testes aprovados em 22 pacotes com zero data races detectadas**. Isso comprova que os ponteiros de mutex (`*sync.Mutex`) no Circuit Breaker e nas filas concorrentes estão sincronizados corretamente.
+
+## 4. Análise de cobertura e decisões de engenharia
+
+A cobertura de código do backend foi avaliada em duas frentes complementares:
+
+1. **Job de Cobertura da CI (`go test -coverpkg`):** executou 208 testes no diretório `./tests/...`, reportando **95,5% de cobertura de statements** do pacote `internal/...`;
+2. **Análise Estática do SonarQube:** avaliou a suíte completa com todos os testes co-localizados nos pacotes, reportando **98,7% de cobertura geral** e **96,7% de cobertura em código novo**.
+
+```bash
+go test -v \
+  -coverpkg=./internal/... \
+  -coverprofile=coverage.out \
+  ./tests/...
+
+go tool cover -func=coverage.out
+```
+
+### Por que não buscamos 100% absoluto de cobertura?
+
+Alcançar 100% teórico exigiria criar abstrações artificiais para simular falhas extremamente raras do sistema operacional ou da biblioteca padrão, como:
+- Falha de alocação de arquivo temporário por falta de descritores (`os.CreateTemp`);
+- Falhas de reposicionamento de ponteiro de arquivo em disco (`Seek(0)`);
+- Erros de alocação de memória no runtime.
+
+Poluir o código de produção com interfaces adicionais apenas para injetar erros de kernel violaria o princípio **YAGNI (You Aren't Gonna Need It)**. A equipe optou conscientemente por manter o código limpo e concentrar os testes em regras de negócio críticas: rollbacks, duplicidades, idempotência e limites de retentativas.
+
+## 5. Pipeline de Integração Contínua (GitLab CI)
+
+O arquivo [`.gitlab-ci.yml`](file:///home/cardoso/GitHub/g04/.gitlab-ci.yml) automatiza a validação de cada commit e merge request através de estágios independentes:
+
+| Estágio | Ferramentas e Comandos | Finalidade de Engenharia |
+|---|---|---|
+| **Lint** | `gofmt -l .` e `go vet ./...` | Verificação de conformidade de estilo e análise semântica básica |
+| **Test** | PostgreSQL 16 de serviço e `go test -race ./...` | Execução de testes unitários e de integração com detector de concorrência ativo |
+| **Security** | `govulncheck ./...` | Varredura de vulnerabilidades conhecidas no grafo de dependências Go |
+| **Build** | `docker build` (multi-stage) | Compilação estática dos artefatos sem CGO em ambiente reprodutível |
+| **Scan** | `trivy image` | Auditoria de segurança na imagem gerada (bloqueia severidades alta e crítica) |
+| **Deploy** | Astro Starlight build | Publicação contínua da documentação técnica no GitLab Pages |
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={gitlabCiAprovada}
+    alt="Grafo do pipeline do GitLab CI com todos os estágios aprovados em verde: lint, test, security, build, scan e pages."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Pipeline de Integração Contínua validando qualidade, segurança e testes do backend a cada commit.
+  </figcaption>
+</figure>

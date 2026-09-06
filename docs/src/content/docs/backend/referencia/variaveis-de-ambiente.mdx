@@ -1,0 +1,85 @@
+---
+title: Variáveis de Ambiente
+description: Referência de configuração da API, worker, PostgreSQL, S3, River e OpenTelemetry.
+---
+
+As configurações são lidas do ambiente, com suporte a `.env` no desenvolvimento. Valores sensíveis devem ser fornecidos pelo mecanismo de secrets do ambiente de implantação.
+
+## Aplicação
+
+| Variável | Padrão | Obrigatória | Descrição |
+|---|---|---|---|
+| `PORT` | `8080` | não | porta HTTP da API |
+| `ENV` | `development` | não | ambiente lógico |
+| `RUN_MIGRATIONS` | `true` | no primeiro deploy | migrações da aplicação e River |
+| `MIGRATIONS_PATH` | `migrations` | não | diretório das migrações SQL |
+| `JWT_SECRET` | vazio | em produção | assinatura dos tokens JWT |
+| `VPS_MODEL_URL` | `http://localhost:8000` | para predição | endpoint do serviço de ML |
+| `CORS_ALLOWED_ORIGINS` | `*` | recomendado em produção | origens separadas por vírgula |
+| `ENABLE_RATE_LIMITER` | `true` | não | ativa limite de requisições |
+| `RATE_LIMIT_RPS` | `50` | não | taxa sustentada por IP |
+| `RATE_LIMIT_BURST` | `100` | não | pico permitido por IP |
+| `LOAD_TEST` | `false` | não | desativa limiter durante teste controlado |
+
+## PostgreSQL
+
+| Variável | Obrigatória | Observação |
+|---|---|---|
+| `DATABASE_URL` | recomendada | URL completa usada por API, worker e River |
+| `DB_HOST` | se não usar URL | host do PostgreSQL/pooler |
+| `DB_PORT` | se não usar URL | normalmente `5432` |
+| `DB_NAME` | se não usar URL | database lógico |
+| `DB_USER` | se não usar URL | usuário técnico |
+| `DB_PASSWORD` | em produção | segredo do usuário técnico |
+| `DB_SSLMODE` | não | padrão `require` |
+
+Prefira `DATABASE_URL` entregue como um único secret. Senhas com caracteres reservados precisam estar corretamente codificadas quando fazem parte de uma URL.
+
+## Storage
+
+| Variável | Padrão | Obrigatória com S3 |
+|---|---|---|
+| `STORAGE_DRIVER` | `local` | sim, valor `s3` em ambientes distribuídos |
+| `S3_ENDPOINT` | vazio | sim |
+| `S3_REGION` | vazio | sim |
+| `S3_BUCKET` | `ingestion-uploads` | sim |
+| `S3_ACCESS_KEY_ID` | vazio | sim |
+| `S3_SECRET_ACCESS_KEY` | vazio | sim |
+| `S3_PREFIX` | `ingestion` | não |
+
+`local` depende de filesystem compartilhado entre API e worker. O Compose monta `ingestion-tmp` em `/tmp`; múltiplos hosts devem usar S3.
+
+## River
+
+| Variável | Padrão | Efeito |
+|---|---|---|
+| `RIVER_POLL_ONLY` | `true` | evita depender de LISTEN/NOTIFY no pooler transacional |
+| `RIVER_MAX_WORKERS` | `2` | jobs processados simultaneamente por worker |
+| `RIVER_MAX_ATTEMPTS` | `5` | total de tentativas por job |
+
+Aumentar workers altera uso de CPU, memória, conexões e concorrência no S3 e banco. Faça a mudança junto de medição de fila e latência.
+
+## OpenTelemetry
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `OTEL_ENABLED` | `false` | habilita exportação de traces |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `localhost:4317` | destino OTLP/gRPC |
+| `OTEL_EXPORTER_OTLP_INSECURE` | `true` | conexão sem TLS na rede interna |
+| `OTEL_SERVICE_NAME` | `g04-api` | nome da API nos traces |
+| `OTEL_WORKER_SERVICE_NAME` | `g04-worker` | nome do worker nos traces |
+
+No Docker Compose, o endpoint é `otel-collector:4317`. Se o Collector estiver fora da rede confiável, configure TLS e autenticação em vez de usar modo inseguro.
+
+## Checklist antes do deploy
+
+- `ENV=production`;
+- JWT longo, aleatório e armazenado como secret;
+- PostgreSQL com TLS;
+- bucket privado e credenciais válidas;
+- CORS restrito aos domínios do frontend;
+- Grafana sem senha padrão;
+- OTLP limitado à rede interna;
+- `.env` ignorado pelo Git e com permissão restrita;
+- `docker compose config` revisado sem publicar sua saída, pois ela pode expandir secrets.
+

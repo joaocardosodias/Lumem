@@ -1,0 +1,119 @@
+---
+title: SonarQube e Segurança
+description: Análise estática profunda, otimizações da regra S3776, segurança de contêineres com Trivy e modelo de ameaças.
+---
+
+import { Image } from 'astro:assets';
+import sonarqubeOverview from '../../../../assets/backend/sonarqube-overview.png';
+import modeloAmeacas from '../../../../assets/backend/modelo-ameacas.png';
+
+A robustez de um sistema crítico para transporte público exige mais do que testes automatizados: requer auditoria contínua de complexidade de código, adesão a padrões de segurança e análise de vulnerabilidades em dependências e contêineres.
+
+Esta página documenta os resultados obtidos na análise estática com **SonarQube**, as refatorações motivadas por regras de manutenibilidade, a varredura de vulnerabilidades com **Trivy** e **govulncheck**, e o modelo de ameaças do backend.
+
+## 1. Resultados da análise SonarQube na Sprint 3
+
+No fechamento da Sprint 3, a análise estática do repositório no SonarQube alcançou as seguintes métricas oficiais:
+
+| Indicador de qualidade | Meta estabelecida | Resultado alcançado | Status |
+|---|---|---:|:---:|
+| **Quality Gate** | Aprovado | **Aprovado** | Conforme |
+| **Cobertura em Código Novo** | >= 80,0% | **96,7%** | Conforme |
+| **Cobertura Geral da Base** | >= 80,0% | **98,7%** | Conforme |
+| **Arquivos com 100% de Cobertura** | — | **18 de 21 arquivos** | Conforme |
+| **Bugs** | 0 | **0** | Conforme |
+| **Vulnerabilidades de Segurança** | 0 | **0** | Conforme |
+| **Code Smells** | 0 | **0** | Conforme |
+| **Security Hotspots Revisados** | 100% | **0 pendentes (100% revisados)** | Conforme |
+| **Densidade de Linhas Duplicadas** | < 3,0% | **0,05%** | Conforme |
+
+O Quality Gate foi aprovado com folga em todas as dimensões avaliadas, comprovando o elevado padrão de qualidade técnica estabelecido no backend.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={sonarqubeOverview}
+    alt="Painel consolidado do SonarQube com Quality Gate Passed, métricas de cobertura e critérios atendidos."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Painel consolidado do SonarQube demonstrando a aprovação integral do Quality Gate e o cumprimento das condições de qualidade.
+  </figcaption>
+</figure>
+
+## 2. Otimizações de manutenibilidade orientadas pelo SonarQube
+
+Durante o ciclo de desenvolvimento, a análise estática contínua orientou melhorias essenciais de legibilidade e segurança:
+
+### 2.1 Redução de Complexidade Cognitiva (Regra S3776)
+
+A função `Config.Validate` acumulava validações aninhadas de ambiente, drivers de storage, portas HTTP, pools de banco de dados e credenciais de observabilidade, atingindo complexidade cognitiva acima do limite aceitável de 15.
+
+A estrutura foi decomposta em funções auxiliares especializadas:
+
+```go
+func (c *Config) Validate() error {
+	if err := c.validateProduction(); err != nil {
+		return err
+	}
+	if err := c.validateStorage(); err != nil {
+		return err
+	}
+	if err := c.validateTelemetry(); err != nil {
+		return err
+	}
+	return nil
+}
+```
+
+Cada função especializada passou a ter um escopo restrito e testável isoladamente, zerando os apontamentos da regra S3776.
+
+### 2.2 Prevenção de `copylocks` em estruturas concorrentes
+
+O `go vet` e o SonarQube apontavam risco de violação na cópia de estruturas contendo `sync.Mutex` em testes unitários paralelos. Quando uma struct que encapsula um mutex é passada por valor, seu estado interno de trava é copiado, o que invalida a sincronização entre goroutines e causa data races.
+
+Todos os mocks e estruturas auxiliares concorrentes foram construídos com compartilhamento estrito por ponteiro (`*sync.Mutex` ou instâncias `&mockStruct{}`), eliminando completamente os alertas `copylocks`.
+
+## 3. Segurança de contêiner e dependências
+
+A segurança em tempo de compilação e empacotamento é garantida por duas ferramentas integradas à esteira:
+
+### 3.1 Auditoria de vulnerabilidades em código Go (`govulncheck`)
+
+O job de segurança executa `govulncheck ./...`, que analisa o Grafo de Chamadas (Call Graph) do binário compilado. Ao contrário de analisadores puramente estáticos que apenas leem o `go.mod`, o `govulncheck` verifica se as funções efetivamente vulneráveis de uma dependência são invocadas pelo código do backend.
+
+### 3.2 Varredura de contêiner com Trivy
+
+A imagem Docker é submetida a scan de vulnerabilidades pelo Trivy antes de ser publicada:
+
+```bash
+trivy image --exit-code 1 --severity HIGH,CRITICAL g04-backend:latest
+```
+
+**Diretrizes de endurecimento (hardening) da imagem:**
+- **Compilação Estática:** `CGO_ENABLED=0` elimina dependências de bibliotecas dinâmicas C (`glibc`);
+- **Stripping de Binário:** flags `-ldflags="-w -s"` removem símbolos de depuração e tabelas de símbolos, reduzindo o tamanho do binário e dificultando engenharia reversa;
+- **Usuário não raiz (non-root):** a imagem cria e executa sob o usuário `appuser` com UID 10001, impedindo que um invasor obtenha privilégios de root no host caso ocorra escape de contêiner.
+
+## 4. Modelo de ameaças simplificado (STRIDE)
+
+O backend adota o framework STRIDE para mapear e mitigar os principais vetores de ataque:
+
+| Categoria | Vetor de ataque potencial | Mitigação implementada no backend |
+|---|---|---|
+| **Spoofing (Falsificação)** | Falsificação de identidade de operadores | Tokens JWT assinados com HMAC-SHA256 e tempo de expiração curto; senhas com hash bcrypt custo 10 |
+| **Tampering (Adulteração)** | Alteração de arquivos CSV/XLSX em trânsito | Cálculo de hash SHA-256 no recebimento; bucket S3 privado sem escrita anônima |
+| **Repudiation (Repúdio)** | Operador nega ter importado planilha com dados errôneos | Tabela `file_uploads` armazena `user_id`, data/hora UTC, nome original e hash do arquivo |
+| **Information Disclosure (Vazamento)** | Exposição de credenciais ou dados do metrô | Rota `/metrics` bloqueada no proxy; logs mascaram segredos; bucket S3 estritamente privado |
+| **Denial of Service (DoS)** | Esgotamento de conexões com planilhas gigantes | Rate limiter configurável por IP (token bucket); I/O em streaming via `io.MultiWriter` sem carregar arquivo todo em RAM |
+| **Elevation of Privilege (Elevação)** | Escalonamento de privilégios no contêiner | Execução exclusiva sob usuário sem privilégios (`appuser` UID 10001) |
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={modeloAmeacas}
+    alt="Diagrama do modelo de ameaças STRIDE identificando vetores de ataque e controles de segurança defensiva do backend."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Mapeamento de superfícies de ataque e controles de segurança defensiva do backend.
+  </figcaption>
+</figure>

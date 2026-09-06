@@ -1,0 +1,125 @@
+---
+title: Visão Geral da Arquitetura
+description: Visão abrangente da topologia de sistemas, contêineres, modelo C4, fronteiras de confiança e garantias de disponibilidade da Sprint 3.
+---
+
+import { Image } from 'astro:assets';
+import c4Contexto from '../../../../assets/backend/c4-contexto.png';
+import c4Conteineres from '../../../../assets/backend/c4-conteineres.png';
+import fronteirasDeConfianca from '../../../../assets/backend/fronteiras-de-confianca.png';
+
+A arquitetura do backend foi concebida e implementada para suportar a operação contínua e a predição de falhas em portas de plataforma (PSD) da Linha 4-Amarela do Metrô de São Paulo. A solução desacopla o processamento de requisições web da execução de tarefas analíticas pesadas, garantindo que reinicializações ou picos de carga não degradem a experiência dos operadores nas estações.
+
+Esta página detalha a topologia do sistema utilizando o modelo **C4 (Context, Containers, Components)**, descrevendo as fronteiras de rede, os protocolos de comunicação e as garantias de disponibilidade.
+
+## 1. Nível C4 — Contexto do sistema
+
+O backend atua como o núcleo operacional e preditivo da plataforma de monitoramento de portas. Ele integra operadores humanos, interfaces web, modelos de inteligência artificial e serviços em nuvem.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={c4Contexto}
+    alt="Diagrama C4 de Contexto do Sistema Motiva G04 exibindo operadores, aplicação web, backend em Go e integrações externas com PostgreSQL, Storage S3 e microsserviço de Machine Learning."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Diagrama C4 de Contexto: fronteiras do sistema e integrações externas.
+  </figcaption>
+</figure>
+
+### Atores e integrações externas
+
+1. **Operador de Linha e Manutenção:** visualiza no frontend o status preditivo das portas em cada estação (ex: Luz, Paulista, Pinheiros) e cadastra ordens de inspeção preventiva ou corretiva;
+2. **Engenheiro de Dados:** realiza o upload das planilhas brutas de telemetria extraídas dos sistemas do metrô (ZM01 - Corretivas, ZM02 - Preventivas e ZM03 - Alarmes de Portas);
+3. **Supabase PostgreSQL 16:** banco relacional gerenciado que armazena entidades de domínio, usuários, inspeções, predições históricas e as tabelas de estado da fila River;
+4. **Supabase Storage (S3):** bucket de objetos privado que armazena os arquivos CSV e XLSX durante a transição entre a API e os workers;
+5. **Microsserviço de Machine Learning:** serviço Python executado em VPS dedicada que recebe os parâmetros das portas e retorna a probabilidade de falha mecânica ou eletrônica.
+
+## 2. Nível C4 — Contêineres e topologia de rede
+
+A infraestrutura é executada em contêineres Docker interligados pela rede interna isolada `backend-network`. O proxy reverso Nginx atua como único ponto de entrada para o tráfego HTTP vindo da internet.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={c4Conteineres}
+    alt="Diagrama C4 de Contêineres e topologia de rede Docker detalhando Nginx, Backend API, Worker River, PostgreSQL, Storage S3 e pilha de observabilidade."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Diagrama C4 de Contêineres e topologia de rede Docker: processos executáveis, persistência, mensageria e observabilidade.
+  </figcaption>
+</figure>
+
+### Especificação dos contêineres em execução
+
+| Contêiner | Papel técnico | Porta interna | Exposta no host | Política de persistência |
+|---|---|---:|:---:|---|
+| `nginx` | Proxy reverso, terminação de conexões e roteamento de subpaths | 80 | Sim (80) | Sem estado local |
+| `backend-linha4` | API HTTP em Go: autenticação, recepção de uploads e agendamento de jobs | 8080 | Não | Sem estado próprio (stateless) |
+| `worker-linha4` | Processador assíncrono em Go: polling do River, leitura S3 e batch SQL | — | Não | Sem estado próprio (stateless) |
+| `otel-collector` | Agregador OpenTelemetry: recebe OTLP gRPC/HTTP e distribui para Tempo | 4317/4318 | Não | Buffer em memória de lote |
+| `tempo` | Mecanismo de armazenamento de traces distribuídos | 3200 | Não | Volume Docker `tempo-data` |
+| `prometheus` | Banco de séries temporais para métricas de infraestrutura e aplicação | 9090 | Não | Volume Docker `prometheus-data` |
+| `loki` | Indexador e agregador de logs estruturados JSON | 3100 | Não | Volume Docker `loki-data` |
+| `promtail` | Agente coletor de logs do socket Docker (`/var/run/docker.sock`) | — | Não | Arquivo de posições de leitura |
+| `grafana` | Portal único de visualização de métricas, logs e traces | 3000 | Não | Volume Docker `grafana-data` |
+
+### Imagem única para API e Worker
+
+Tanto o contêiner `backend-linha4` quanto o `worker-linha4` são instanciados a partir da **mesma imagem Docker** compilada no pipeline. A imagem contém dois binários estáticos: `/app/api` e `/app/worker`.
+- A API inicia executando `/app/api` (padrão do `ENTRYPOINT`);
+- O Worker substitui o comando no Compose por `command: ["/app/worker"]`.
+
+Essa abordagem elimina divergências de versões de bibliotecas e modelos de dados entre quem produz o job e quem o consome.
+
+## 3. Nível C4 — Componentes internos do backend
+
+Dentro da base de código em Go, os componentes são estruturados segundo as camadas da Clean Architecture:
+
+```text
+src/backend/
+├── cmd/
+│   ├── api/          -> Composition Root da API HTTP (instancia adaptadores e inicia Gin)
+│   └── worker/       -> Composition Root do Worker (instancia processadores e registra no River)
+├── internal/
+│   ├── domain/       -> Entidades com invariantes (Alarm, Inspection, Maintenance, Upload)
+│   ├── usecase/      -> Orquestração de negócio (IngestAlarms, IngestMaintenance, Login, etc.)
+│   │   └── port/     -> Interfaces desacopladas (Repositories, Storage, JobQueue, MLClient)
+│   └── adapter/      -> Implementações concretas de infraestrutura
+│       ├── http/     -> Handlers Gin, middlewares, DTOs e Problem Details
+│       ├── repository/ -> Repositórios PostgreSQL parametrizados e Unit of Work
+│       ├── storage/  -> S3Storage e LocalTempStorage
+│       ├── jobqueue/ -> RiverQueue e IngestionWorker
+│       ├── mlclient/ -> Cliente HTTP com Circuit Breaker para o serviço Python
+│       └── telemetry/-> Configuração do TracerProvider OpenTelemetry OTLP
+```
+
+Os composition roots em `cmd/api/main.go` e `cmd/worker/main.go` são os únicos pontos onde structs concretas encontram as interfaces.
+
+## 4. Fronteiras de confiança e zonas de segurança
+
+Todo dado que trafega no sistema é categorizado de acordo com a zona de segurança onde se encontra:
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={fronteirasDeConfianca}
+    alt="Mapa de fronteiras de confiança e fluxos de dados seguros em três zonas: pública, rede interna controlada de contêineres e serviços gerenciados."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Fronteiras de confiança e fluxos de dados seguros entre clientes, API, banco e microsserviço de ML.
+  </figcaption>
+</figure>
+
+### Controles de segurança aplicados
+
+1. **Bucket S3 estritamente privado:** o Supabase Storage não permite acesso público anônimo. O upload e download são efetuados exclusivamente pelos contêineres via AWS SDK v2 com credenciais restritas;
+2. **Defesa contra injeção SQL:** todos os repositórios utilizam consultas preparadas parametrizadas (`$1, $2, ...`), impedindo injeção mesmo em consultas complexas;
+3. **Bloqueio de métricas externas:** a rota `/metrics` do Prometheus é bloqueada pelo Nginx para clientes de fora da rede interna;
+4. **Proteção contra sobrescrita:** arquivos enviados geram nomes compostos por UUID v4 e prefixo controlado, impossibilitando path traversal ou substituição acidental de arquivos de outro operador.
+
+## 5. Características de disponibilidade e tolerância a falhas
+
+1. **Desacoplamento do ciclo de vida:** a API não depende da conclusão do parsing para liberar a conexão HTTP do operador. Se o contêiner `worker-linha4` for reiniciado durante um deploy, os jobs persistem no PostgreSQL e são retomados do ponto onde pararam;
+2. **Compatibilidade com connection poolers transacionais:** o River foi configurado com `RIVER_POLL_ONLY=true`. Em ambientes com PgBouncer (como o Supabase), conexões não podem depender de `LISTEN/NOTIFY` mantidos abertos por sessão longa. O modo polling realiza consultas leves a cada segundo, garantindo alta compatibilidade operacional;
+3. **Escalabilidade independente:** caso o volume de planilhas aumente em dias de manutenção pesada, é possível escalar o número de réplicas do contêiner `worker` sem precisar alterar o número de instâncias da API HTTP.

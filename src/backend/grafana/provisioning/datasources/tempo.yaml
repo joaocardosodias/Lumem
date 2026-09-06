@@ -9,6 +9,6 @@ datasources:
     editable: true
     jsonData:
       tracesToLogsV2:
-        datasourceUid: loki
+        datasourceUid: P8E80F9AEF21F6940
         filterByTraceID: true
         filterBySpanID: false

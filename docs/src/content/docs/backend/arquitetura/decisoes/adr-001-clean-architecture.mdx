@@ -1,0 +1,50 @@
+---
+title: ADR 001 — Clean Architecture e Ports & Adapters
+description: Registro formal da decisão arquitetural de estruturação do backend em quatro camadas concêntricas com inversão de dependência.
+---
+
+## 1. Contexto e Forças de Decisão
+
+O backend da plataforma precisa integrar uma variedade heterogênea de tecnologias: frameworks web (Gin), bancos relacionais (PostgreSQL 16), mensageria transacional (River), armazenamento em nuvem (Supabase S3), segurança criptográfica (JWT e bcrypt), telemetria (OpenTelemetry) e serviços analíticos externos (modelo preditivo em Python).
+
+Ao planejar a arquitetura na Sprint 3, a equipe estabeleceu que acoplar persistência e lógica de negócios diretamente nos handlers HTTP geraria bloqueios inaceitáveis:
+1. **Dificuldade severa de testes:** seria impossível testar regras de validação de alarmes ou transições de inspeção sem subir instâncias reais do PostgreSQL;
+2. **Incompatibilidade com múltiplos executáveis:** a existência de um processo worker exigia compartilhar regras de negócio sem levar Gin ou endpoints HTTP para dentro do worker;
+3. **Alto acoplamento com fornecedores:** qualquer troca futura de provedor de nuvem exigiria reescrever múltiplos pontos de negócio caso não houvesse uma abstração intermediária de portas.
+
+## 2. Decisão Arquitetural
+
+Adotar estritamente a **Clean Architecture** combinada com o padrão **Hexagonal (Ports and Adapters)**:
+- **Entidades de Domínio (`internal/domain`):** structs puras que representam os conceitos operacionais do metrô (alarmes, ordens, portas, predições), contendo validações de invariantes em seus construtores e erros fortemente tipados;
+- **Casos de Uso (`internal/usecase`):** fluxos de trabalho que orquestram a execução do sistema sem conhecer nenhum driver ou SDK concreto;
+- **Portas (`internal/usecase/port`):** interfaces Go definidas no lado do consumidor que estabelecem contratos de repositório, mensageria, storage e segurança;
+- **Adaptadores (`internal/adapter`):** implementações concretas que realizam a comunicação com o mundo exterior (Gin, pgx/sql, AWS SDK, River);
+- **Composition Roots (`cmd/api` e `cmd/worker`):** os únicos arquivos autorizados a importar adaptadores concretos e injetá-los nos casos de uso.
+
+
+## 3. Matriz de Alternativas Avaliadas
+
+| Abordagem | Prós | Contras | Avaliação final |
+|---|---|---|---|
+| **Handlers diretos no Banco (Active Record / Script)** | Desenvolvimento inicial muito rápido; pouquíssimos arquivos | Regras de negócio misturadas com SQL; impossível testar sem banco; duplicação no worker | **Rejeitada:** inviabiliza testes rápidos e quebra com múltiplos executáveis |
+| **Arquitetura Tradicional em 3 Camadas (Controller-Service-DAO)** | Separação básica de papéis; padrão conhecido na indústria | Serviços costumam depender diretamente das DAOs concretas, invertendo o controle e acoplando o domínio ao schema SQL | **Rejeitada:** não isola o núcleo contra mudanças em bibliotecas externas |
+| **Clean Architecture com Ports & Adapters** | Testabilidade máxima com doubles em memória; domínio independente de banco e frameworks; API e Worker reutilizam os mesmos casos de uso | Maior número de arquivos e structs DTO; necessidade de montagem explícita nos composition roots | **Aprovada:** benefícios de isolamento e resiliência superam a verbosidade inicial |
+
+## 4. Consequências da Decisão
+
+### Consequências Positivas
+- **Velocidade de testes:** casos de uso executam centenas de asserções em menos de 10 milissegundos usando test doubles sem conexões de rede;
+- **Portabilidade de infraestrutura:** a porta `IngestionStorage` permitiu criar `LocalTempStorage` (para testes locais) e `S3Storage` (para nuvem) sem alterar uma linha de `IngestAlarmsUseCase`;
+- **Compartilhamento de código limpo:** a API HTTP e o processo Worker compartilham exatamente o mesmo núcleo de negócio;
+- **Erros desacoplados:** o domínio emite erros de negócio (`ErrDuplicateUpload`), e a borda HTTP decide mapeá-los para Problem Details (`409 Conflict`).
+
+### Trade-offs e Custos Aceitos
+- Aumento da quantidade de arquivos no repositório para acomodar portas, DTOs e adaptadores;
+- Exigência de disciplina rigorosa da equipe para não permitir `import "database/sql"` ou bibliotecas externas dentro de `internal/usecase`.
+
+## 5. Evidências de Conformidade no Código
+
+- [`internal/usecase/port/repository.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/repository.go): contratos abstratos de persistência;
+- [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go): contratos de storage, mensageria e Unit of Work;
+- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go): implementação S3 atendendo à porta de storage;
+- [`cmd/api/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/worker/main.go): composition roots independentes.

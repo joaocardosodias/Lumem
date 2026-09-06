@@ -1,0 +1,104 @@
+---
+title: DevOps e Deploy
+description: Guia de orquestração com Docker Compose, build multi-stage, dependências de inicialização, migrações e rollout seguro.
+---
+
+import { Image } from 'astro:assets';
+import dockerBuildMultistage from '../../../../assets/backend/docker-build-multistage.png';
+import dockerComposePs from '../../../../assets/backend/docker-compose-ps.png';
+
+A estratégia de implantação (deploy) do backend foi desenhada para materializar em nível de infraestrutura a separação de responsabilidades definida na Clean Architecture: a API HTTP e o Worker assíncrono executam como **processos independentes**, orquestrados via Docker Compose.
+
+Esta página documenta a construção da imagem Docker multi-stage, a topologia do Compose, a execução ordenada de migrações de banco de dados e o roteiro de verificação operacional pós-deploy.
+
+## 1. Construção da imagem Docker multi-stage
+
+O arquivo [`Dockerfile`](file:///home/cardoso/GitHub/g04/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter a imagem final enxuta, sem compiladores ou ferramentas de desenvolvimento, minimizando a superfície de ataque:
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={dockerBuildMultistage}
+    alt="Diagrama do Docker Multi-Stage Build: estágio Builder Go 1.24 e estágio Runtime Alpine com usuário appuser UID 10001."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Pipeline de compilação multi-stage da imagem Docker do backend.
+  </figcaption>
+</figure>
+
+## 2. Orquestração e dependências de inicialização
+
+No [`docker-compose.yml`](file:///home/cardoso/GitHub/g04/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
+
+```yaml
+services:
+  backend:
+    build: .
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build: .
+    command: ["/app/worker"]
+    depends_on:
+      backend:
+        condition: service_healthy
+```
+
+### Por que o Worker aguarda o Backend estar saudável?
+
+Ao iniciar, a API executa as migrações SQL da aplicação e do River (`RUN_MIGRATIONS=true`). Se o worker subisse concorrentemente no mesmo milissegundo, tentaria consultar tabelas do River (`river_job`) que ainda poderiam não existir ou estar em processo de migração. O condicional `service_healthy` garante que o worker só inicia seu loop de consumo após a API confirmar que o PostgreSQL está migrado e acessível.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={dockerComposePs}
+    alt="Captura de tela de terminal executando docker compose ps exibindo todos os serviços saudáveis e ativos."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Estado operacional dos contêineres da plataforma validados via docker compose ps.
+  </figcaption>
+</figure>
+
+## 3. Gestão de migrações de banco de dados
+
+O backend opera com dois subsistemas de migração independentes:
+1. **Migrações de Negócio (`src/backend/migrations/`):** arquivos SQL versionados (`000001_create_initial_schema.up.sql`, etc.) gerenciados pela biblioteca `golang-migrate`;
+2. **Migrações da Fila River (`rivermigrate`):** esquema interno de controle de jobs gerenciado pelo driver oficial do River.
+
+A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes com múltiplas réplicas da API, a migração é habilitada apenas na primeira instância de deploy para evitar contenção de locks de DDL no PostgreSQL.
+
+## 4. Roteiro de rollout seguro (Passo a Passo)
+
+1. **Configuração de Ambiente:** copiar `.env.example` para `.env` e preencher os segredos corporativos;
+2. **Auditoria de Configuração:** validar a sintaxe do compose sem exibir valores sensíveis:
+   ```bash
+   docker compose config --quiet
+   ```
+3. **Compilação e Subida em Background:**
+   ```bash
+   docker compose up --build -d
+   ```
+4. **Inspeção de Logs dos Serviços Principais:**
+   ```bash
+   docker compose logs --tail=100 backend worker
+   ```
+5. **Verificação de Healthchecks:**
+   ```bash
+   curl -f http://localhost/healthz/live
+   curl -f http://localhost/healthz/ready
+   ```
+
+## 5. Checklist de validação pós-deploy
+
+| Verificação | Comando / Rota | Critério de aceitação |
+|---|---|---|
+| **Liveness** | `GET /healthz/live` | Retorna HTTP 200 `{"status":"live"}` |
+| **Readiness** | `GET /healthz/ready` | Retorna HTTP 200 `{"status":"ready","database":"connected","storage":"connected"}` |
+| **Documentação** | `GET /docs` | Swagger UI renderizado com endpoints da v1 |
+| **Métricas Prometheus** | `curl -s localhost:9090/targets` | Target `backend-linha4` com status **UP** |
+| **Fluxo E2E Sintético** | Upload de CSV de teste | Status transiciona de `processing` para `completed` em menos de 5s |
+| **Rastreamento** | Grafana Tempo Explore | Trace completo correlacionando span HTTP da API e span consumer do Worker |
