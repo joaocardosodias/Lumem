@@ -14,6 +14,7 @@ const backendSidebar = {
 			items: [
 				{ label: 'Visão Geral da Arquitetura', slug: 'backend/arquitetura/visao-geral' },
 				{ label: 'Clean Architecture', slug: 'backend/arquitetura/clean-architecture' },
+				{ label: 'Banco de Dados & Schemas', slug: 'backend/arquitetura/banco-de-dados' },
 				{ label: 'Fluxo de Ingestão', slug: 'backend/arquitetura/fluxo-de-ingestao' },
 				{
 					label: 'Decisões de Arquitetura (ADRs)',
