@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"io"
 	"log/slog"
@@ -17,6 +18,30 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
+func TestCheckLiveness(t *testing.T) {
+	healthy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer healthy.Close()
+	if err := checkLiveness(context.Background(), healthy.URL); err != nil {
+		t.Fatalf("healthcheck saudavel retornou erro: %v", err)
+	}
+
+	unhealthy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer unhealthy.Close()
+	if err := checkLiveness(context.Background(), unhealthy.URL); err == nil {
+		t.Fatal("healthcheck deveria rejeitar status nao saudavel")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := checkLiveness(ctx, healthy.URL); err == nil {
+		t.Fatal("healthcheck deveria respeitar contexto cancelado")
+	}
+}
 
 func TestIsOriginAllowed(t *testing.T) {
 	wildcardCfg := &config.Config{

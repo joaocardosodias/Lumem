@@ -1,37 +1,59 @@
-FROM golang:1.26-alpine3.23 AS builder
+# syntax=docker/dockerfile:1.7
 
-WORKDIR /app
+ARG GO_VERSION=1.26
+ARG ALPINE_VERSION=3.23
 
-RUN apk add --no-cache git ca-certificates tzdata
+FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
+
+WORKDIR /src
+
+RUN apk add --no-cache ca-certificates git
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-COPY . .
+COPY cmd ./cmd
+COPY internal ./internal
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app/bin/api cmd/api/main.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app/bin/worker cmd/worker/main.go
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -buildvcs=false -tags netgo,osusergo \
+    -ldflags="-s -w -buildid=" -o /out/api ./cmd/api && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -buildvcs=false -tags netgo,osusergo \
+    -ldflags="-s -w -buildid=" -o /out/worker ./cmd/worker && \
+    install -d -m 1777 /out/rootfs/tmp
 
-FROM alpine:3.23
+FROM scratch AS runtime
 
 WORKDIR /app
+USER 10001:10001
 
-RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache ca-certificates tzdata curl && \
-    adduser -D -u 10001 appuser
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /out/rootfs/ /
 
-COPY --from=builder /app/bin/api /app/api
-COPY --from=builder /app/bin/worker /app/worker
-COPY --from=builder /app/migrations /app/migrations
-COPY --from=builder /app/docs/openapi.json /app/docs/openapi.json
+FROM runtime AS api
 
-RUN chown -R appuser:appuser /app
-
-USER appuser
+COPY --from=builder /out/api /app/api
+COPY migrations /app/migrations
+COPY docs/openapi.json /app/docs/openapi.json
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/healthz/live || exit 1
+  CMD ["/app/api", "healthcheck"]
 
 ENTRYPOINT ["/app/api"]
+
+FROM runtime AS worker
+
+COPY --from=builder /out/worker /app/worker
+
+ENTRYPOINT ["/app/worker"]
+
+# Mantém `docker build .` compatível, produzindo a imagem da API por padrão.
+FROM api AS final

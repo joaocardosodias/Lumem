@@ -41,7 +41,7 @@ O operador submeteu uma planilha de alarmes ou manutenção, a API retornou cód
 3. **Verificar conectividade do Worker com o Supabase Storage (S3):**
    Execute um teste de abertura de socket a partir da rede do contêiner:
    ```bash
-   docker compose exec worker curl -v -I "$S3_ENDPOINT"
+   docker run --rm --network container:worker-linha4 curlimages/curl:8.16.0 -v -I "$S3_ENDPOINT"
    ```
 
 4. **Ação corretiva:**
@@ -106,4 +106,3 @@ Ao realizar requisições na API, os logs no Loki exibem `trace_id`, mas ao clic
    ```
 4. **Janela de busca no Grafana Explore:**
    O exportador do OpenTelemetry Collector agrupa spans em lotes com timeout de flush de 5 segundos. Aguarde 10 segundos antes de buscar o trace e certifique-se de que o seletor de tempo no Grafana cubra o intervalo da requisição.
-

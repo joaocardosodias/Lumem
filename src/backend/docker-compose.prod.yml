@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend:latest
+    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend-api:latest
     container_name: backend-linha4
     restart: unless-stopped
     expose:
@@ -14,7 +14,7 @@ services:
     volumes:
       - ingestion-tmp:/tmp
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz/live"]
+      test: ["CMD", "/app/api", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -28,10 +28,9 @@ services:
         max-file: "3"
 
   worker:
-    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend:latest
+    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend-worker:latest
     container_name: worker-linha4
     restart: unless-stopped
-    entrypoint: ["/app/worker"]
     env_file:
       - .env
     environment:

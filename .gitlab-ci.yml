@@ -115,22 +115,29 @@ build_container:
     DOCKER_TLS_CERTDIR: ""
   script:
     - docker info
-    - docker build -t "backend-linha4:$CI_COMMIT_SHORT_SHA" src/backend
-    - docker save -o backend-image.tar "backend-linha4:$CI_COMMIT_SHORT_SHA"
+    - docker build --target api -t "backend-linha4-api:$CI_COMMIT_SHORT_SHA" src/backend
+    - docker build --target worker -t "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" src/backend
+    - docker save -o backend-api-image.tar "backend-linha4-api:$CI_COMMIT_SHORT_SHA"
+    - docker save -o backend-worker-image.tar "backend-linha4-worker:$CI_COMMIT_SHORT_SHA"
     - |
       if [ -n "$GHCR_TOKEN" ] && [ -n "$GHCR_USERNAME" ]; then
         echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-        docker tag "backend-linha4:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
-        docker push "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
+        docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
+        docker push "ghcr.io/$GHCR_USERNAME/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker push "ghcr.io/$GHCR_USERNAME/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
         if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-          docker tag "backend-linha4:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
-          docker push "ghcr.io/$GHCR_USERNAME/g04-backend:latest"
+          docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-api:latest"
+          docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-worker:latest"
+          docker push "ghcr.io/$GHCR_USERNAME/g04-backend-api:latest"
+          docker push "ghcr.io/$GHCR_USERNAME/g04-backend-worker:latest"
         fi
       fi
   artifacts:
     expire_in: 1 day
     paths:
-      - backend-image.tar
+      - backend-api-image.tar
+      - backend-worker-image.tar
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
@@ -145,10 +152,12 @@ trivy_scan:
     - build_container
   script:
     - |
-      if [ -f backend-image.tar ]; then
-        trivy image --input backend-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+      if [ -f backend-api-image.tar ] && [ -f backend-worker-image.tar ]; then
+        trivy image --input backend-api-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+        trivy image --input backend-worker-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
       elif [ -n "$GHCR_USERNAME" ]; then
-        trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "ghcr.io/$GHCR_USERNAME/g04-backend:$CI_COMMIT_SHORT_SHA"
+        trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "ghcr.io/$GHCR_USERNAME/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "ghcr.io/$GHCR_USERNAME/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
       fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

@@ -50,6 +50,22 @@ func runMigrations(db *sql.DB, migrationsPath string) error {
 	return nil
 }
 
+func checkLiveness(ctx context.Context, endpoint string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return errors.New("healthcheck retornou status nao saudavel")
+	}
+	return nil
+}
+
 func isOriginAllowed(origin string, cfg *config.Config, allowedOrigins []string) bool {
 	if cfg.CORSAllowedOrigins == "*" || cfg.Environment != "production" {
 		return true
@@ -271,6 +287,19 @@ func runGracefulServer(cfg *config.Config, router *gin.Engine, logger *slog.Logg
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "healthcheck" {
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := checkLiveness(ctx, "http://127.0.0.1:"+port+"/healthz/live"); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+
 	cfg := config.LoadConfig()
 
 	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

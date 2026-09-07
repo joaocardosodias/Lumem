@@ -13,7 +13,20 @@ Esta página documenta a construção da imagem Docker multi-stage, a topologia 
 
 ## 1. Construção da imagem Docker multi-stage
 
-O arquivo [`Dockerfile`](file:///home/cardoso/GitHub/g04/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter a imagem final enxuta, sem compiladores ou ferramentas de desenvolvimento, minimizando a superfície de ataque:
+O arquivo [`Dockerfile`](file:///home/cardoso/GitHub/g04/src/backend/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter as imagens finais sem compiladores ou ferramentas de desenvolvimento. Um único estágio `builder` compila os dois binários com `CGO_ENABLED=0`, `-trimpath` e remoção de símbolos e build ID. A partir de um runtime vazio (`scratch`) compartilhado, os targets `api` e `worker` recebem somente o executável e os artefatos necessários ao próprio processo.
+
+Essa separação reduziu o tamanho exibido pelo Docker de **243 MB por imagem** para **57 MB na API** e **38,6 MB no Worker**:
+
+| Imagem | Antes | Depois | Redução |
+|---|---:|---:|---:|
+| API | 243 MB | 57 MB | 76,5% |
+| Worker | 243 MB | 38,6 MB | 84,1% |
+
+O ganho não veio de compressão agressiva do executável. A camada `RUN chown -R /app`, que duplicava 75,8 MB de arquivos já copiados, foi eliminada porque binários e arquivos somente leitura podem continuar pertencendo ao `root` e ser executados pelo UID 10001. O runtime `scratch` também eliminou shell, gerenciador de pacotes e utilitários que não participam do serviço. Permaneceram somente o certificado de autoridades públicas para conexões TLS e um diretório `/tmp` com permissão `1777` para o streaming de uploads.
+
+Como `scratch` não possui `curl` ou `wget`, a API ganhou o comando `/app/api healthcheck`. Ele faz uma requisição com timeout para o endpoint de liveness e devolve ao Docker o código de saída adequado. Isso mantém o healthcheck funcional sem adicionar outro executável à imagem.
+
+O custo aceito foi publicar duas tags (`g04-backend-api` e `g04-backend-worker`) no registry. Em troca, cada contêiner passa a carregar somente seu binário, reduzindo transferência, armazenamento, superfície de ataque e tempo de rollout. As camadas de Alpine são compartilhadas pelo Docker, e o cache BuildKit evita recompilar dependências entre os dois targets.
 
 <figure style="margin: 2rem 0; text-align: center;">
   <Image
@@ -28,21 +41,24 @@ O arquivo [`Dockerfile`](file:///home/cardoso/GitHub/g04/Dockerfile) utiliza o p
 
 ## 2. Orquestração e dependências de inicialização
 
-No [`docker-compose.yml`](file:///home/cardoso/GitHub/g04/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
+No [`docker-compose.yml`](file:///home/cardoso/GitHub/g04/src/backend/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
 
 ```yaml
 services:
   backend:
-    build: .
+    build:
+      context: .
+      target: api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz/ready"]
+      test: ["CMD", "/app/api", "healthcheck"]
       interval: 5s
       timeout: 3s
       retries: 5
 
   worker:
-    build: .
-    command: ["/app/worker"]
+    build:
+      context: .
+      target: worker
     depends_on:
       backend:
         condition: service_healthy
