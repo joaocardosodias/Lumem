@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/g04/backend/internal/usecase/port"
@@ -47,7 +46,7 @@ type S3Storage struct {
 	prefix string
 }
 
-func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
+func NewS3Storage(_ context.Context, cfg S3Config) (*S3Storage, error) {
 	endpoint := strings.TrimSpace(cfg.Endpoint)
 	region := strings.TrimSpace(cfg.Region)
 	bucket := strings.TrimSpace(cfg.Bucket)
@@ -57,19 +56,16 @@ func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
 		return nil, errors.New("configuracao S3 incompleta")
 	}
 
-	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
-		awsconfig.WithRegion(region),
-		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+	awsCfg := aws.Config{
+		Region: region,
+		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
 			accessKeyID,
 			secretAccessKey,
 			"",
 		)),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("carregar configuracao S3: %w", err)
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
 	}
-	awsCfg.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
-	awsCfg.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
 
 	client := s3.NewFromConfig(awsCfg, func(options *s3.Options) {
 		options.BaseEndpoint = aws.String(strings.TrimRight(endpoint, "/"))

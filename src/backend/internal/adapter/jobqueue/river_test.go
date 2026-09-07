@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 
@@ -295,5 +296,134 @@ func TestRiverQueueEnqueueBeginTxError(t *testing.T) {
 	err = q.Enqueue(context.Background(), &domain.FileUpload{ID: "up-tx-fail"}, port.IngestionJob{})
 	if err == nil || !strings.Contains(err.Error(), "iniciar transacao de agendamento") {
 		t.Fatalf("esperava erro de conexao na transacao, obteve %v", err)
+	}
+}
+
+type fakeRiverInserter struct {
+	err      error
+	rollback bool
+	args     IngestionArgs
+	opts     river.InsertOpts
+}
+
+func (f *fakeRiverInserter) InsertTx(_ context.Context, tx *sql.Tx, args river.JobArgs, opts *river.InsertOpts) (*rivertype.JobInsertResult, error) {
+	f.args = args.(IngestionArgs)
+	f.opts = *opts
+	if f.rollback {
+		_ = tx.Rollback()
+	}
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &rivertype.JobInsertResult{}, nil
+}
+
+func openRiverTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://postgres:postgres@localhost:5439/postgres?sslmode=disable"
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Skipf("nao foi possivel abrir o PostgreSQL de teste: %v", err)
+	}
+	if err := db.PingContext(context.Background()); err != nil {
+		_ = db.Close()
+		t.Skipf("PostgreSQL de teste indisponivel: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	return db
+}
+
+func TestRiverQueueEnqueueTransaction(t *testing.T) {
+	db := openRiverTestDB(t)
+	db.SetMaxOpenConns(1)
+	_, err := db.Exec(`
+		CREATE TEMP TABLE file_uploads (
+			id UUID PRIMARY KEY,
+			file_name TEXT NOT NULL,
+			file_type TEXT NOT NULL,
+			file_hash TEXT UNIQUE,
+			status TEXT,
+			rows_processed INTEGER,
+			rows_inserted INTEGER,
+			error_log TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("criar tabela temporaria de uploads: %v", err)
+	}
+
+	newUpload := func(id, hash string) *domain.FileUpload {
+		return &domain.FileUpload{
+			ID:       id,
+			FileName: "alarmes.csv",
+			FileType: "alarms",
+			FileHash: hash,
+			Status:   "queued",
+		}
+	}
+	job := port.IngestionJob{
+		Type:       port.IngestionJobAlarms,
+		UploadID:   "10000000-0000-0000-0000-000000000001",
+		StorageKey: "ingestion/alarmes.csv",
+		FileName:   "alarmes.csv",
+	}
+
+	successInserter := &fakeRiverInserter{}
+	queue := &RiverQueue{db: db, client: successInserter, maxAttempts: 7}
+	if err := queue.Enqueue(context.Background(), newUpload(job.UploadID, "hash-success"), job); err != nil {
+		t.Fatalf("enfileirar upload: %v", err)
+	}
+	if successInserter.args.UploadID != job.UploadID || successInserter.opts.MaxAttempts != 7 {
+		t.Fatalf("argumentos do job inesperados: args=%+v opts=%+v", successInserter.args, successInserter.opts)
+	}
+	var persisted int
+	if err := db.QueryRow("SELECT COUNT(*) FROM file_uploads WHERE id = $1", job.UploadID).Scan(&persisted); err != nil || persisted != 1 {
+		t.Fatalf("upload nao foi confirmado na transacao: count=%d err=%v", persisted, err)
+	}
+
+	duplicate := newUpload("10000000-0000-0000-0000-000000000002", "hash-success")
+	if err := queue.Enqueue(context.Background(), duplicate, job); !errors.Is(err, domain.ErrDuplicateUpload) {
+		t.Fatalf("esperava erro de upload duplicado, obteve %v", err)
+	}
+
+	insertFailure := &fakeRiverInserter{err: errors.New("river indisponivel")}
+	queue.client = insertFailure
+	failedUpload := newUpload("10000000-0000-0000-0000-000000000003", "hash-insert-error")
+	if err := queue.Enqueue(context.Background(), failedUpload, job); err == nil || !strings.Contains(err.Error(), "inserir job River") {
+		t.Fatalf("esperava erro de insercao River, obteve %v", err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM file_uploads WHERE id = $1", failedUpload.ID).Scan(&persisted); err != nil || persisted != 0 {
+		t.Fatalf("upload deveria sofrer rollback: count=%d err=%v", persisted, err)
+	}
+
+	commitFailure := &fakeRiverInserter{rollback: true}
+	queue.client = commitFailure
+	commitUpload := newUpload("10000000-0000-0000-0000-000000000004", "hash-commit-error")
+	if err := queue.Enqueue(context.Background(), commitUpload, job); err == nil || !strings.Contains(err.Error(), "confirmar upload e job") {
+		t.Fatalf("esperava erro de commit, obteve %v", err)
+	}
+}
+
+func TestRiverMigrationsSuccess(t *testing.T) {
+	db := openRiverTestDB(t)
+	ctx := context.Background()
+	if err := MigrateSQL(ctx, db, nil); err != nil {
+		t.Fatalf("migracao River via database/sql: %v", err)
+	}
+
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://postgres:postgres@localhost:5439/postgres?sslmode=disable"
+	}
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatalf("abrir pool pgx: %v", err)
+	}
+	defer pool.Close()
+	if err := Migrate(ctx, pool, nil); err != nil {
+		t.Fatalf("migracao River via pgx: %v", err)
 	}
 }

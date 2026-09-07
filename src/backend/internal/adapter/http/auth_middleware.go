@@ -37,20 +37,21 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			RespondProblem(c, http.StatusUnauthorized, "ERR_INVALID_CLAIMS", "Claims Invalidas", "Falha ao extrair informacoes do token.")
-			return
-		}
-
-		userID, _ := claims["sub"].(string)
-		email, _ := claims["email"].(string)
-		role, _ := claims["role"].(string)
-
-		c.Set("userID", userID)
-		c.Set("userEmail", email)
-		c.Set("userRole", role)
-
-		c.Next()
+		applyClaims(c, token)
 	}
+}
+
+func applyClaims(c *gin.Context, token *jwt.Token) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		RespondProblem(c, http.StatusUnauthorized, "ERR_INVALID_CLAIMS", "Claims Invalidas", "Falha ao extrair informacoes do token.")
+		return
+	}
+
+	userID, _ := claims["sub"].(string)
+	email, _ := claims["email"].(string)
+	role, _ := claims["role"].(string)
+	c.Set("userID", userID)
+	c.Set("userEmail", email)
+	c.Set("userRole", role)
 }

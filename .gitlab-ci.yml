@@ -42,11 +42,21 @@ lint_vet:
 test_suite:
   stage: test
   image: golang:1.26-alpine3.23
+  services:
+    - postgres:16-alpine
+  variables:
+    POSTGRES_DB: g04_test
+    POSTGRES_USER: test
+    POSTGRES_PASSWORD: test
+    POSTGRES_HOST_AUTH_METHOD: trust
+    TEST_DATABASE_URL: "postgresql://test:test@postgres:5432/g04_test?sslmode=disable"
   before_script:
     - export PATH="$GOPATH/bin:$PATH"
+    - apk add --no-cache build-base postgresql-client
+    - until pg_isready -h postgres -p 5432 -U test; do sleep 1; done
     - cd src/backend
   script:
-    - go test -v -coverpkg=./internal/... -coverprofile=coverage.out ./tests/...
+    - go test -race -coverpkg=./internal/... -coverprofile=coverage.out ./...
     - go tool cover -func=coverage.out
   coverage: '/total:\s+\(statements\)\s+(\d+.\d+\%)/'
   artifacts:

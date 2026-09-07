@@ -18,6 +18,14 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type prepareErrorDB struct {
+	*sql.DB
+}
+
+func (db *prepareErrorDB) PrepareContext(context.Context, string) (*sql.Stmt, error) {
+	return nil, errors.New("falha simulada ao preparar statement")
+}
+
 func testUserRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 	userRepo := repository.NewPostgresUserRepository(db)
 	user, err := userRepo.GetByEmail(ctx, "operador@motiva.com.br")
@@ -435,6 +443,18 @@ func testInspectionRepoEdgeCases(t *testing.T, ctx context.Context, db *sql.DB, 
 }
 
 func testDashboardRepo(t *testing.T, ctx context.Context, db *sql.DB) {
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO prediction_runs (id, horizon_days, total_doors_evaluated, total_doors_at_risk)
+		VALUES ('zzzz-dashboard-integration', 7, 1, 1)
+		ON CONFLICT (id) DO NOTHING;
+		INSERT INTO predictions (id, run_id, station_code, platform, door_number, will_fail)
+		VALUES ('dashboard-integration-prediction', 'zzzz-dashboard-integration', 'PIN', 'P1', 1, TRUE)
+		ON CONFLICT (id) DO NOTHING
+	`)
+	if err != nil {
+		t.Fatalf("prepare dashboard risk data: %v", err)
+	}
+
 	dashRepo := repository.NewPostgresDashboardRepository(db)
 	summary, err := dashRepo.GetSummary(ctx)
 	if err != nil {
@@ -442,6 +462,9 @@ func testDashboardRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 	}
 	if summary.TotalDoors == 0 {
 		t.Fatalf("expected doors from migration 8, got 0")
+	}
+	if len(summary.CriticalStations) == 0 || summary.CriticalStations[0].StationCode != "PIN" {
+		t.Fatalf("expected PIN among critical stations, got %+v", summary.CriticalStations)
 	}
 
 	timeline, err := dashRepo.GetDoorTimeline(ctx, 1)
@@ -565,6 +588,66 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 	}
 }
 
+func testRepositoryErrorPaths(t *testing.T, ctx context.Context, db *sql.DB) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("abrir transacao para testar erros de scan: %v", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+		CREATE TEMP VIEW stations AS
+		SELECT 1::INTEGER AS id, 'ERR'::TEXT AS code, 'Estacao de erro'::TEXT AS name, NOW() AS created_at;
+
+		CREATE TEMP VIEW doors AS
+		SELECT NULL::INTEGER AS id, 1::INTEGER AS station_id, 'P1'::TEXT AS platform,
+		       1::INTEGER AS door_number, 'TAG-ERR'::TEXT AS sap_tag, 'active'::TEXT AS status,
+		       NOW() AS created_at;
+
+		CREATE TEMP VIEW maintenance_events AS
+		SELECT 'maintenance-error'::TEXT AS id, NULL::TEXT AS upload_id, NULL::TEXT AS sap_order_number,
+		       'ZM01'::TEXT AS order_type, NULL::TEXT AS installation_location, NULL::TEXT AS station_code,
+		       '2026-09-01T10:00:00Z'::TEXT AS start_timestamp, NULL::TEXT AS end_timestamp,
+		       NULL::REAL AS duration_hours, NULL::TEXT AS description, NULL::TEXT AS symptom,
+		       NULL::TEXT AS cause, NULL::TEXT AS action_taken, 'manual'::TEXT AS source, NOW() AS created_at;
+
+		CREATE TEMP VIEW inspections AS
+		SELECT 'inspection-error'::TEXT AS id, NULL::TEXT AS prediction_id, 'ERR'::TEXT AS station_code,
+		       'P1'::TEXT AS platform, NULL::INTEGER AS door_number, NULL::TEXT AS scheduled_for,
+		       'high'::TEXT AS priority, 'pending'::TEXT AS status, NULL::TEXT AS notes,
+		       NULL::TIMESTAMPTZ AS completed_at, NOW() AS created_at, NOW() AS updated_at
+	`)
+	if err != nil {
+		t.Fatalf("criar views temporarias para erros de scan: %v", err)
+	}
+
+	if _, err := repository.NewPostgresPredictionRepository(tx).ListDoorsForInference(ctx); err == nil {
+		t.Fatal("esperava erro de scan ao listar portas para inferencia")
+	}
+	if _, err := repository.NewPostgresDashboardRepository(tx).GetStationDoorsStatus(ctx, "ERR"); err == nil {
+		t.Fatal("esperava erro de scan ao listar status das portas")
+	}
+	if _, err := repository.NewPostgresMaintenanceRepository(tx).List(ctx, 10, 0); err == nil {
+		t.Fatal("esperava erro de scan ao listar manutencoes")
+	}
+	if _, err := repository.NewPostgresInspectionRepository(tx).List(ctx, 10, 0, ""); err == nil {
+		t.Fatal("esperava erro de scan ao listar inspecoes")
+	}
+
+	if err := tx.Rollback(); err != nil {
+		t.Fatalf("reverter views temporarias: %v", err)
+	}
+
+	repoWithPrepareFailure := repository.NewPostgresPredictionRepository(&prepareErrorDB{DB: db})
+	err = repoWithPrepareFailure.SaveRun(ctx, &domain.PredictionRun{
+		ID:          uuid.NewString(),
+		HorizonDays: 7,
+	}, []domain.PredictionItem{{StationCode: "PIN", Platform: "P1", DoorNumber: 1}})
+	if err == nil || err.Error() != "falha simulada ao preparar statement" {
+		t.Fatalf("esperava erro ao preparar insercao de previsoes, obteve %v", err)
+	}
+}
+
 func testUOWRollback(t *testing.T, ctx context.Context, db *sql.DB) {
 	uow := repository.NewPostgresUnitOfWork(db)
 	err := uow.Do(ctx, func(store port.UnitOfWorkStore) error {
@@ -634,6 +717,7 @@ func TestPostgresRepositories(t *testing.T) {
 	testInspectionRepo(t, ctx, db, predID)
 	testDashboardRepo(t, ctx, db)
 	testPredictionRepoExtra(t, ctx, db)
+	testRepositoryErrorPaths(t, ctx, db)
 	testCleanupUploads(t, ctx, db, uploadID)
 	testUOWRollback(t, ctx, db)
 }

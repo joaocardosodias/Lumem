@@ -21,7 +21,7 @@ A concepção do backend foi guiada desde o primeiro momento pelos princípios d
 3. **Mensageria transacional durável:** adoção da biblioteca River sobre o PostgreSQL para garantir que tarefas de ingestão sejam persistidas atomicamente e sobrevivam a reinicializações;
 4. **Armazenamento de objetos em nuvem:** utilização do Supabase Storage via protocolo S3 privado para permitir que API e Worker acessem os mesmos arquivos sem dependência de discos locais;
 5. **Observabilidade distribuída unificada:** instrumentação com OpenTelemetry correlacionando métricas no Prometheus, logs estruturados no Loki e traces distribuídos no Tempo através do Grafana;
-6. **Rigor de qualidade e testes:** suíte de 245 testes automatizados sem condições de corrida e 98,7% de cobertura geral no SonarQube com Quality Gate aprovado.
+6. **Rigor de qualidade e testes:** suíte de 249 testes automatizados sem condições de corrida e 99,7% de cobertura geral no SonarQube com Quality Gate aprovado.
 
 <figure style="margin: 2rem 0; text-align: center;">
   <Image
@@ -49,7 +49,7 @@ Cada decisão arquitetural adotada na concepção do backend responde a requisit
 | Arquivos de telemetria acessíveis entre contêineres desacoplados | Armazenamento de arquivos brutos em bucket privado Supabase S3 | API e Worker desacoplados sem necessidade de volumes compartilhados | Latência de rede para upload/download e controle de expurgo | [ADR-003 — S3](file:///home/cardoso/GitHub/g04/docs/src/content/docs/backend/arquitetura/decisoes/adr-003-object-storage.mdx) |
 | Atomicidade em operações com múltiplas tabelas | Padrão Unit of Work sobre transações PostgreSQL | Atomicidade garantida: ou todos os lotes gravam ou nada persiste | Controle de transação manual no adaptador de repositório | [Práticas de Engenharia](file:///home/cardoso/GitHub/g04/docs/src/content/docs/backend/praticas-de-engenharia.mdx) |
 | Rastreabilidade de requisições web até tarefas assíncronas | Tracing distribuído com OpenTelemetry e contexto W3C no River | Visibilidade fim a fim de latência e causa raiz entre contêineres | Operação de OTel Collector e armazenamento no Tempo | [ADR-004 — OTel](file:///home/cardoso/GitHub/g04/docs/src/content/docs/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo.mdx) |
-| Proteção contra regressão e segurança em produção | Suíte de 245 testes com race detector, SonarQube e Trivy | Confiança com 98,7% de cobertura, 0 code smells e imagem hardened | Manutenção contínua de test doubles e fixtures | [Testes e CI](file:///home/cardoso/GitHub/g04/docs/src/content/docs/backend/qualidade/testes-e-ci.mdx) |
+| Proteção contra regressão e segurança em produção | Suíte de 249 testes com race detector, SonarQube e Trivy | Confiança com 99,7% de cobertura, 0 code smells e imagem hardened | Manutenção contínua de test doubles e fixtures | [Testes e CI](file:///home/cardoso/GitHub/g04/docs/src/content/docs/backend/qualidade/testes-e-ci.mdx) |
 
 ## Estrutura e guia de navegação da documentação
 

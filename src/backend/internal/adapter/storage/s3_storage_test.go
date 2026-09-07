@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -175,5 +176,15 @@ func TestNewS3Storage(t *testing.T) {
 	}
 	if st == nil || st.bucket != "test-bucket" || st.prefix != "uploads" {
 		t.Fatalf("estado incorreto do S3Storage: %+v", st)
+	}
+}
+
+func TestS3StorageStoreTempFileError(t *testing.T) {
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "diretorio-inexistente"))
+
+	store := newS3Storage(newFakeS3API(), "ingestion-uploads", "ingestion")
+	_, _, err := store.Store(context.Background(), "alarmes.csv", strings.NewReader("dados"))
+	if err == nil || !strings.Contains(err.Error(), "criar arquivo temporario") {
+		t.Fatalf("esperava erro ao criar arquivo temporario, obteve %v", err)
 	}
 }
