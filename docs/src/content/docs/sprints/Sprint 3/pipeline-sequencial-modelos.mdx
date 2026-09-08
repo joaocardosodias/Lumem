@@ -27,7 +27,7 @@ Portas priorizadas para inspeção
 
 O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 é executado somente para detalhar o risco das portas pertencentes às plataformas selecionadas na primeira etapa. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
 
-Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 gerou e avaliou a lista final de portas. A Task 5 incorporou a preparação das features e a execução do CatBoost ao notebook. A Task 6 consolidou a configuração, o reuso dos modelos salvos e o tratamento dos casos sem cobertura. A Task 7 transformou o ranking em uma lista operacional limitada de portas para inspeção.
+Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 gerou e avaliou a lista final de portas. A Task 5 incorporou a preparação das features e a execução do CatBoost ao notebook. A Task 6 consolidou a configuração, o reuso dos modelos salvos e o tratamento dos casos sem cobertura. A Task 7 transformou o ranking em uma lista operacional limitada de portas para inspeção. As Tasks 8 e 9 acrescentaram a execução por comando, a validação automática e o guia de uso.
 
 ## 2. Papel de cada modelo
 
@@ -228,6 +228,8 @@ Na Task 5, o pipeline passou a reconstruir as 21 features do Modelo 7 a partir d
 
 Na Task 6, a execução passou a reutilizar os modelos por padrão, com avaliação histórica opcional e um relatório que preserva todas as plataformas previstas, inclusive as que não puderam ser detalhadas por porta.
 
+Na Task 7, o ranking foi convertido em uma lista operacional configurável. As Tasks 8 e 9 tornaram a execução reproduzível por linha de comando e adicionaram uma verificação automática do contrato dos artefatos.
+
 O alinhamento do target e do uso do dia `D` no Modelo 5 fica registrado como aprimoramento metodológico posterior. Ele será necessário caso o grupo queira avaliar os dois estágios como um único modelo com exatamente o mesmo target, mas não impede a construção do primeiro pipeline sequencial.
 
 Com essas condições atendidas, o fluxo acordado será:
@@ -416,3 +418,59 @@ No período comum de teste, a configuração de uma porta por plataforma gerou *
 - aumentar o limite de portas amplia a cobertura, mas também aumenta a quantidade de inspeções.
 
 A lista operacional não representa um terceiro modelo e não altera os limiares. Ela é apenas uma regra de priorização aplicada ao ranking já produzido pelo Random Forest.
+
+## 18. Task 8 — Execução automatizada
+
+O pipeline pode ser executado sem abrir o notebook por meio de `models/pipeline-sequencial/executar_pipeline.py`. O programa carrega uma cópia do notebook em memória, aplica os argumentos à célula de configuração e executa todas as células de código na ordem. O arquivo `.ipynb` original não é sobrescrito.
+
+Exemplo:
+
+```bash
+python models/pipeline-sequencial/executar_pipeline.py \
+  --inicio 2025-10-01 \
+  --fim 2026-03-21 \
+  --pasta-saida artefatos \
+  --max-portas 1
+```
+
+O argumento `--sem-avaliacao` desativa as métricas históricas e mantém somente a inferência. O executor sempre define `RETREINAR_MODELO_5 = False`, evitando que uma execução operacional substitua o Random Forest salvo.
+
+O comando foi testado em uma pasta isolada para um único dia, com avaliação desativada e duas portas por plataforma. A execução gerou 22 previsões de plataforma, avaliou 336 registros de porta e produziu 28 recomendações. Os hashes dos modelos permaneceram inalterados.
+
+Na inferência, o Random Forest é configurado em memória para usar uma única thread, e os números decimais são exportados com precisão fixa. Essa configuração não altera o modelo nem suas decisões; ela evita pequenas diferenças de arredondamento nos CSVs entre duas execuções idênticas.
+
+## 19. Task 9 — Validação automática e guia de entrega
+
+O arquivo `models/pipeline-sequencial/validar_pipeline.py` verifica uma execução já produzida sem chamar os modelos. Entre as condições verificadas estão:
+
+- existência dos artefatos obrigatórios;
+- unicidade das chaves de plataforma, porta e data;
+- probabilidades dentro do intervalo de zero a um;
+- correspondência das decisões com os limiares registrados;
+- preservação de todas as plataformas previstas;
+- ausência do target nas saídas de inferência;
+- consistência do ranking e da lista operacional;
+- horizonte correto entre `D+1` e `D+7`;
+- correspondência entre arquivos e contagens do relatório;
+- integridade dos modelos por SHA-256.
+
+A validação padrão é executada com:
+
+```bash
+python models/pipeline-sequencial/validar_pipeline.py
+```
+
+O arquivo `models/pipeline-sequencial/README.md` concentra as instruções, comandos, saídas e limitações. O arquivo `models/pipeline-sequencial/requirements.txt` registra as dependências específicas e suas versões testadas.
+
+## 20. Situação final e limitações
+
+O pipeline sequencial está implementado de ponta a ponta sobre as bases de features existentes: prepara e executa o Modelo 7, filtra as plataformas, executa o Modelo 5, ranqueia as portas, gera a lista operacional, registra a execução e valida os artefatos.
+
+Permanecem como evoluções futuras, e não como etapas incompletas desta implementação:
+
+- automatizar a limpeza das novas planilhas e a reconstrução de `tabela_mestra_psd.csv` e `painel.parquet`;
+- incluir as portas de `FRE` no painel do Modelo 5;
+- retreinar os dois modelos com o mesmo target e o mesmo instante de corte, caso seja necessária uma avaliação metodológica totalmente uniforme;
+- definir com o parceiro quantas portas podem ser inspecionadas por plataforma e ajustar `MAXIMO_PORTAS_RECOMENDADAS_POR_PLATAFORMA` conforme essa capacidade.
+
+Essas limitações são exibidas explicitamente para evitar interpretar ausência de cobertura como ausência de risco. Elas não impedem a reprodução do experimento histórico nem a execução do encadeamento construído nesta sprint.
