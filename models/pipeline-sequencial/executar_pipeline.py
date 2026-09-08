@@ -70,6 +70,7 @@ def configurar_notebook(notebook: dict, argumentos: argparse.Namespace) -> None:
     codigo = "".join(celula["source"])
     configuracoes = {
         "RETREINAR_MODELO_5": False,
+        "TREINAR_MODELO_5_COM_SCORE_7": False,
         "AVALIAR_HISTORICO": not argumentos.sem_avaliacao,
         "INICIO_INFERENCIA_MODELO_7": argumentos.inicio,
         "FIM_INFERENCIA_MODELO_7": argumentos.fim,
