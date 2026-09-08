@@ -5,6 +5,9 @@ description: "Arquitetura inicial da plataforma de manutenção preditiva de PSD
 
 import { Image } from 'astro:assets';
 import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import DiagramaComponentes from '../../../../assets/sprints/sprint3/diagramas/diagrama-componentes.png';
+import DiagramaClasses from '../../../../assets/sprints/sprint3/diagramas/diagrama-classes.png';
+import DiagramaCasosUso from '../../../../assets/sprints/sprint3/diagramas/diagrama-casos-uso.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -45,7 +48,9 @@ O upload de novos dados não é processado de forma síncrona: o Backend armazen
 
 O Backend se comunica, via API, com uma **VPS que hospeda o modelo preditivo**, que expõe duas operações: gerar uma predição e retreinar o modelo. Ao clicar no botão de retreino no site, o Backend aciona a VPS, que lê os dados de treino diretamente do PostgreSQL, gera um novo modelo e grava novas predições no banco, refletindo automaticamente nas telas da plataforma.
 
-{/* Diagrama de Componentes */}
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={DiagramaComponentes} alt="Diagrama de Componentes da plataforma de manutenção preditiva" width={1300} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+</div>
 
 Essa separação entre Backend e o serviço do modelo existe porque os modelos preditivos são treinados e servidos em Python, enquanto o Backend é escrito em Go, linguagem que não carrega nativamente os artefatos de modelo Python. Isolar o modelo em sua própria VPS evita reescrever ou converter os modelos treinados, ao custo de uma chamada de rede entre Backend e VPS a cada predição ou retreino. O uso de um único banco de dados para os dados operacionais e os dados de domínio simplifica a arquitetura nesta fase inicial.
 
@@ -60,7 +65,9 @@ O diagrama de classes registra o modelo de domínio conceitual da plataforma: as
 
 **Manutenção** e **Inspeção** aparecem como entidades separadas, pois representam momentos distintos do processo: a Manutenção é um registro histórico de uma intervenção já realizada (com ordem SAP, sintoma, causa e ação tomada), enquanto a Inspeção é a ordem de trabalho — com status, prioridade e responsável — que ainda precisa ser executada. Uma Inspeção pode ser criada automaticamente pelo sistema quando uma Predição indica risco de falha, e também poderá ser criada manualmente por um Usuário.
 
-{/* Diagrama de Classes */}
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={DiagramaClasses} alt="Diagrama de Classes da plataforma de manutenção preditiva" width={800} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+</div>
 
 A Predição é um indicador booleano (a porta deve ou não falhar dentro do horizonte avaliado). O banco mantém um histórico completo de Predições por Porta, mas a plataforma sempre exibe ao usuário apenas a mais recente. O Arquivo Enviado guarda apenas os metadados do upload (nome, status de processamento); os dados em si são gravados diretamente nas entidades de domínio que referenciam esse arquivo como origem.
 
@@ -73,7 +80,9 @@ A Predição é um indicador booleano (a porta deve ou não falhar dentro do hor
 
 O diagrama de casos de uso descreve as ações disponíveis para a persona **Marta**, operadora responsável por analisar dados e planejar manutenções, único ator do sistema nesta fase, enquanto Ronaldo, o mecânico, recebe as ordens de manutenção por fora da plataforma. Os casos de uso mapeados cobrem toda a jornada da Marta: autenticar-se na plataforma, visualizar as portas com maior probabilidade de falha, consultar detalhes de uma estação ou porta específica, agendar manutenções, consultar o histórico de alarmes e manutenções, enviar novos dados para o modelo e disparar o retreino.
 
-{/* Diagrama de Casos de Uso */}
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={DiagramaCasosUso} alt="Diagrama de Casos de Uso da plataforma de manutenção preditiva" width={400} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+</div>
 
 O caso de uso "Agendar manutenção" convive com a criação automática de Inspeções pelo sistema: quando uma predição indica risco de falha, o sistema já cria a ordem de inspeção correspondente, e a Marta também poderá agendar uma manutenção manualmente, sem depender de uma predição prévia.
 
