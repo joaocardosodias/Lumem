@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -49,5 +50,9 @@ func (s *LocalTempStorage) Open(ctx context.Context, storageKey string) (io.Read
 }
 
 func (s *LocalTempStorage) Delete(ctx context.Context, storageKey string) error {
-	return os.Remove(storageKey)
+	err := os.Remove(storageKey)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
 }

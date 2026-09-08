@@ -59,7 +59,7 @@ type RawAlarmRecord struct {
 }
 
 type AlarmParser interface {
-	ParseAlarms(r io.Reader, format string) ([]RawAlarmRecord, error)
+	StreamAlarms(ctx context.Context, r io.Reader, format string, yield func(RawAlarmRecord) error) error
 }
 
 type RawMaintenanceRecord struct {
@@ -77,7 +77,7 @@ type RawMaintenanceRecord struct {
 }
 
 type MaintenanceParser interface {
-	ParseMaintenance(r io.Reader, format string, defaultOrderType string) ([]RawMaintenanceRecord, error)
+	StreamMaintenance(ctx context.Context, r io.Reader, format string, defaultOrderType string, yield func(RawMaintenanceRecord) error) error
 }
 
 type JobRunner interface {

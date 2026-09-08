@@ -105,7 +105,7 @@ O backend adota o framework STRIDE para mapear e mitigar os principais vetores d
 | **Tampering (Adulteração)** | Alteração de arquivos CSV/XLSX em trânsito | Cálculo de hash SHA-256 no recebimento; bucket S3 privado sem escrita anônima |
 | **Repudiation (Repúdio)** | Operador nega ter importado planilha com dados errôneos | Tabela `file_uploads` armazena `user_id`, data/hora UTC, nome original e hash do arquivo |
 | **Information Disclosure (Vazamento)** | Exposição de credenciais ou dados do metrô | Rota `/metrics` bloqueada no proxy; logs mascaram segredos; bucket S3 estritamente privado |
-| **Denial of Service (DoS)** | Esgotamento de conexões com planilhas gigantes | Rate limiter configurável por IP (token bucket); I/O em streaming via `io.MultiWriter` sem carregar arquivo todo em RAM |
+| **Denial of Service (DoS)** | Esgotamento de conexões com planilhas gigantes | Rate limiter configurável por IP (token bucket); CSV por linha; XLSX em arquivo temporário com limite de descompressão; ingestão em lotes de 500 registros |
 | **Elevation of Privilege (Elevação)** | Escalonamento de privilégios no contêiner | Execução exclusiva sob usuário sem privilégios (`appuser` UID 10001) |
 
 <figure style="margin: 2rem 0; text-align: center;">

@@ -118,3 +118,7 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
 | **Métricas Prometheus** | `curl -s localhost:9090/targets` | Target `backend-linha4` com status **UP** |
 | **Fluxo E2E Sintético** | Upload de CSV de teste | Status transiciona de `processing` para `completed` em menos de 5s |
 | **Rastreamento** | Grafana Tempo Explore | Trace completo correlacionando span HTTP da API e span consumer do Worker |
+
+## Publicação após verificação de segurança
+
+O pipeline separa `build`, `scan` e `publish`. O build gera arquivos tar da API e do worker; o Trivy verifica esses arquivos e uma etapa posterior carrega e publica exatamente as imagens verificadas. A ausência dos artefatos faz o scan falhar. A tag `latest` só é atualizada na branch principal após o sucesso das etapas anteriores, evitando que o Watchtower implante uma imagem antes do resultado do scan.

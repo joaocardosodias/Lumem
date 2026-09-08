@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -92,31 +93,34 @@ func parseMaintenanceRow(row []string, cols maintenanceColumnIndices, defaultOrd
 	}
 }
 
-func (p *DefaultMaintenanceParser) ParseMaintenance(r io.Reader, format string, defaultOrderType string) (records []port.RawMaintenanceRecord, err error) {
+// ParseMaintenance collects small inputs; ingestion uses StreamMaintenance.
+func (p *DefaultMaintenanceParser) ParseMaintenance(r io.Reader, format, orderType string) (records []port.RawMaintenanceRecord, err error) {
+	err = p.StreamMaintenance(context.Background(), r, format, orderType, func(row port.RawMaintenanceRecord) error { records = append(records, row); return nil })
+	return
+}
+
+func (p *DefaultMaintenanceParser) StreamMaintenance(ctx context.Context, r io.Reader, format, orderType string, yield func(port.RawMaintenanceRecord) error) (err error) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			err = fmt.Errorf("panico recuperado durante leitura de manutencao: %v", rec)
 		}
 	}()
-
-	rows, err := readRowsFromReader(r, format)
+	var cols maintenanceColumnIndices
+	count := 0
+	err = walkRows(ctx, r, format, func(row []string) error {
+		count++
+		if count == 1 {
+			var err error
+			cols, err = extractMaintenanceIndices(row)
+			return err
+		}
+		return yield(parseMaintenanceRow(row, cols, orderType))
+	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	if len(rows) < 2 {
-		return nil, errors.New("arquivo vazio ou sem linhas de dados")
+	if count < 2 {
+		return errors.New("arquivo vazio ou sem linhas de dados")
 	}
-
-	cols, err := extractMaintenanceIndices(rows[0])
-	if err != nil {
-		return nil, err
-	}
-
-	records = make([]port.RawMaintenanceRecord, 0, len(rows)-1)
-	for _, row := range rows[1:] {
-		records = append(records, parseMaintenanceRow(row, cols, defaultOrderType))
-	}
-
-	return records, nil
+	return nil
 }

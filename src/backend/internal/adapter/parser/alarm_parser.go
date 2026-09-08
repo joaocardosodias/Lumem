@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -18,23 +19,39 @@ func NewDefaultAlarmParser() *DefaultAlarmParser {
 	return &DefaultAlarmParser{}
 }
 
+// ParseAlarms is a convenience collector for small inputs; ingestion uses StreamAlarms.
 func (p *DefaultAlarmParser) ParseAlarms(r io.Reader, format string) (records []port.RawAlarmRecord, err error) {
+	err = p.StreamAlarms(context.Background(), r, format, func(row port.RawAlarmRecord) error { records = append(records, row); return nil })
+	return
+}
+
+func (p *DefaultAlarmParser) StreamAlarms(ctx context.Context, r io.Reader, format string, yield func(port.RawAlarmRecord) error) (err error) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			err = fmt.Errorf("panico recuperado durante leitura de alarmes: %v", rec)
 		}
 	}()
-
-	rows, err := readRowsFromReader(r, format)
+	var cols alarmColumnIndices
+	count := 0
+	err = walkRows(ctx, r, format, func(row []string) error {
+		count++
+		if count == 1 {
+			var err error
+			cols, err = extractAlarmIndices(row)
+			return err
+		}
+		return yield(parseAlarmRow(row, cols))
+	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	if len(rows) < 2 {
-		return nil, errors.New("arquivo vazio ou sem linhas de dados")
+	if count < 2 {
+		return errors.New("arquivo vazio ou sem linhas de dados")
 	}
+	return nil
+}
 
-	headers := rows[0]
+func extractAlarmIndices(headers []string) (alarmColumnIndices, error) {
 	colMap := make(map[string]int)
 	for i, h := range headers {
 		colMap[strings.ToLower(strings.TrimSpace(h))] = i
@@ -50,10 +67,10 @@ func (p *DefaultAlarmParser) ParseAlarms(r io.Reader, format string) (records []
 	timeIdx, hasTime := getFirstIndex(colMap, "horário do alarme", "horario do alarme", "horario_alarme", "dt_alarme")
 
 	if !hasTag || !hasStation || !hasDoor || !hasAlarm || !hasTime {
-		return nil, errors.New("colunas obrigatorias ausentes no arquivo de alarmes")
+		return alarmColumnIndices{}, errors.New("colunas obrigatorias ausentes no arquivo de alarmes")
 	}
 
-	cols := alarmColumnIndices{
+	return alarmColumnIndices{
 		tagIdx:     tagIdx,
 		stationIdx: stationIdx,
 		doorIdx:    doorIdx,
@@ -65,14 +82,7 @@ func (p *DefaultAlarmParser) ParseAlarms(r io.Reader, format string) (records []
 		platIdx:    platIdx,
 		hasPlat:    hasPlat,
 		timeIdx:    timeIdx,
-	}
-
-	records = make([]port.RawAlarmRecord, 0, len(rows)-1)
-	for _, row := range rows[1:] {
-		records = append(records, parseAlarmRow(row, cols))
-	}
-
-	return records, nil
+	}, nil
 }
 
 type alarmColumnIndices struct {

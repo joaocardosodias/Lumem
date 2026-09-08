@@ -41,6 +41,9 @@ func TestLocalTempStorageStoreOpenAndDelete(t *testing.T) {
 	if err := st.Delete(ctx, key); err != nil {
 		t.Fatalf("Delete retornou erro: %v", err)
 	}
+	if err := st.Delete(ctx, key); err != nil {
+		t.Fatalf("repeated deletion must succeed: %v", err)
+	}
 	if _, err := os.Stat(key); !os.IsNotExist(err) {
 		t.Fatalf("esperava arquivo removido, obteve erro: %v", err)
 	}

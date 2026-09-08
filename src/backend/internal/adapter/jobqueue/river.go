@@ -10,6 +10,7 @@ import (
 
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/domain"
+	"github.com/g04/backend/internal/usecase"
 	"github.com/g04/backend/internal/usecase/port"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -165,6 +166,10 @@ func (w *IngestionWorker) Work(ctx context.Context, riverJob *river.Job[Ingestio
 
 	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())
+	var cleanupErr *usecase.CleanupPendingError
+	if errors.As(err, &cleanupErr) {
+		return river.JobSnooze(time.Minute)
+	}
 	if w.logger != nil {
 		fields := []any{
 			slog.String("upload_id", args.UploadID),
@@ -188,6 +193,9 @@ func (w *IngestionWorker) Work(ctx context.Context, riverJob *river.Job[Ingestio
 		defer cancel()
 		reason := fmt.Sprintf("processamento falhou apos %d tentativas: %v", riverJob.Attempt, err)
 		if failErr := processor.FailJob(failCtx, job, reason); failErr != nil {
+			if errors.As(failErr, &cleanupErr) {
+				return river.JobSnooze(time.Minute)
+			}
 			return errors.Join(err, fmt.Errorf("marcar upload como falho: %w", failErr))
 		}
 	}
@@ -209,9 +217,10 @@ func (w *IngestionWorker) processorFor(jobType port.IngestionJobType) (Ingestion
 }
 
 type WorkerConfig struct {
-	MaxWorkers int
-	PollOnly   bool
-	Logger     *slog.Logger
+	CleanupStorage port.IngestionStorage
+	MaxWorkers     int
+	PollOnly       bool
+	Logger         *slog.Logger
 }
 
 func NewWorkerClient(pool *pgxpool.Pool, worker *IngestionWorker, cfg WorkerConfig) (*river.Client[pgx.Tx], error) {
@@ -221,11 +230,16 @@ func NewWorkerClient(pool *pgxpool.Pool, worker *IngestionWorker, cfg WorkerConf
 	}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, worker)
+	queues := map[string]river.QueueConfig{QueueName: {MaxWorkers: maxWorkers}}
+	if cfg.CleanupStorage != nil {
+		river.AddWorker(workers, &CleanupWorker{storage: cfg.CleanupStorage, logger: cfg.Logger})
+		queues[cleanupQueueName] = river.QueueConfig{MaxWorkers: 1}
+	}
 	return river.NewClient(riverpgxv5.New(pool), &river.Config{
 		JobTimeout:      15 * time.Minute,
 		Logger:          cfg.Logger,
 		PollOnly:        cfg.PollOnly,
-		Queues:          map[string]river.QueueConfig{QueueName: {MaxWorkers: maxWorkers}},
+		Queues:          queues,
 		SoftStopTimeout: 20 * time.Second,
 		Workers:         workers,
 	})

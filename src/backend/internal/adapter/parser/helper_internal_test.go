@@ -2,6 +2,8 @@ package parser
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"strings"
 	"testing"
 
@@ -68,4 +70,9 @@ func TestHelper_Internal(t *testing.T) {
 	if err != nil || len(rows2) == 0 {
 		t.Fatalf("expected rows from custom sheet")
 	}
+}
+
+func readRowsFromReader(r io.Reader, format string) (rows [][]string, err error) {
+	err = walkRows(context.Background(), r, format, func(row []string) error { rows = append(rows, row); return nil })
+	return
 }

@@ -65,6 +65,7 @@ func TestIngestAlarms_RecordFailure_And_FailUpload(t *testing.T) {
 		t.Fatalf("esperava status failed e motivo composto, obteve %+v", repo.upload)
 	}
 
+	repo.upload.Status = "processing"
 	repo.updErr = errors.New("falha no update")
 	uc.recordFailure("up-1", "motivo", "log de falha", nil)
 	if len(logger.errors) == 0 {
@@ -88,6 +89,7 @@ func TestIngestMaintenance_RecordFailure_And_FailUpload(t *testing.T) {
 		t.Fatalf("esperava status failed e motivo composto, obteve %+v", repo.upload)
 	}
 
+	repo.upload.Status = "processing"
 	repo.updErr = errors.New("falha no update")
 	uc.recordFailure("up-m", "motivo", "log de falha", nil)
 	if len(logger.errors) == 0 {

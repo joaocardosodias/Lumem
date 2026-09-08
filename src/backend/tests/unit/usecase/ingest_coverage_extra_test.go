@@ -813,8 +813,8 @@ func TestIngestAlarms_ProcessJob_And_FailJob(t *testing.T) {
 	stor.openErr = nil
 	parserMock.err = errors.New("sintaxe invalida")
 	repo.getUploadByIDErr = errors.New("falha no banco")
-	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "registrar falha permanente do upload") {
-		t.Fatalf("esperava erro ao falhar marcacao no banco, obteve %v", err)
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "falha no banco") {
+		t.Fatalf("esperava erro ao consultar status no banco, obteve %v", err)
 	}
 
 	repo.getUploadByIDErr = nil
@@ -837,8 +837,8 @@ func TestIngestAlarms_ProcessJob_And_FailJob(t *testing.T) {
 	if err := uc.FailJob(context.Background(), job, "falha manual"); err != nil {
 		t.Fatalf("esperava sucesso no FailJob, obteve %v", err)
 	}
-	if repo.uploads["test-upload"].Status != "failed" {
-		t.Fatalf("esperava status failed apos FailJob")
+	if repo.uploads["test-upload"].Status != "completed" {
+		t.Fatalf("FailJob nao pode sobrescrever um upload concluido")
 	}
 
 	repo.getUploadByIDErr = errors.New("falha no banco")
@@ -881,8 +881,8 @@ func TestIngestMaintenance_ProcessJob_And_FailJob(t *testing.T) {
 	stor.openErr = nil
 	parserMock.err = errors.New("sintaxe invalida")
 	uploadRepo.getUploadByIDErr = errors.New("falha no banco")
-	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "registrar falha permanente do upload") {
-		t.Fatalf("esperava erro ao falhar marcacao no banco, obteve %v", err)
+	if err := uc.ProcessJob(context.Background(), job); err == nil || !strings.Contains(err.Error(), "falha no banco") {
+		t.Fatalf("esperava erro ao consultar status no banco, obteve %v", err)
 	}
 
 	uploadRepo.getUploadByIDErr = nil
@@ -905,8 +905,8 @@ func TestIngestMaintenance_ProcessJob_And_FailJob(t *testing.T) {
 	if err := uc.FailJob(context.Background(), job, "falha manual"); err != nil {
 		t.Fatalf("esperava sucesso no FailJob, obteve %v", err)
 	}
-	if uploadRepo.uploads["maint-upload"].Status != "failed" {
-		t.Fatalf("esperava status failed apos FailJob")
+	if uploadRepo.uploads["maint-upload"].Status != "completed" {
+		t.Fatalf("FailJob nao pode sobrescrever um upload concluido")
 	}
 
 	uploadRepo.getUploadByIDErr = errors.New("falha no banco")
@@ -995,6 +995,7 @@ func TestIngestAlarms_ProcessJob_BatchInsertError(t *testing.T) {
 	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
 	uc := usecase.NewIngestAlarmsUseCase(repo, repo, stor, parserMock, nil, uow, nil)
 	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: "up-batch-err", StorageKey: "key1", FileName: "alarmes.csv"}
+	repo.uploads["up-batch-err"] = &domain.FileUpload{ID: "up-batch-err", Status: "processing"}
 
 	err := uc.ProcessJob(context.Background(), job)
 	if err == nil || !strings.Contains(err.Error(), "falha ao inserir lote de alarmes") {
@@ -1020,6 +1021,7 @@ func TestIngestMaintenance_ProcessJob_DeleteByUploadIDError(t *testing.T) {
 	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: uploadRepo, maintRepo: maintRepo}}
 	uc := usecase.NewIngestMaintenanceUseCase(maintRepo, uploadRepo, stor, parserMock, nil, uow, nil)
 	job := port.IngestionJob{Type: port.IngestionJobMaintenance, UploadID: "maint-del-err", StorageKey: "key1", FileName: "maint.csv"}
+	uploadRepo.uploads["maint-del-err"] = &domain.FileUpload{ID: "maint-del-err", Status: "processing"}
 
 	err := uc.ProcessJob(context.Background(), job)
 	if err == nil || !strings.Contains(err.Error(), "falha ao preparar nova tentativa de manutencao") {
@@ -1047,9 +1049,36 @@ func TestIngestAlarms_ProcessJob_DeleteByUploadIDError(t *testing.T) {
 	uow := &customUOWMock{store: &customUOWStoreMock{alarmRepo: repo}}
 	uc := usecase.NewIngestAlarmsUseCase(repo, repo, stor, parserMock, nil, uow, nil)
 	job := port.IngestionJob{Type: port.IngestionJobAlarms, UploadID: "alarm-del-err", StorageKey: "key1", FileName: "alarm.csv"}
+	repo.uploads["alarm-del-err"] = &domain.FileUpload{ID: "alarm-del-err", Status: "processing"}
 
 	err := uc.ProcessJob(context.Background(), job)
 	if err == nil || !strings.Contains(err.Error(), "falha ao preparar nova tentativa de alarmes") {
 		t.Fatalf("esperava erro ao deletar tentativa anterior, obteve %v", err)
 	}
+}
+
+func (p *customAlarmParserMock) StreamAlarms(ctx context.Context, r io.Reader, format string, yield func(port.RawAlarmRecord) error) error {
+	records, err := p.ParseAlarms(r, format)
+	if err != nil {
+		return err
+	}
+	for _, row := range records {
+		if err := yield(row); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *customMaintParserMock) StreamMaintenance(ctx context.Context, r io.Reader, format string, orderType string, yield func(port.RawMaintenanceRecord) error) error {
+	records, err := p.ParseMaintenance(r, format, orderType)
+	if err != nil {
+		return err
+	}
+	for _, row := range records {
+		if err := yield(row); err != nil {
+			return err
+		}
+	}
+	return nil
 }

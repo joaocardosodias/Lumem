@@ -1063,3 +1063,29 @@ func TestMetricsMiddlewareAndHandler(t *testing.T) {
 	w5 := httptest.NewRecorder()
 	r.ServeHTTP(w5, req5)
 }
+
+func (p *mockAlarmParserForHTTP) StreamAlarms(ctx context.Context, r io.Reader, format string, yield func(port.RawAlarmRecord) error) error {
+	records, err := p.ParseAlarms(r, format)
+	if err != nil {
+		return err
+	}
+	for _, row := range records {
+		if err := yield(row); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *mockMaintenanceParserForHTTP) StreamMaintenance(ctx context.Context, r io.Reader, format string, orderType string, yield func(port.RawMaintenanceRecord) error) error {
+	records, err := p.ParseMaintenance(r, format, orderType)
+	if err != nil {
+		return err
+	}
+	for _, row := range records {
+		if err := yield(row); err != nil {
+			return err
+		}
+	}
+	return nil
+}

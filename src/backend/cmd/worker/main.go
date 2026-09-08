@@ -98,6 +98,13 @@ func main() {
 		logger.Error("falha ao inicializar armazenamento", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	insertClient, err := jobqueue.NewInsertClient(db, logger)
+	if err != nil {
+		logger.Error("falha ao criar cliente de limpeza", "error", err)
+		os.Exit(1)
+	}
+	rawStorage := storedFiles
+	storedFiles = jobqueue.NewCleanupStorage(rawStorage, insertClient)
 	uow := repository.NewPostgresUnitOfWork(db)
 	uploadRepo := repository.NewPostgresAlarmRepository(db)
 	alarms := usecase.NewIngestAlarmsUseCaseWithQueue(
@@ -110,9 +117,10 @@ func main() {
 
 	worker := jobqueue.NewIngestionWorker(alarms, maintenance, logger)
 	client, err := jobqueue.NewWorkerClient(riverPool, worker, jobqueue.WorkerConfig{
-		MaxWorkers: cfg.RiverMaxWorkers,
-		PollOnly:   cfg.RiverPollOnly,
-		Logger:     logger,
+		CleanupStorage: rawStorage,
+		MaxWorkers:     cfg.RiverMaxWorkers,
+		PollOnly:       cfg.RiverPollOnly,
+		Logger:         logger,
 	})
 	if err != nil {
 		logger.Error("falha ao criar worker River", slog.String("error", err.Error()))

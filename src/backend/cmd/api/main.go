@@ -381,6 +381,7 @@ func main() {
 		slog.String("driver", cfg.StorageDriver),
 		slog.String("bucket", cfg.S3Bucket),
 	)
+	ingestionStorage = jobqueue.NewCleanupStorage(ingestionStorage, riverClient)
 	alarmParser := parser.NewDefaultAlarmParser()
 	maintParser := parser.NewDefaultMaintenanceParser()
 	mlClient := mlclient.NewClient(cfg.VPSModelURL)

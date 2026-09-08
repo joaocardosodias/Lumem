@@ -23,7 +23,7 @@ Processar planilhas operacionais com milhares de linhas exige desacoplar a aceit
 
 A solução implementada na Sprint 3 divide o pipeline em duas fases rigorosamente orquestradas:
 - **Etapa Síncrona (API):** recebe a requisição, valida extensões, gera hash SHA-256 em fluxo, transfere o arquivo para o S3 privado e registra atomicamente o upload e o job no PostgreSQL;
-- **Etapa Assíncrona (Worker):** o processo worker reserva o job da fila River, restaura o contexto de trace distribuído, faz streaming do arquivo do S3, processa lotes dentro de uma transação idempotente e remove o objeto após o término.
+- **Etapa Assíncrona (Worker):** o processo worker reserva o job da fila River, restaura o contexto de trace distribuído, faz streaming do arquivo do S3, processa lotes dentro de uma transação idempotente e agenda a remoção do objeto em uma fila durável após o término.
 
 <figure style="margin: 2rem 0; text-align: center;">
   <Image
@@ -43,7 +43,7 @@ A etapa síncrona é executada pelo contêiner `backend-linha4` com foco em resp
 1. **Validação de cabeçalho e extensão:** o handler inspeciona o multipart e rejeita imediatamente arquivos que não terminem em `.csv` ou `.xlsx`;
 2. **Streaming e hashing simultâneo:** o leitor HTTP é consumido via `io.Copy(io.MultiWriter(tmpFile, hasher), reader)`. O hash SHA-256 é calculado na mesma passagem em que o arquivo temporário é escrito em disco;
 3. **Envio ao Supabase Storage:** o arquivo é enviado ao bucket privado através de `s3.PutObject`, utilizando uma chave segura composta por UUID v4 e prefixo (ex: `ingestion/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.csv`). Isso elimina colisões entre arquivos de nomes idênticos enviados por operadores diferentes;
-4. **Verificação de duplicidade:** o caso de uso consulta se o hash SHA-256 já existe em `file_uploads`. Se já tiver sido processado, o objeto recém-enviado ao S3 é apagado e a API retorna `409 Conflict` com o payload de Problem Details correspondente;
+4. **Verificação de duplicidade:** o caso de uso consulta se o hash SHA-256 já existe em `file_uploads`. Se já tiver sido processado, a remoção do objeto recém-enviado ao S3 é enfileirada e a API retorna `409 Conflict` com o payload de Problem Details correspondente;
 5. **Transação atômica de enfileiramento:** se for inédito, uma transação `sql.Tx` insere o registro em `file_uploads` (com status `processing`) e chama `riverClient.InsertTx` para criar a linha na tabela `river_job`. As duas inserções são confirmadas no mesmo `COMMIT`;
 6. **Resposta ao cliente:** a API responde com código `202 Accepted`, informando o `upload_id` gerado.
 
@@ -57,13 +57,13 @@ A etapa assíncrona é executada pelo executável `cmd/worker`, consumindo jobs 
 
 1. **Reserva e locking transacional:** o River executa um `SELECT ... FOR UPDATE SKIP LOCKED` nas tabelas internas do PostgreSQL, garantindo que múltiplos workers não peguem o mesmo job simultaneamente;
 2. **Propagação de observabilidade W3C:** o worker extrai o mapa de cabeçalhos de telemetria contido nos argumentos do job (`args.TraceContext`), criando o span `ingestion.process` vinculado ao trace original da requisição HTTP;
-3. **Download em stream:** o worker abre o arquivo diretamente do S3 através de `s3.GetObject`. O payload é lido diretamente pelo parser através de `io.Reader`, sem salvar arquivo no disco local do worker;
+3. **Leitura com memória limitada:** CSV é consumido com `csv.Reader.Read()`. Para XLSX, o download é copiado para um arquivo temporário e aberto com `excelize.OpenFile`, evitando o carregamento integral feito por `OpenReader`. O iterador `Rows` entrega uma linha por vez; XML acima de 4 MiB é descarregado em disco e o conteúdo descompactado tem limite de 256 MiB;
 4. **Parsing e validação:** o parser normaliza cabeçalhos e converte cada linha em entidades de domínio (`domain.NewAlarm` ou `domain.NewMaintenanceEvent`). Invariantes de datas, plataformas e códigos de falha são validadas individualmente;
 5. **Transação de gravação idempotente:**
    - Para garantir idempotência em caso de repetição, a transação remove dados de execuções parciais anteriores (`DELETE FROM alarms WHERE upload_id = $1`);
    - As entidades são inseridas em lotes de 500 registros utilizando comandos SQL preparados;
    - O registro do upload é atualizado para `status = 'completed'`, preenchendo os campos `rows_processed` e `rows_inserted`;
-6. **Expurgo seguro do S3:** com os dados persistidos e confirmados no banco, o worker executa `s3.DeleteObject`, liberando o armazenamento na nuvem.
+6. **Expurgo durável:** após o commit, o adaptador `CleanupStorage` persiste um job `delete_ingestion_file` na fila `ingestion_cleanup`. Um consumidor dedicado executa a exclusão. Falhas de storage reagendam esse job para cinco minutos depois, preservando o estado terminal do upload.
 
 ## 5. Máquina de estados e ciclo de vida do upload
 
@@ -86,16 +86,18 @@ O ciclo de vida de um arquivo de upload é modelado como uma máquina de estados
 |---|---|---|---|---|
 | **Upload aceito pela API** | `processing` | `available` | Mantido | Aguarda consumo pelo worker |
 | **Instabilidade transitória (banco ou rede S3)** | `processing` | `retryable` | Mantido | Reagendado automaticamente (até 5x) |
-| **Arquivo vazio ou colunas inválidas** | `failed` | Concluído (`nil`) | Removido | Erro permanente: upload marcado como falho sem retentativas inúteis |
-| **Processamento bem-sucedido** | `completed` | `completed` | Removido | Linhas gravadas com sucesso no banco |
-| **Esgotamento das 5 tentativas** | `failed` | `discarded` | Removido | Falha definitiva: grava mensagem de erro e libera espaço no bucket |
-| **Upload duplicado (mesmo SHA-256)** | Não gerado (409) | Nenhum | Removido | O novo arquivo é descartado imediatamente |
+| **Arquivo vazio ou colunas inválidas** | `failed` | Concluído (`nil`) | Remoção enfileirada | Erro permanente: upload marcado como falho sem retentativas inúteis |
+| **Processamento bem-sucedido** | `completed` | `completed` | Remoção enfileirada | Linhas gravadas com sucesso no banco |
+| **Esgotamento das 5 tentativas** | `failed` | `discarded` | Remoção enfileirada | Falha definitiva: grava mensagem de erro e libera espaço no bucket |
+| **Upload duplicado (mesmo SHA-256)** | Não gerado (409) | Apenas job de limpeza | Remoção enfileirada | O arquivo duplicado aguarda exclusão assíncrona |
 
 ## 6. Estratégia de Idempotência: "Pelo Menos Uma Vez"
 
 Em sistemas de mensageria distribuída, a garantia de entrega padrão é **at-least-once (pelo menos uma vez)**. Isso significa que, se um contêiner worker sofrer uma falha de energia imediatamente após confirmar a transação de banco mas antes de avisar o River que o job terminou, o River considerará o job pendente e o entregará a outro worker.
 
-Para prevenir a duplicação de dados nas tabelas operacionais, a gravação é estruturada para ser estritamente idempotente:
+Antes de abrir o arquivo, o caso de uso consulta o estado persistido. Uploads `completed` ou `failed` executam somente a etapa de limpeza. Assim, uma nova entrega após o commit não tenta ler um objeto já excluído nem altera dados concluídos. `FailJob` também preserva estados terminais.
+
+Para uploads ainda em processamento, a gravação mantém todos os lotes na mesma transação:
 
 ```sql
 DELETE FROM alarms WHERE upload_id = $1;
@@ -113,3 +115,13 @@ Os arquivos de telemetria contêm histórico operacional de estações da Linha 
 - **Restrição de MIME types no provedor:** o Supabase Storage rejeita uploads que não correspondam a `text/csv` ou à especificação OpenXML de planilhas Excel;
 - **Limite de tamanho de arquivo:** evita ataques de negação de serviço por esgotamento de disco nos contêineres temporários.
 
+
+## 8. Correções de resiliência e limites aceitos
+
+A revisão identificou uma janela entre o commit da ingestão e a confirmação do job no River. A consulta de estado terminal elimina a necessidade de reabrir o arquivo nessa situação. Se o banco não aceitar o agendamento da limpeza, o job de ingestão é adiado por um minuto; esse adiamento não consome as tentativas reservadas ao processamento.
+
+A limpeza foi separada porque uma indisponibilidade do S3 não deve invalidar dados já confirmados. O job fica persistido no PostgreSQL, usa deduplicação pela chave do objeto e pode ser retomado por outro processo. A exclusão local passou a aceitar arquivos já ausentes, permitindo repetir a operação após uma queda. A fila tem um consumidor próprio para não ocupar os consumidores de ingestão com falhas de exclusão.
+
+O processamento retém até 500 registros brutos por lote. As entidades são criadas e inseridas antes de ler o lote seguinte. Um erro de banco interrompe a leitura e permanece recuperável; um erro estrutural posterior a um lote provoca rollback de toda a transação. O custo dessa atomicidade é manter uma conexão e a transação abertas durante a leitura. XLSX também requer espaço temporário e memória para metadados; leitura por linhas não significa consumo zero de memória.
+
+A garantia de limpeza durável começa quando o PostgreSQL confirma seu job. Uma queda anterior ao registro do upload/job, durante a etapa entre S3 e banco, ainda requer reconciliação de objetos sem referência; não existe uma transação distribuída entre esses serviços.

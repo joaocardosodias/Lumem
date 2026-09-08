@@ -77,14 +77,14 @@ func (uc *IngestMaintenanceUseCase) checkDuplicateHash(ctx context.Context, file
 	if err != nil || existing == nil {
 		return "", false
 	}
-	if delErr := uc.storage.Delete(ctx, storageKey); delErr != nil && uc.logger != nil {
+	if delErr := uc.cleanupStoredFile(ctx, storageKey); delErr != nil && uc.logger != nil {
 		uc.logger.Warn("falha ao remover arquivo temporario de upload duplicado", "storage_key", storageKey, "error", delErr.Error())
 	}
 	return existing.ID, true
 }
 
 func (uc *IngestMaintenanceUseCase) handleCreateUploadError(ctx context.Context, storageKey, fileHash string, err error) (string, error) {
-	if delErr := uc.storage.Delete(ctx, storageKey); delErr != nil && uc.logger != nil {
+	if delErr := uc.cleanupStoredFile(ctx, storageKey); delErr != nil && uc.logger != nil {
 		uc.logger.Warn("falha ao remover arquivo temporario apos erro ao criar upload", "storage_key", storageKey, "error", delErr.Error())
 	}
 	if errors.Is(err, domain.ErrDuplicateUpload) {
@@ -148,25 +148,6 @@ func (uc *IngestMaintenanceUseCase) recordFailure(uploadID, reason, logMsg strin
 	}
 }
 
-func (uc *IngestMaintenanceUseCase) readAndParseMaintenance(ctx context.Context, storageKey, fileName, explicitOrderType string) ([]port.RawMaintenanceRecord, error) {
-	rc, err := uc.storage.Open(ctx, storageKey)
-	if err != nil {
-		return nil, fmt.Errorf("falha ao abrir arquivo: %w", err)
-	}
-	defer rc.Close()
-
-	rawRecords, err := uc.maintParser.ParseMaintenance(rc, fileName, explicitOrderType)
-	if err != nil {
-		return nil, permanentIngestionFailure("falha ao analisar arquivo: %w", err)
-	}
-
-	if len(rawRecords) == 0 {
-		return nil, permanentIngestionFailure("arquivo vazio ou sem linhas de dados validas")
-	}
-
-	return rawRecords, nil
-}
-
 func convertRawMaintenanceEvents(rawRecords []port.RawMaintenanceRecord, uploadID, fileName string) ([]*domain.MaintenanceEvent, int) {
 	source := strings.TrimPrefix(strings.ToLower(filepath.Ext(fileName)), ".")
 	if source == "" {
@@ -221,6 +202,8 @@ func finalizeMaintenanceUpload(ctx context.Context, store port.UnitOfWorkStore, 
 	if err != nil {
 		return fmt.Errorf("falha ao obter upload: %w", err)
 	}
+	updated := *upload
+	upload = &updated
 	upload.RowsProcessed = processed
 	upload.RowsInserted = inserted
 	upload.Status = "completed"
@@ -232,7 +215,7 @@ func finalizeMaintenanceUpload(ctx context.Context, store port.UnitOfWorkStore, 
 }
 
 func (uc *IngestMaintenanceUseCase) deleteStoredFile(ctx context.Context, storageKey string) error {
-	if err := uc.storage.Delete(ctx, storageKey); err != nil {
+	if err := uc.cleanupStoredFile(ctx, storageKey); err != nil {
 		if uc.logger != nil {
 			uc.logger.Warn("falha ao remover arquivo de ingestao", "storage_key", storageKey, "error", err.Error())
 		}
@@ -242,37 +225,53 @@ func (uc *IngestMaintenanceUseCase) deleteStoredFile(ctx context.Context, storag
 }
 
 func (uc *IngestMaintenanceUseCase) ProcessJob(ctx context.Context, job port.IngestionJob) error {
-	rawRecords, err := uc.readAndParseMaintenance(ctx, job.StorageKey, job.FileName, job.OrderType)
+	terminal, err := terminalUpload(ctx, uc.uploadRepo, job.UploadID)
 	if err != nil {
-		var permanentErr *permanentIngestionError
-		if errors.As(err, &permanentErr) {
-			if failErr := uc.failUploadContext(ctx, job.UploadID, err.Error()); failErr != nil {
-				return fmt.Errorf("registrar falha permanente do upload: %w", failErr)
-			}
-			_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
-			return nil
-		}
 		return err
 	}
-
-	allEvents, processedCount := convertRawMaintenanceEvents(rawRecords, job.UploadID, job.FileName)
-	const batchSize = 500
-
+	if terminal {
+		return uc.cleanupJob(ctx, job.StorageKey)
+	}
+	rc, err := uc.storage.Open(ctx, job.StorageKey)
+	if err != nil {
+		return fmt.Errorf("falha ao abrir arquivo: %w", err)
+	}
+	defer rc.Close()
 	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
 		if err := store.Maintenances().DeleteByUploadID(ctx, job.UploadID); err != nil {
 			return fmt.Errorf("falha ao preparar nova tentativa de manutencao: %w", err)
 		}
-		insertedCount, err := insertMaintenanceBatches(ctx, store, allEvents, batchSize)
+		processed, inserted, err := consumeBatches(ctx,
+			func(yield func(port.RawMaintenanceRecord) error) error {
+				return uc.maintParser.StreamMaintenance(ctx, rc, job.FileName, job.OrderType, yield)
+			},
+			func(batch []port.RawMaintenanceRecord) (int, error) {
+				records, _ := convertRawMaintenanceEvents(batch, job.UploadID, job.FileName)
+				return insertMaintenanceBatches(ctx, store, records, 500)
+			})
 		if err != nil {
 			return err
 		}
-		return finalizeMaintenanceUpload(ctx, store, job.UploadID, processedCount, insertedCount)
+		return finalizeMaintenanceUpload(ctx, store, job.UploadID, processed, inserted)
 	})
 	if err != nil {
-		return err
+		var permanentErr *permanentIngestionError
+		if !errors.As(err, &permanentErr) {
+			return err
+		}
+		if failErr := uc.failUploadContext(ctx, job.UploadID, err.Error()); failErr != nil {
+			return fmt.Errorf("registrar falha permanente do upload: %w", failErr)
+		}
 	}
+	return uc.cleanupJob(ctx, job.StorageKey)
+}
 
-	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
+func (uc *IngestMaintenanceUseCase) cleanupJob(ctx context.Context, storageKey string) error {
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+	if err := uc.deleteStoredFile(cleanupCtx, storageKey); err != nil {
+		return &CleanupPendingError{Cause: err}
+	}
 	return nil
 }
 
@@ -280,8 +279,7 @@ func (uc *IngestMaintenanceUseCase) FailJob(ctx context.Context, job port.Ingest
 	if err := uc.failUploadContext(ctx, job.UploadID, reason); err != nil {
 		return err
 	}
-	_ = uc.deleteStoredFile(context.Background(), job.StorageKey)
-	return nil
+	return uc.cleanupJob(ctx, job.StorageKey)
 }
 
 func (uc *IngestMaintenanceUseCase) processFileAsync(uploadID, storageKey, fileName, explicitOrderType string) {
@@ -306,6 +304,11 @@ func (uc *IngestMaintenanceUseCase) failUploadContext(ctx context.Context, uploa
 		}
 		return err
 	}
+	if upload.Status == "completed" || upload.Status == "failed" {
+		return nil
+	}
+	updated := *upload
+	upload = &updated
 	upload.Status = "failed"
 	upload.ErrorLog = reason
 	upload.CompletedAt = &now
@@ -316,4 +319,10 @@ func (uc *IngestMaintenanceUseCase) failUploadContext(ctx context.Context, uploa
 		return err
 	}
 	return nil
+}
+
+func (uc *IngestMaintenanceUseCase) cleanupStoredFile(ctx context.Context, storageKey string) error {
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+	return uc.storage.Delete(cleanupCtx, storageKey)
 }
