@@ -15,7 +15,6 @@ As configurações são lidas do ambiente, com suporte a `.env` no desenvolvimen
 | `MIGRATIONS_PATH` | `migrations` | não | diretório das migrações SQL |
 | `JWT_SECRET` | vazio | em produção | assinatura dos tokens JWT |
 | `VPS_MODEL_URL` | `http://localhost:8000` | para predição | endpoint do serviço de ML |
-| `CORS_ALLOWED_ORIGINS` | `*` | recomendado em produção | origens separadas por vírgula |
 | `ENABLE_RATE_LIMITER` | `true` | não | ativa limite de requisições |
 | `RATE_LIMIT_RPS` | `50` | não | taxa sustentada por IP |
 | `RATE_LIMIT_BURST` | `100` | não | pico permitido por IP |
@@ -77,9 +76,7 @@ No Docker Compose, o endpoint é `otel-collector:4317`. Se o Collector estiver f
 - JWT longo, aleatório e armazenado como secret;
 - PostgreSQL com TLS;
 - bucket privado e credenciais válidas;
-- CORS restrito aos domínios do frontend;
 - Grafana sem senha padrão;
 - OTLP limitado à rede interna;
 - `.env` ignorado pelo Git e com permissão restrita;
 - `docker compose config` revisado sem publicar sua saída, pois ela pode expandir secrets.
-

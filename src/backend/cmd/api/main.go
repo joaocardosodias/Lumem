@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -64,41 +63,6 @@ func checkLiveness(ctx context.Context, endpoint string) error {
 		return errors.New("healthcheck retornou status nao saudavel")
 	}
 	return nil
-}
-
-func isOriginAllowed(origin string, cfg *config.Config, allowedOrigins []string) bool {
-	if cfg.CORSAllowedOrigins == "*" || cfg.Environment != "production" {
-		return true
-	}
-	for _, o := range allowedOrigins {
-		if strings.TrimSpace(o) == origin {
-			return true
-		}
-	}
-	return false
-}
-
-func setupCORSMiddleware(cfg *config.Config) gin.HandlerFunc {
-	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
-	return func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		allow := isOriginAllowed(origin, cfg, allowedOrigins)
-
-		if allow {
-			if origin != "" {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			} else {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			}
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.Next()
-	}
 }
 
 func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) {
@@ -235,7 +199,6 @@ func buildRouter(cfg *config.Config, logger *slog.Logger, h appHandlers) *gin.En
 		router.Use(httpAdapter.RateLimiterMiddleware(limiter))
 	}
 
-	router.Use(setupCORSMiddleware(cfg))
 	registerRoutes(router, h)
 	return router
 }

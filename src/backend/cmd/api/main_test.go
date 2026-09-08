@@ -14,7 +14,6 @@ import (
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
 	"github.com/g04/backend/internal/config"
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -41,105 +40,6 @@ func TestCheckLiveness(t *testing.T) {
 	if err := checkLiveness(ctx, healthy.URL); err == nil {
 		t.Fatal("healthcheck deveria respeitar contexto cancelado")
 	}
-}
-
-func TestIsOriginAllowed(t *testing.T) {
-	wildcardCfg := &config.Config{
-		Environment:        "production",
-		CORSAllowedOrigins: "*",
-	}
-	if !isOriginAllowed("https://qualquer.com", wildcardCfg, []string{"*"}) {
-		t.Fatalf("esperava true para wildcard")
-	}
-
-	devCfg := &config.Config{
-		Environment:        "development",
-		CORSAllowedOrigins: "https://app.linha4.com.br",
-	}
-	if !isOriginAllowed("http://localhost:3000", devCfg, []string{"https://app.linha4.com.br"}) {
-		t.Fatalf("esperava true em ambiente que nao e production")
-	}
-
-	prodCfg := &config.Config{
-		Environment:        "production",
-		CORSAllowedOrigins: "https://app.linha4.com.br, https://painel.linha4.com.br",
-	}
-	allowed := []string{"https://app.linha4.com.br", " https://painel.linha4.com.br"}
-
-	if !isOriginAllowed("https://app.linha4.com.br", prodCfg, allowed) {
-		t.Fatalf("esperava true para origem cadastrada")
-	}
-
-	if !isOriginAllowed("https://painel.linha4.com.br", prodCfg, allowed) {
-		t.Fatalf("esperava true para origem com espaco trim")
-	}
-
-	if isOriginAllowed("https://malicioso.com", prodCfg, allowed) {
-		t.Fatalf("esperava false para origem nao cadastrada em producao")
-	}
-}
-
-func TestSetupCORSMiddleware(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	cfg := &config.Config{
-		Environment:        "production",
-		CORSAllowedOrigins: "https://app.linha4.com.br",
-	}
-
-	r := gin.New()
-	r.Use(setupCORSMiddleware(cfg))
-	r.GET("/test", func(c *gin.Context) {
-		c.String(http.StatusOK, "ok")
-	})
-
-	t.Run("options preflight", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodOptions, "/test", nil)
-		req.Header.Set("Origin", "https://app.linha4.com.br")
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusNoContent {
-			t.Fatalf("esperava 204 No Content para OPTIONS, obteve %d", w.Code)
-		}
-		if w.Header().Get("Access-Control-Allow-Origin") != "https://app.linha4.com.br" {
-			t.Fatalf("cabecalho allow origin incorreto: %s", w.Header().Get("Access-Control-Allow-Origin"))
-		}
-	})
-
-	t.Run("normal get with origin", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req.Header.Set("Origin", "https://app.linha4.com.br")
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("esperava 200, obteve %d", w.Code)
-		}
-		if w.Header().Get("Access-Control-Allow-Origin") != "https://app.linha4.com.br" {
-			t.Fatalf("cabecalho allow origin incorreto: %s", w.Header().Get("Access-Control-Allow-Origin"))
-		}
-	})
-
-	t.Run("normal get without origin", func(t *testing.T) {
-		cfgDev := &config.Config{
-			Environment:        "development",
-			CORSAllowedOrigins: "*",
-		}
-		rDev := gin.New()
-		rDev.Use(setupCORSMiddleware(cfgDev))
-		rDev.GET("/test", func(c *gin.Context) {
-			c.String(http.StatusOK, "ok")
-		})
-
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		w := httptest.NewRecorder()
-		rDev.ServeHTTP(w, req)
-
-		if w.Header().Get("Access-Control-Allow-Origin") != "*" {
-			t.Fatalf("esperava wildcard quando origem esta vazia")
-		}
-	})
 }
 
 func TestWaitForUploads(t *testing.T) {
@@ -200,18 +100,16 @@ func TestBuildRouter_AndRoutes(t *testing.T) {
 	jwtSecret := "test-secret-key-12345"
 
 	cfgProd := &config.Config{
-		Environment:        "production",
-		CORSAllowedOrigins: "*",
-		LoadTest:           false,
-		EnableRateLimiter:  true,
-		RateLimitRPS:       100,
-		RateLimitBurst:     100,
+		Environment:       "production",
+		LoadTest:          false,
+		EnableRateLimiter: true,
+		RateLimitRPS:      100,
+		RateLimitBurst:    100,
 	}
 
 	cfgLoadTest := &config.Config{
-		Environment:        "development",
-		CORSAllowedOrigins: "*",
-		LoadTest:           true,
+		Environment: "development",
+		LoadTest:    true,
 	}
 
 	handlers := appHandlers{
