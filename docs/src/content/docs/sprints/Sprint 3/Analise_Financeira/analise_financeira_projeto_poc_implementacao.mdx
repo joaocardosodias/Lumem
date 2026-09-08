@@ -31,6 +31,8 @@ A análise financeira seguirá os seguintes critérios:
 - separação entre custos da POC e custos da solução implementada;
 - utilização, sempre que possível, de preços públicos ou informações fornecidas pela Motiva;
 - explicitação de todas as premissas utilizadas;
+- a análise priorizará **custos incrementais**, isto é, gastos adicionais gerados especificamente pela POC;
+- atividades que já fazem parte da operação normal da Motiva e não exigem contratação adicional, horas extras ou aumento de capacidade serão registradas como **R$ 0 de custo incremental**;
 - custos que não geram desembolso para a POC serão registrados como custo igual a zero ou descritos como fora do escopo;
 - os custos serão relacionados diretamente à arquitetura e ao funcionamento da solução;
 - quando não houver um valor exato disponível, serão utilizadas estimativas justificadas;
@@ -113,7 +115,7 @@ Esses itens não representam desembolsos incrementais para a elaboração do pro
 
 Até o momento, foram identificadas as seguintes categorias com potencial de gerar custo durante os 12 meses:
 
-1. atualização e disponibilização de novos dados operacionais;
+1. atualização e disponibilização de novos dados operacionais, analisada como atividade existente da Motiva e, portanto, sem custo incremental no cenário-base;
 2. ambiente Red Hat utilizado para realizar o deploy do modelo;
 3. recursos computacionais necessários para executar o container;
 4. banco de dados Azure SQL Database;
@@ -121,7 +123,7 @@ Até o momento, foram identificadas as seguintes categorias com potencial de ger
 6. armazenamento e execução do container Docker;
 7. logs e monitoramento da aplicação;
 8. transferência de dados;
-9. validação das previsões junto à Motiva;
+9. validação das previsões junto à Motiva, também tratada como atividade operacional já existente e sem custo incremental no cenário-base;
 10. eventuais serviços pagos que ultrapassem os planos gratuitos ou recursos disponíveis durante a POC.
 
 O frontend não será deployado durante a POC e, portanto, não será considerado como uma categoria de custo neste cenário.
@@ -540,7 +542,9 @@ intervalo_medio_zm01
 
 Essas informações são calculadas pelo pipeline a partir dos dados brutos.
 
-O custo operacional relacionado aos dados, portanto, deve considerar principalmente a **disponibilização das fontes originais**, e não a quantidade total de features utilizadas pelo modelo.
+Para a análise financeira, a quantidade de features não será tratada como um custo separado, pois elas são calculadas automaticamente pelo pipeline.
+
+A disponibilização das fontes originais também não será considerada como custo incremental no cenário-base, pois essa atividade já faz parte da operação normal da Motiva.
 
 ---
 
@@ -568,187 +572,170 @@ Essas três funções utilizam o mesmo fluxo de atualização de dados e, portan
 
 ---
 
-# 7. Primeiro custo mapeado — Atualização e disponibilização dos dados
+# 7. Atualização e disponibilização dos dados operacionais
 
-## 7.1. Definição do custo
+## 7.1. Revisão da premissa financeira
 
-A Motiva já possui os dados em seus sistemas internos.
-
-Portanto, o custo não será tratado como "aquisição de dados", mas como:
-
-> **Custo de atualização e disponibilização dos dados operacionais.**
-
-Esse custo representa o tempo necessário para um profissional da Motiva acessar os sistemas, extrair as bases relevantes, realizar uma conferência básica e disponibilizar os arquivos para a POC.
-
-As quatro fontes consideradas inicialmente são:
+Inicialmente foi considerada a possibilidade de calcular o custo de atualização dos dados a partir do tempo gasto por um profissional da Motiva para registrar, extrair e disponibilizar informações de:
 
 - histórico de alarmes;
 - ZM01;
 - ZM02;
 - ZM03.
 
----
+Após revisão do processo operacional, essa abordagem foi alterada.
 
-## 7.2. Processo considerado
+A Motiva já possui profissionais contratados para executar atividades relacionadas ao registro, atualização e acompanhamento dessas informações como parte de suas funções regulares.
 
-O fluxo manual foi representado inicialmente da seguinte forma:
+Portanto, no cenário-base da POC, essas atividades **não representam um novo desembolso causado pelo projeto**.
 
-```text
-Sistema de Alarmes
-        │
-ZM01 ───┤
-ZM02 ───┼──→ Profissional Motiva → Exportação → Disponibilização para a POC
-ZM03 ───┤
-        │
-```
-
-O custo financeiro desse processo será calculado a partir do tempo de trabalho do profissional responsável.
-
----
-
-## 7.3. Fórmula de cálculo
-
-A fórmula utilizada será:
+A análise passa a utilizar o conceito de **custo incremental**.
 
 ```text
-Custo anual de atualização dos dados =
-tempo gasto por ciclo
-× quantidade de ciclos anuais
-× custo por hora do profissional
+Custo incremental de atualização e disponibilização dos dados = R$ 0
 ```
 
 ---
 
-## 7.4. Frequência inicial considerada
+## 7.2. Justificativa
 
-Como os modelos trabalham com previsões de falha para períodos futuros curtos, é desejável que a aplicação tenha acesso a dados recentes.
+O fato de profissionais da Motiva dedicarem tempo ao preenchimento e atualização das informações não significa, por si só, que esse tempo deva ser imputado como novo custo da POC.
 
-Para uma primeira estimativa da POC, será considerada uma atualização em cada dia útil.
+Esse custo só seria adicional caso o projeto exigisse, por exemplo:
 
-Premissa inicial:
+- contratação de um novo profissional;
+- pagamento de horas extras;
+- aumento formal da carga de trabalho;
+- criação de uma equipe exclusiva para a POC;
+- contratação de serviço externo;
+- aquisição de uma nova ferramenta especificamente para realizar o processo.
 
-```text
-250 atualizações por ano
-```
+Nenhuma dessas condições foi considerada necessária no cenário-base atual.
 
-Esse valor representa aproximadamente a quantidade de dias úteis existentes em um período de 12 meses.
-
-A frequência poderá ser ajustada posteriormente caso a Motiva informe uma rotina diferente de atualização.
-
----
-
-## 7.5. Estimativa inicial do tempo por atualização
-
-Como ainda não existe uma medição fornecida pela Motiva, foi adotada uma premissa inicial para representar o esforço manual.
-
-| Atividade | Tempo estimado |
-|---|---:|
-| Extração do histórico de alarmes | 15 minutos |
-| Extração da ZM01 | 10 minutos |
-| Extração da ZM02 | 5 minutos |
-| Extração da ZM03 | 5 minutos |
-| Conferência, exportação e disponibilização | 10 minutos |
-| **Total estimado por ciclo** | **45 minutos** |
-
-A premissa-base é, portanto:
-
-```text
-45 minutos por atualização
-```
-
-Convertendo para horas:
-
-```text
-45 minutos = 0,75 hora
-```
+Assim, não será realizada uma duplicação contábil do custo de funcionários que já fazem parte da operação regular da empresa.
 
 ---
 
-## 7.6. Horas anuais estimadas
+## 7.3. Maior exigência de qualidade dos dados
 
-Considerando:
+Embora não exista custo incremental estimado, a POC aumenta a importância da **qualidade e precisão do preenchimento dos dados**.
 
-```text
-0,75 hora por atualização
-×
-250 atualizações por ano
-```
+O modelo depende diretamente da consistência das informações utilizadas para formar suas features.
 
-temos:
+Erros como:
 
 ```text
-187,5 horas por ano
+porta incorreta
+estação incorreta
+plataforma incorreta
+data ou horário incorreto
+ordem de manutenção classificada incorretamente
+registro ausente
+duplicidade
 ```
 
-Portanto, na premissa-base, a manutenção manual do fluxo de atualização de dados demandaria aproximadamente:
+podem alterar as features e reduzir a qualidade das previsões.
 
-> **187,5 horas anuais de um profissional da Motiva.**
+A mudança operacional esperada, portanto, não é a criação de uma nova atividade, mas uma maior necessidade de:
+
+- preenchimento correto;
+- padronização dos registros;
+- redução de erros;
+- consistência entre sistemas;
+- atenção às chaves utilizadas pelo modelo.
+
+Essa exigência será tratada como **premissa operacional da POC**, e não como custo adicional no cenário-base.
 
 ---
 
-## 7.7. Cenários de esforço operacional
+## 7.4. Situações que exigiriam revisão do custo
 
-Como o tempo real ainda precisa ser validado com a Motiva, serão considerados inicialmente três níveis de esforço:
+A premissa de custo igual a zero deverá ser revisada caso a POC passe a exigir esforço adicional fora das funções já existentes.
 
-| Cenário de extração | Tempo por ciclo | Ciclos por ano | Horas anuais |
-|---|---:|---:|---:|
-| Processo rápido | 30 min | 250 | 125 h |
-| **Premissa-base** | **45 min** | **250** | **187,5 h** |
-| Processo mais trabalhoso | 60 min | 250 | 250 h |
+Exemplos:
 
-Esses cenários permitem avaliar a sensibilidade do custo caso o processo de extração seja mais rápido ou mais demorado do que a premissa inicial.
+| Situação futura | Impacto financeiro |
+|---|---|
+| Processo atual continua sendo executado pelos mesmos profissionais | R$ 0 incremental |
+| Necessidade de horas extras | novo custo a calcular |
+| Contratação de novo profissional | novo custo a calcular |
+| Automação paga de extração ou integração | novo custo a calcular |
+| Ferramenta adicional de qualidade de dados | novo custo a calcular |
+
+No cenário atualmente considerado:
+
+> **Custo incremental anual de atualização e disponibilização dos dados: R$ 0.**
 
 ---
 
-## 7.8. Transformação das horas em custo financeiro
+# 7.5. Validação operacional das previsões
 
-Para finalizar essa linha de custo, ainda será necessário definir o custo por hora do profissional responsável pela extração.
+A mesma lógica foi aplicada à validação dos alertas produzidos pelo modelo.
 
-A fórmula será:
+A Motiva já possui profissionais responsáveis por acompanhar as condições das portas, registrar ocorrências e analisar eventos operacionais.
 
-```text
-Custo anual =
-horas anuais
-×
-custo por hora do profissional Motiva
-```
+Dessa forma, verificar se um alerta do modelo correspondeu ou não a uma falha real é considerado uma extensão das informações já analisadas pela operação, e não uma nova função dedicada.
 
-Na premissa-base:
+No cenário-base:
 
 ```text
-Custo anual =
-187,5
-×
-custo por hora
+Custo incremental de validação operacional = R$ 0
 ```
 
-Exemplo apenas para demonstrar a sensibilidade do cálculo:
+Não será considerada a contratação de uma pessoa exclusiva para verificar as previsões.
 
-| Custo por hora | Custo anual estimado |
-|---:|---:|
-| R$ 40/h | R$ 7.500 |
-| R$ 60/h | R$ 11.250 |
-| R$ 80/h | R$ 15.000 |
-| R$ 100/h | R$ 18.750 |
+A validação poderá utilizar os próprios registros posteriores de falha para comparar:
 
-Os valores acima **não representam ainda o custo adotado oficialmente no projeto**.
+```text
+previsão realizada
+       ↓
+evento observado posteriormente
+       ↓
+acerto / falso alerta / falha não detectada
+```
 
-Eles servem apenas para demonstrar como o custo anual varia em função do valor/hora escolhido.
+A premissa deverá ser revista apenas se a validação do modelo exigir:
 
-O próximo passo será identificar qual perfil profissional da Motiva normalmente realiza essas extrações e definir uma referência adequada de custo/hora.
+- equipe adicional;
+- horas extras;
+- inspeções extras que não fariam parte da rotina;
+- processo formal adicional de auditoria;
+- contratação de ferramenta ou serviço específico.
 
 ---
 
 # 8. Resultado parcial da análise da POC
 
-Até este ponto, a primeira linha financeira estruturada é:
+Com as premissas definidas até o momento, o cenário-base possui a seguinte estrutura:
 
-| Categoria | Item | Premissa-base | Quantidade anual | Custo |
-|---|---|---|---:|---:|
-| Dados | Atualização e disponibilização de Alarmes + ZM01 + ZM02 + ZM03 | 45 min por dia útil | 187,5 h | 187,5 × custo/h |
+| Categoria | Item | Custo-base em 12 meses | Justificativa |
+|---|---|---:|---|
+| Desenvolvimento | Desenvolvimento pelos alunos | R$ 0 | realizado pelo grupo do Inteli |
+| Dados | Atualização e disponibilização de Alarmes, ZM01, ZM02 e ZM03 | R$ 0 incremental | atividade já existente na operação da Motiva |
+| Validação | Verificação operacional dos alertas | R$ 0 incremental | profissionais já acompanham os eventos das portas |
+| Containerização | Docker | R$ 0 | tecnologia utilizada sem custo incremental de licença |
+| Deploy | Red Hat Developer Sandbox — 30 dias | R$ 0 | ambiente gratuito utilizado no primeiro mês |
+| Deploy | OpenShift Local — 11 meses | R$ 0 incremental | executado em hardware já disponível |
+| Banco de dados | Azure SQL Database | R$ 0 | cenário-base dentro da camada gratuita |
+| Logs | Logs locais/OpenShift | R$ 0 | baixo volume e sem serviço externo dedicado |
+| Frontend | Deploy de interface | Fora do escopo | frontend não será publicado durante a POC |
 
-O valor monetário final ainda depende da definição do custo/hora do profissional da Motiva.
+Até este estágio:
 
-Os demais custos da POC ainda serão precificados individualmente.
+```text
+Subtotal de custos incrementais mapeados = R$ 0
+```
+
+Esse resultado não significa que a solução não utilize recursos.
+
+Ele indica que, para a POC acadêmica definida, os componentes mapeados até agora utilizam:
+
+- trabalho dos próprios alunos;
+- profissionais que já fazem parte da operação da Motiva;
+- infraestrutura já disponível;
+- ferramentas open source;
+- camadas gratuitas de serviços.
+
+A análise continuará buscando custos que sejam efetivamente **adicionais ao cenário atual**, evitando imputar despesas que já existiriam independentemente do projeto.
 
 ---
