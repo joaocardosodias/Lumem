@@ -1,0 +1,89 @@
+---
+title: "Arquitetura UML"
+description: "Arquitetura inicial da plataforma de manutenção preditiva de PSDs, documentada através de três diagramas UML: Componentes, Classes e Casos de Uso."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. O que é Arquitetura UML</h2>
+</div>
+
+**UML (Unified Modeling Language)** é uma estrutura usada para representar visualmente a arquitetura, o comportamento e as interações de um sistema de software, independente da linguagem de implementação. Seu papel é comunicar decisões de design de forma clara entre as pessoas envolvidas no projeto, antes ou durante a construção do sistema.
+
+Os diagramas UML se dividem em duas famílias. Os **estruturais** mostram a "anatomia" do sistema, ou seja, o que existe e como se relaciona: Classes, Objetos, Componentes, Implantação, Pacotes e Estrutura Composta. Já os **comportamentais** mostram o "funcionamento" do sistema ao longo do tempo: Casos de Uso, Atividades, Sequência, Máquina de Estados, Comunicação e Timing.
+
+Este documento descreve a **arquitetura inicial** da solução proposta, cujas telas foram validadas no [Wireframe da Sprint 2](/sprints/sprint-2/wireframe). Por se tratar de uma arquitetura inicial, o nível de detalhe é propositalmente baixo: backend, frontend e a infraestrutura do modelo preditivo ainda estão em definição e desenvolvimento, e os diagramas a seguir serão refinados nas próximas sprints conforme decisões validadas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Diagramas Escolhidos</h2>
+</div>
+
+Nem todos os diagramas UML fazem sentido em toda fase de um projeto. Para esta arquitetura inicial, foram escolhidos três:
+
+- **Componentes**, por dar a visão macro de como Frontend, Backend, banco de dados e o modelo preditivo se conectam.
+- **Classes**, por registrar as entidades do domínio (Usuário, Estação, Porta, Manutenção, Predição) e como se relacionam, orientando o desenho do banco de dados.
+- **Casos de Uso**, por formalizar as ações que a persona Marta realiza na plataforma, conectando o wireframe aos requisitos funcionais do backend.
+
+Outros diagramas foram deixados de fora nesta etapa por dependerem de decisões que ainda não existem ou por não trazerem valor proporcional ao tamanho atual do projeto.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Diagrama de Componentes</h2>
+</div>
+
+O diagrama de componentes representa a visão macro da arquitetura da plataforma. O **Frontend**, em React, consome a API do **Backend**, em Go, que persiste os dados em um único banco **PostgreSQL** — guardando tanto os dados operacionais da plataforma (Usuário, Estação, Porta, Manutenção, Predição) quanto os dados de domínio derivados dos arquivos enviados pelo usuário (Alarmes, histórico de Manutenções).
+
+O upload de novos dados não é processado de forma síncrona: o Backend armazena o arquivo bruto em um **object storage (S3)** e enfileira um job para um **Worker** dedicado, que lê o arquivo do storage, interpreta seu conteúdo e grava os registros já estruturados no PostgreSQL. Essa separação evita que o upload de arquivos grandes bloqueie a API.
+
+O Backend se comunica, via API, com uma **VPS que hospeda o modelo preditivo**, que expõe duas operações: gerar uma predição e retreinar o modelo. Ao clicar no botão de retreino no site, o Backend aciona a VPS, que lê os dados de treino diretamente do PostgreSQL, gera um novo modelo e grava novas predições no banco, refletindo automaticamente nas telas da plataforma.
+
+{/* Diagrama de Componentes */}
+
+Essa separação entre Backend e o serviço do modelo existe porque os modelos preditivos são treinados e servidos em Python, enquanto o Backend é escrito em Go, linguagem que não carrega nativamente os artefatos de modelo Python. Isolar o modelo em sua própria VPS evita reescrever ou converter os modelos treinados, ao custo de uma chamada de rede entre Backend e VPS a cada predição ou retreino. O uso de um único banco de dados para os dados operacionais e os dados de domínio simplifica a arquitetura nesta fase inicial.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Diagrama de Classes</h2>
+</div>
+
+O diagrama de classes registra o modelo de domínio conceitual da plataforma: as entidades principais e como se relacionam, sem especificar tipos de dado ou o schema final do banco, já que o backend ainda está em desenvolvimento. As entidades identificadas são Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado. Uma Estação possui várias Portas; uma Porta acumula um histórico de Alarmes, de Manutenções e de Predições ao longo do tempo; um Usuário é responsável por Inspeções; e um Arquivo Enviado origina os registros de Alarme e Manutenção que ele contém.
+
+**Manutenção** e **Inspeção** aparecem como entidades separadas, pois representam momentos distintos do processo: a Manutenção é um registro histórico de uma intervenção já realizada (com ordem SAP, sintoma, causa e ação tomada), enquanto a Inspeção é a ordem de trabalho — com status, prioridade e responsável — que ainda precisa ser executada. Uma Inspeção pode ser criada automaticamente pelo sistema quando uma Predição indica risco de falha, e também poderá ser criada manualmente por um Usuário.
+
+{/* Diagrama de Classes */}
+
+A Predição é um indicador booleano (a porta deve ou não falhar dentro do horizonte avaliado). O banco mantém um histórico completo de Predições por Porta, mas a plataforma sempre exibe ao usuário apenas a mais recente. O Arquivo Enviado guarda apenas os metadados do upload (nome, status de processamento); os dados em si são gravados diretamente nas entidades de domínio que referenciam esse arquivo como origem.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Diagrama de Casos de Uso</h2>
+</div>
+
+O diagrama de casos de uso descreve as ações disponíveis para a persona **Marta**, operadora responsável por analisar dados e planejar manutenções, único ator do sistema nesta fase, enquanto Ronaldo, o mecânico, recebe as ordens de manutenção por fora da plataforma. Os casos de uso mapeados cobrem toda a jornada da Marta: autenticar-se na plataforma, visualizar as portas com maior probabilidade de falha, consultar detalhes de uma estação ou porta específica, agendar manutenções, consultar o histórico de alarmes e manutenções, enviar novos dados para o modelo e disparar o retreino.
+
+{/* Diagrama de Casos de Uso */}
+
+O caso de uso "Agendar manutenção" convive com a criação automática de Inspeções pelo sistema: quando uma predição indica risco de falha, o sistema já cria a ordem de inspeção correspondente, e a Marta também poderá agendar uma manutenção manualmente, sem depender de uma predição prévia.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Conclusão</h2>
+</div>
+
+Esta documentação descreve a arquitetura inicial da solução através de três diagramas UML complementares. O diagrama de **Componentes** mostrou como Frontend, Backend, Worker, banco de dados, object storage e a VPS do modelo preditivo se conectam, com destaque para a separação entre o Backend em Go e o modelo preditivo em Python, hospedado em sua própria VPS, e para o processamento assíncrono dos uploads via Worker. O diagrama de **Classes** registrou as entidades do domínio — Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado — e seus relacionamentos, distinguindo o histórico de manutenções já realizadas das inspeções ainda pendentes, e servindo de base conceitual para o schema do banco de dados. Por fim, o diagrama de **Casos de Uso** formalizou as ações da persona Marta na plataforma, incluindo o retreino do modelo e o agendamento manual de manutenções.
+
+Juntos, os três diagramas cobrem a estrutura, o domínio e o comportamento da solução. À medida que o projeto for se desenvolvendo, estes diagramas devem ser atualizados para continuar refletindo o sistema real.
