@@ -1,0 +1,62 @@
+{
+  "periodo_comum": {
+    "inicio": "2025-10-01",
+    "fim": "2025-10-31"
+  },
+  "target_avaliacao": "y do Modelo 5: qualquer ZM01 da porta em (D, D+7]",
+  "portas_no_periodo_comum": 11904,
+  "portas_encaminhadas": 9744,
+  "portas_priorizadas": 5013,
+  "pares_plataforma_data_encaminhados": 406,
+  "pares_sem_porta_acima_limiar": 0,
+  "reducao_portas_avaliadas_percentual": 18.145161290322577,
+  "reducao_alertas_percentual": 7.423822714681439,
+  "metricas_portas_encaminhadas": {
+    "precision": 0.11051266706562936,
+    "recall": 0.6986128625472888,
+    "f1": 0.19083706510506374,
+    "pr_auc": 0.1431274760710114,
+    "roc_auc": 0.6327454941383964,
+    "alertas": 5013,
+    "tn": 4492,
+    "fp": 4459,
+    "fn": 239,
+    "tp": 554,
+    "suporte_negativo": 8951,
+    "suporte_positivo": 793
+  },
+  "metricas_modelo_5_isolado_periodo_comum": {
+    "precision": 0.10932594644506002,
+    "recall": 0.6681715575620768,
+    "f1": 0.18790668147913028,
+    "pr_auc": 0.13572371747295603,
+    "roc_auc": 0.6520365607356238,
+    "alertas": 5415,
+    "tn": 6195,
+    "fp": 4823,
+    "fn": 294,
+    "tp": 592,
+    "suporte_negativo": 11018,
+    "suporte_positivo": 886
+  },
+  "metricas_pipeline_periodo_comum": {
+    "precision": 0.11051266706562936,
+    "recall": 0.6252821670428894,
+    "f1": 0.18782844549923716,
+    "pr_auc": 0.1359164373863567,
+    "roc_auc": 0.6378403675168112,
+    "alertas": 5013,
+    "tn": 6559,
+    "fp": 4459,
+    "fn": 332,
+    "tp": 554,
+    "suporte_negativo": 11018,
+    "suporte_positivo": 886
+  },
+  "arquivos": {
+    "scores_portas_encaminhadas": "saida_portas_modelo_5.csv",
+    "portas_priorizadas": "saida_final_portas_priorizadas.csv",
+    "resumo_plataformas": "resumo_plataformas_pipeline.csv"
+  },
+  "gerado_em_utc": "2026-09-08T17:51:36.190618+00:00"
+}

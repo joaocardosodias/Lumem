@@ -27,7 +27,7 @@ Portas priorizadas para inspeção
 
 O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 é executado somente para detalhar o risco das portas pertencentes às plataformas selecionadas na primeira etapa. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
 
-Esta página registra o contrato de integração e a preparação dos modelos para o pipeline. A Task 1 definiu como os modelos se conectam; a Task 2 preparou o artefato do Modelo 5 para inferência. A execução conjunta e a geração da lista final de portas pertencem às próximas etapas.
+Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 encadeou as previsões históricas salvas do Modelo 7 à inferência do Modelo 5, gerando a lista final de portas.
 
 ## 2. Papel de cada modelo
 
@@ -222,7 +222,7 @@ Também foram concluídos na Task 3:
 3. o tratamento explícito das plataformas e datas sem cobertura;
 4. a materialização da saída intermediária do Modelo 7.
 
-Ainda precisam ser implementadas a inferência do Modelo 5 sobre as portas encaminhadas e a saída final com as portas priorizadas.
+Na Task 4, foram concluídas a inferência do Modelo 5 sobre as portas encaminhadas, a priorização das portas e a comparação do pipeline completo com o Random Forest isolado.
 
 O alinhamento do target e do uso do dia `D` no Modelo 5 fica registrado como aprimoramento metodológico posterior. Ele será necessário caso o grupo queira avaliar os dois estágios como um único modelo com exatamente o mesmo target, mas não impede a construção do primeiro pipeline sequencial.
 
@@ -267,16 +267,19 @@ BUT_1_05 → BUT_P1_PDM05
 
 O mapa resultante contém **480 portas**, distribuídas igualmente entre **20 plataformas**, com 24 portas por plataforma. As duas plataformas de `FRE` presentes no Modelo 7 não possuem portas no painel do Modelo 5 e permanecem identificadas como alertas sem detalhamento.
 
-Além da cobertura por plataforma, foi verificada a cobertura temporal. As previsões salvas do Modelo 7 vão de **01/10/2025 a 21/03/2026**, enquanto o painel disponível do Modelo 5 termina em **31/10/2025**. Portanto, o pipeline utiliza quatro status:
+Além da cobertura por plataforma, foi verificada a disponibilidade das features para cada combinação exata de plataforma e data. As previsões salvas do Modelo 7 vão de **01/10/2025 a 21/03/2026**, enquanto o painel disponível do Modelo 5 termina globalmente em **31/10/2025** e algumas plataformas deixam de aparecer antes dessa data. Portanto, o período global, sozinho, não é considerado evidência suficiente de cobertura.
+
+O pipeline utiliza os seguintes status:
 
 | Status | Significado |
 |---|---|
 | `sem_alerta_modelo_7` | A plataforma não atingiu o limiar do CatBoost |
 | `alerta_sem_mapeamento_portas` | Existe alerta, mas não há portas dessa plataforma no Modelo 5 |
-| `alerta_sem_features_modelo_5` | Existe alerta e mapeamento, mas faltam features para a data |
+| `alerta_sem_features_modelo_5` | Existe alerta e mapeamento, mas não há features para a plataforma naquela data |
+| `encaminhar_modelo_5_cobertura_parcial` | Apenas parte das portas possui features; somente as disponíveis são encaminhadas |
 | `encaminhar_modelo_5` | O alerta possui plataforma e data cobertas |
 
-Foram encontrados **530 pares de plataforma e data elegíveis**, que correspondem a **12.720 linhas de porta** encaminhadas. Também ficaram registrados 344 alertas sem mapeamento de portas, 2.419 alertas fora da cobertura temporal do Modelo 5 e 491 casos sem alerta do Modelo 7.
+Foram encontrados **406 pares de plataforma e data elegíveis**, que correspondem a **9.744 linhas de porta** encaminhadas. Também ficaram registrados 344 alertas sem mapeamento de portas, 2.543 alertas sem features na combinação exata de plataforma e data e 491 casos sem alerta do Modelo 7. Na base atual, todos os 406 pares elegíveis possuem as 24 portas; nenhum caso de cobertura parcial ocorreu, mas a regra ficou implementada para dados futuros.
 
 Os arquivos gerados em `models/pipeline-sequencial/artefatos/` são:
 
@@ -285,4 +288,41 @@ Os arquivos gerados em `models/pipeline-sequencial/artefatos/` são:
 - `portas_encaminhadas_modelo_5.csv`: portas elegíveis para a próxima inferência;
 - `metadata_integracao_chaves.json`: formatos, coberturas, períodos e contagens de auditoria.
 
-Essa etapa ainda não calcula o score das portas. Ela prepara e valida exatamente quais linhas poderão ser avaliadas pelo Random Forest na próxima task.
+Essa etapa não calcula o score das portas. Ela prepara e valida exatamente quais linhas podem ser avaliadas pelo Random Forest na Task 4.
+
+## 14. Task 4 — Inferência e priorização das portas
+
+A Task 4 carregou o Random Forest serializado e o executou somente sobre as **9.744 portas encaminhadas**. Para cada porta, foram produzidos:
+
+- a probabilidade calculada pelo Modelo 5;
+- a decisão pelo limiar `0,488753`;
+- a posição no ranking de risco da plataforma;
+- uma marcação para a porta de maior risco em cada plataforma e data.
+
+O pipeline priorizou **5.013 portas** em 406 pares de plataforma e data. Todas as plataformas encaminhadas tiveram ao menos uma porta acima do limiar. Como o limiar permite múltiplos alertas, a quantidade média foi de aproximadamente 12 portas priorizadas por plataforma e data; o ranking permite selecionar primeiro a porta com maior score.
+
+### 14.1 Avaliação no período comum
+
+A comparação foi feita entre **01/10/2025 e 31/10/2025**, usando somente as 11.904 linhas em que existem previsões do Modelo 7 e features do Modelo 5. Para medir o efeito do encadeamento, foram comparados o Random Forest isolado e a decisão final que exige alerta dos dois modelos.
+
+| Cenário | Precisão | Recall | F1 | PR-AUC | ROC-AUC | Alertas |
+|---|---:|---:|---:|---:|---:|---:|
+| Modelo 5 isolado | 10,93% | 66,82% | 18,79% | 13,57% | 65,20% | 5.415 |
+| Pipeline Modelo 7 → Modelo 5 | 11,05% | 62,53% | 18,78% | 13,59% | 63,78% | 5.013 |
+
+O filtro do Modelo 7 reduziu em **18,15%** a quantidade de portas enviadas ao Random Forest e em **7,42%** os alertas finais. Entretanto, a precisão aumentou apenas 0,12 ponto percentual, o recall caiu 4,29 pontos percentuais e o F1 permaneceu praticamente igual, com uma pequena redução.
+
+Portanto, esta primeira versão comprova que o encadeamento técnico funciona e reduz o volume processado, mas **não demonstrou melhora da qualidade preditiva**. Antes de uso operacional, os modelos devem ser alinhados para o mesmo target, avaliados em um período comum maior e ter seus limiares ajustados em conjunto.
+
+### 14.2 Arquivos gerados
+
+Os resultados foram gravados em `models/pipeline-sequencial/artefatos/`:
+
+- `saida_portas_modelo_5.csv`: scores e ranking das 9.744 portas avaliadas;
+- `saida_final_portas_priorizadas.csv`: somente as 5.013 portas acima do limiar;
+- `resumo_plataformas_pipeline.csv`: porta de maior risco e quantidade priorizada por plataforma e data;
+- `metricas_pipeline_teste.json`: métricas, períodos, contagens e comparação com o Modelo 5 isolado.
+
+O target histórico foi utilizado apenas na avaliação. Ele não aparece na saída operacional das portas priorizadas.
+
+Esta implementação valida o pipeline sobre as previsões de teste já exportadas pelo Modelo 7. Para operar com dados novos, ainda será necessário transformar a preparação e a inferência do CatBoost em uma rotina executável que produza o mesmo contrato de saída intermediária.

@@ -10,7 +10,7 @@
   "horizonte": "(D, D+7]",
   "target": "y",
   "definicao_target": "existe qualquer ZM01 da mesma porta em (D, D+7]",
-  "limiar": 0.48875282623227445,
+  "limiar": 0.4887528262322745,
   "quantidade_features": 71,
   "features": [
     "num_porta",
@@ -208,5 +208,5 @@
     "scikit_learn": "1.9.0",
     "joblib": "1.5.3"
   },
-  "gerado_em_utc": "2026-09-04T00:03:32.511794+00:00"
+  "gerado_em_utc": "2026-09-08T17:51:34.095347+00:00"
 }
