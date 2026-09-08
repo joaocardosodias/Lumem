@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8080",
-      "description": "Servidor de Desenvolvimento Local"
+      "url": "/",
+      "description": "Servidor da aplicação"
     }
   ],
   "paths": {
