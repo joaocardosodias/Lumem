@@ -63,7 +63,7 @@ A arquitetura prevista para a POC contempla:
 - modelo de Machine Learning já treinado;
 - empacotamento do modelo e de suas dependências em um container Docker;
 - utilização de ambiente Red Hat para realizar o deploy e executar o container;
-- banco de dados utilizando Supabase;
+- banco de dados utilizando Azure SQL Database;
 - utilização de dados operacionais da Motiva;
 - armazenamento das previsões geradas;
 - possibilidade de validação dos resultados ao longo do período.
@@ -75,7 +75,7 @@ De forma simplificada:
 ```text
 Dados da Motiva
       ↓
-   Supabase
+   Azure SQL Database
       ↓
  Ambiente Red Hat
       ↓
@@ -85,7 +85,7 @@ Modelo de Machine Learning
       ↓
 Predições
       ↓
-   Supabase
+   Azure SQL Database
 ```
 
 ---
@@ -116,7 +116,7 @@ Até o momento, foram identificadas as seguintes categorias com potencial de ger
 1. atualização e disponibilização de novos dados operacionais;
 2. ambiente Red Hat utilizado para realizar o deploy do modelo;
 3. recursos computacionais necessários para executar o container;
-4. banco de dados Supabase;
+4. banco de dados Azure SQL Database;
 5. armazenamento de arquivos, modelos e previsões;
 6. armazenamento e execução do container Docker;
 7. logs e monitoramento da aplicação;
@@ -176,7 +176,7 @@ O fluxo previsto para a POC é:
 ```text
 Dados operacionais
        ↓
-    Supabase
+    Azure SQL Database
        ↓
  Red Hat / OpenShift
        ↓
@@ -186,7 +186,7 @@ Modelo treinado
        ↓
    Predições
        ↓
-    Supabase
+    Azure SQL Database
 ```
 
 O frontend não será deployado durante a POC.
@@ -294,6 +294,55 @@ A capacidade da máquina, porém, deverá ser validada antes da implantação da
 
 ---
 
+## 3.4.5. Logs e monitoramento
+
+Como a arquitetura não utilizará AWS, também não haverá uso de CloudWatch.
+
+Os logs deverão ser registrados no próprio ambiente utilizado para executar o container.
+
+O objetivo dos logs será acompanhar informações operacionais como:
+
+```text
+início da execução
+fim da execução
+erros
+tempo de processamento
+quantidade de registros processados
+falhas de conexão
+reinicializações do container
+```
+
+Como a POC terá baixo volume de processamento, espera-se um volume pequeno de logs.
+
+Neste momento:
+
+```text
+Custo adicional estimado de logs = R$ 0
+```
+
+Essa premissa deverá ser revisada caso seja utilizado algum serviço externo de observabilidade ou armazenamento dedicado.
+
+---
+
+## 3.4.6. Itens removidos do escopo da POC
+
+Com a arquitetura atualmente definida, os seguintes itens não serão utilizados:
+
+- AWS Lambda;
+- AWS API Gateway;
+- Amazon ECR;
+- AWS CloudWatch;
+- Vercel;
+- frontend publicado;
+- OpenShift Dedicated;
+- contratação de cluster empresarial dedicado.
+
+O OpenShift Dedicated não foi considerado porque sua estrutura e custo são desproporcionais ao porte da POC acadêmica.
+
+A estratégia adotada prioriza o menor custo possível mantendo um ambiente reproduzível para execução do modelo.
+
+---
+
 ## 3.4.7. Premissa financeira adotada
 
 A premissa financeira para o deploy da POC fica registrada da seguinte forma:
@@ -307,6 +356,132 @@ Essa premissa deverá ser reavaliada caso:
 - o projeto exija disponibilidade contínua em nuvem;
 - seja necessário utilizar uma assinatura paga;
 - seja adotado algum serviço externo de armazenamento ou monitoramento.
+
+---
+
+# 3.5. Banco de dados da POC — Azure SQL Database
+
+A arquitetura da POC foi atualizada para utilizar **Azure SQL Database** como banco de dados.
+
+A escolha foi feita porque os dados utilizados pela solução possuem estrutura relacional, envolvendo:
+
+- estações;
+- plataformas;
+- portas;
+- alarmes;
+- ordens de manutenção;
+- datas;
+- previsões;
+- probabilidades geradas pelo modelo.
+
+O banco será utilizado para armazenar tanto os dados necessários à execução da POC quanto as previsões produzidas pelo modelo.
+
+O fluxo atualizado fica:
+
+```text
+Dados novos da Motiva
+        ↓
+Azure SQL Database
+        ↓
+Red Hat / OpenShift
+        ↓
+Container Docker
+        ↓
+Modelo de Machine Learning
+        ↓
+Predições
+        ↓
+Azure SQL Database
+```
+
+---
+
+## 3.5.1. Camada gratuita considerada
+
+Para a POC será considerada a camada gratuita do **Azure SQL Database**.
+
+Como premissa de orçamento, foi adotado que o volume de dados e o número de consultas permanecerão dentro dos limites gratuitos disponibilizados pela Microsoft.
+
+A referência considerada nesta análise é:
+
+- até **100.000 vCore-segundos de computação por mês**;
+- até **32 GB de armazenamento de dados**;
+- até **32 GB de armazenamento de backup**;
+- utilização dentro das condições vigentes da oferta gratuita.
+
+Assim, para o cenário-base da POC:
+
+```text
+Custo anual estimado do Azure SQL Database = R$ 0
+```
+
+Esse valor considera que o projeto permanecerá dentro da capacidade gratuita durante os 12 meses.
+
+---
+
+## 3.5.2. Justificativa de capacidade
+
+As principais fontes utilizadas pela solução são:
+
+- histórico de alarmes;
+- ZM01;
+- ZM02;
+- ZM03;
+- dados processados para inferência;
+- histórico de previsões.
+
+O volume atual do projeto é reduzido em relação ao limite considerado para o banco.
+
+Mesmo com a entrada de novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do limite de armazenamento da camada gratuita.
+
+Por esse motivo, não será considerada inicialmente a contratação de um plano pago.
+
+---
+
+## 3.5.3. Controle de uso
+
+Durante a POC deverão ser monitorados:
+
+```text
+uso de processamento
+armazenamento ocupado
+crescimento mensal da base
+volume de consultas
+volume de backup
+```
+
+Caso algum desses indicadores se aproxime dos limites gratuitos, a premissa financeira deverá ser revisada.
+
+Também deverá ser priorizada uma configuração que reduza o risco de cobranças inesperadas caso a franquia gratuita seja ultrapassada.
+
+---
+
+## 3.5.4. Cenário de contingência do banco
+
+O custo-base considerado para o Azure SQL Database será de R$ 0.
+
+Caso o projeto ultrapasse a camada gratuita ou passe a exigir mais capacidade, o custo deverá ser recalculado conforme o plano necessário naquele momento.
+
+| Cenário | Tratamento financeiro |
+|---|---:|
+| Uso dentro da camada gratuita | R$ 0/ano |
+| Uso acima dos limites | custo a recalcular |
+
+A decisão de não contratar capacidade paga antecipadamente evita superdimensionar a infraestrutura da POC.
+
+---
+
+## 3.5.5. Premissa financeira adotada
+
+> Para a POC será utilizado Azure SQL Database em sua camada gratuita. Considerando o baixo volume estimado de dados, previsões e consultas, espera-se que o projeto permaneça dentro dos limites gratuitos durante os 12 meses. Dessa forma, o custo-base estimado do banco de dados é de R$ 0.
+
+Essa premissa deverá ser revista caso:
+
+- o volume de dados cresça acima do previsto;
+- a frequência de consultas aumente significativamente;
+- o limite de processamento gratuito seja atingido;
+- seja necessário aumentar o armazenamento;
+- sejam exigidos recursos adicionais não contemplados na camada gratuita.
 
 ---
 
