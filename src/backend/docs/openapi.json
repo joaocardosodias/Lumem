@@ -102,6 +102,11 @@
     "/api/v1/uploads/alarms": {
       "post": {
         "summary": "Upload de CSV de Alarmes de Telemetria",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -139,6 +144,11 @@
     "/api/v1/uploads/maintenance": {
       "post": {
         "summary": "Upload de Planilha de Manutencao (ZM01, ZM02, ZM03)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -173,6 +183,11 @@
     "/api/v1/uploads/{id}": {
       "get": {
         "summary": "Consulta Status do Processamento de Upload",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -200,6 +215,11 @@
     "/api/v1/maintenance": {
       "get": {
         "summary": "Listagem de Eventos de Manutencao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -226,6 +246,11 @@
       },
       "post": {
         "summary": "Registro Manual de Evento de Manutencao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -253,6 +278,11 @@
     "/api/v1/inspections": {
       "get": {
         "summary": "Listagem de Ordens de Inspecao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "status",
@@ -271,6 +301,11 @@
       },
       "post": {
         "summary": "Abertura Manual de Ordem de Inspecao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -291,6 +326,11 @@
     "/api/v1/inspections/{id}/status": {
       "patch": {
         "summary": "Atualizacao de Status de Inspecao de Campo",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -321,6 +361,11 @@
     "/api/v1/dashboard/summary": {
       "get": {
         "summary": "KPIs Operacionais de Alto Nivel",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "description": "Retorna resumo de portas ativas, portas em risco calculadas pela IA e estacoes criticas.",
         "responses": {
           "200": {
@@ -339,6 +384,11 @@
     "/api/v1/doors/{id}/timeline": {
       "get": {
         "summary": "Dossie Completo de Historico da Porta",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -366,6 +416,11 @@
     "/api/v1/stations/{code}/doors/status": {
       "get": {
         "summary": "Mapa Termico Visual de Portas da Estacao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "code",
@@ -387,6 +442,11 @@
     "/api/v1/predictions/trigger": {
       "post": {
         "summary": "Disparo Sob Demanda de Predicao por IA",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -412,6 +472,11 @@
     "/api/v1/predictions/latest": {
       "get": {
         "summary": "Ultimos Resultados de Inferencia",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Ultima rodada de predicoes gravada"

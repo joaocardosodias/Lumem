@@ -52,6 +52,8 @@ Os endpoints da API estão agrupados por capacidade funcional:
     └── GET  /latest            ──> Últimas probabilidades de falha geradas pelo modelo
 ```
 
+Com exceção de `POST /api/v1/auth/login`, todas as rotas de negócio sob `/api/v1` exigem um JWT válido no cabeçalho `Authorization`. As rotas de healthcheck e documentação permanecem públicas para permitir monitoramento e descoberta do contrato.
+
 ## 3. Protocolo de upload assíncrono: `202 Accepted`
 
 O endpoint `POST /api/v1/uploads/alarms` recebe uma planilha através de um campo multipart chamado `file`.
@@ -114,4 +116,3 @@ A emissão do token é feita em `POST /api/v1/auth/login`. O payload JWT contém
 - `email`: endereço de e-mail corporativo;
 - `role`: nível de privilégio (`operator`, `maintainer`, `admin`);
 - `exp`: timestamp de expiração (UTC).
-

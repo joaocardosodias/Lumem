@@ -149,6 +149,35 @@ func TestBuildRouter_AndRoutes(t *testing.T) {
 		rDev.ServeHTTP(w, req)
 	}
 
+	protectedEndpoints := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/api/v1/uploads/alarms"},
+		{http.MethodPost, "/api/v1/uploads/maintenance"},
+		{http.MethodGet, "/api/v1/uploads/upload-id"},
+		{http.MethodGet, "/api/v1/maintenance"},
+		{http.MethodPost, "/api/v1/maintenance"},
+		{http.MethodPost, "/api/v1/inspections"},
+		{http.MethodGet, "/api/v1/inspections"},
+		{http.MethodGet, "/api/v1/inspections/insp-id"},
+		{http.MethodPatch, "/api/v1/inspections/insp-id/status"},
+		{http.MethodGet, "/api/v1/dashboard/summary"},
+		{http.MethodGet, "/api/v1/doors/1/timeline"},
+		{http.MethodGet, "/api/v1/stations/PIN/doors/status"},
+		{http.MethodPost, "/api/v1/predictions/trigger"},
+		{http.MethodGet, "/api/v1/predictions/latest"},
+		{http.MethodGet, "/api/v1/auth/me"},
+	}
+	for _, endpoint := range protectedEndpoints {
+		req := httptest.NewRequest(endpoint.method, endpoint.path, nil)
+		response := httptest.NewRecorder()
+		rDev.ServeHTTP(response, req)
+		if response.Code != http.StatusUnauthorized {
+			t.Fatalf("esperava status 401 para %s %s sem token, obteve %d", endpoint.method, endpoint.path, response.Code)
+		}
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   "usr_abc",
 		"email": "teste@linha4.com.br",

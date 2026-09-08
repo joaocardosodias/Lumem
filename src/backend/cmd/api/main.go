@@ -142,30 +142,29 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 	router.GET("/metrics", httpAdapter.MetricsHandler())
 
 	v1 := router.Group("/api/v1")
-	{
-		v1.POST("/auth/login", h.auth.Login)
-		v1.POST("/uploads/alarms", h.upload.UploadAlarms)
-		v1.POST("/uploads/maintenance", h.upload.UploadMaintenance)
-		v1.GET("/uploads/:id", h.upload.GetUploadStatus)
-
-		v1.GET("/maintenance", h.maint.List)
-		v1.POST("/maintenance", h.maint.Create)
-
-		v1.POST("/inspections", h.ins.Create)
-		v1.GET("/inspections", h.ins.List)
-		v1.GET("/inspections/:id", h.ins.GetByID)
-		v1.PATCH("/inspections/:id/status", h.ins.UpdateStatus)
-
-		v1.GET("/dashboard/summary", h.dash.GetSummary)
-		v1.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
-		v1.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
-		v1.POST("/predictions/trigger", h.dash.TriggerPredictions)
-		v1.GET("/predictions/latest", h.dash.GetLatestPredictions)
-	}
+	v1.POST("/auth/login", h.auth.Login)
 
 	protected := v1.Group("")
 	protected.Use(httpAdapter.AuthMiddleware(h.jwtSecret))
 	{
+		protected.POST("/uploads/alarms", h.upload.UploadAlarms)
+		protected.POST("/uploads/maintenance", h.upload.UploadMaintenance)
+		protected.GET("/uploads/:id", h.upload.GetUploadStatus)
+
+		protected.GET("/maintenance", h.maint.List)
+		protected.POST("/maintenance", h.maint.Create)
+
+		protected.POST("/inspections", h.ins.Create)
+		protected.GET("/inspections", h.ins.List)
+		protected.GET("/inspections/:id", h.ins.GetByID)
+		protected.PATCH("/inspections/:id/status", h.ins.UpdateStatus)
+
+		protected.GET("/dashboard/summary", h.dash.GetSummary)
+		protected.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
+		protected.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
+		protected.POST("/predictions/trigger", h.dash.TriggerPredictions)
+		protected.GET("/predictions/latest", h.dash.GetLatestPredictions)
+
 		protected.GET("/auth/me", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"id":    c.GetString("userID"),
