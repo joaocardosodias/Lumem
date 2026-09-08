@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend-api:latest
+    image: ${ACR_REGISTRY}/g04-backend-api:latest
     container_name: backend-linha4
     restart: unless-stopped
     expose:
@@ -28,7 +28,7 @@ services:
         max-file: "3"
 
   worker:
-    image: ghcr.io/SEU_USUARIO_GITHUB/g04-backend-worker:latest
+    image: ${ACR_REGISTRY}/g04-backend-worker:latest
     container_name: worker-linha4
     restart: unless-stopped
     env_file:
@@ -58,6 +58,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.docker/config.json:/config.json:ro
     environment:
       - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_CLEANUP=true

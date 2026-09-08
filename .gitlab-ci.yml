@@ -164,21 +164,21 @@ publish_container:
     - docker load -i backend-api-image.tar
     - docker load -i backend-worker-image.tar
     - |
-      if [ -n "$GHCR_TOKEN" ] && [ -n "$GHCR_USERNAME" ]; then
-        echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-        docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-api:$CI_COMMIT_SHORT_SHA"
-        docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
-        docker push "ghcr.io/$GHCR_USERNAME/g04-backend-api:$CI_COMMIT_SHORT_SHA"
-        docker push "ghcr.io/$GHCR_USERNAME/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
+      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
+        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+        docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
+        docker push "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker push "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
         if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-          docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-api:latest"
-          docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "ghcr.io/$GHCR_USERNAME/g04-backend-worker:latest"
-          docker push "ghcr.io/$GHCR_USERNAME/g04-backend-api:latest"
-          docker push "ghcr.io/$GHCR_USERNAME/g04-backend-worker:latest"
+          docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:latest"
+          docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:latest"
+          docker push "$ACR_REGISTRY/g04-backend-api:latest"
+          docker push "$ACR_REGISTRY/g04-backend-worker:latest"
         fi
       fi
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $GHCR_TOKEN && $GHCR_USERNAME'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
 
 pages:
   stage: deploy
