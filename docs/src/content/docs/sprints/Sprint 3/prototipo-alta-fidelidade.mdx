@@ -1,0 +1,18 @@
+---
+title: "Protótipo de Alta Fidelidade"
+description: "Introdução do protótipo de alta fidelidade da plataforma de manutenção preditiva de Portas de Plataforma (PSDs), evoluído a partir dos wireframes da Sprint 2."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
+</div>
+
+Depois de desenvolver o wireframe do sistema na sprint passada, o próximo passo natural é avançar para o desenvolvimento do Protótipo de Alta Fidelidade. O objetivo é partir para a evolução visual natural do wireframe, onde as telas deixam de ser um esqueleto e passam a incorporar **identidade visual, tipografia, cores de marca, componentes reutilizáveis e conteúdo operacional real**. Enquanto o wireframe da [Sprint 2](/sprints/sprint-2/wireframe) validou *onde* cada elemento fica e *como* o usuário navega, o protótipo de alta fidelidade valida *como a plataforma parece e se comporta* na rotina da operação.
+
+A estrutura de navegação, os fluxos principais e a jornada da persona **Marta** (operadora/planejadora de manutenção) foram preservados; o que muda é o nível de acabamento. Cores da Motiva, cards de indicador, tabelas com dados de PSD, mapa da Linha 4-Amarela e modais de cadastro substituem os retângulos genéricos e o texto sem significado.
+
+Primeiro, alinhar o time e o parceiro em torno de uma interface que já se parece com o produto final, reduzindo ambiguidades antes da implementação. Segundo, criar um canal para automatizar a comunicação com o modelo preditivo e permitir que os usuários responsáveis pela manutenção consigam acrescentar novos alarmes e ordens de manutenção.
