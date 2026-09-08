@@ -1,4 +1,5 @@
 {
+  "status_avaliacao": "concluida",
   "periodo_comum": {
     "inicio": "2025-10-01",
     "fim": "2025-10-31"
@@ -56,7 +57,20 @@
   "arquivos": {
     "scores_portas_encaminhadas": "saida_portas_modelo_5.csv",
     "portas_priorizadas": "saida_final_portas_priorizadas.csv",
-    "resumo_plataformas": "resumo_plataformas_pipeline.csv"
+    "resumo_plataformas": "resumo_plataformas_pipeline.csv",
+    "recomendacoes_manutencao": "recomendacoes_manutencao.csv"
   },
-  "gerado_em_utc": "2026-09-08T17:51:36.190618+00:00"
+  "gerado_em_utc": "2026-09-08T19:25:08.728209+00:00",
+  "metricas_saida_operacional_periodo_comum": {
+    "precision": 0.2019704433497537,
+    "recall": 0.09255079006772009,
+    "f1": 0.12693498452012383,
+    "alertas": 406,
+    "tn": 10694,
+    "fp": 324,
+    "fn": 804,
+    "tp": 82,
+    "suporte_negativo": 11018,
+    "suporte_positivo": 886
+  }
 }

@@ -1,0 +1,43 @@
+{
+  "modo": "inferencia_catboost_a_partir_da_tabela_mestra",
+  "fonte": "data/processados/modelo-7/tabela_mestra_psd.csv",
+  "sha256_tabela_mestra": "7673bce4de11ff40e888d71d327b315e2fea988bcab179b5e8c91ce33a4143e2",
+  "modelo": "models/modelo-7/modelo_catboost.cbm",
+  "sha256_modelo": "ff22139b5eb09df7b7d66c8ea87e7260b2af20e56df250a8bf4a5efefdcefa8e",
+  "sha256_metadata": "84fe017097104c8dd5dd042eb6a084f16487daba99c44925269be3603ab084ec",
+  "catboost": "1.2.10",
+  "features": [
+    "id_psd",
+    "estacao_padrao",
+    "plataforma_padrao",
+    "dia_semana",
+    "domingo_flag",
+    "qtd_anomalias_criticas_30s",
+    "qtd_criticas_pico_manha",
+    "qtd_criticas_pico_tarde",
+    "duracao_media_alarmes_seg",
+    "duracao_maxima_alarme_seg",
+    "qtd_portas_com_alarme",
+    "qtd_anomalias_criticas_30s_7d",
+    "qtd_criticas_pico_7d",
+    "dias_com_anomalia_critica_7d",
+    "duracao_maxima_alarme_7d",
+    "proporcao_criticas_pico_7d",
+    "dias_desde_ultima_corretiva",
+    "dias_desde_ultima_preventiva",
+    "qtd_corretivas_emergenciais_30d",
+    "qtd_corretivas_programadas_30d",
+    "qtd_preventivas_nao_canceladas_30d"
+  ],
+  "limiar": 0.31738017595573687,
+  "horizonte_dias": 7,
+  "periodo": {
+    "inicio": "2025-10-01",
+    "fim": "2026-03-21"
+  },
+  "linhas_plataforma_dia": 3784,
+  "plataformas": 22,
+  "alertas_plataforma_dia": 3293,
+  "arquivo_previsoes": "previsoes_modelo_7_pipeline.csv",
+  "gerado_em_utc": "2026-09-08T19:25:07.422885+00:00"
+}

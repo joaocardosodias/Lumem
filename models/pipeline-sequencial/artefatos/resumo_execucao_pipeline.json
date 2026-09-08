@@ -1,0 +1,48 @@
+{
+  "horizonte_dias": 7,
+  "periodo_solicitado": {
+    "inicio": "2025-10-01",
+    "fim": "2026-03-21"
+  },
+  "retreino_modelo_5": false,
+  "avaliacao_historica_solicitada": true,
+  "status_avaliacao": "concluida",
+  "modelos": {
+    "modelo_7": {
+      "arquivo": "models/modelo-7/modelo_catboost.cbm",
+      "sha256": "ff22139b5eb09df7b7d66c8ea87e7260b2af20e56df250a8bf4a5efefdcefa8e",
+      "limiar": 0.31738017595573687
+    },
+    "modelo_5": {
+      "arquivo": "models/pipeline-sequencial/artefatos/modelo_5_random_forest.joblib",
+      "sha256": "e2806ac27939e5c89b6f748c44841d56c620784b656065ce08daddbf8ea0b14c",
+      "sha256_metadata": "2dcbde3cf42e8f553e9d92a5ef5bfff603187cb984d59e6eb821e5c4fa6f94b7",
+      "limiar": 0.4887528262322745
+    }
+  },
+  "contagens": {
+    "previsoes_plataforma_dia": 3784,
+    "alertas_plataforma_dia": 3293,
+    "plataformas_dia_analisadas_pelo_modelo_5": 406,
+    "registros_porta_dia_avaliados": 9744,
+    "alertas_porta_dia": 5013,
+    "portas_distintas_com_alerta": 256,
+    "recomendacoes_porta_dia": 406,
+    "portas_distintas_recomendadas": 86
+  },
+  "quantidade_por_status_final": {
+    "alerta_sem_features_modelo_5": 2543,
+    "sem_alerta_modelo_7": 491,
+    "portas_priorizadas": 406,
+    "alerta_sem_mapeamento_portas": 344
+  },
+  "arquivos": {
+    "status_todas_plataformas": "status_plataformas_pipeline.csv",
+    "portas_avaliadas": "saida_portas_modelo_5.csv",
+    "portas_priorizadas": "saida_final_portas_priorizadas.csv",
+    "avaliacao": "metricas_pipeline_teste.json",
+    "recomendacoes_manutencao": "recomendacoes_manutencao.csv"
+  },
+  "gerado_em_utc": "2026-09-08T19:25:08.728799+00:00",
+  "maximo_portas_recomendadas_por_plataforma": 1
+}
