@@ -489,36 +489,376 @@ Essa premissa deverá ser revista caso:
 
 # 4. Cenário 2 — Projeto implementado por 12 meses
 
-## 4.1. Definição do projeto implementado
+## 4.1. Definição do cenário implementado
 
-O segundo cenário representa a evolução da POC para uma solução integrada à operação da Motiva.
+O segundo cenário representa a evolução da POC para uma solução efetivamente implantada e utilizada pela Motiva durante um período de 12 meses.
 
-Nesse cenário, a aplicação deixa de ser apenas um protótipo demonstrativo e passa a necessitar de maior confiabilidade, disponibilidade, integração e manutenção.
+Nesse estágio, a solução deixa de ser apenas um protótipo acadêmico e passa a exigir uma estrutura mínima de produção, com maior estabilidade, disponibilidade e capacidade de manutenção.
 
-A solução implementada deverá ser analisada separadamente porque poderá exigir recursos que não são necessários durante a POC.
+A arquitetura considerada é:
 
-Entre os custos que deverão ser avaliados futuramente estão:
+```text
+Dados operacionais da Motiva
+          ↓
+Azure SQL Database
+          ↓
+Red Hat / OpenShift
+          ↓
+Container Docker
+          ↓
+Modelo de Machine Learning
+          ↓
+Predições
+          ↓
+Frontend publicado
+```
 
-- aprimoramento da aplicação desenvolvida pelos alunos;
-- eventual contratação temporária de desenvolvedores;
-- integração automática com os sistemas da Motiva;
-- automação da entrada de novos dados;
-- infraestrutura de produção;
-- banco de dados em plano de produção;
-- monitoramento da aplicação;
-- monitoramento do modelo;
-- armazenamento e backup;
-- segurança e controle de acesso;
-- manutenção da solução;
-- suporte técnico;
-- atualização ou retreinamento futuro do modelo;
-- homologação e implantação.
-
-Foi considerada inicialmente a possibilidade de utilização de um ou dois desenvolvedores por um período curto, aproximadamente duas a três semanas, para aprimorar a POC antes de sua implementação definitiva.
-
-Esse custo **não será atribuído à POC**, mas poderá ser incluído posteriormente no cenário de projeto implementado.
+Diferentemente da POC, neste cenário foram considerados custos adicionais para transformar o protótipo em uma aplicação operacional.
 
 ---
+
+## 4.2. Critério utilizado para estimar os custos
+
+A estimativa foi construída considerando o **menor cenário de produção considerado tecnicamente viável**, evitando superdimensionamento da infraestrutura.
+
+Foram considerados apenas custos incrementais relacionados à implementação.
+
+Atividades que já fazem parte da operação da Motiva, como:
+
+- atualização dos dados;
+- registro de eventos;
+- acompanhamento das portas;
+- validação operacional dos alertas;
+
+não foram novamente imputadas como custo, pois já são executadas por profissionais contratados pela empresa.
+
+Os principais custos adicionais considerados são:
+
+1. aprimoramento técnico da solução;
+2. publicação do frontend;
+3. banco de dados em ambiente de produção;
+4. ambiente Red Hat/OpenShift;
+5. contingência financeira.
+
+---
+
+## 4.3. Aprimoramento da aplicação
+
+Para transformar a POC desenvolvida pelos alunos em uma aplicação mais adequada para uso operacional, foi considerada a contratação temporária de:
+
+```text
+2 desenvolvedores Full-Stack Pleno
+por aproximadamente 3 semanas
+```
+
+A função desses profissionais seria:
+
+- revisar e organizar o código desenvolvido na POC;
+- preparar a aplicação para produção;
+- ajustar o backend;
+- integrar a aplicação ao Azure SQL Database;
+- preparar o container definitivo;
+- configurar o deploy;
+- finalizar e publicar o frontend;
+- implementar tratamento de erros;
+- realizar testes técnicos;
+- realizar ajustes finais de estabilidade.
+
+Foi adotada como premissa uma remuneração de referência de aproximadamente:
+
+```text
+R$ 12.000 por mês por desenvolvedor
+```
+
+Considerando três semanas como aproximadamente 75% de um mês:
+
+```text
+R$ 12.000
+× 0,75
+× 2 desenvolvedores
+=
+R$ 18.000
+```
+
+Portanto:
+
+```text
+Custo estimado de aprimoramento e implantação = R$ 18.000
+```
+
+Esse custo é tratado como **investimento inicial**, e não como despesa recorrente durante os 12 meses.
+
+---
+
+## 4.4. Frontend em produção
+
+Na POC o frontend não será publicado.
+
+No cenário implementado, entretanto, será necessário disponibilizar uma interface para que a solução possa ser utilizada.
+
+Foi considerado inicialmente o uso do **Vercel Pro**.
+
+Premissa adotada:
+
+```text
+US$ 20 por mês
+× 12 meses
+=
+US$ 240 por ano
+```
+
+Para fins de estimativa foi utilizada uma conversão aproximada de:
+
+```text
+US$ 1 = R$ 5,10
+```
+
+Assim:
+
+```text
+US$ 240 × R$ 5,10
+=
+R$ 1.224 por ano
+```
+
+Portanto:
+
+```text
+Custo estimado do frontend em 12 meses = R$ 1.224
+```
+
+Esse valor poderá ser revisto caso seja escolhido outro serviço de hospedagem ou plano.
+
+---
+
+## 4.5. Azure SQL Database em produção
+
+Na POC será utilizada a camada gratuita do Azure SQL Database.
+
+Para o cenário implementado, foi adotada uma postura mais conservadora.
+
+Embora seja possível que o volume continue dentro da camada gratuita, não é adequado assumir que uma aplicação operacional dependerá integralmente do Free Tier.
+
+Por isso foi criada uma **reserva orçamentária anual** para banco de dados.
+
+Premissa:
+
+```text
+Reserva anual para Azure SQL Database = R$ 1.500
+```
+
+Esse valor não representa um preço fixo contratado da Microsoft.
+
+Ele funciona como uma estimativa orçamentária para cobrir:
+
+- maior processamento;
+- aumento de armazenamento;
+- maior volume de consultas;
+- backups;
+- eventual necessidade de migração para uma camada paga.
+
+Caso a aplicação continue dentro dos limites gratuitos, o custo real poderá ser inferior.
+
+---
+
+## 4.6. Red Hat / OpenShift em produção
+
+Na POC será utilizada uma combinação de:
+
+```text
+30 dias de Red Hat Developer Sandbox
++
+11 meses de OpenShift Local
+```
+
+No cenário implementado, entretanto, não foi considerada a continuidade do ambiente local.
+
+Uma aplicação operacional necessita de uma infraestrutura mais adequada para execução contínua do container.
+
+Como referência inicial mínima, foi adotado um custo estimado de:
+
+```text
+US$ 1.000 por ano
+```
+
+para ambiente Red Hat/OpenShift.
+
+Utilizando a mesma premissa cambial:
+
+```text
+US$ 1.000 × R$ 5,10
+=
+R$ 5.100 por ano
+```
+
+Portanto:
+
+```text
+Custo estimado Red Hat/OpenShift em 12 meses = R$ 5.100
+```
+
+Esse valor deve ser tratado como **estimativa mínima inicial**.
+
+A configuração definitiva deverá ser revisada de acordo com:
+
+- quantidade de CPU;
+- memória RAM;
+- armazenamento;
+- disponibilidade;
+- necessidade de redundância;
+- ambiente escolhido;
+- condições comerciais vigentes no momento da contratação.
+
+---
+
+## 4.7. Docker e bibliotecas de Machine Learning
+
+O Docker continuará sendo utilizado para containerização da solução.
+
+As principais bibliotecas utilizadas permanecem open source.
+
+Assim:
+
+| Item | Custo estimado |
+|---|---:|
+| Docker | R$ 0 |
+| Python | R$ 0 |
+| Scikit-learn | R$ 0 |
+| CatBoost | R$ 0 |
+| XGBoost | R$ 0 |
+| LightGBM | R$ 0 |
+| Pandas | R$ 0 |
+
+Esses componentes não geram custo incremental de licenciamento no cenário atualmente considerado.
+
+---
+
+## 4.8. Dados e validação operacional
+
+A mesma lógica utilizada na POC foi mantida.
+
+A Motiva já possui profissionais responsáveis por:
+
+- registrar informações das portas;
+- atualizar dados de alarmes e manutenção;
+- acompanhar eventos operacionais;
+- verificar condições das portas.
+
+Por esse motivo:
+
+```text
+Custo incremental de atualização dos dados = R$ 0
+```
+
+e:
+
+```text
+Custo incremental de validação operacional = R$ 0
+```
+
+Esses valores deverão ser revistos apenas se a solução passar a exigir:
+
+- contratação adicional;
+- horas extras;
+- equipe dedicada;
+- novas inspeções não existentes atualmente;
+- novas ferramentas pagas.
+
+---
+
+## 4.9. Consolidação dos custos da implementação
+
+Com as premissas atuais:
+
+| Categoria | Item | Tipo | Custo em 12 meses |
+|---|---|---|---:|
+| Desenvolvimento | 2 desenvolvedores por 3 semanas | Investimento inicial | R$ 18.000 |
+| Frontend | Vercel Pro | Recorrente | R$ 1.224 |
+| Banco de dados | Azure SQL Database | Recorrente / reserva | R$ 1.500 |
+| Deploy | Red Hat/OpenShift | Recorrente | R$ 5.100 |
+| Containerização | Docker | Software | R$ 0 |
+| Bibliotecas | Ferramentas open source | Software | R$ 0 |
+| Dados | Atualização operacional | Operação existente | R$ 0 incremental |
+| Validação | Acompanhamento operacional | Operação existente | R$ 0 incremental |
+| **TOTAL BASE** |  |  | **R$ 25.824** |
+
+---
+
+## 4.10. Cenários de contingência
+
+Como se trata de uma estimativa, foram definidos dois cenários adicionais.
+
+### Cenário base
+
+```text
+R$ 25.824
+```
+
+### Cenário conservador
+
+Aplicação de margem de 5%:
+
+```text
+R$ 25.824 × 1,05
+=
+R$ 27.115,20
+```
+
+### Pior caso
+
+Aplicação de margem de 10%:
+
+```text
+R$ 25.824 × 1,10
+=
+R$ 28.406,40
+```
+
+Resumo:
+
+| Cenário | Custo estimado em 12 meses |
+|---|---:|
+| Base | R$ 25.824,00 |
+| Conservador +5% | R$ 27.115,20 |
+| Pior caso +10% | R$ 28.406,40 |
+
+Essas margens representam incertezas relacionadas a preços de infraestrutura, câmbio, ajustes técnicos e pequenas variações de esforço durante a implantação.
+
+---
+
+## 4.11. Premissas que podem alterar a estimativa
+
+Os valores deverão ser revisados caso ocorram mudanças como:
+
+- necessidade de mais de dois desenvolvedores;
+- período de implementação superior a três semanas;
+- contratação de suporte recorrente;
+- necessidade de ambiente Red Hat/OpenShift maior;
+- banco Azure com consumo acima da reserva prevista;
+- maior necessidade de segurança ou observabilidade;
+- contratação de novas ferramentas;
+- aumento significativo do volume de dados;
+- necessidade de alta disponibilidade ou redundância;
+- mudança relevante na cotação do dólar.
+
+---
+
+## 4.12. Resultado financeiro preliminar da implementação
+
+Com as premissas atualmente definidas, o custo estimado para transformar a POC em uma solução operacional e mantê-la durante 12 meses fica entre:
+
+```text
+R$ 25.824,00
+e
+R$ 28.406,40
+```
+
+O primeiro valor representa o cenário-base.
+
+O segundo representa o cenário de pior caso com margem adicional de 10%.
+
+A próxima etapa da análise financeira será estimar os **benefícios econômicos gerados pela solução**, permitindo comparar o custo de implementação com potenciais economias, ganhos operacionais e retorno sobre o investimento.
+
 
 # 5. Dados utilizados pelos modelos
 
