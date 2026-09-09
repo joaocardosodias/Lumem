@@ -1,4 +1,4 @@
-import Button from '../components/Button'
+import CadastrarButton from '../components/CadastrarButton'
 import { maintenances } from '../data/mock'
 import './Manutencoes.css'
 
@@ -7,7 +7,7 @@ function Manutencoes() {
     <section>
       <div className="page-head">
         <h1>Manutenções</h1>
-        <Button>Cadastrar Manutenções +</Button>
+        <CadastrarButton>Cadastrar Manutenções +</CadastrarButton>
       </div>
 
       <div className="manutencoes__list">

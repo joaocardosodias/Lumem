@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Button from '../components/Button'
+import CadastrarButton from '../components/CadastrarButton'
 import CardAlerta from '../components/CardAlerta'
 import Input from '../components/Input'
 import { alarms as initialAlarms } from '../data/mock'
@@ -46,7 +47,7 @@ function Alertas() {
     <section className="alertas">
       <div className="page-head">
         <h1>Alertas</h1>
-        <Button onClick={() => setOpen(true)}>Cadastrar Alarmes +</Button>
+        <CadastrarButton onClick={() => setOpen(true)}>Cadastrar Alarmes +</CadastrarButton>
       </div>
 
       <div className="alertas__charts">
