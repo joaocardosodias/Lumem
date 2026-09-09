@@ -61,7 +61,7 @@
 
 .card-manutencao {
   display: grid;
-  grid-template-columns: 0.45fr 0.75fr 0.45fr 1.2fr 0.95fr 0.95fr 0.5fr 1fr 1fr 0.55fr auto;
+  grid-template-columns: 0.45fr 0.75fr 0.45fr 1.2fr 0.95fr 0.95fr 0.5fr 1fr 1fr 0.55fr;
   gap: 12px;
   align-items: start;
   padding: 18px 6px;
@@ -84,15 +84,6 @@
 .card-manutencao strong {
   font-size: 15px;
   word-break: break-all;
-}
-
-.card-manutencao button {
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid var(--brand);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--brand);
 }
 
 .manutencoes-modal {

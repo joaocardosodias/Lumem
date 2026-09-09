@@ -61,7 +61,7 @@
 
 .card-alerta {
   display: grid;
-  grid-template-columns: 1.5fr 1.1fr 0.9fr 0.45fr 1.3fr auto;
+  grid-template-columns: 1.5fr 1.1fr 0.9fr 0.45fr 1.3fr;
   gap: 14px;
   align-items: center;
   padding: 18px 6px;
@@ -83,15 +83,6 @@
 
 .card-alerta strong {
   font-size: 15px;
-}
-
-.card-alerta button {
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid var(--brand);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--brand);
 }
 
 .alertas-modal {

@@ -21,9 +21,6 @@ function CardAlerta({ tag, startedAt, station, alarm, normalizedAt }) {
         <span>Data e Hora de Normalização</span>
         <strong>{normalizedAt}</strong>
       </div>
-      <button type="button" aria-label="Editar alerta">
-        ✎
-      </button>
     </article>
   )
 }

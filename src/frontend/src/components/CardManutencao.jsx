@@ -59,9 +59,6 @@ function CardManutencao({
         <span>Origem</span>
         <strong>{source || '—'}</strong>
       </div>
-      <button type="button" aria-label="Editar manutenção">
-        ✎
-      </button>
     </article>
   )
 }
