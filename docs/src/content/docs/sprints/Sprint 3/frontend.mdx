@@ -16,6 +16,8 @@ import telaPortas from '../../../../assets/sprints/sprint3/frontend/Portas.png';
 import telaPortasEstacao from '../../../../assets/sprints/sprint3/frontend/PortasEstacao.png';
 import telaPortasEspec1 from '../../../../assets/sprints/sprint3/frontend/PortasEspec1.png';
 import telaPortasEspec2 from '../../../../assets/sprints/sprint3/frontend/PortasEspec2.png';
+import telaInspecoes from '../../../../assets/sprints/sprint3/frontend/Inspecoes.png';
+import telaAbrirInspecao from '../../../../assets/sprints/sprint3/frontend/AbrirOrdemInspec.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -221,5 +223,42 @@ No rodapé da mesma tela ficam **Realizar Previsão** e **Re-treinar modelo**. O
 </figure>
 
 O terceiro nível é o dossiê da porta. A Marta chega nele pela barra ou pela linha da tabela. O título vira a TAG SAP (ou o número da porta), com estação, plataforma e número no subtítulo. Dois cards trazem o diagnóstico (*Vai falhar* ou *Estável*) e a data da última avaliação. O painel **Dossiê da porta** preenche id, estação, plataforma, número, TAG, status e o flag *vai falhar*, mesclando o item da lista com `GET /api/v1/doors/{id}/timeline`. **Manutenções relacionadas** usam as ordens que o timeline devolver; se a API não as mandar, o frontend busca `GET /api/v1/maintenance` e tenta casar o local de instalação com `PP` mais o número da porta e a plataforma. Sem casamento, mostra até oito ordens da mesma estação. O formulário **Abrir inspeção** envia data, hora e notas em `POST /api/v1/inspections`, com prioridade alta se a porta estiver em risco, invalida o cache de inspeções e leva a Marta para a tela de Inspeções.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Inspeções</h2>
+</div>
+
+A tela de Inspeções é a fila de campo da Marta: o que está pendente, o que já entrou em execução e o que foi concluído. O catálogo inteiro entra no cache ainda no overlay de login, via `GET /api/v1/inspections` em páginas paralelas (`listAllInspections`), o mesmo recorte que alimenta os tiles do Dashboard e o card de pendentes em Portas. Se o cache já existir, a tela abre na hora; senão busca de novo. Depois de criar uma ordem no dossiê da porta, esse cache é invalidado para a lista nascer atualizada.
+
+Os três cards azuis (Pendentes, Em andamento e Concluídas) contam o recorte dos **filtros**, não da aba de status. Período (o padrão é Tudo), estação, plataforma e prioridade mudam os números; clicar em Pendentes na lista abaixo não zera os outros cards. A barra de filtros vem em seguida. As abas Todas, Pendentes, Em andamento e Concluídas recortam só a listagem, 50 linhas por página. Cada card mostra estação (código e nome), plataforma, porta, prioridade (Baixa, Normal, Alta ou Crítica), data agendada, notas e um seletor de status. Trocar o seletor dispara `PATCH /api/v1/inspections/{id}/status` e atualiza o cache na hora, sem recarregar a página. Códigos de estação passam por `resolveStation`, como nas manutenções.
+
+Na captura da Figura 12 o volume está concentrado em pendentes (quase três mil ordens de teste na API, zero em andamento e zero concluídas). Sem nenhum registro, a lista lê *Nenhuma inspeção retornada pela API*; com filtros demais, *Nenhuma inspeção com esses filtros.*
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 12: Tela de Inspeções</strong></figcaption>
+  <Image
+    src={telaInspecoes}
+    alt="Tela de Inspeções com cards de pendentes, em andamento e concluídas, filtros, abas de status e lista de ordens"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+**Abrir inspeção +** abre o modal da Figura 13, sobre a própria lista. Não há aba de planilha: a ordem nasce só pelo formulário. A Marta informa estação (o padrão é Butantã), plataforma (as opções seguem o catálogo local da estação, inclusive P3 e P4 em Pinheiros, República e Luz), número da porta (1 a 24), prioridade, data, hora e notas. O envio faz `POST /api/v1/inspections` com `scheduled_for` montado a partir da data e da hora, recarrega o cache e fecha o modal. Clique fora cancela. O mesmo tipo de ordem também nasce no dossiê da porta, já preenchido com estação, plataforma, número e prioridade alta se a PSD estiver em risco; depois do POST a Marta cai nesta tela.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 13: Modal Abrir inspeção</strong></figcaption>
+  <Image
+    src={telaAbrirInspecao}
+    alt="Modal Abrir inspeção sobre a tela de Inspeções, com campos de estação, plataforma, porta, prioridade, data, hora e notas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
 
 
