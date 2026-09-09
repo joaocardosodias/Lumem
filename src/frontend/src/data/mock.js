@@ -5,6 +5,11 @@ export const currentUser = {
   role: 'Admin',
 }
 
+export const mockAuth = {
+  email: currentUser.email,
+  password: 'motiva',
+}
+
 export const dashboardSummary = {
   total_doors: 526,
   doors_at_risk: 150,
