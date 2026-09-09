@@ -1,0 +1,194 @@
+---
+title: Observabilidade e Telemetria
+description: "Guia completo da tríade de observabilidade: métricas Prometheus, logs estruturados Loki e traces distribuídos OpenTelemetry e Tempo no Grafana."
+---
+
+import { Image } from 'astro:assets';
+import observabilidadeArquitetura from '../../../../assets/backend/observabilidade-arquitetura.png';
+import grafanaMetricasHttp from '../../../../assets/backend/grafana-metricas-http.png';
+import grafanaLokiTraceLink from '../../../../assets/backend/grafana-loki-trace-link.png';
+
+Em sistemas monolíticos tradicionais, investigar uma falha normalmente se resume a inspecionar os logs do processo no servidor. No entanto, a separação do backend em **API HTTP** e **Worker Assíncrono com Fila River** introduziu uma descontinuidade temporal: a requisição que aceita a planilha de telemetria conclui em milissegundos, mas o processamento efetivo pode ocorrer segundos ou minutos depois em outro contêiner.
+
+Para garantir que qualquer anomalia operacional seja diagnosticável, foi implementada a **tríade de observabilidade unificada** com correlação cruzada no Grafana.
+
+| Sinal | Propósito | Ferramenta |
+|---|---|---|
+| **Métricas** | Detecta onde e quando ocorreu a anomalia operacional | Prometheus |
+| **Logs** | Registra o que aconteceu em detalhes estruturados | Grafana Loki |
+| **Traces** | Explica o fluxo causal e a latência distribuída entre serviços | Grafana Tempo |
+
+## 1. Arquitetura da pilha de telemetria
+
+Todos os sinais convergem para o Grafana através de pipelines dedicados na rede Docker interna:
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={observabilidadeArquitetura}
+    alt="Diagrama da arquitetura integrada da pilha de observabilidade unindo métricas Prometheus, logs Loki e traces Tempo no Grafana."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Arquitetura integrada da pilha de observabilidade: três sinais de telemetria convergindo no Grafana.
+  </figcaption>
+</figure>
+
+## 2. Métricas com Prometheus
+
+A API HTTP expõe o endpoint interno `/metrics`, raspado (scraped) pelo Prometheus a cada 15 segundos.
+
+### 2.1 Métricas de negócio e infraestrutura
+
+| Métrica | Tipo | Rótulos (Labels) | Finalidade operacional |
+|---|---|---|---|
+| `http_requests_total` | Contador | `method`, `path`, `status` | Volume de requisições e taxa de erros HTTP |
+| `http_request_duration_seconds` | Histograma | `method`, `path` | Distribuição de latência e cálculo de percentis (p50, p95, p99) |
+| `rate_limit_rejections_total` | Contador | — | Monitoramento de abusos ou necessidade de aumento de burst |
+| `go_goroutines` | Gauge | — | Monitoramento de vazamento de concorrência no runtime Go |
+| `go_memstats_alloc_bytes` | Gauge | — | Consumo real de memória RAM alocada no heap |
+
+### 2.2 Consultas PromQL operacionais
+
+**Taxa de requisições por segundo (Throughput) por rota:**
+```promql
+sum(rate(http_requests_total[5m])) by (path)
+```
+
+**Percentual de falhas de servidor (Erros 5xx):**
+```promql
+sum(rate(http_requests_total{status=~"5.."}[5m]))
+/
+sum(rate(http_requests_total[5m])) * 100
+```
+
+**Latência no percentil 95 (p95) por endpoint:**
+```promql
+histogram_quantile(
+  0.95,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path)
+)
+```
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={grafanaMetricasHttp}
+    alt="Dashboard do Grafana com métricas HTTP da API: throughput, taxa de erro 5xx, latência p95 e rate limiter."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Painel de métricas da API HTTP no Grafana para detecção precoce de degradação.
+  </figcaption>
+</figure>
+
+## 3. Logs estruturados com Grafana Loki
+
+Todos os contêineres emitem logs exclusivamente em formato **JSON estruturado** para o `stdout`. O Promtail lê os logs diretamente do socket do Docker e os encaminha ao Loki.
+
+### 3.1 Formato dos logs da API e do Worker
+
+```json
+{
+  "time": "2026-09-06T01:25:30.142Z",
+  "level": "INFO",
+  "msg": "upload aceito e job agendado",
+  "container": "backend-linha4",
+  "request_id": "87265fc2-eb69-4ba4-b52f-4e38cca20927",
+  "upload_id": "a4d92a10-2f14-469b-8f3e-7a0e365007b8",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "method": "POST",
+  "path": "/api/v1/uploads/alarms",
+  "status": 202,
+  "latency_ms": 48.2
+}
+```
+
+### 3.2 Consultas LogQL essenciais
+
+**Filtrar erros 5xx na API:**
+```logql
+{container="backend-linha4"} | json | status >= 500
+```
+
+**Filtrar o ciclo de vida completo de um upload no worker:**
+```logql
+{container="worker-linha4"} | json | upload_id = "a4d92a10-2f14-469b-8f3e-7a0e365007b8"
+```
+
+### 3.3 Link derivado: Loki para Tempo
+
+No arquivo de provisionamento do datasource Loki no Grafana ([`docker/grafana/provisioning/datasources/datasources.yml`](file:///home/cardoso/GitHub/g04/docker/grafana/provisioning/datasources/datasources.yml)), foi configurado um **campo derivado (Derived Field)** que localiza o `trace_id` no JSON do log e gera um botão clicável que abre diretamente o trace no Grafana Tempo:
+
+```yaml
+derivedFields:
+  - datasourceUid: tempo
+    matcherRegex: '"trace_id":"([a-f0-9]+)"'
+    name: TraceID
+    url: '$${__value.raw}'
+```
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={grafanaLokiTraceLink}
+    alt="Logs estruturados no Grafana Loki com link para o trace distribuído no Grafana Tempo via campo derivado."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Correlação direta no Grafana: navegação do log no Loki para o trace no Tempo via campo derivado.
+  </figcaption>
+</figure>
+
+## 4. Tracing distribuído com OpenTelemetry e Tempo
+
+O tracing distribuído responde à pergunta: *onde o tempo foi gasto ao longo de toda a jornada assíncrona?*
+
+### 4.1 Injeção de contexto na API (`RiverQueue.Enqueue`)
+
+Ao enfileirar o job no PostgreSQL, o adaptador River serializa o contexto W3C ativo na requisição HTTP dentro do payload JSON dos argumentos do job:
+
+```go
+func newIngestionArgs(ctx context.Context, job port.IngestionJob) IngestionArgs {
+	traceContext := make(map[string]string)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(traceContext))
+	return IngestionArgs{
+		Type:         job.Type,
+		UploadID:     job.UploadID,
+		StorageKey:   job.StorageKey,
+		FileName:     job.FileName,
+		OrderType:    job.OrderType,
+		TraceContext: traceContext,
+	}
+}
+```
+
+### 4.2 Extração de contexto no Worker (`IngestionWorker.Work`)
+
+Ao consumir o job no processo worker, o contexto é restaurado. Isso faz com que o span de processamento assíncrono seja registrado como filho do trace originado na API:
+
+```go
+func (w *IngestionWorker) Work(ctx context.Context, riverJob *river.Job[IngestionArgs]) error {
+	args := riverJob.Args
+	ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(args.TraceContext))
+	ctx, span := otel.Tracer("g04/backend/jobqueue").Start(ctx, "ingestion.process",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(
+			attribute.String("messaging.system", "river"),
+			attribute.String("messaging.destination.name", QueueName),
+			attribute.String("ingestion.type", string(args.Type)),
+			attribute.String("ingestion.upload_id", args.UploadID),
+			attribute.Int("messaging.message.retry.count", riverJob.Attempt-1),
+		),
+	)
+	defer span.End()
+	return nil
+}
+```
+
+## 5. Roteiro de diagnóstico de ponta a ponta
+
+Quando um operador relata lentidão ou falha na importação de dados, a equipe segue este procedimento padronizado:
+
+1. **Alerta no Prometheus:** Uma alta na métrica `http_requests_total{status="500"}` indica anomalia na API;
+2. **Localização no Loki:** O operador abre o Explore no Grafana e busca `{container="backend-linha4"} | json | status >= 500`. A linha de log revela o `upload_id` e o `trace_id`;
+3. **Inspeção no Tempo:** Clicando no link `TraceID` do log, o Tempo exibe o gráfico de cascata (waterfall). O operador identifica exatamente em qual span o erro ocorreu (ex: falha de timeout na conexão S3 ou violação de integridade no PostgreSQL);
+4. **Verificação no Worker:** Se a falha ocorreu durante o processamento em segundo plano, busca-se `{container="worker-linha4"} | json | upload_id="ID"` para analisar as 5 tentativas de retentativa do River e o erro permanente final.

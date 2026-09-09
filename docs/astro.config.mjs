@@ -2,15 +2,68 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+const backendSidebar = {
+	label: 'Backend',
+	collapsed: true,
+	items: [
+		{ label: 'Visão Geral do Backend', slug: 'backend' },
+		{ label: 'Práticas de Engenharia', slug: 'backend/praticas-de-engenharia' },
+		{
+			label: 'Arquitetura',
+			collapsed: true,
+			items: [
+				{ label: 'Visão Geral da Arquitetura', slug: 'backend/arquitetura/visao-geral' },
+				{ label: 'Clean Architecture', slug: 'backend/arquitetura/clean-architecture' },
+				{ label: 'Banco de Dados & Schemas', slug: 'backend/arquitetura/banco-de-dados' },
+				{ label: 'Fluxo de Ingestão', slug: 'backend/arquitetura/fluxo-de-ingestao' },
+				{
+					label: 'Decisões de Arquitetura (ADRs)',
+					collapsed: true,
+					items: [
+						{ label: 'ADR 001 — Clean Architecture', slug: 'backend/arquitetura/decisoes/adr-001-clean-architecture' },
+						{ label: 'ADR 002 — Fila River', slug: 'backend/arquitetura/decisoes/adr-002-river-postgresql' },
+						{ label: 'ADR 003 — Armazenamento S3', slug: 'backend/arquitetura/decisoes/adr-003-object-storage' },
+						{ label: 'ADR 004 — OpenTelemetry & Tracing', slug: 'backend/arquitetura/decisoes/adr-004-opentelemetry-tempo' },
+					],
+				},
+			],
+		},
+		{
+			label: 'Serviços & Qualidade',
+			collapsed: true,
+			items: [
+				{ label: 'API REST & Contratos', slug: 'backend/api/openapi' },
+				{ label: 'Observabilidade & Métricas', slug: 'backend/operacao/observabilidade' },
+				{ label: 'Testes Automatizados & CI', slug: 'backend/qualidade/testes-e-ci' },
+				{ label: 'SonarQube & Segurança', slug: 'backend/qualidade/sonarqube-e-seguranca' },
+			],
+		},
+		{
+			label: 'DevOps & Referências',
+			collapsed: true,
+			items: [
+				{ label: 'DevOps & Deploy', slug: 'backend/operacao/configuracao-e-deploy' },
+				{ label: 'Diagnóstico & Troubleshooting', slug: 'backend/operacao/troubleshooting' },
+				{ label: 'Variáveis de Ambiente', slug: 'backend/referencia/variaveis-de-ambiente' },
+			],
+		},
+	],
+};
+
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://graduacao.pages.git.inteli.edu.br',
+	base: '/2026-2a/t16/g04',
 	redirects: {
-		'/': '/readme',
+		'/': '/2026-2a/t16/g04/readme',
 	},
 	integrations: [
 		starlight({
 			title: 'Documentação',
-			tableOfContents: false,
+			locales: {
+				root: { label: 'Português', lang: 'pt-BR' },
+			},
+			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
 			logo: {
 				light: './src/assets/logo.png',
 				dark: './src/assets/logo-white.png',
@@ -19,14 +72,17 @@ export default defineConfig({
 			customCss: [
 				'./src/styles/custom.css',
 			],
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }],
+			social: [{ icon: 'gitlab', label: 'GitLab do projeto', href: 'https://git.inteli.edu.br/graduacao/2026-2a/t16/g04' }],
 			sidebar: [
 				{ label: 'Solução', slug: 'readme' },
+
 				{
 					label: 'Sprints',
+					collapsed: true,
 					items: [
 						{
 							label: 'Sprint 1',
+							collapsed: true,
 							items: [
 								{ label: 'Visão Geral da Sprint 1', slug: 'sprints/sprint-1' },
 								{ label: 'Análise de Valor e da Solução', slug: 'sprints/sprint-1/analise-de-valor-e-da-solução' },
@@ -34,10 +90,12 @@ export default defineConfig({
 								{ label: 'Personas', slug: 'sprints/sprint-1/personas' },
 								{
 									label: 'Hipóteses',
+									collapsed: true,
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Hipoteses' } }],
 								},
 								{
 									label: 'Limpeza de dados',
+									collapsed: true,
 									items: [{ autogenerate: { directory: 'sprints/Sprint 1/Limpeza de dados' } }],
 								},
 								{ label: 'Features Candidatas', slug: 'sprints/sprint-1/features-candidatas' },
@@ -46,26 +104,33 @@ export default defineConfig({
 						},
 						{
 							label: 'Sprint 2',
+							collapsed: true,
 							items: [
 								{ label: 'Visão Geral da Sprint 2', slug: 'sprints/sprint-2' },
 								{ label: 'Comparação dos Modelos', slug: 'sprints/sprint-2/comparacao_modelos' },
 								{ label: 'Wireframe', slug: 'sprints/sprint-2/wireframe' },
 								{
 									label: 'Modelos Preditivos',
+									collapsed: true,
 									items: [{ autogenerate: { directory: 'sprints/Sprint 2/modelos' } }],
 								},
 							],
 						},
 						{
 							label: 'Sprint 3',
-							items: [{ autogenerate: { directory: 'sprints/Sprint 3' } }],
+							collapsed: true,
+							items: [
+								backendSidebar,
+							],
 						},
 						{
 							label: 'Sprint 4',
+							collapsed: true,
 							items: [{ autogenerate: { directory: 'sprints/Sprint 4' } }],
 						},
 						{
 							label: 'Sprint 5',
+							collapsed: true,
 							items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }],
 						},
 					],

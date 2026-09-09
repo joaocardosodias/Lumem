@@ -1,0 +1,108 @@
+---
+title: Diagnóstico e Troubleshooting
+description: Procedimentos operacionais para diagnóstico e mitigação de falhas em uploads, River, S3, PostgreSQL e telemetria.
+---
+
+Este guia reúne os procedimentos operacionais padrão (Runbooks) para identificação rápida e mitigação de incidentes em ambiente de desenvolvimento, homologação e produção.
+
+:::caution[Auditoria e Segurança]
+Durante a execução de qualquer runbook, nunca copie nem compartilhe chaves de API, senhas de banco ou tokens JWT em chamados, mensagens ou capturas de tela. Utilize sempre identificadores opacos (`upload_id`, `request_id` e `trace_id`).
+:::
+
+## 1. Runbook: Upload permanece em status `processing`
+
+### Sintoma
+O operador submeteu uma planilha de alarmes ou manutenção, a API retornou código 202 Accepted, mas a consulta `GET /api/v1/uploads/:id` permanece indefinidamente com `status: "processing"`.
+
+### Diagnóstico passo a passo
+
+1. **Verificar se o contêiner do Worker está em execução:**
+   ```bash
+   docker compose ps worker
+   ```
+   Se o contêiner estiver com status `Restarting` ou `Exited`, inspecione as últimas 100 linhas de log:
+   ```bash
+   docker compose logs --tail=100 worker
+   ```
+
+2. **Inspecionar a tabela de controle de jobs do River:**
+   Conecte-se ao PostgreSQL e consulte o estado do job associado ao `upload_id`:
+   ```sql
+   SELECT id, state, queue, kind, attempt, max_attempts, errors, scheduled_at, finalized_at
+   FROM river_job
+   WHERE args->>'upload_id' = 'ID_DO_UPLOAD'
+   ORDER BY id DESC;
+   ```
+   - **Se `state = 'available'` e `scheduled_at` no futuro:** o job está em intervalo de espera entre retentativas (backoff exponencial);
+   - **Se `state = 'running'`:** o worker está atualmente processando o arquivo. Verifique se o arquivo possui milhões de linhas;
+   - **Se `state = 'discarded'`:** o job esgotou as 5 tentativas e falhou definitivamente;
+   - **Se nenhum registro for retornado:** a transação conjunta falhou na API ou o `upload_id` informado está incorreto.
+
+3. **Verificar conectividade do Worker com o Supabase Storage (S3):**
+   Execute um teste de abertura de socket a partir da rede do contêiner:
+   ```bash
+   docker run --rm --network container:worker-linha4 curlimages/curl:8.16.0 -v -I "$S3_ENDPOINT"
+   ```
+
+4. **Ação corretiva:**
+   Nunca force manualmente o status para `completed` via SQL, pois isso deixaria as tabelas de alarmes vazias sem os registros correspondentes. Se o arquivo estiver corrompido, atualize o status para `failed` registrando o motivo em `error_log`.
+
+## 2. Runbook: Falhas de autorização no Supabase Storage (HTTP 403)
+
+### Sintoma
+A API ou o Worker registram logs de erro ao tentar executar `PutObject`, `GetObject` ou `DeleteObject` retornando código HTTP 403 Forbidden.
+
+### Diagnóstico e Causas Prováveis
+
+| Causa raiz provável | Verificação técnica | Ação de mitigação |
+|---|---|---|
+| **Chave S3 com espaços ou quebras de linha** | Inspecione `echo -n "$S3_SECRET_ACCESS_KEY" | wc -c` | Verifique se a variável no `.env` foi colada com espaços adicionais |
+| **Divergência de horário do servidor (Clock Skew)** | Compare `date -u` no host com um servidor NTP | Assinaturas AWS Signature v4 rejeitam requisições com drift > 15 minutos; sincronize com NTP |
+| **Endpoint incorreto** | Verifique se a URL termina com a porta correta | O Supabase Storage exige URL no padrão `https://<ref>.supabase.co/storage/v1/s3` |
+| **Permissões insuficientes no Bucket** | Acesse o painel Supabase Storage | Certifique-se de que o bucket `ingestion-uploads` existe e possui políticas para o usuário técnico |
+
+## 3. Runbook: Indisponibilidade ou Saturação do PostgreSQL
+
+### Sintoma
+A API falha ao responder endpoints com erro HTTP 500 (`ERR_INTERNAL_SERVER`) e o readiness probe `/healthz/ready` retorna HTTP 503.
+
+### Procedimento de diagnóstico
+
+1. **Consultar contadores de conexões ativas no PostgreSQL:**
+   ```sql
+   SELECT count(*), state
+   FROM pg_stat_activity
+   WHERE datname = current_database()
+   GROUP BY state;
+   ```
+2. **Avaliar se `RIVER_MAX_WORKERS` está superdimensionado:**
+   Se o total de conexões estiver próximo do limite contratado no Supabase (ex: limite de 20 conexões na instância compartilhada), reduza a variável `RIVER_MAX_WORKERS` de `5` para `2` no `.env` e reinicie o serviço;
+3. **Verificar transações presas em idle:**
+   ```sql
+   SELECT pid, now() - xact_start AS duration, query
+   FROM pg_stat_activity
+   WHERE state = 'idle in transaction'
+   ORDER BY duration DESC;
+   ```
+
+## 4. Runbook: Traces não aparecem no Grafana Tempo
+
+### Sintoma
+Ao realizar requisições na API, os logs no Loki exibem `trace_id`, mas ao clicar no link ou buscar o identificador no Tempo, o resultado retorna vazio ("Trace not found").
+
+### Procedimento de verificação
+
+1. **Confirmar se o tracing está habilitado:**
+   Verifique se `OTEL_ENABLED=true` nas variáveis de ambiente da API e do Worker;
+2. **Inspecionar os logs do OpenTelemetry Collector:**
+   ```bash
+   docker compose logs --tail=50 otel-collector
+   ```
+   Procure por mensagens confirmando o recebimento de lotes OTLP:
+   `"Exporting spans to tempo:4317"`
+3. **Inspecionar os logs do Tempo:**
+   ```bash
+   docker compose logs --tail=50 tempo
+   ```
+4. **Janela de busca no Grafana Explore:**
+   O exportador do OpenTelemetry Collector agrupa spans em lotes com timeout de flush de 5 segundos. Aguarde 10 segundos antes de buscar o trace e certifique-se de que o seletor de tempo no Grafana cubra o intervalo da requisição.

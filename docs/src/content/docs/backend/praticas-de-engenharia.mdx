@@ -1,0 +1,294 @@
+---
+title: Práticas de Engenharia e Padrões de Código
+description: Manual aprofundado de engenharia de software, SOLID em Go, Unit of Work, circuit breaker, mensageria e observabilidade.
+---
+
+import { Image } from 'astro:assets';
+import quatroCamadasCleanArchitecture from '../../../assets/backend/quatro-camadas-clean-architecture.png';
+import circuitBreakerMl from '../../../assets/backend/circuit-breaker-ml.png';
+import riverGarantias from '../../../assets/backend/river-garantias.png';
+
+Esta seção documenta a aplicação prática dos padrões de projeto e engenharia de software adotados no backend. O objetivo é demonstrar tecnicamente como princípios clássicos de arquitetura de software foram implementados na linguagem Go, comprovando a motivação de cada escolha, as estruturas de dados utilizadas, os fluxos de execução e os trade-offs assumidos.
+
+## 1. Clean Architecture e organização de pacotes
+
+A arquitetura foi estruturada segundo a **Regra de Dependência** da Clean Architecture: o código fonte de camadas internas nunca referencia ou depende de elementos declarados em camadas externas.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={quatroCamadasCleanArchitecture}
+    alt="Diagrama das 4 camadas concêntricas da Clean Architecture no backend Go: domínio, casos de uso, adaptadores e frameworks."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Mapeamento estrutural das 4 camadas da Clean Architecture e inversão de controle no backend.
+  </figcaption>
+</figure>
+
+### 1.1 Domínio — `internal/domain`
+
+O pacote [`internal/domain`](file:///home/cardoso/GitHub/g04/src/backend/internal/domain) contém as entidades centrais do sistema: `Alarm`, `MaintenanceEvent`, `FileUpload`, `Inspection`, `PredictionRound` e `User`.
+
+Para evitar o anti-padrão de modelo de domínio anêmico, entidades não são structs abertas sem regras. Seus construtores executam validação de invariantes e campos obrigatórios antes de retornar uma instância válida:
+
+```go
+func NewAlarm(station, platform, line string, doorID, code int, desc string, timestamp time.Time) (*Alarm, error) {
+	if strings.TrimSpace(station) == "" {
+		return nil, ErrStationRequired
+	}
+	if strings.TrimSpace(platform) == "" {
+		return nil, ErrInvalidPlatform
+	}
+	if doorID <= 0 {
+		return nil, ErrInvalidDoorID
+	}
+	return &Alarm{
+		ID:          uuid.NewString(),
+		Station:     strings.TrimSpace(station),
+		Platform:    strings.TrimSpace(platform),
+		Line:        strings.TrimSpace(line),
+		DoorID:      doorID,
+		Code:        code,
+		Description: strings.TrimSpace(desc),
+		Timestamp:   timestamp,
+		CreatedAt:   time.Now().UTC(),
+	}, nil
+}
+```
+
+O domínio possui seu próprio vocabulário de erros fortemente tipados (`ErrStationRequired`, `ErrInvalidPlatform`, `ErrDuplicateUpload`, `ErrPredictionServiceUnavailable`). Nenhum arquivo sob `internal/domain` importa pacotes de terceiros como Gin, SQL drivers ou AWS SDK.
+
+### 1.2 Casos de uso e DTOs — `internal/usecase`
+
+Os casos de uso orquestram o fluxo de informação entre as entidades e as portas do sistema. Eles não realizam chamadas de rede ou queries SQL diretamente. As entradas e saídas de cada caso de uso utilizam DTOs (Data Transfer Objects) dedicados para evitar o vazamento de estruturas internas de banco ou payloads HTTP para o restante da aplicação.
+
+### 1.3 Portas — `internal/usecase/port`
+
+O pacote [`internal/usecase/port`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port) materializa o **Dependency Inversion Principle (DIP)**. Em vez de o caso de uso depender de implementações concretas de infraestrutura, ele define interfaces com os métodos estritamente necessários para a operação:
+
+```go
+type IngestionStorage interface {
+	Store(ctx context.Context, name string, r io.Reader) (storageKey, hash string, err error)
+	Open(ctx context.Context, storageKey string) (io.ReadCloser, error)
+	Delete(ctx context.Context, storageKey string) error
+}
+
+type IngestionJobQueue interface {
+	Enqueue(ctx context.Context, upload *domain.FileUpload, job IngestionJob) error
+}
+```
+
+### 1.4 Adaptadores — `internal/adapter`
+
+Os adaptadores contêm o código que conversa com o mundo externo. Eles implementam as interfaces definidas em `port`:
+- `adapter/http`: roteamento REST com Gin, validação de requisições e conversão de respostas;
+- `adapter/repository`: comandos SQL parametrizados executados sobre PostgreSQL;
+- `adapter/storage`: cliente S3 para Supabase Storage e implementação local para testes;
+- `adapter/jobqueue`: cliente River para gerenciamento de fila sobre PostgreSQL;
+- `adapter/mlclient`: cliente HTTP para o modelo preditivo em Python com circuit breaker e retentativas;
+- `adapter/security`: geração e validação de tokens JWT e hashing com bcrypt.
+
+
+## 2. Princípios SOLID aplicados à linguagem Go
+
+| Princípio | Implementação no backend | Benefício de engenharia |
+|---|---|---|
+| **Single Responsibility (SRP)** | Parsers apenas convertem bytes em structs; entidades apenas validam invariantes; casos de uso apenas coordenam regras; repositórios apenas persistem SQL | Cada arquivo possui apenas uma razão para mudar |
+| **Open/Closed (OCP)** | Novos destinos de armazenamento (ex: Google Cloud Storage) implementam `port.IngestionStorage` sem alterar uma única linha de `IngestAlarmsUseCase` | O sistema é estendido por novos adaptadores sem modificar as regras existentes |
+| **Liskov Substitution (LSP)** | `S3Storage` e `LocalTempStorage` satisfazem rigorosamente os mesmos contratos e comportamentos de `port.IngestionStorage` | O composition root pode alternar entre implementações sem que o caso de uso perceba a troca |
+| **Interface Segregation (ISP)** | Em vez de uma interface monolítica de serviço, foram criadas portas pequenas e específicas (`TokenService`, `HashService`, `Logger`, `UnitOfWork`) | Casos de uso não dependem de métodos que não utilizam |
+| **Dependency Inversion (DIP)** | Casos de uso recebem interfaces de `port` em seus construtores e nunca instanciam structs concretas de adaptadores | O núcleo da aplicação pode ser compilado e testado sem rede, banco de dados ou buckets |
+
+## 3. Padrão Unit of Work
+
+Operações complexas no backend frequentemente exigem mutações coordenadas em múltiplas tabelas. O padrão **Unit of Work** foi adotado para garantir transacionalidade ACID sem violar a regra de dependência da Clean Architecture.
+
+### 3.1 Contrato da Porta
+
+Em [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go), a porta declara a assinatura do método `Do`, recebendo um callback com repositórios ligados à mesma transação:
+
+```go
+type UnitOfWork interface {
+	Do(ctx context.Context, fn func(store UnitOfWorkStore) error) error
+}
+
+type UnitOfWorkStore interface {
+	Predictions() PredictionRepository
+	Inspections() InspectionRepository
+	Maintenances() MaintenanceRepository
+	Alarms() AlarmRepository
+	Uploads() UploadRepository
+}
+```
+
+### 3.2 Implementação transacional no PostgreSQL
+
+Em [`internal/adapter/repository/unit_of_work.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/repository/unit_of_work.go), a struct [`PostgresUnitOfWork`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/repository/unit_of_work.go#L13-L66) gerencia o ciclo de vida do `sql.Tx`:
+
+```go
+func (u *PostgresUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWorkStore) error) error {
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("falha ao iniciar transacao: %w", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	store := &postgresUnitOfWorkStore{tx: tx}
+
+	if err := fn(store); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("falha ao confirmar transacao: %w", err)
+	}
+
+	return nil
+}
+```
+
+Esse mecanismo oferece três garantias:
+1. **Rollback automático:** se `fn(store)` retornar qualquer erro, o `defer tx.Rollback()` desfaz todas as alterações pendentes da transação;
+2. **Commit explícito:** a confirmação no PostgreSQL ocorre apenas se todo o bloco de código do caso de uso for concluído com sucesso;
+3. **Isolamento de infraestrutura:** o caso de uso não conhece `database/sql` nem manipula ponteiros de transação diretamente.
+
+## 4. Circuit Breaker na integração de Machine Learning
+
+A API Go comunica-se via HTTP com o modelo preditivo executado em serviço Python na VPS. Se o microsserviço de ML sofrer lentidão ou indisponibilidade, requisições concorrentes poderiam esgotar o pool de conexões e travar o servidor HTTP da API.
+
+Para evitar falhas em cascata, foi desenvolvido um **Circuit Breaker** com proteção por mutex em [`internal/adapter/mlclient/circuit_breaker.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/mlclient/circuit_breaker.go).
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={circuitBreakerMl}
+    alt="Diagrama da máquina de estados do Circuit Breaker do serviço de ML com estados Closed, Open e Half-Open."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Máquina de estados finitos do Circuit Breaker aplicada à integração do modelo preditivo.
+  </figcaption>
+</figure>
+
+### 4.1 Parâmetros operacionais e retentativas
+
+- **Estado Fechado (Closed):** requisições são enviadas normalmente. Se a chamada falhar, o cliente executa até 2 retentativas imediatas com backoff exponencial (50 ms e 100 ms);
+- **Abertura do Circuito (Open):** se 3 chamadas consecutivas falharem, o circuito abre imediatamente. Novas requisições falham de forma instantânea retornando `ErrCircuitOpen` sem gerar tráfego de rede para a VPS;
+- **Estado Meio-Aberto (Half-Open):** após 10 segundos no estado aberto, uma única requisição de teste é permitida. Se for bem-sucedida, o circuito retorna para Fechado; se falhar, retorna para Aberto por mais 10 segundos;
+- **Concorrência segura:** as transições de estado e o contador de falhas são protegidos por `sync.Mutex`.
+
+## 5. Padronização de erros com Problem Details (RFC 7807)
+
+Todas as respostas de erro da API são serializadas segundo a especificação **RFC 7807 (Problem Details for HTTP APIs)** através do pacote [`internal/adapter/http/problem.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/http/problem.go).
+
+### 5.1 Estrutura do payload JSON
+
+```json
+{
+  "type": "https://motiva.com.br/errors/ERR_DUPLICATE_UPLOAD",
+  "title": "Arquivo Duplicado",
+  "status": 409,
+  "detail": "Arquivo ja processado anteriormente pelo sistema.",
+  "instance": "/api/v1/uploads/alarms",
+  "code": "ERR_DUPLICATE_UPLOAD",
+  "request_id": "c7a810f2-b8e1-4c5e-8512-421762d08a1c"
+}
+```
+
+### 5.2 Mapeamento de erros de domínio para códigos HTTP
+
+A função `RespondDomainError` atua como barreira de tradução, garantindo que regras de negócio não conheçam protocolos web:
+
+| Erro de domínio | Código HTTP | Código estável | Significado para o cliente |
+|---|---|---|---|
+| `domain.ErrInvalidCredentials` | 401 Unauthorized | `ERR_INVALID_CREDENTIALS` | Email ou senha incorretos |
+| `domain.ErrUserInactive` | 403 Forbidden | `ERR_USER_INACTIVE` | Operador desativado |
+| `domain.ErrUploadNotFound`, `ErrDoorNotFound` | 404 Not Found | `ERR_NOT_FOUND` | Recurso não localizado |
+| `domain.ErrDuplicateUpload` | 409 Conflict | `ERR_DUPLICATE_UPLOAD` | Hash SHA-256 idêntico já processado |
+| `domain.ErrInvalidPlatform`, `ErrInvalidDoorID` | 400 Bad Request | `ERR_VALIDATION` | Invariante de domínio violada |
+| `domain.ErrPredictionServiceUnavailable` | 503 Service Unavailable | `ERR_PREDICTION_UNAVAILABLE` | VPS ou circuito de ML indisponível |
+
+## 6. Otimização de I/O, streaming e controle de memória
+
+Para suportar planilhas volumosas de telemetria sem sobrecarregar a memória do contêiner da API, a camada de adaptadores adota técnicas específicas de streaming de I/O.
+
+### 6.1 MultiWriter e cálculo de SHA-256 em fluxo
+
+Durante o recebimento do arquivo multipart em [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go#L102-L144), o fluxo de dados é gravado em arquivo temporário em disco e simultaneamente enviado para o gerador de hash SHA-256 através de `io.MultiWriter`:
+
+```go
+hasher := sha256.New()
+size, err := io.Copy(io.MultiWriter(tmpFile, hasher), reader)
+if err != nil {
+	return "", "", fmt.Errorf("preparar upload S3: %w", err)
+}
+if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+	return "", "", fmt.Errorf("reposicionar arquivo para upload S3: %w", err)
+}
+
+_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+	Bucket:        aws.String(s.bucket),
+	Key:           aws.String(storageKey),
+	Body:          tmpFile,
+	ContentLength: aws.Int64(size),
+	ContentType:   aws.String(contentType),
+})
+```
+
+**Benefício técnico:** O arquivo nunca é carregado por inteiro como um slice `[]byte` na memória RAM da aplicação, preservando o footprint de memória mesmo com arquivos extensos.
+
+### 6.2 Persistência em lotes (Batch SQL)
+
+O PostgreSQL possui um limite máximo de 65.535 parâmetros por comando preparado. Repositórios de alarmes e manutenções gravam as linhas normalizadas em **lotes fixos de 500 registros**. Essa estratégia balanceia tempo de ida e volta ao banco (round-trips de rede) e consumo de memória da transação.
+
+## 7. Fila transacional River sobre PostgreSQL
+
+A substituição de processamento em memória por mensageria durável com River foi implementada em [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go).
+
+### 7.1 Enfileiramento atômico (`RiverQueue.Enqueue`)
+
+A gravação do metadado do upload e a inserção do job na fila do River ocorrem sob a **mesma transação PostgreSQL**:
+
+```go
+tx, err := q.db.BeginTx(ctx, nil)
+if err != nil {
+	return fmt.Errorf("iniciar transacao de agendamento: %w", err)
+}
+defer tx.Rollback()
+
+if err := repository.NewPostgresAlarmRepository(tx).CreateUpload(ctx, upload); err != nil {
+	return err
+}
+
+args := newIngestionArgs(ctx, job)
+insertOpts := args.InsertOpts()
+insertOpts.MaxAttempts = q.maxAttempts
+if _, err := q.client.InsertTx(ctx, tx, args, &insertOpts); err != nil {
+	return fmt.Errorf("inserir job River: %w", err)
+}
+if err := tx.Commit(); err != nil {
+	return fmt.Errorf("confirmar upload e job: %w", err)
+}
+```
+
+Se o banco falhar durante a criação do job, o rollback cancela o registro em `file_uploads`. Isso impede a existência de uploads em status `processing` órfãos sem job associado.
+
+### 7.2 Tratamento de erros recuperáveis versus definitivos
+
+No worker, erros são categorizados de acordo com sua recuperabilidade:
+- **Erros transitórios (ex: timeout de rede no S3 ou lock temporário no banco):** retornam erro normal ao River. O River aplica backoff exponencial e reagenda o job até o limite configurado (padrão de 5 tentativas);
+- **Erros permanentes (ex: planilha com colunas ausentes ou arquivo corrompido):** são embrulhados em `permanentIngestionError`. O worker atualiza o upload para `failed`, remove o objeto do S3 e retorna sucesso técnico ao River (`nil`), evitando tentativas inúteis que consumiriam ciclos de CPU;
+- **Cancelamento explícito:** tipos de jobs inválidos ou não suportados utilizam `river.JobCancel(err)`.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={riverGarantias}
+    alt="Diagrama de sequência exibindo garantias transacionais, reserva concorrente e políticas de retentativa da fila River no PostgreSQL."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Garantias de atomicidade e políticas de retentativa da fila de ingestão River.
+  </figcaption>
+</figure>

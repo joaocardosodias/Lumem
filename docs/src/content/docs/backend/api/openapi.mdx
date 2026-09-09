@@ -1,0 +1,118 @@
+---
+title: API REST e Contratos OpenAPI
+description: Especificação da API REST, versionamento de rotas, protocolo de upload assíncrono 202 Accepted e respostas RFC 7807.
+---
+
+A API HTTP do backend publica sua especificação formal no padrão **OpenAPI 3.0.3**, versionada em [`src/backend/docs/openapi.json`](file:///home/cardoso/GitHub/g04/src/backend/docs/openapi.json) e servida interativamente via Swagger UI nas rotas `/docs` e `/swagger`.
+
+Manter o contrato no próprio repositório garante que alterações em endpoints, payloads de requisição, cabeçalhos e respostas de erro sejam revisadas e versionadas junto com o código-fonte Go correspondente.
+
+## 1. Princípios de desenho da API
+
+| Decisão de desenho | Justificativa técnica | Benefício para a integração |
+|---|---|---|
+| **Prefixo de versão `/api/v1`** | Isola a versão atual e reserva espaço para futuras quebras sem afetar clientes legado | Previsibilidade no ciclo de vida dos clientes web e mobile |
+| **Resposta `202 Accepted` em uploads** | Desacopla a aceitação física do arquivo do tempo de parsing analítico | Liberação imediata da conexão HTTP e prevenção de timeouts de proxy |
+| **Problem Details (RFC 7807)** | Estrutura uniforme para todas as respostas de erro com campos estáveis | O frontend consome códigos de erro sem depender de strings variáveis |
+| **Autenticação Bearer JWT** | Modelo sem estado (stateless) assinado por segredo compartilhado | Não exige sessões em memória, permitindo escalabilidade horizontal da API |
+| **Documentação como código** | O arquivo `openapi.json` reside na árvore do projeto e é validado no build | Evita divergências entre documentação e comportamento real dos handlers |
+
+## 2. Superfície e catálogo de endpoints
+
+Os endpoints da API estão agrupados por capacidade funcional:
+
+```text
+/healthz/live                   ──> Liveness probe (Processo ativo)
+/healthz/ready                  ──> Readiness probe (Conexão com PostgreSQL e S3)
+/metrics                        ──> Métricas Prometheus (Bloqueado externamente pelo Nginx)
+/docs, /swagger                 ──> Swagger UI (Documentação navegável do contrato)
+
+/api/v1/
+├── auth/
+│   ├── POST /login             ──> Autenticação de operador e emissão de JWT Bearer
+│   └── GET  /me                ──> Perfil e permissões do usuário autenticado (Protegido)
+├── uploads/
+│   ├── POST /alarms            ──> Upload multipart de alarmes operacionais (Retorna 202)
+│   ├── POST /maintenance       ──> Upload multipart de ordens ZM01/ZM02/ZM03 (Retorna 202)
+│   └── GET  /:id               ──> Consulta do status do processamento (processing/completed/failed)
+├── maintenances/
+│   ├── POST /                  ──> Cadastro manual de ordem de manutenção
+│   └── GET  /                  ──> Listagem com filtros por estação e data
+├── inspections/
+│   ├── POST /                  ──> Abertura de ordem de inspeção preditiva
+│   ├── GET  /                  ──> Listagem geral de inspeções
+│   ├── GET  /:id               ──> Detalhe da inspeção e histórico
+│   └── PATCH /:id/status       ──> Transição de estado de inspeção (validação de invariantes)
+├── dashboard/
+│   ├── GET  /overview          ──> Resumo executivo de alarmes e taxa de disponibilidade
+│   ├── GET  /timeline          ──> Histórico temporal de incidentes por estação
+│   └── GET  /stations/:id/doors──> Visão matricial das 24 portas de plataforma por via
+└── predictions/
+    ├── POST /trigger           ──> Disparo manual de rodada de inferência preditiva
+    └── GET  /latest            ──> Últimas probabilidades de falha geradas pelo modelo
+```
+
+Com exceção de `POST /api/v1/auth/login`, todas as rotas de negócio sob `/api/v1` exigem um JWT válido no cabeçalho `Authorization`. As rotas de healthcheck e documentação permanecem públicas para permitir monitoramento e descoberta do contrato.
+
+## 3. Protocolo de upload assíncrono: `202 Accepted`
+
+O endpoint `POST /api/v1/uploads/alarms` recebe uma planilha através de um campo multipart chamado `file`.
+
+Em vez de manter o cliente aguardando durante todo o parsing e inserção no banco de dados (o que poderia levar minutos para planilhas de 100 mil linhas), a API responde imediatamente:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+X-Request-ID: d41d8cd9-8f00-4b20-9a55-2e6b9c9f28d8
+
+{
+  "upload_id": "a4d92a10-2f14-469b-8f3e-7a0e365007b8",
+  "status": "processing",
+  "file_name": "alarmes_estacao_luz_agosto.csv",
+  "message": "arquivo recebido com sucesso e enfileirado para processamento assincrono"
+}
+```
+
+### Máquina de consulta do cliente (Polling)
+
+O frontend consulta periodicamente `GET /api/v1/uploads/{id}` (ex: a cada 2 segundos) até que o status mude para um estado terminal:
+
+| Status retornado | Ação da interface web | Campos de metadado |
+|---|---|---|
+| `processing` | Exibe barra de progresso com animação de aguardo | `created_at`, `file_name` |
+| `completed` | Exibe notificação de sucesso e atualiza dashboards | `rows_processed`, `rows_inserted`, `processed_at` |
+| `failed` | Exibe alerta vermelho e apresenta o motivo amigável | `error_log`, `failed_at` |
+
+Essa estratégia isola a estabilidade da interface do tempo de execução analítica, permitindo que o operador continue navegando pelo sistema enquanto os dados são processados em segundo plano.
+
+## 4. Padronização de erros RFC 7807 no OpenAPI
+
+Todas as respostas de erro documentadas no OpenAPI seguem o schema de `ProblemDetails`:
+
+```json
+{
+  "type": "https://motiva.com.br/errors/ERR_DUPLICATE_UPLOAD",
+  "title": "Arquivo Duplicado",
+  "status": 409,
+  "detail": "Arquivo ja processado anteriormente pelo sistema.",
+  "instance": "/api/v1/uploads/alarms",
+  "code": "ERR_DUPLICATE_UPLOAD",
+  "request_id": "d41d8cd9-8f00-4b20-9a55-2e6b9c9f28d8"
+}
+```
+
+O campo `code` permite que o frontend execute lógica condicional (ex: abrir modal de substituição para `ERR_DUPLICATE_UPLOAD` ou redirecionar para login para `ERR_INVALID_CREDENTIALS`), enquanto `title` e `detail` fornecem mensagens prontas para exibição na interface.
+
+## 5. Autenticação e cabeçalhos de segurança
+
+Rotas protegidas exigem o envio do token no cabeçalho:
+
+```http
+Authorization: Bearer <token_jwt>
+```
+
+A emissão do token é feita em `POST /api/v1/auth/login`. O payload JWT contém:
+- `sub`: identificador único do operador;
+- `email`: endereço de e-mail corporativo;
+- `role`: nível de privilégio (`operator`, `maintainer`, `admin`);
+- `exp`: timestamp de expiração (UTC).
