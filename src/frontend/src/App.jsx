@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import AppLayout from './components/AppLayout'
+import { PredictionLoadProvider } from './components/PredictionLoad'
 import Alertas from './pages/Alertas'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
@@ -32,14 +33,16 @@ function App() {
     return <Placeholder title="Configurações" />
   }
 
-  if (!loggedIn) {
-    return <Login onLogin={handleLogin} />
-  }
-
   return (
-    <AppLayout current={page} onNavigate={setPage} onLogout={handleLogout}>
-      {renderPage()}
-    </AppLayout>
+    <PredictionLoadProvider>
+      {!loggedIn ? (
+        <Login onLogin={handleLogin} />
+      ) : (
+        <AppLayout current={page} onNavigate={setPage} onLogout={handleLogout}>
+          {renderPage()}
+        </AppLayout>
+      )}
+    </PredictionLoadProvider>
   )
 }
 

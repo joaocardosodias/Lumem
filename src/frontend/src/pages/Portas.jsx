@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Card from '../components/Card'
 import CadastrarButton from '../components/CadastrarButton'
+import { usePredictionLoad } from '../components/PredictionLoad'
 import {
   dashboardSummary,
   getStationDoors,
@@ -20,6 +21,7 @@ function Portas() {
   const [lastTraining, setLastTraining] = useState('08/09/2026')
   const [lastPrediction, setLastPrediction] = useState(null)
   const [activePlatform, setActivePlatform] = useState('P1')
+  const { run, busy } = usePredictionLoad()
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
 
@@ -112,7 +114,9 @@ function Portas() {
     setLastPrediction(next[0]?.last_evaluated_at ?? '2026-09-08 18:40:00')
   }
 
-  function handlePredict() {
+  async function handlePredict() {
+    if (busy) return
+    await run({ variant: 'overlay', mode: 'predict' })
     const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ')
     setDoors((current) =>
       current.map((item) => ({
@@ -123,7 +127,9 @@ function Portas() {
     setLastPrediction(stamp)
   }
 
-  function handleRetrain() {
+  async function handleRetrain() {
+    if (busy) return
+    await run({ variant: 'overlay', mode: 'retrain' })
     const now = new Date()
     const stamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
     setLastTraining(stamp)

@@ -1,18 +1,23 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import iconMotiva from '../assets/icon_motiva.svg'
 import logo from '../assets/logo.svg'
 import Button from '../components/Button'
 import Grainient from '../components/Grainient'
 import Input from '../components/Input'
+import { usePredictionLoad } from '../components/PredictionLoad'
 import { mockAuth } from '../data/mock'
 import './Login.css'
 
 function Login({ onLogin }) {
+  const { run, busy } = usePredictionLoad()
+  const brandRef = useRef(null)
+  const logoRef = useRef(null)
+  const markRef = useRef(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     const validEmail = email.trim().toLowerCase() === mockAuth.email.toLowerCase()
@@ -23,13 +28,24 @@ function Login({ onLogin }) {
       return
     }
 
+    if (busy) return
+
     setError('')
-    onLogin()
+    await run({
+      variant: 'login',
+      mode: 'login',
+      source: {
+        brand: brandRef.current,
+        logo: logoRef.current,
+        mark: markRef.current,
+      },
+      onReady: onLogin,
+    })
   }
 
   return (
-    <section className="login">
-      <aside className="login__brand">
+    <section className={`login${busy ? ' is-loading' : ''}`}>
+      <aside ref={brandRef} className="login__brand">
         <div className="login__grainient" aria-hidden="true">
           <Grainient
             color1="#1f03ff"
@@ -56,7 +72,7 @@ function Login({ onLogin }) {
             zoom={0.9}
           />
         </div>
-        <img className="login__logo" src={logo} alt="motiva" />
+        <img ref={logoRef} className="login__logo" src={logo} alt="motiva" />
 
         <div className="login__intro">
           <p>Manutenção preditiva das portas de plataforma</p>
@@ -65,7 +81,7 @@ function Login({ onLogin }) {
       </aside>
 
       <div className="login__panel">
-        <img className="login__panel-mark" src={iconMotiva} alt="" aria-hidden="true" />
+        <img ref={markRef} className="login__panel-mark" src={iconMotiva} alt="" aria-hidden="true" />
 
         <form className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-head">
