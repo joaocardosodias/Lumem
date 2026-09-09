@@ -1,20 +1,67 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
+import CardAlerta from '../components/CardAlerta'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
-import { api, errorMessage } from '../lib/api'
+import { stationLabel } from '../data/stations'
+import { api, asList, errorMessage } from '../lib/api'
 import { pollUpload } from '../lib/runUpload'
 import './Alertas.css'
 
+function countBy(items, key) {
+  return items.reduce((acc, item) => {
+    const value = item[key] || '—'
+    acc[value] = (acc[value] || 0) + 1
+    return acc
+  }, {})
+}
+
+function mapPrediction(item) {
+  return {
+    tag: item.sap_tag || '—',
+    started_at: item.last_evaluated_at || '—',
+    station: item.station_name || stationLabel(item.station_code) || item.station_code || '—',
+    alarm: item.will_fail ? 'Vai falhar' : 'Estável',
+    normalized_at: [item.platform, item.door_number != null ? String(item.door_number).padStart(2, '0') : '']
+      .filter(Boolean)
+      .join(' · ') || '—',
+    door_id: item.door_id,
+  }
+}
+
 function Alertas() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState(null)
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
-  const [lastUpload, setLastUpload] = useState(null)
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      setItems(asList(await api.predictionsLatest()).map(mapPrediction))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const byType = useMemo(() => countBy(items, 'alarm'), [items])
+  const byStation = useMemo(() => countBy(items, 'station'), [items])
+  const maxType = Math.max(...Object.values(byType), 1)
+  const maxStation = Math.max(...Object.values(byStation), 1)
+  const atRisk = items.filter((item) => item.alarm === 'Vai falhar').length
 
   async function handleImport(event) {
     event.preventDefault()
@@ -32,12 +79,12 @@ function Alertas() {
       if (done.status === 2) {
         throw new Error('A API recusou o processamento deste arquivo.')
       }
-      setLastUpload(done)
       setFile(null)
       setUpload(null)
       setOpen(false)
-    } catch (error) {
-      setImportError(errorMessage(error))
+      await load()
+    } catch (err) {
+      setImportError(errorMessage(err))
     } finally {
       setImporting(false)
     }
@@ -57,23 +104,55 @@ function Alertas() {
         <CadastrarButton onClick={openCadastro}>Cadastrar Alarmes +</CadastrarButton>
       </div>
 
+      {loading ? <p className="page-status">Carregando alertas da última inferência…</p> : null}
+      {error ? <p className="page-status is-error">{error}</p> : null}
+
       <div className="alertas__hero">
         <Card
           layout="banner"
-          label="Linhas gravadas no último upload"
-          value={lastUpload?.rows_inserted ?? '—'}
-          hint={
-            lastUpload?.file_name
-              ? lastUpload.file_name
-              : 'A API não lista alarmes. Envie a planilha de telemetria para ingestão.'
-          }
+          label="Alertas preditivos"
+          value={atRisk}
+          hint={items.length ? `${items.length} portas na última rodada da IA` : 'Nenhum alerta na última rodada'}
         />
+        <div className="alertas__charts">
+          <article className="alertas__chart">
+            <h2>Alertas por diagnóstico</h2>
+            {Object.entries(byType).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxType) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+          <article className="alertas__chart">
+            <h2>Alertas por estação</h2>
+            {Object.entries(byStation).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+        </div>
       </div>
 
       <div className="alertas__list">
-        <p className="page-empty">
-          A API não lista alarmes. Os registros entram só pelo envio da planilha de telemetria.
-        </p>
+        {items.length ? (
+          items.map((alarm) => (
+            <CardAlerta
+              key={`${alarm.tag}-${alarm.door_id}-${alarm.started_at}`}
+              tag={alarm.tag}
+              startedAt={alarm.started_at}
+              station={alarm.station}
+              alarm={alarm.alarm}
+              normalizedAt={alarm.normalized_at}
+            />
+          ))
+        ) : (
+          <p className="page-empty">Nenhum alerta na última inferência.</p>
+        )}
       </div>
 
       {open ? (

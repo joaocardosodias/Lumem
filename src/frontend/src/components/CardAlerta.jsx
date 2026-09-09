@@ -14,11 +14,11 @@ function CardAlerta({ tag, startedAt, station, alarm, normalizedAt }) {
         <strong>{station}</strong>
       </div>
       <div>
-        <span>Alarme</span>
+        <span>Diagnóstico</span>
         <strong>{alarm}</strong>
       </div>
       <div>
-        <span>Data e Hora de Normalização</span>
+        <span>Plataforma</span>
         <strong>{normalizedAt}</strong>
       </div>
     </article>
