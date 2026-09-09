@@ -84,6 +84,36 @@ O card de alerta representa uma ocorrência operacional em uma única faixa: **t
   <Image src={CardAlerta} alt="Componente de card de alerta operacional" width={900} format="png" />
 </div>
 
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Desenvolvimento das Telas</h2>
+</div>
+
+As telas abaixo partem da estrutura validada no wireframe (Login, Dashboard, Estações, Manutenções, Histórico e Novos Dados) e ganham identidade visual, dados reais de PSD e os fluxos de cadastro que alimentam o modelo preditivo.
+
+### 3.1 Dashboard
+
+Tela inicial após o login. No topo, o título de boas vindas abre a jornada da Marta. Em seguida, **cards macro** resumem a operação: probabilidade de uma porta quebrar nos próximos 7 dias, número de alertas no mesmo horizonte em todas as estações e estação com maior volume recente de alarmes. É o equivalente de alta fidelidade do ranking de risco previsto no wireframe.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaDashboard} alt="Protótipo de alta fidelidade da tela de Dashboard" width={750} format="png" />
+</div>
+
+### 3.2 Alertas
+
+Evolução do **Histórico** de alarmes do wireframe. A lista apresenta tag da PSD, data e hora, estação, tipo de alarme e data de normalização, com ação de edição em cada linha.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaAlertas} alt="Protótipo de alta fidelidade da tela de Alertas" width={750} format="png" />
+</div>
+
+O botão **Cadastrar Alarmes +** abre um **popup** sobre a própria tela, o mesmo padrão de “não sair do contexto” usado no agendamento do wireframe, para registrar TAG, datas de início e de normalização, estação e tipo de alarme.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaAlertasCadastro} alt="Protótipo de alta fidelidade do modal de cadastro de alarmes" width={750} format="png" />
+</div>
+
+
 
 
 
