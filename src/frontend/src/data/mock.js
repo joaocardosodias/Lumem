@@ -172,17 +172,17 @@ import imgRep from '../assets/estacoes/Republica.jpg'
 import imgLuz from '../assets/estacoes/Luz.jpg'
 
 export const lineStations = [
-  { code: 'VSO', name: 'Vila Sônia', photo: imgVso },
-  { code: 'MBI', name: 'São Paulo-Morumbi', photo: imgMbi },
-  { code: 'BUT', name: 'Butantã', photo: imgBut },
-  { code: 'PIN', name: 'Pinheiros', photo: imgPin },
-  { code: 'FAL', name: 'Faria Lima', photo: imgFal },
-  { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra },
-  { code: 'OSC', name: 'Oscar Freire', photo: imgOsc },
-  { code: 'PAU', name: 'Paulista', photo: imgPau },
-  { code: 'HIG', name: 'Higienópolis-Mackenzie', photo: imgHig },
-  { code: 'REP', name: 'República', photo: imgRep },
-  { code: 'LUZ', name: 'Luz', photo: imgLuz },
+  { code: 'VSO', name: 'Vila Sônia', photo: imgVso, platforms: ['P1', 'P2'] },
+  { code: 'MBI', name: 'São Paulo-Morumbi', photo: imgMbi, platforms: ['P1', 'P2'] },
+  { code: 'BUT', name: 'Butantã', photo: imgBut, platforms: ['P1', 'P2'] },
+  { code: 'PIN', name: 'Pinheiros', photo: imgPin, platforms: ['P1', 'P2', 'P3', 'P4'] },
+  { code: 'FAL', name: 'Faria Lima', photo: imgFal, platforms: ['P1', 'P2'] },
+  { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra, platforms: ['P1', 'P2'] },
+  { code: 'OSC', name: 'Oscar Freire', photo: imgOsc, platforms: ['P1', 'P2'] },
+  { code: 'PAU', name: 'Paulista', photo: imgPau, platforms: ['P1', 'P2'] },
+  { code: 'HIG', name: 'Higienópolis-Mackenzie', photo: imgHig, platforms: ['P1', 'P2'] },
+  { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2', 'P3', 'P4'] },
+  { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2', 'P3', 'P4'] },
 ]
 
 const stationRiskSeed = {
@@ -201,31 +201,37 @@ const stationRiskSeed = {
 
 export function getStationDoors(stationCode) {
   const base = stationRiskSeed[stationCode] ?? 0.3
+  const station = lineStations.find((item) => item.code === stationCode)
+  const platforms = station?.platforms ?? ['P1', 'P2']
+  const stationIndex = lineStations.findIndex((item) => item.code === stationCode) + 1
 
-  return Array.from({ length: 24 }, (_, index) => {
-    const doorNumber = index + 1
-    const platform = doorNumber <= 12 ? 'P1' : 'P2'
-    const prediction = latestPredictions.find(
-      (item) => item.station_code === stationCode && item.door_number === doorNumber,
-    )
-    const wave = ((doorNumber * 17) % 45) / 100
-    const risk = prediction?.risk ?? Math.min(0.97, Math.round((base * (0.55 + wave)) * 100) / 100)
-    const willFail = prediction?.will_fail ?? risk >= 0.55
+  return platforms.flatMap((platform, platformIndex) =>
+    Array.from({ length: 24 }, (_, index) => {
+      const doorNumber = index + 1
+      const prediction = latestPredictions.find(
+        (item) =>
+          item.station_code === stationCode &&
+          item.platform === platform &&
+          item.door_number === doorNumber,
+      )
+      const wave = ((doorNumber * 17 + platformIndex * 11) % 45) / 100
+      const risk = prediction?.risk ?? Math.min(0.97, Math.round((base * (0.55 + wave)) * 100) / 100)
+      const willFail = prediction?.will_fail ?? risk >= 0.55
 
-    return {
-      door_id: Number(`${stationCode.charCodeAt(0)}${stationCode.charCodeAt(1)}${String(doorNumber).padStart(2, '0')}`),
-      station_code: stationCode,
-      platform,
-      door_number: doorNumber,
-      sap_tag: `PSD_${stationCode}_${platform}_PDM${String(doorNumber).padStart(2, '0')}`,
-      will_fail: willFail,
-      risk,
-      alarms: willFail ? 6 + (doorNumber % 8) : doorNumber % 4,
-      last_maintenance_days: willFail ? 8 + (doorNumber % 12) : 18 + (doorNumber % 20),
-      status: willFail ? 'at_risk' : 'stable',
-      last_evaluated_at: prediction?.last_evaluated_at ?? '2026-09-08 18:40:00',
-    }
-  })
+      return {
+        door_id: prediction?.door_id ?? stationIndex * 10000 + (platformIndex + 1) * 100 + doorNumber,
+        station_name: station?.name ?? stationCode,
+        platform,
+        door_number: doorNumber,
+        sap_tag: `PSD_${stationCode}_${platform}_PDM${String(doorNumber).padStart(2, '0')}`,
+        status: willFail ? 1 : 0,
+        will_fail: willFail,
+        last_evaluated_at: prediction?.last_evaluated_at ?? '2026-09-08 18:40:00',
+        station_code: stationCode,
+        risk,
+      }
+    }),
+  )
 }
 
 export const alarms = [

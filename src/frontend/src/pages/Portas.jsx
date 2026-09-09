@@ -19,6 +19,7 @@ function Portas() {
   const [doors, setDoors] = useState([])
   const [lastTraining, setLastTraining] = useState('08/09/2026')
   const [lastPrediction, setLastPrediction] = useState(null)
+  const [activePlatform, setActivePlatform] = useState('P1')
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
 
@@ -26,11 +27,22 @@ function Portas() {
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
   const topStation = dashboardSummary.critical_stations[0]
   const doorsAtRisk = doors.filter((item) => item.will_fail).length
+  const platforms = useMemo(
+    () => [...new Set(doors.map((item) => item.platform))],
+    [doors],
+  )
+  const visibleDoors = useMemo(
+    () =>
+      doors
+        .filter((item) => item.platform === activePlatform)
+        .sort((a, b) => a.door_number - b.door_number),
+    [doors, activePlatform],
+  )
   const selectedIndex = lineStations.findIndex((item) => item.code === selectedCode)
 
   const maxRisk = useMemo(
-    () => Math.max(...doors.map((item) => item.risk), 0.01),
-    [doors],
+    () => Math.max(...visibleDoors.map((item) => item.risk), 0.01),
+    [visibleDoors],
   )
 
   useEffect(() => {
@@ -93,6 +105,7 @@ function Portas() {
   function handleOpenStation(code) {
     const next = getStationDoors(code)
     setDoors(next)
+    setActivePlatform(next[0]?.platform ?? 'P1')
     setOpenedCode(code)
     setSelectedCode(null)
     setTooltipOpen(false)
@@ -132,14 +145,34 @@ function Portas() {
         </div>
 
         <div className="portas__kpis">
-          <Card layout="banner" label="Total de portas" value="48" hint="24 por plataforma" />
+          <Card
+            layout="banner"
+            label="Total de portas"
+            value={doors.length}
+            hint={`${visibleDoors.length} em ${activePlatform} · ${platforms.length} plataformas`}
+          />
           <Card layout="banner" label="Portas em risco" value={doorsAtRisk} hint="próximos 7 dias" />
         </div>
 
+        <div className="portas-tabs" role="tablist" aria-label="Plataformas da estação">
+          {platforms.map((platform) => (
+            <button
+              key={platform}
+              type="button"
+              role="tab"
+              aria-selected={activePlatform === platform}
+              className={activePlatform === platform ? 'is-active' : ''}
+              onClick={() => setActivePlatform(platform)}
+            >
+              {platform}
+            </button>
+          ))}
+        </div>
+
         <article className="portas__panel">
-          <h2>Riscos por porta</h2>
+          <h2>Riscos por porta · {activePlatform}</h2>
           <div className="portas-risk-chart">
-            {doors.map((item) => (
+            {visibleDoors.map((item) => (
               <div key={item.door_id} className="portas-risk-chart__col">
                 <span>
                   <i style={{ height: `${(item.risk / maxRisk) * 100}%` }} />
@@ -151,29 +184,29 @@ function Portas() {
         </article>
 
         <article className="portas__panel">
-          <h2>Portas de Estação</h2>
+          <h2>Portas de Estação · {activePlatform}</h2>
           <div className="portas__table">
             <div className="portas__row portas__row--head">
               <span>Porta</span>
+              <span>TAG</span>
               <span>Risco</span>
-              <span>Alarmes</span>
-              <span>Última Manutenção</span>
               <span>Status</span>
+              <span>Avaliado em</span>
             </div>
-            {doors.map((item) => (
+            {visibleDoors.map((item) => (
               <div key={item.door_id} className="portas__row">
                 <strong>{padDoor(item.door_number)}</strong>
+                <strong>{item.sap_tag}</strong>
                 <div className="portas-risk">
                   <b>
                     <i style={{ width: `${Math.round(item.risk * 100)}%` }} />
                   </b>
                   <em>{Math.round(item.risk * 100)}%</em>
                 </div>
-                <strong>{item.alarms}</strong>
-                <strong>{item.last_maintenance_days} dias</strong>
                 <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
                   {item.will_fail ? 'Em risco' : 'Estável'}
                 </span>
+                <strong>{item.last_evaluated_at}</strong>
               </div>
             ))}
           </div>

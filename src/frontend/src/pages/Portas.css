@@ -264,6 +264,32 @@
   font-size: 16px;
 }
 
+.portas-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0 0 18px;
+  border-bottom: 2px solid color-mix(in srgb, var(--brand) 16%, white);
+}
+
+.portas-tabs button {
+  min-height: 42px;
+  padding: 8px 22px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 0;
+  background: transparent;
+  color: #6b4fe0;
+  font-weight: 500;
+}
+
+.portas-tabs button.is-active {
+  border-bottom-color: var(--brand);
+  color: var(--brand);
+  font-weight: 700;
+}
+
 .portas-risk-chart {
   display: grid;
   grid-template-columns: repeat(24, minmax(18px, 1fr));
@@ -304,13 +330,15 @@
 .portas__table {
   display: flex;
   flex-direction: column;
+  overflow-x: auto;
 }
 
 .portas__row {
   display: grid;
-  grid-template-columns: 0.5fr 1.4fr 0.5fr 1fr 0.8fr;
+  grid-template-columns: 0.4fr 1.6fr 1.3fr 0.7fr 1.1fr;
   gap: 12px;
   align-items: center;
+  min-width: 640px;
   padding: 14px 0;
   border-bottom: 1px solid rgba(64, 0, 255, 0.14);
   color: var(--brand);
@@ -324,6 +352,11 @@
   padding-top: 0;
   font-size: 13px;
   font-weight: 700;
+}
+
+.portas__row strong {
+  font-size: 14px;
+  word-break: break-all;
 }
 
 .portas-risk {
@@ -400,14 +433,8 @@
 
 @media (max-width: 1100px) {
   .portas__cards,
-  .portas__kpis,
-  .portas__row,
-  .portas__row--head {
+  .portas__kpis {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .portas-risk-chart {
-    grid-template-columns: repeat(12, minmax(22px, 1fr));
   }
 }
 
