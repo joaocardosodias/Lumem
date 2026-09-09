@@ -8,6 +8,8 @@ import Background from '../../../../assets/sprints/sprint1/background_title.png'
 import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
 import telaCarregamento from '../../../../assets/sprints/sprint3/frontend/Carregamento.png';
 import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
+import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manutencoes.png';
+import telaCadastrarManutencoes from '../../../../assets/sprints/sprint3/frontend/CadastrarManutencoes.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -80,4 +82,40 @@ No topo, o card azul concentra o indicador principal, *Portas em risco nos próx
   />
   <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
 </figure>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Manutenções</h2>
+</div>
+
+A tela de Manutenções é o catálogo operacional das ordens SAP da linha (ZM01 corretiva emergencial, ZM02 corretiva programada e ZM03 preventiva). A Marta usa essa visão para cruzar volume, tipo, estação e duração com o que o modelo prioriza no Dashboard. Os dados já entram no cache durante o overlay de login, via `GET /api/v1/maintenance` em páginas paralelas, para o card azul refletir o total real e não só a primeira página da API. Se o cache estiver vazio, a tela busca de novo.
+
+O recorte visível alimenta tudo ao mesmo tempo. O card *Ordens de manutenção* mostra a quantidade filtrada e destaca o tipo mais frequente. **Ordens por tipo** empilha as barras ZM; **Ordens por estação** parte as seis maiores à esquerda e o restante à direita. A barra de filtros vem em seguida: período (1d, 7d, 30d, 6 meses, 1 ano ou Tudo, o padrão), estação, tipo, origem (manual ou upload) e duração mínima e máxima em horas. A lista abaixo traz tipo, ordem SAP, estação, local de instalação, início, fim, duração, sintoma, descrição e origem, 50 linhas por página. Códigos SAP do tipo `SP04IFAL` são normalizados para as três letras da Linha 4 (FAL, PIN, OSC etc.).
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 4: Tela de Manutenções</strong></figcaption>
+  <Image
+    src={telaManutencoes}
+    alt="Tela de Manutenções com card de total, gráficos por tipo e estação, filtros e listagem de ordens"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+O botão **Cadastrar Manutenções +** abre um modal roxo sobre a própria tela, sem perder o contexto da lista. Há duas abas. Em **Manual**, a Marta informa tipo da ordem, número SAP, estação, local de instalação, início, fim opcional, duração, sintoma e descrição. Preenchidas as datas de início e fim, a duração em horas é calculada sozinha. O envio faz `POST /api/v1/maintenance` e recarrega o catálogo. Em **CSV / XLSX**, ela escolhe o tipo ZM da planilha, anexa o arquivo (lido no cliente pelo SheetJS) e envia `POST /api/v1/uploads/maintenance`; a tela acompanha o processamento até a API concluir. Clique fora do modal, com o upload parado, fecha o cadastro.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 5: Modal de cadastro de manutenção</strong></figcaption>
+  <Image
+    src={telaCadastrarManutencoes}
+    alt="Modal Cadastrar manutenção sobre a tela de Manutenções, na aba Manual"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
 
