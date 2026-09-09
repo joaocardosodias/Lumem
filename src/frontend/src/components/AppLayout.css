@@ -29,6 +29,8 @@
   height: 100%;
   overflow: auto;
   padding: 48px 56px;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff transparent;
 }
 
 @media (max-width: 900px) {

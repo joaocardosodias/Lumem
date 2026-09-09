@@ -65,3 +65,47 @@
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.92);
 }
+
+.kpi-card--banner {
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 16px 24px;
+  border-radius: 20px;
+}
+
+.kpi-card--banner .kpi-card__mark {
+  left: -12px;
+  bottom: -24px;
+  width: min(22%, 120px);
+}
+
+.kpi-card--banner .kpi-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: none;
+  text-align: left;
+}
+
+.kpi-card--banner .kpi-card__content p {
+  font-size: 15px;
+}
+
+.kpi-card--banner .kpi-card__content small {
+  margin-top: 4px;
+}
+
+.kpi-card--banner .kpi-card__value {
+  margin-top: 0;
+}
+
+.kpi-card--banner .kpi-card__value strong {
+  font-size: 36px;
+}
+
+.kpi-card--banner .kpi-card__value i {
+  height: 32px;
+}

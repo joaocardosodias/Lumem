@@ -20,3 +20,15 @@
 .ui-input input:focus {
   border-bottom-color: var(--brand);
 }
+
+.ui-input input[type='date'],
+.ui-input input[type='time'],
+.ui-input input[type='number'] {
+  color-scheme: inherit;
+}
+
+.ui-input-row {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+}

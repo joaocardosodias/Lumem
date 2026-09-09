@@ -1,17 +1,30 @@
 import { useMemo, useState } from 'react'
 import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
+import Card from '../components/Card'
 import CardAlerta from '../components/CardAlerta'
 import Input from '../components/Input'
+import PlanilhaImport from '../components/PlanilhaImport'
+import { mapAlarmRows } from '../lib/importRows'
+import { parseSpreadsheet } from '../lib/spreadsheet'
 import { alarms as initialAlarms } from '../data/mock'
 import './Alertas.css'
 
 const emptyForm = {
   tag: '',
-  started_at: '',
+  start_date: '',
+  start_time: '',
+  end_date: '',
+  end_time: '',
   station: '',
   alarm: '',
-  normalized_at: '',
+}
+
+function formatDateTime(date, time) {
+  if (!date) return ''
+  const [year, month, day] = date.split('-')
+  const clock = time ? (time.length === 5 ? `${time}:00` : time) : '00:00:00'
+  return `${day}/${month}/${year} ${clock}`
 }
 
 function countBy(items, key) {
@@ -25,12 +38,17 @@ function countBy(items, key) {
 function Alertas() {
   const [items, setItems] = useState(initialAlarms)
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState('manual')
   const [form, setForm] = useState(emptyForm)
+  const [file, setFile] = useState(null)
+  const [importError, setImportError] = useState('')
+  const [importing, setImporting] = useState(false)
 
   const byType = useMemo(() => countBy(items, 'alarm'), [items])
   const byStation = useMemo(() => countBy(items, 'station'), [items])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
+  const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
 
   function updateField(field) {
     return (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
@@ -38,39 +56,90 @@ function Alertas() {
 
   function handleSubmit(event) {
     event.preventDefault()
-    setItems((current) => [form, ...current])
+    setItems((current) => [
+      {
+        tag: form.tag,
+        started_at: formatDateTime(form.start_date, form.start_time),
+        station: form.station,
+        alarm: form.alarm,
+        normalized_at: formatDateTime(form.end_date, form.end_time),
+      },
+      ...current,
+    ])
     setForm(emptyForm)
     setOpen(false)
+  }
+
+  async function handleImport(event) {
+    event.preventDefault()
+    if (!file) {
+      setImportError('Selecione um arquivo CSV ou XLSX.')
+      return
+    }
+
+    setImporting(true)
+    setImportError('')
+
+    try {
+      const rows = mapAlarmRows(await parseSpreadsheet(file))
+      if (!rows.length) {
+        setImportError('Nenhum alarme válido encontrado na planilha.')
+        return
+      }
+
+      setItems((current) => [...rows, ...current])
+      setFile(null)
+      setOpen(false)
+    } catch (error) {
+      setImportError(error.message || 'Não foi possível ler a planilha.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  function openCadastro() {
+    setMode('manual')
+    setImportError('')
+    setFile(null)
+    setOpen(true)
   }
 
   return (
     <section className="alertas">
       <div className="page-head">
         <h1>Alertas</h1>
-        <CadastrarButton onClick={() => setOpen(true)}>Cadastrar Alarmes +</CadastrarButton>
+        <CadastrarButton onClick={openCadastro}>Cadastrar Alarmes +</CadastrarButton>
       </div>
 
-      <div className="alertas__charts">
-        <article className="alertas__chart">
-          <h2>Alarmes por tipo</h2>
-          {Object.entries(byType).map(([label, value]) => (
-            <div key={label} className="alertas__bar">
-              <strong>{label}</strong>
-              <i style={{ width: `${(value / maxType) * 100}%` }} />
-              <em>{value}</em>
-            </div>
-          ))}
-        </article>
-        <article className="alertas__chart">
-          <h2>Alarmes por estação</h2>
-          {Object.entries(byStation).map(([label, value]) => (
-            <div key={label} className="alertas__bar">
-              <strong>{label}</strong>
-              <i style={{ width: `${(value / maxStation) * 100}%` }} />
-              <em>{value}</em>
-            </div>
-          ))}
-        </article>
+      <div className="alertas__hero">
+        <Card
+          layout="banner"
+          label="Alarmes registrados"
+          value={items.length}
+          hint={topType ? `${topType[1]} do tipo ${topType[0]}` : 'Nenhum alarme na linha'}
+        />
+        <div className="alertas__charts">
+          <article className="alertas__chart">
+            <h2>Alarmes por tipo</h2>
+            {Object.entries(byType).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxType) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+          <article className="alertas__chart">
+            <h2>Alarmes por estação</h2>
+            {Object.entries(byStation).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+        </div>
       </div>
 
       <div className="alertas__list">
@@ -90,17 +159,79 @@ function Alertas() {
         <div className="alertas-modal" onClick={() => setOpen(false)}>
           <form
             onClick={(event) => event.stopPropagation()}
-            onSubmit={handleSubmit}
+            onSubmit={mode === 'import' ? handleImport : handleSubmit}
           >
             <h2>Cadastrar alarme</h2>
-            <Input id="alarm-tag" label="TAG" value={form.tag} onChange={updateField('tag')} />
-            <Input id="alarm-start" label="Data de início" value={form.started_at} onChange={updateField('started_at')} />
-            <Input id="alarm-end" label="Data de normalização" value={form.normalized_at} onChange={updateField('normalized_at')} />
-            <Input id="alarm-station" label="Estação" value={form.station} onChange={updateField('station')} />
-            <Input id="alarm-type" label="Tipo de alarme" value={form.alarm} onChange={updateField('alarm')} />
-            <Button type="submit" variant="light">
-              Cadastrar
-            </Button>
+            <div className="cadastro-tabs">
+              <button type="button" className={mode === 'manual' ? 'is-active' : ''} onClick={() => setMode('manual')}>
+                Manual
+              </button>
+              <button type="button" className={mode === 'import' ? 'is-active' : ''} onClick={() => setMode('import')}>
+                CSV / XLSX
+              </button>
+            </div>
+
+            {mode === 'import' ? (
+              <>
+                <PlanilhaImport
+                  file={file}
+                  onFile={(next) => {
+                    setFile(next)
+                    setImportError('')
+                  }}
+                  hint="Planilha de alarmes de telemetria em CSV ou XLSX."
+                  error={importError}
+                />
+                <Button type="submit" variant="light">
+                  {importing ? 'Importando…' : 'Importar planilha'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Input id="alarm-tag" label="TAG" value={form.tag} onChange={updateField('tag')} />
+                <div className="ui-input-row">
+                  <Input
+                    id="alarm-start-date"
+                    label="Data de início"
+                    type="date"
+                    value={form.start_date}
+                    required
+                    onChange={updateField('start_date')}
+                  />
+                  <Input
+                    id="alarm-start-time"
+                    label="Hora de início"
+                    type="time"
+                    step="60"
+                    value={form.start_time}
+                    required
+                    onChange={updateField('start_time')}
+                  />
+                </div>
+                <div className="ui-input-row">
+                  <Input
+                    id="alarm-end-date"
+                    label="Data de normalização"
+                    type="date"
+                    value={form.end_date}
+                    onChange={updateField('end_date')}
+                  />
+                  <Input
+                    id="alarm-end-time"
+                    label="Hora de normalização"
+                    type="time"
+                    step="60"
+                    value={form.end_time}
+                    onChange={updateField('end_time')}
+                  />
+                </div>
+                <Input id="alarm-station" label="Estação" value={form.station} onChange={updateField('station')} />
+                <Input id="alarm-type" label="Tipo de alarme" value={form.alarm} onChange={updateField('alarm')} />
+                <Button type="submit" variant="light">
+                  Cadastrar
+                </Button>
+              </>
+            )}
           </form>
         </div>
       ) : null}

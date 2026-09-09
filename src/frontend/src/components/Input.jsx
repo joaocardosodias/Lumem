@@ -1,6 +1,6 @@
 import './Input.css'
 
-function Input({ id, label, type = 'text', value, onChange, placeholder, autoComplete }) {
+function Input({ id, label, type = 'text', value, onChange, placeholder, autoComplete, required, step, min, max }) {
   return (
     <label className="ui-input" htmlFor={id}>
       <span>{label}</span>
@@ -10,6 +10,10 @@ function Input({ id, label, type = 'text', value, onChange, placeholder, autoCom
         value={value}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        required={required}
+        step={step}
+        min={min}
+        max={max}
         onChange={onChange}
       />
     </label>
