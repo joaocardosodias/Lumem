@@ -459,7 +459,9 @@ function Portas({ onNavigate }) {
         </article>
 
         <div className="portas__actions">
-          <CadastrarButton onClick={handlePredict}>Realizar Previsão</CadastrarButton>
+          <div>
+            <CadastrarButton onClick={handlePredict}>Realizar Previsão</CadastrarButton>
+          </div>
           <div>
             <CadastrarButton onClick={handleRetrain}>Re-treinar modelo</CadastrarButton>
             <small>Último disparo {lastTraining}</small>

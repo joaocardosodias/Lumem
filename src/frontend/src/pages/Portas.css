@@ -415,17 +415,31 @@
 }
 
 .portas__actions {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  width: min(100%, 460px);
+  margin: 8px 0 0 auto;
   gap: 12px;
-  margin-top: 8px;
+}
+
+.portas__actions .cadastrar-button {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px;
 }
 
 .portas__actions > div {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  min-width: 0;
   gap: 6px;
+}
+
+.portas__actions small {
+  text-align: center;
 }
 
 .portas__actions small,
