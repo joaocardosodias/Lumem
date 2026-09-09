@@ -29,6 +29,7 @@
   --white: #ffffff;
   --text: #3f00ff;
   --nav-width: 248px;
+  --nav-collapsed: 74px;
   --font: 'Circular Std', sans-serif;
   --grad-brand: linear-gradient(145deg, #6a28ff 0%, #3f00ff 100%);
 }

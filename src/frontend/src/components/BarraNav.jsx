@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import iconMotiva from '../assets/icon_motiva.svg'
 import logo from '../assets/logo.svg'
 import './BarraNav.css'
 
@@ -12,14 +14,19 @@ const items = [
 ]
 
 function BarraNav({ current, onNavigate, onLogout }) {
+  const [collapsed, setCollapsed] = useState(false)
   const activeIndex = Math.max(
     items.findIndex((item) => item.id === current),
     0,
   )
 
   return (
-    <aside className="barra-nav">
-      <img className="barra-nav__logo" src={logo} alt="motiva" />
+    <aside className={`barra-nav${collapsed ? ' is-collapsed' : ''}`}>
+      <img
+        className="barra-nav__logo"
+        src={collapsed ? iconMotiva : logo}
+        alt="motiva"
+      />
 
       <nav>
         <div className="barra-nav__indicator" style={{ '--i': String(activeIndex) }} aria-hidden="true" />
@@ -30,20 +37,48 @@ function BarraNav({ current, onNavigate, onLogout }) {
                 type="button"
                 className={current === item.id ? 'is-active' : undefined}
                 onClick={() => onNavigate(item.id)}
+                title={collapsed ? item.label : undefined}
               >
                 <NavIcon id={item.id} />
-                {item.label}
+                <span className="barra-nav__label">{item.label}</span>
               </button>
             </li>
           ))}
         </ul>
       </nav>
 
-      <button type="button" className="barra-nav__sair" onClick={onLogout}>
-        <NavIcon id="sair" />
-        Sair
-      </button>
+      <div className="barra-nav__footer">
+        <button
+          type="button"
+          className="barra-nav__toggle"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? 'Expandir menu' : 'Minimizar menu'}
+        >
+          <ToggleIcon collapsed={collapsed} />
+        </button>
+        <button
+          type="button"
+          className="barra-nav__sair"
+          onClick={onLogout}
+          title={collapsed ? 'Sair' : undefined}
+        >
+          <NavIcon id="sair" />
+          <span className="barra-nav__label">Sair</span>
+        </button>
+      </div>
     </aside>
+  )
+}
+
+function ToggleIcon({ collapsed }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {collapsed ? (
+        <path d="M9 6l6 6-6 6" />
+      ) : (
+        <path d="M15 6l-6 6 6 6" />
+      )}
+    </svg>
   )
 }
 

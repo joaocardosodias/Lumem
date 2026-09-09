@@ -6,6 +6,11 @@
   padding: 28px 16px 18px;
   background: var(--brand);
   color: var(--white);
+  transition: width 0.28s ease, padding 0.28s ease;
+}
+
+.barra-nav.is-collapsed {
+  width: var(--nav-collapsed);
 }
 
 .barra-nav__logo {
@@ -13,6 +18,11 @@
   width: 118px;
   height: auto;
   margin: 32px auto 40px;
+  transition: width 0.28s ease;
+}
+
+.barra-nav.is-collapsed .barra-nav__logo {
+  width: 34px;
 }
 
 .barra-nav nav {
@@ -62,15 +72,29 @@
   color: var(--white);
   font-size: 13px;
   text-align: left;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, padding 0.28s ease, gap 0.28s ease;
+}
+
+.barra-nav.is-collapsed button {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  height: 42px;
+  justify-content: center;
+  padding: 0;
+  gap: 0;
 }
 
 .barra-nav li button {
   height: 100%;
 }
 
-.barra-nav button:hover:not(.is-active) {
+.barra-nav button:hover:not(.is-active):not(.barra-nav__toggle) {
   background: rgba(0, 0, 0, 0.08);
+}
+
+.barra-nav button.barra-nav__toggle:hover {
+  background: rgba(0, 0, 0, 0.28);
 }
 
 .barra-nav button svg {
@@ -84,10 +108,43 @@
   transform: scale(1.06);
 }
 
+.barra-nav__label {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.barra-nav.is-collapsed .barra-nav__label {
+  display: none;
+}
+
+.barra-nav__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.barra-nav button.barra-nav__toggle {
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.barra-nav.is-collapsed button.barra-nav__toggle {
+  align-self: flex-start;
+}
+
 .barra-nav__sair {
   height: 42px;
   flex-shrink: 0;
-  margin-top: auto;
   background: rgba(229, 57, 53, 0.1) !important;
   box-shadow: inset 3px 0 0 #e53935;
 }
