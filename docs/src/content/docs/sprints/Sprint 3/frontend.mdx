@@ -10,6 +10,8 @@ import telaCarregamento from '../../../../assets/sprints/sprint3/frontend/Carreg
 import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
 import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manutencoes.png';
 import telaCadastrarManutencoes from '../../../../assets/sprints/sprint3/frontend/CadastrarManutencoes.png';
+import telaAlertas from '../../../../assets/sprints/sprint3/frontend/Alertas.png';
+import telaCadastrarAlarmes from '../../../../assets/sprints/sprint3/frontend/CadastrarAlarmes.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -112,6 +114,41 @@ O botão **Cadastrar Manutenções +** abre um modal roxo sobre a própria tela,
   <Image
     src={telaCadastrarManutencoes}
     alt="Modal Cadastrar manutenção sobre a tela de Manutenções, na aba Manual"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Alertas</h2>
+</div>
+
+A tela de Alertas herda o papel do Histórico do wireframe: um lugar para a Marta ver o que está sinalizado na linha e alimentar o modelo com planilha de telemetria. No estado atual da API, porém, **não existe listagem de alarmes**. O OpenAPI expõe `POST /api/v1/uploads/alarms` e as rotas de predição, mas nenhum `GET` de alarmes. Por isso a tela não mostra ocorrências de telemetria (código, horário do alarme, normalização). Ela mostra a **última inferência** (`GET /api/v1/predictions/latest`), mapeada para o visual de alerta: a TAG da porta, a data em que a IA avaliou, a estação, o diagnóstico *Vai falhar* ou *Estável* e, no lugar da normalização, a plataforma e o número da porta.
+
+O card azul *Alertas preditivos* conta só as portas com `will_fail`. Os gráficos partem o mesmo recorte por diagnóstico e por estação. Os filtros de período, estação, diagnóstico e plataforma atuam sobre essa lista, com 50 linhas por página. Se a API ainda não tiver rodada calculada, a tela fica no estado vazio da Figura 6: aviso em vermelho, card em zero e a mensagem *Nenhum alerta na última inferência.*
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 6: Tela de Alertas sem rodada de predição</strong></figcaption>
+  <Image
+    src={telaAlertas}
+    alt="Tela de Alertas da Motiva em estado vazio, com card de alertas preditivos em zero e filtros"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+**Cadastrar Alarmes +** abre o modal *Enviar planilha de alarmes*. O arquivo CSV ou XLSX segue para `POST /api/v1/uploads/alarms`; o frontend acompanha o processamento e, ao terminar, recarrega `predictions/latest`. O upload entra no pipeline da API, mas as linhas da planilha **não voltam como lista de alarmes**: o que a Marta vê depois continua sendo o resultado da inferência, não o histórico de telemetria. Quando existir um GET de alarmes, essa tela poderá passar a listar as ocorrências reais e deixar as predições no Dashboard e em Portas.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 7: Modal de envio de planilha de alarmes</strong></figcaption>
+  <Image
+    src={telaCadastrarAlarmes}
+    alt="Modal Enviar planilha de alarmes sobre a tela de Alertas"
     width={1100}
     format="png"
   />
