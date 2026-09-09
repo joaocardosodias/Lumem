@@ -13,3 +13,4 @@ src/backend/bin/
 *.db
 *.sqlite
 *.sqlite3
+src/.env
