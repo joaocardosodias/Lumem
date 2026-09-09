@@ -35,18 +35,20 @@ Os endpoints da API estão agrupados por capacidade funcional:
 │   ├── POST /alarms            ──> Upload multipart de alarmes operacionais (Retorna 202)
 │   ├── POST /maintenance       ──> Upload multipart de ordens ZM01/ZM02/ZM03 (Retorna 202)
 │   └── GET  /:id               ──> Consulta do status do processamento (processing/completed/failed)
-├── maintenances/
+├── maintenance/
 │   ├── POST /                  ──> Cadastro manual de ordem de manutenção
-│   └── GET  /                  ──> Listagem com filtros por estação e data
+│   └── GET  /                  ──> Listagem paginada (limit e offset)
 ├── inspections/
 │   ├── POST /                  ──> Abertura de ordem de inspeção preditiva
-│   ├── GET  /                  ──> Listagem geral de inspeções
-│   ├── GET  /:id               ──> Detalhe da inspeção e histórico
+│   ├── GET  /                  ──> Listagem geral de inspeções (filtro por status)
+│   ├── GET  /:id               ──> Detalhes de uma ordem de inspeção específica
 │   └── PATCH /:id/status       ──> Transição de estado de inspeção (validação de invariantes)
 ├── dashboard/
-│   ├── GET  /overview          ──> Resumo executivo de alarmes e taxa de disponibilidade
-│   ├── GET  /timeline          ──> Histórico temporal de incidentes por estação
-│   └── GET  /stations/:id/doors──> Visão matricial das 24 portas de plataforma por via
+│   └── GET  /summary           ──> Resumo executivo de portas em risco e KPIs
+├── doors/
+│   └── GET  /:id/timeline      ──> Dossiê consolidado de alarmes, manutenções e IA da porta
+├── stations/
+│   └── GET  /:code/doors/status──> Mapa térmico de status das portas por estação
 └── predictions/
     ├── POST /trigger           ──> Disparo manual de rodada de inferência preditiva
     └── GET  /latest            ──> Últimas probabilidades de falha geradas pelo modelo

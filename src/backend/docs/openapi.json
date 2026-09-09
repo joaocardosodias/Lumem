@@ -323,6 +323,38 @@
         }
       }
     },
+    "/api/v1/inspections/{id}": {
+      "get": {
+        "summary": "Detalhes de uma Ordem de Inspecao",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes da inspecao tecnica",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/inspections/{id}/status": {
       "patch": {
         "summary": "Atualizacao de Status de Inspecao de Campo",
@@ -454,7 +486,7 @@
                 "type": "object",
                 "properties": {
                   "horizon_days": {
-                    "type": "string",
+                    "type": "integer",
                     "default": 7
                   }
                 }
@@ -464,7 +496,14 @@
         },
         "responses": {
           "201": {
-            "description": "Rodada de inferencia executada e eventos disparados"
+            "description": "Rodada de inferencia executada e eventos disparados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunOutput"
+                }
+              }
+            }
           }
         }
       }
@@ -479,7 +518,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Ultima rodada de predicoes gravada"
+            "description": "Ultima rodada de predicoes gravada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunOutput"
+                }
+              }
+            }
           }
         }
       }
@@ -626,6 +672,50 @@
           "rows_processed": { "type": "integer" },
           "rows_inserted": { "type": "integer" },
           "created_at": { "type": "string" }
+        }
+      },
+      "InspectionOutput": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "prediction_id": { "type": "string" },
+          "station_code": { "type": "string" },
+          "platform": { "type": "string" },
+          "door_number": { "type": "integer" },
+          "scheduled_for": { "type": "string" },
+          "priority": { "type": "string" },
+          "status": { "type": "string" },
+          "notes": { "type": "string" },
+          "completed_at": { "type": "string" },
+          "created_at": { "type": "string" },
+          "updated_at": { "type": "string" }
+        }
+      },
+      "PredictionItemOutput": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "run_id": { "type": "string" },
+          "station_code": { "type": "string" },
+          "platform": { "type": "string" },
+          "door_number": { "type": "integer" },
+          "will_fail": { "type": "boolean" }
+        }
+      },
+      "PredictionRunOutput": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "horizon_days": { "type": "integer" },
+          "total_doors_evaluated": { "type": "integer" },
+          "total_doors_at_risk": { "type": "integer" },
+          "created_at": { "type": "string" },
+          "predictions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PredictionItemOutput"
+            }
+          }
         }
       }
     }

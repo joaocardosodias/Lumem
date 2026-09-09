@@ -4,9 +4,9 @@ description: "Guia completo da tríade de observabilidade: métricas Prometheus,
 ---
 
 import { Image } from 'astro:assets';
-import observabilidadeArquitetura from '../../../../assets/backend/observabilidade-arquitetura.png';
-import grafanaMetricasHttp from '../../../../assets/backend/grafana-metricas-http.png';
-import grafanaLokiTraceLink from '../../../../assets/backend/grafana-loki-trace-link.png';
+import observabilidadeArquitetura from '../../../../../../assets/backend/observabilidade-arquitetura.png';
+import grafanaMetricasHttp from '../../../../../../assets/backend/grafana-metricas-http.png';
+import grafanaLokiTraceLink from '../../../../../../assets/backend/grafana-loki-trace-link.png';
 
 Em sistemas monolíticos tradicionais, investigar uma falha normalmente se resume a inspecionar os logs do processo no servidor. No entanto, a separação do backend em **API HTTP** e **Worker Assíncrono com Fila River** introduziu uma descontinuidade temporal: a requisição que aceita a planilha de telemetria conclui em milissegundos, mas o processamento efetivo pode ocorrer segundos ou minutos depois em outro contêiner.
 

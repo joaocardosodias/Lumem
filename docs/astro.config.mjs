@@ -6,24 +6,24 @@ const backendSidebar = {
 	label: 'Backend',
 	collapsed: true,
 	items: [
-		{ label: 'Visão Geral do Backend', slug: 'backend' },
-		{ label: 'Práticas de Engenharia', slug: 'backend/praticas-de-engenharia' },
+		{ label: 'Visão Geral do Backend', slug: 'sprints/sprint-3/backend' },
+		{ label: 'Práticas de Engenharia', slug: 'sprints/sprint-3/backend/praticas-de-engenharia' },
 		{
 			label: 'Arquitetura',
 			collapsed: true,
 			items: [
-				{ label: 'Visão Geral da Arquitetura', slug: 'backend/arquitetura/visao-geral' },
-				{ label: 'Clean Architecture', slug: 'backend/arquitetura/clean-architecture' },
-				{ label: 'Banco de Dados & Schemas', slug: 'backend/arquitetura/banco-de-dados' },
-				{ label: 'Fluxo de Ingestão', slug: 'backend/arquitetura/fluxo-de-ingestao' },
+				{ label: 'Visão Geral da Arquitetura', slug: 'sprints/sprint-3/backend/arquitetura/visao-geral' },
+				{ label: 'Clean Architecture', slug: 'sprints/sprint-3/backend/arquitetura/clean-architecture' },
+				{ label: 'Banco de Dados & Schemas', slug: 'sprints/sprint-3/backend/arquitetura/banco-de-dados' },
+				{ label: 'Fluxo de Ingestão', slug: 'sprints/sprint-3/backend/arquitetura/fluxo-de-ingestao' },
 				{
 					label: 'Decisões de Arquitetura (ADRs)',
 					collapsed: true,
 					items: [
-						{ label: 'ADR 001 — Clean Architecture', slug: 'backend/arquitetura/decisoes/adr-001-clean-architecture' },
-						{ label: 'ADR 002 — Fila River', slug: 'backend/arquitetura/decisoes/adr-002-river-postgresql' },
-						{ label: 'ADR 003 — Armazenamento S3', slug: 'backend/arquitetura/decisoes/adr-003-object-storage' },
-						{ label: 'ADR 004 — OpenTelemetry & Tracing', slug: 'backend/arquitetura/decisoes/adr-004-opentelemetry-tempo' },
+						{ label: 'ADR 001 — Clean Architecture', slug: 'sprints/sprint-3/backend/arquitetura/decisoes/adr-001-clean-architecture' },
+						{ label: 'ADR 002 — Fila River', slug: 'sprints/sprint-3/backend/arquitetura/decisoes/adr-002-river-postgresql' },
+						{ label: 'ADR 003 — Armazenamento S3', slug: 'sprints/sprint-3/backend/arquitetura/decisoes/adr-003-object-storage' },
+						{ label: 'ADR 004 — OpenTelemetry & Tracing', slug: 'sprints/sprint-3/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo' },
 					],
 				},
 			],
@@ -32,19 +32,19 @@ const backendSidebar = {
 			label: 'Serviços & Qualidade',
 			collapsed: true,
 			items: [
-				{ label: 'API REST & Contratos', slug: 'backend/api/openapi' },
-				{ label: 'Observabilidade & Métricas', slug: 'backend/operacao/observabilidade' },
-				{ label: 'Testes Automatizados & CI', slug: 'backend/qualidade/testes-e-ci' },
-				{ label: 'SonarQube & Segurança', slug: 'backend/qualidade/sonarqube-e-seguranca' },
+				{ label: 'API REST & Contratos', slug: 'sprints/sprint-3/backend/api/openapi' },
+				{ label: 'Observabilidade & Métricas', slug: 'sprints/sprint-3/backend/operacao/observabilidade' },
+				{ label: 'Testes Automatizados & CI', slug: 'sprints/sprint-3/backend/qualidade/testes-e-ci' },
+				{ label: 'SonarQube & Segurança', slug: 'sprints/sprint-3/backend/qualidade/sonarqube-e-seguranca' },
 			],
 		},
 		{
 			label: 'DevOps & Referências',
 			collapsed: true,
 			items: [
-				{ label: 'DevOps & Deploy', slug: 'backend/operacao/configuracao-e-deploy' },
-				{ label: 'Diagnóstico & Troubleshooting', slug: 'backend/operacao/troubleshooting' },
-				{ label: 'Variáveis de Ambiente', slug: 'backend/referencia/variaveis-de-ambiente' },
+				{ label: 'DevOps & Deploy', slug: 'sprints/sprint-3/backend/operacao/configuracao-e-deploy' },
+				{ label: 'Diagnóstico & Troubleshooting', slug: 'sprints/sprint-3/backend/operacao/troubleshooting' },
+				{ label: 'Variáveis de Ambiente', slug: 'sprints/sprint-3/backend/referencia/variaveis-de-ambiente' },
 			],
 		},
 	],
@@ -121,6 +121,11 @@ export default defineConfig({
 							collapsed: true,
 							items: [
 								backendSidebar,
+								{
+									label: 'Modelos Preditivos',
+									collapsed: true,
+									items: [{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } }],
+								},
 							],
 						},
 						{

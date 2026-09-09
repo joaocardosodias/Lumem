@@ -51,8 +51,9 @@ def test_predict_formato_e_execucao_real():
 
         com_historico = next(i for i in corpo if i['door_number'] == 8)
         sem_historico = next(i for i in corpo if i['door_number'] == 99)
-        print(f"\nporta com alarme+corretiva -> probability={com_historico['probability']:.4f}")
-        print(f"porta sem nenhum dado       -> probability={sem_historico['probability']:.4f}")
+        assert com_historico['will_fail'] is True
+        assert sem_historico['will_fail'] is False
+        assert com_historico['probability'] > sem_historico['probability']
 
 
 def test_predict_lista_vazia():

@@ -4,8 +4,8 @@ description: Guia de orquestração com Docker Compose, build multi-stage, depen
 ---
 
 import { Image } from 'astro:assets';
-import dockerBuildMultistage from '../../../../assets/backend/docker-build-multistage.png';
-import dockerComposePs from '../../../../assets/backend/docker-compose-ps.png';
+import dockerBuildMultistage from '../../../../../../assets/backend/docker-build-multistage.png';
+import dockerComposePs from '../../../../../../assets/backend/docker-compose-ps.png';
 
 A estratégia de implantação (deploy) do backend foi desenhada para materializar em nível de infraestrutura a separação de responsabilidades definida na Clean Architecture: a API HTTP e o Worker assíncrono executam como **processos independentes**, orquestrados via Docker Compose.
 
@@ -136,4 +136,4 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
 
 ## Publicação após verificação de segurança
 
-O pipeline separa `build`, `scan` e `publish`. O build gera arquivos tar da API, do worker e do microserviço de ML (`g04-ml-service`); o Trivy verifica esses arquivos e uma etapa posterior carrega e publica exatamente as imagens verificadas no Azure Container Registry (ACR). A ausência dos artefatos faz o scan falhar. A tag `latest` só é atualizada na branch principal após o sucesso das etapas anteriores, evitando que o Watchtower implante uma imagem antes do resultado do scan.
+O pipeline separa `build`, `scan` e `publish`. Para as imagens Go (API e Worker, compactas), o build gera arquivos tar que são auditados pelo Trivy na etapa de scan e publicados no Azure Container Registry (ACR). Para o microsserviço de ML (`g04-ml-service`), cujo tamanho descompactado excede os limites de upload de artefatos do coordenador GitLab (erro HTTP 413), a imagem é construída e verificada com o Trivy diretamente no ambiente Docker-in-Docker da etapa de scan e construída/publicada diretamente na etapa de publish. A tag `latest` só é atualizada na branch principal após o sucesso de todas as verificações, evitando que o Watchtower implante contêineres vulneráveis.
