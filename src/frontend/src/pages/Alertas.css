@@ -102,36 +102,60 @@
 .alertas-modal form {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  width: min(460px, 100%);
-  padding: 32px;
-  border-radius: 24px;
-  background: var(--paper);
-  color: var(--brand);
-  box-shadow: 0 24px 60px rgba(20, 0, 80, 0.22);
+  gap: 20px;
+  width: min(480px, 100%);
+  padding: 36px 40px 28px;
+  border-radius: 16px;
+  background: var(--brand);
+  color: var(--white);
+  box-shadow: 0 24px 60px rgba(20, 0, 80, 0.35);
 }
 
 .alertas-modal h2 {
-  margin: 0;
+  margin: 0 0 8px;
   font-size: 28px;
+  font-weight: 700;
 }
 
 .alertas-modal .ui-input {
-  color: var(--brand);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 500;
+  gap: 8px;
 }
 
 .alertas-modal .ui-input span {
-  color: #6b4fe0;
+  color: var(--white);
   font-size: 13px;
+  font-weight: 500;
 }
 
 .alertas-modal .ui-input input {
-  border-bottom-width: 2px;
-  border-bottom-color: var(--brand);
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 0 8px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: var(--white);
+}
+
+.alertas-modal .ui-input input:focus {
+  border-color: var(--white);
+}
+
+.alertas-modal .ui-input input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .alertas-modal .ui-button {
-  align-self: flex-end;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  margin-top: 4px;
+  border-radius: 8px;
 }
 
 @media (max-width: 900px) {

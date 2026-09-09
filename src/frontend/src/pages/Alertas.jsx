@@ -97,7 +97,9 @@ function Alertas() {
             <Input id="alarm-end" label="Data de normalização" value={form.normalized_at} onChange={updateField('normalized_at')} />
             <Input id="alarm-station" label="Estação" value={form.station} onChange={updateField('station')} />
             <Input id="alarm-type" label="Tipo de alarme" value={form.alarm} onChange={updateField('alarm')} />
-            <Button type="submit">Cadastrar</Button>
+            <Button type="submit" variant="light">
+              Cadastrar
+            </Button>
           </form>
         </div>
       ) : null}
