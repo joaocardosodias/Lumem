@@ -88,9 +88,9 @@
 
 .linha-train__car {
   position: absolute;
-  bottom: 8px;
+  bottom: 6px;
   left: 0;
-  width: 56px;
+  width: 120px;
   will-change: transform;
 }
 
