@@ -1,0 +1,59 @@
+.barra-nav {
+  display: flex;
+  flex-direction: column;
+  width: var(--nav-width);
+  min-height: 100vh;
+  padding: 28px 16px 18px;
+  background: var(--grad-nav);
+  color: var(--white);
+}
+
+.barra-nav__logo {
+  display: block;
+  width: 168px;
+  height: auto;
+  margin: 0 10px 40px;
+}
+
+.barra-nav nav {
+  flex: 1;
+}
+
+.barra-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barra-nav li + li {
+  margin-top: 6px;
+}
+
+.barra-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+}
+
+.barra-nav button svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.barra-nav button.is-active {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  box-shadow: inset 3px 0 0 var(--white);
+}
+
+.barra-nav__sair {
+  margin-top: auto;
+  background: var(--grad-sair) !important;
+}

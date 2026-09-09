@@ -1,0 +1,35 @@
+.portas .page-head p {
+  margin: 8px 0 0;
+  color: var(--brand);
+}
+
+.portas__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card-metrica {
+  padding: 22px 26px;
+  border-radius: 20px;
+  background: var(--grad-surface);
+  box-shadow: 0 10px 24px rgba(47, 0, 180, 0.08);
+  border-left: 6px solid var(--brand);
+}
+
+.card-metrica span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--brand);
+}
+
+.card-metrica strong {
+  color: var(--brand);
+  font-size: 32px;
+}
+
+@media (max-width: 800px) {
+  .portas__cards {
+    grid-template-columns: 1fr;
+  }
+}

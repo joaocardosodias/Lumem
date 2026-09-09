@@ -1,0 +1,47 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 48px 56px;
+}
+
+.app-main__mark {
+  position: absolute;
+  right: -40px;
+  bottom: -50px;
+  width: 420px;
+  height: 360px;
+  pointer-events: none;
+  background: var(--brand);
+  opacity: 0.05;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.app-main > *:not(.app-main__mark) {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .barra-nav {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .app-main {
+    padding: 28px 20px;
+  }
+}

@@ -1,0 +1,13 @@
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--grad-button);
+  color: var(--white);
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(47, 0, 200, 0.18);
+}

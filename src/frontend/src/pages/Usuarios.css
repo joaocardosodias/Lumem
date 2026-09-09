@@ -1,0 +1,56 @@
+.usuarios__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-usuario {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #ece8f0 0%, #f7f4f8 100%);
+  box-shadow: 0 8px 20px rgba(47, 0, 180, 0.08);
+  border-left: 7px solid var(--brand);
+}
+
+.card-usuario__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--grad-button);
+}
+
+.card-usuario strong {
+  display: block;
+  color: var(--brand);
+  font-size: 18px;
+}
+
+.card-usuario span {
+  color: #6b4fe0;
+}
+
+.card-usuario__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.card-usuario__actions button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.card-usuario__actions button:first-child {
+  border: 1.5px solid #d12b3a;
+  color: #d12b3a;
+}
+
+.card-usuario__actions button:last-child {
+  border: 1.5px solid var(--brand);
+  color: var(--brand);
+}

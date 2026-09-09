@@ -1,0 +1,25 @@
+.ui-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.ui-input label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ui-input input {
+  width: 100%;
+  padding: 0.35rem 0 0.5rem;
+  border: 0;
+  border-bottom: 1px solid rgba(26, 20, 96, 0.28);
+  background: transparent;
+  color: var(--ink);
+  outline: none;
+}
+
+.ui-input input:focus {
+  border-bottom-color: var(--brand);
+}
