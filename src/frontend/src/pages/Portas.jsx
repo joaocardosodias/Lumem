@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Card from '../components/Card'
 import CadastrarButton from '../components/CadastrarButton'
 import {
@@ -14,10 +14,13 @@ function padDoor(value) {
 
 function Portas() {
   const [selectedCode, setSelectedCode] = useState(null)
+  const [tooltipOpen, setTooltipOpen] = useState(false)
   const [openedCode, setOpenedCode] = useState(null)
   const [doors, setDoors] = useState([])
   const [lastTraining, setLastTraining] = useState('08/09/2026')
   const [lastPrediction, setLastPrediction] = useState(null)
+  const hideTimer = useRef(null)
+  const pendingCode = useRef(null)
 
   const openedStation = lineStations.find((item) => item.code === openedCode)
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
@@ -30,8 +33,61 @@ function Portas() {
     [doors],
   )
 
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [])
+
+  function clearHide() {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current)
+      hideTimer.current = null
+    }
+  }
+
+  function openTooltip(code) {
+    setSelectedCode(code)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTooltipOpen(true))
+    })
+  }
+
+  function closeTooltip() {
+    pendingCode.current = null
+    setTooltipOpen(false)
+    clearHide()
+    hideTimer.current = setTimeout(() => {
+      setSelectedCode(null)
+      hideTimer.current = null
+    }, 220)
+  }
+
   function handleSelectStation(code) {
-    setSelectedCode((current) => (current === code ? null : code))
+    if (selectedCode === code && tooltipOpen) {
+      closeTooltip()
+      return
+    }
+
+    const switching = Boolean(selectedCode && selectedCode !== code && (tooltipOpen || hideTimer.current))
+
+    if (switching) {
+      pendingCode.current = code
+      setTooltipOpen(false)
+      clearHide()
+      hideTimer.current = setTimeout(() => {
+        const next = pendingCode.current
+        pendingCode.current = null
+        hideTimer.current = null
+        if (next) openTooltip(next)
+        else setSelectedCode(null)
+      }, 220)
+      return
+    }
+
+    pendingCode.current = null
+    clearHide()
+    openTooltip(code)
   }
 
   function handleOpenStation(code) {
@@ -39,6 +95,7 @@ function Portas() {
     setDoors(next)
     setOpenedCode(code)
     setSelectedCode(null)
+    setTooltipOpen(false)
     setLastPrediction(next[0]?.last_evaluated_at ?? '2026-09-08 18:40:00')
   }
 
@@ -135,7 +192,7 @@ function Portas() {
   }
 
   return (
-    <section className="portas" onClick={() => setSelectedCode(null)}>
+    <section className="portas" onClick={closeTooltip}>
       <div className="page-head">
         <div>
           <h1>Portas</h1>
@@ -161,7 +218,7 @@ function Portas() {
 
         {selectedStation ? (
           <aside
-            className={`portas-tooltip${selectedIndex % 2 ? ' is-up' : ' is-down'}${selectedIndex === 0 ? ' is-start' : ''}${selectedIndex === lineStations.length - 1 ? ' is-end' : ''}`}
+            className={`portas-tooltip${tooltipOpen ? ' is-open' : ''}${selectedIndex % 2 ? ' is-up' : ' is-down'}${selectedIndex === 0 ? ' is-start' : ''}${selectedIndex === lineStations.length - 1 ? ' is-end' : ''}`}
             style={{ left: `${(selectedIndex / (lineStations.length - 1)) * 100}%` }}
           >
             <div>
@@ -169,7 +226,7 @@ function Portas() {
                 <span>Estação</span>
                 <strong>{selectedStation.name}</strong>
               </div>
-              <i aria-hidden="true">{selectedStation.code}</i>
+              <img src={selectedStation.photo} alt="" />
             </div>
             <button type="button" onClick={() => handleOpenStation(selectedStation.code)}>
               Acessar

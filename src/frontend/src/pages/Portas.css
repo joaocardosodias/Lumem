@@ -68,10 +68,22 @@
   background: #ffd000;
   box-shadow: 0 0 0 5px color-mix(in srgb, #ffd000 28%, white);
   transform: translate(-50%, -50%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.linha-map__stop:hover .linha-map__dot,
+.linha-map__stop:focus-visible .linha-map__dot {
+  background: #ffd000;
+  box-shadow:
+    0 0 0 3px var(--brand),
+    0 0 0 8px color-mix(in srgb, var(--brand) 22%, white);
+  transform: translate(-50%, -50%) scale(1.14);
 }
 
 .linha-map__stop.is-active .linha-map__dot {
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 35%, white);
+  box-shadow:
+    0 0 0 3px var(--brand),
+    0 0 0 8px color-mix(in srgb, var(--brand) 28%, white);
 }
 
 .linha-map__name {
@@ -101,64 +113,91 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: min(280px, 72vw);
-  padding: 18px 18px 16px;
-  border-radius: 16px;
+  gap: 18px;
+  width: min(340px, 82vw);
+  padding: 22px 22px 18px;
+  border-radius: 18px;
   background: var(--brand);
   color: var(--white);
   box-shadow: 0 18px 40px rgba(20, 0, 80, 0.28);
-  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-10px) scale(0.96);
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .portas-tooltip.is-down {
   top: auto;
   bottom: 8px;
+  transform: translateX(-50%) translateY(10px) scale(0.96);
 }
 
 .portas-tooltip.is-start {
-  transform: none;
+  transform: translateY(-10px) scale(0.96);
+}
+
+.portas-tooltip.is-start.is-down {
+  transform: translateY(10px) scale(0.96);
 }
 
 .portas-tooltip.is-end {
-  transform: translateX(-100%);
+  transform: translateX(-100%) translateY(-10px) scale(0.96);
+}
+
+.portas-tooltip.is-end.is-down {
+  transform: translateX(-100%) translateY(10px) scale(0.96);
+}
+
+.portas-tooltip.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.portas-tooltip.is-open.is-start {
+  transform: translateY(0) scale(1);
+}
+
+.portas-tooltip.is-open.is-end {
+  transform: translateX(-100%) translateY(0) scale(1);
 }
 
 .portas-tooltip > div {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+}
+
+.portas-tooltip > div > div {
+  min-width: 0;
+  flex: 1;
 }
 
 .portas-tooltip span {
   display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .portas-tooltip strong {
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 24px;
+  line-height: 1.15;
 }
 
-.portas-tooltip i {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 52px;
-  border-radius: 8px;
-  background: color-mix(in srgb, #ffd000 75%, white);
-  color: var(--brand);
-  font-style: normal;
-  font-size: 13px;
-  font-weight: 700;
+.portas-tooltip img {
+  flex-shrink: 0;
+  width: 128px;
+  height: 86px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 10px;
 }
 
 .portas-tooltip button {
   width: 100%;
-  min-height: 40px;
+  min-height: 42px;
   border: 0;
   border-radius: 8px;
   background: var(--white);

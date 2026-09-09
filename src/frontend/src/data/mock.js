@@ -159,18 +159,30 @@ export const users = [
   { id: 'usr-002', name: 'Marta Oliveira', role: 'Operadora' },
 ]
 
+import imgVso from '../assets/estacoes/VilaSonia.jpeg'
+import imgMbi from '../assets/estacoes/Morumbi.jpg'
+import imgBut from '../assets/estacoes/butanta.jpg'
+import imgPin from '../assets/estacoes/pinheiros.jpg'
+import imgFal from '../assets/estacoes/farialima.jpg'
+import imgFra from '../assets/estacoes/FradiqueCoutinho.jpg'
+import imgOsc from '../assets/estacoes/OscarFreire.jpg'
+import imgPau from '../assets/estacoes/Paulista.jpg'
+import imgHig from '../assets/estacoes/higienopolis.jpg'
+import imgRep from '../assets/estacoes/Republica.jpg'
+import imgLuz from '../assets/estacoes/Luz.jpg'
+
 export const lineStations = [
-  { code: 'VSO', name: 'Vila Sônia' },
-  { code: 'MBI', name: 'São Paulo-Morumbi' },
-  { code: 'BUT', name: 'Butantã' },
-  { code: 'PIN', name: 'Pinheiros' },
-  { code: 'FAL', name: 'Faria Lima' },
-  { code: 'FRA', name: 'Fradique Coutinho' },
-  { code: 'OSC', name: 'Oscar Freire' },
-  { code: 'PAU', name: 'Paulista' },
-  { code: 'HIG', name: 'Higienópolis-Mackenzie' },
-  { code: 'REP', name: 'República' },
-  { code: 'LUZ', name: 'Luz' },
+  { code: 'VSO', name: 'Vila Sônia', photo: imgVso },
+  { code: 'MBI', name: 'São Paulo-Morumbi', photo: imgMbi },
+  { code: 'BUT', name: 'Butantã', photo: imgBut },
+  { code: 'PIN', name: 'Pinheiros', photo: imgPin },
+  { code: 'FAL', name: 'Faria Lima', photo: imgFal },
+  { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra },
+  { code: 'OSC', name: 'Oscar Freire', photo: imgOsc },
+  { code: 'PAU', name: 'Paulista', photo: imgPau },
+  { code: 'HIG', name: 'Higienópolis-Mackenzie', photo: imgHig },
+  { code: 'REP', name: 'República', photo: imgRep },
+  { code: 'LUZ', name: 'Luz', photo: imgLuz },
 ]
 
 const stationRiskSeed = {
