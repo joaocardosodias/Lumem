@@ -1,0 +1,57 @@
+---
+title: "Frontend"
+description: "Documentação do frontend da plataforma de manutenção preditiva das portas de plataforma da Linha 4 Amarela."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
+import telaCarregamento from '../../../../assets/sprints/sprint3/frontend/Carregamento.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
+</div>
+
+Esta seção documenta a camada de implantação da solução preditiva: o frontend com o qual a operadora **Marta** interage para transformar as saídas do modelo e os registros operacionais em decisão. A interface foi desenvolvida em React 19, empacotada com Vite, e vive em `src/frontend`. Não há roteamento por URL; o `App.jsx` escolhe a tela a partir da sessão. Sem autenticação, só existe o Login. Com sessão válida, a barra de navegação passa a oferecer Dashboard, Alertas, Manutenções, Portas e Inspeções.
+
+A stack foi escolhida para cobrir três necessidades do produto. React e React DOM montam a interface e o contexto de autenticação. O Vite serve o ambiente de desenvolvimento, gera o build e, no `npm run dev`, encaminha `/api` ao host definido em `VITE_API_URL`. GSAP e OGL cuidam da camada visual em movimento: o primeiro anima o overlay de carregamento e a contagem dos indicadores; o segundo desenha o background animado em WebGL no Login e nesse overlay. A biblioteca SheetJS (`xlsx`) interpreta as planilhas CSV e XLSX no cadastro de alarmes e de ordens de manutenção, antes do envio à API. O lint de desenvolvimento fica a cargo do Oxlint.
+
+A identidade visual segue a Motiva (roxo `#3F00FF`, papel `#f6f3ee`, fonte Circular Std). As chamadas HTTP passam por `src/frontend/src/lib/api.js`. Este documento descreve as telas na ordem da jornada da Marta, começando pelo Login.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Login</h2>
+</div>
+
+O Login é o controle de acesso da plataforma. Sem token, o restante do painel não é montado. A tela está em `Login.jsx` e a sessão em `Auth.jsx`.
+
+Visualmente, a tela se divide em duas colunas. À esquerda, o painel de marca usa o background animado nas cores da Motiva, com a logo no canto superior e o texto *Manutenção preditiva das portas de plataforma* e *Linha 4 Amarela* no inferior. À direita, sobre o papel claro, o formulário traz o kicker **Acesso à plataforma**, o título **Entrar**, os campos de e-mail e senha e o botão **Logar**, com a marca Motiva em marca d’água. Se as credenciais forem recusadas ou a rede falhar, o erro aparece acima do botão, sem sair da tela. O envio lê o `FormData` do formulário, de modo que o autofill do navegador também entre na requisição.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 1: Tela de Login</strong></figcaption>
+  <Image
+    src={telaLogin}
+    alt="Tela de login da plataforma Motiva, com painel de marca à esquerda e formulário Entrar à direita"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Ao clicar em **Logar**, o frontend envia `POST /api/v1/auth/login` com e-mail e senha. A API devolve um JWT, gravado em `sessionStorage` na chave `motiva.token` pelo restante da aba. O perfil do operador vem nessa resposta ou, se faltar, de `GET /api/v1/auth/me`. Enquanto isso acontece, o botão passa a **Entrando…** e um segundo envio é bloqueado. Um `401` em rota protegida apaga o token, limpa os caches de manutenção e inspeção e devolve o usuário a esta tela. Se a aba for recarregada com token ainda válido, `GET /api/v1/auth/me` restaura a sessão sem novo formulário.
+
+O Dashboard não abre no instante em que o token chega. O painel esquerdo se expande para tela cheia, a logo vai ao centro e um metrô percorre um trilho conforme o progresso. É o mesmo overlay usado depois em **Realizar Previsão** e **Re-treinar modelo**. Nesse intervalo, o frontend pré-carrega manutenções e inspeções em paralelo, para que os indicadores já reflitam o catálogo completo. Na reta final o status lê *Carregando as ordens de manutenção*. Se essas buscas falharem, o painel abre mesmo assim e as telas correspondentes mostram o erro. Ao chegar a 100%, o overlay some e a Marta entra no Dashboard autenticado.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 2: Overlay de carregamento após o login</strong></figcaption>
+  <Image
+    src={telaCarregamento}
+    alt="Overlay de carregamento da Motiva com logo, metrô no trilho, status das ordens de manutenção e percentual"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
