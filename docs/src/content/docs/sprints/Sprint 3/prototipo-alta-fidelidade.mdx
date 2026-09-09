@@ -113,6 +113,40 @@ O botão **Cadastrar Alarmes +** abre um **popup** sobre a própria tela, o mesm
   <Image src={telaAlertasCadastro} alt="Protótipo de alta fidelidade do modal de cadastro de alarmes" width={750} format="png" />
 </div>
 
+### 3.3 Manutenções
+
+Tela de gestão das ordens de manutenção. A listagem traz campos próximos do SAP (tipo, nota, ordem, indisponibilidade, falha, analisada, CCE e perfil do catálogo) no lugar da tabela genérica do wireframe.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoes} alt="Protótipo de alta fidelidade da tela de Manutenções" width={750} format="png" />
+</div>
+
+O cadastro de novas manutenções também ocorre em popup, reaproveitando o padrão visual do cadastro de alarmes. Essa tela absorve, em alta fidelidade, o papel que o wireframe reservava para **Novos Dados**: inserir registros sem sair do fluxo de manutenção.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoesCadastro} alt="Protótipo de alta fidelidade do modal de cadastro de manutenções" width={750} format="png" />
+</div>
+
+### 3.4 Portas
+
+Substitui o fluxo de **Estações** do wireframe por uma leitura espacial da Linha 4 Amarela. As estações aparecem sobre a linha, de Vila Sônia até Luz. Cards na base destacam a estação com maior probabilidade de defeito e o total de alarmes da linha.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortas} alt="Protótipo de alta fidelidade da tela de Portas com o mapa da Linha 4 Amarela" width={750} format="png" />
+</div>
+
+Ao clicar em uma estação, um tooltip com foto e o botão **Acessar** abre o caminho para o detalhe daquela estação, sem perder o mapa de contexto.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortasTooltip} alt="Protótipo de alta fidelidade da tela de Portas com tooltip da estação Butantã" width={750} format="png" />
+</div>
+
+**Portas, detalhes:** ao entrar em uma estação, no exemplo **Butantã**, o usuário encontra o total de portas, o gráfico de risco por porta e a tabela com risco, alarmes, última manutenção e status. As ações **Realizar Previsão** e **Retreinar modelo** ligam a interface ao modelo preditivo sem sair do contexto da estação.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortasDetalhe} alt="Protótipo de alta fidelidade do detalhe das portas da estação Butantã" width={750} format="png" />
+</div>
+
 
 
 
