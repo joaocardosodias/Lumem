@@ -12,8 +12,15 @@
   justify-content: space-between;
   overflow: hidden;
   padding: 56px 48px 48px;
-  background: var(--grad-brand);
+  background: #1f03ff;
   color: var(--white);
+}
+
+.login__grainient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .login__logo {
@@ -124,6 +131,7 @@
 .login .ui-button {
   align-self: flex-end;
   margin-top: 8px;
+  border-radius: 8px;
 }
 
 .login__error {
