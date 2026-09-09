@@ -261,4 +261,17 @@ Na captura da Figura 12 o volume está concentrado em pendentes (quase três mil
   <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
 </figure>
 
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Conclusão</h2>
+</div>
+
+O frontend documentado nesta seção é a camada de implantação da solução preditiva: a interface com a qual a operadora Marta transforma inferência e registro operacional em decisão na Linha 4 Amarela. A jornada começa no Login, passa pelo overlay de carregamento (o mesmo que acompanha **Realizar Previsão** e **Re-treinar modelo**) e se abre no Dashboard autenticado. Dali ela consulta o que a última rodada da IA sinalizou (Alertas), cruza com o catálogo SAP (Manutenções), desce o mapa até a PSD (Portas) e abre ou atualiza a ordem de campo (Inspeções). React, Vite, GSAP, OGL e a identidade Motiva sustentam essa navegação; as chamadas passam por `api.js` contra o host de `VITE_API_URL`.
+
+O contrato da API ainda define o que cada tela pode mostrar de verdade. Alertas não lista telemetria, porque não há GET de alarmes: a lista é a última inferência. Em Portas, o percentual de risco é 0,82 ou 0,22 quando o payload não traz `risk`, e **Re-treinar modelo** dispara o mesmo `POST /predictions/trigger` da previsão. Manutenções e Inspeções, por outro lado, já operam o catálogo completo em cache, com filtro, paginação e escrita (POST, PATCH e upload). O mapa da linha permanece local (`stations.js`). Essas restrições não quebram a jornada; elas marcam o limite entre o que o modelo e a API já devolvem e o que o painel ainda interpola.
+
+Em relação ao [protótipo de alta fidelidade](/sprints/sprint-3/prototipo-alta-fidelidade), a barra deixou de lado Análise, Configurações e Usuários e ganhou Inspeções, o destino natural da decisão de campo. O artefato deixa de ser mock e passa a ser o painel ligado à API. O próximo passo é estreitar esse contrato: listar alarmes de telemetria de fato, devolver risco e avaliação por porta, e separar retreino de disparo de inferência, para que o que a Marta vê coincida com o que o backend calcula.
+
 
