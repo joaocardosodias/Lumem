@@ -9,9 +9,9 @@ description: "Contrato, execução e avaliação do pipeline sequencial entre o 
 
 O pipeline sequencial combina dois modelos desenvolvidos na Sprint 2 para produzir uma previsão em dois níveis. Primeiro, o **Modelo 7 — CatBoost** calcula o risco do sistema de portas da plataforma. Depois, esse score entra como uma feature do **Modelo 5 — Random Forest**, que estima o risco de cada porta e indica quais devem ser priorizadas.
 
-A diferença de granularidade é proposital. O Modelo 7 consegue indicar que **alguma porta da plataforma** poderá falhar, mas não identifica qual delas. O Modelo 5 complementa essa previsão ao estimar o risco de cada porta individual. A primeira versão usava o Modelo 7 como filtro rígido; a versão atual preserva mais falhas ao fornecer seu score diretamente ao segundo modelo.
+A diferença de granularidade motivou o experimento. O Modelo 7 consegue indicar que **alguma porta da plataforma** poderá falhar, mas não identifica qual delas, enquanto o Modelo 5 estima o risco de cada porta individual. Foram avaliadas duas formas de integração: o Modelo 7 como filtro rígido e seu score como feature do Modelo 5. Como nenhuma delas melhorou o desempenho do Modelo 5 usado isoladamente, a integração não foi adotada e o grupo decidiu manter somente o **Modelo 5 desenvolvido na Sprint 2**.
 
-O fluxo proposto é:
+O fluxo experimental avaliado foi:
 
 ```text
 Dados disponíveis na data de referência D
@@ -25,7 +25,7 @@ Modelo 5 — Random Forest procura a porta em risco
 Portas priorizadas para inspeção
 ```
 
-O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 usa o resultado dessa etapa para detalhar o risco das portas. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
+No experimento, o Modelo 7 foi executado primeiro porque trabalha em um nível mais amplo, e o Modelo 5 usou o resultado dessa etapa para detalhar o risco das portas. Essa estratégia implementou uma **inferência hierárquica em duas etapas**, mas os resultados não justificaram sua adoção.
 
 Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 gerou e avaliou a lista final de portas. A Task 5 incorporou a preparação das features e a execução do CatBoost ao notebook. A Task 6 consolidou a configuração, o reuso dos modelos salvos e o tratamento dos casos sem cobertura. A Task 7 transformou o ranking em uma lista operacional limitada de portas para inspeção. As Tasks 8 e 9 acrescentaram a execução por comando, a validação automática e o guia de uso. A Task 10 avaliou o score do Modelo 7 como uma nova feature do Modelo 5.
 
@@ -487,6 +487,12 @@ O modelo combinado detectou 697 das 886 falhas do teste, portanto superou a meta
 
 Quando os dois Random Forest usam a mesma meta, o controle apresenta recall e F1 ligeiramente maiores. O modelo com o score reduz 59 alertas, mas deixa de detectar seis falhas em relação ao controle. Em comparação ao pipeline de filtro rígido da Task 4, o modelo combinado aumenta o recall de 62,53% para 78,67%, porém reduz a precisão de 11,05% para 9,88% e o F1 de 18,78% para 17,56%. Portanto, aumentar o recall exige aceitar mais falsos alertas.
 
+### 20.1 Decisão sobre o experimento
+
+A ideia de fazer o Modelo 7 melhorar a previsão do Modelo 5 **não apresentou o resultado esperado**. Com a mesma meta de recall, o Modelo 5 controle alcançou recall de 79,35% e F1 de 17,58%, enquanto a versão com o score do Modelo 7 obteve recall de 78,67% e F1 de 17,56%. Portanto, a nova feature aumentou a complexidade do processo sem melhorar as métricas principais.
+
+Por esse motivo, o pipeline sequencial e o modelo combinado serão mantidos apenas como registro do experimento realizado na Sprint 3. A solução escolhida pelo grupo para continuidade do projeto é utilizar somente o **Modelo 5 da Sprint 2**, sem depender do Modelo 7.
+
 Os artefatos gerados são:
 
 - `modelo_5_com_score_modelo_7.joblib`;
@@ -498,9 +504,9 @@ O Random Forest original não foi sobrescrito. Como o CatBoost utilizou parte de
 
 ## 21. Situação final e limitações
 
-O pipeline sequencial está implementado de ponta a ponta sobre as bases de features existentes: prepara e executa o Modelo 7, filtra as plataformas, executa o Modelo 5, ranqueia as portas, gera a lista operacional, registra a execução e valida os artefatos.
+O pipeline sequencial foi implementado de ponta a ponta sobre as bases de features existentes: prepara e executa o Modelo 7, integra seu resultado ao Modelo 5, ranqueia as portas e gera a lista operacional. Essa implementação comprovou a viabilidade técnica da integração.
 
-Também foi criada uma alternativa experimental na qual o score do Modelo 7 é usado como feature do Modelo 5. Com a política de 75% de recall na validação, ela alcançou 78,67% no teste, mas teve precisão de 9,88% e não superou o controle submetido à mesma meta. Por isso, permanece separada do fluxo operacional e ainda exige validação temporal mais rigorosa.
+Entretanto, a ideia não trouxe ganho preditivo. O filtro rígido reduziu o recall, e a alternativa com o score do Modelo 7 também não superou o Modelo 5 controle. Diante desses resultados, o grupo decidiu **não utilizar o pipeline sequencial como solução final** e manter somente o **Modelo 5 desenvolvido na Sprint 2**.
 
 Permanecem como evoluções futuras, e não como etapas incompletas desta implementação:
 
@@ -539,4 +545,4 @@ docker run --rm \
   --max-portas 1
 ```
 
-O executor desativa o retreinamento e carrega `modelo_5_com_score_modelo_7.joblib` com o limiar `0,4413`. No teste realizado dentro do container, foram reproduzidos **78,67% de recall**, **9,88% de precisão**, 697 falhas detectadas e 7.053 alertas. As planilhas ficam em `execucoes-docker/planilhas/`; os JSONs de auditoria ficam diretamente em `execucoes-docker/`.
+O executor desativa o retreinamento e carrega `modelo_5_com_score_modelo_7.joblib` com o limiar `0,4413`. No teste realizado dentro do container, foram reproduzidos **78,67% de recall**, **9,88% de precisão**, 697 falhas detectadas e 7.053 alertas. As planilhas ficam em `execucoes-docker/planilhas/`; os JSONs de auditoria ficam diretamente em `execucoes-docker/`. Esse container preserva a reprodutibilidade do experimento, mas não representa o modelo escolhido para continuidade: a decisão final foi manter o Modelo 5 da Sprint 2.
