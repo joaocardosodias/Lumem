@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
+import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
-import { lineStations, stationLabel } from '../data/stations'
+import { lineStations, resolveStation, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
-import { PAGE_SIZE } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
 import { getCachedInspections, loadInspections, patchCachedInspection } from '../lib/inspectionCache'
 import './Inspecoes.css'
 
@@ -33,10 +34,21 @@ const PRIORITY_LABEL = {
   critical: 'Crítica',
 }
 
+const emptyFilters = {
+  station: '',
+  platform: '',
+  priority: '',
+  period: DEFAULT_PERIOD,
+}
+
 function toTimestamp(date, time) {
   if (!date) return ''
   const clock = time ? (time.length === 5 ? `${time}:00` : time) : '00:00:00'
   return `${date} ${clock}`
+}
+
+function inspectionStation(item) {
+  return resolveStation(item) || String(item.station_code || '').toUpperCase()
 }
 
 function Inspecoes() {
@@ -44,6 +56,7 @@ function Inspecoes() {
   const [loading, setLoading] = useState(() => !getCachedInspections())
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
+  const [filters, setFilters] = useState(emptyFilters)
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -74,20 +87,46 @@ function Inspecoes() {
 
   useEffect(() => {
     setPage(1)
-  }, [filter])
+  }, [filter, filters])
 
-  const visible = useMemo(
-    () => (filter ? items.filter((item) => item.status === filter) : items),
-    [items, filter],
+  const scoped = useMemo(
+    () =>
+      items.filter((item) => {
+        if (filters.station && inspectionStation(item) !== filters.station) return false
+        if (filters.platform && item.platform !== filters.platform) return false
+        if (filters.priority && item.priority !== filters.priority) return false
+        if (!inPeriod(item.scheduled_for, filters.period)) return false
+        return true
+      }),
+    [items, filters],
   )
+  const visible = useMemo(
+    () => (filter ? scoped.filter((item) => item.status === filter) : scoped),
+    [scoped, filter],
+  )
+  const filtersDirty =
+    Boolean(filters.station || filters.platform || filters.priority) || filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const pending = items.filter((item) => item.status === 'pending').length
-  const inProgress = items.filter((item) => item.status === 'in_progress').length
-  const completed = items.filter((item) => item.status === 'completed').length
+  const rangeHint = periodHint(filters.period)
+  const pending = scoped.filter((item) => item.status === 'pending').length
+  const inProgress = scoped.filter((item) => item.status === 'in_progress').length
+  const completed = scoped.filter((item) => item.status === 'completed').length
   const selectedStation = lineStations.find((item) => item.code === form.station_code)
   const platforms = selectedStation?.platforms ?? ['P1', 'P2']
+  const filterPlatforms = filters.station
+    ? lineStations.find((station) => station.code === filters.station)?.platforms ?? []
+    : [...new Set(items.map((item) => item.platform).filter(Boolean))]
+
+  function updateFilter(field) {
+    return (event) =>
+      setFilters((current) => {
+        const next = { ...current, [field]: event.target.value }
+        if (field === 'station') next.platform = ''
+        return next
+      })
+  }
 
   function updateField(field) {
     return (event) => {
@@ -146,10 +185,63 @@ function Inspecoes() {
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       <div className="inspecoes__kpis">
-        <Card layout="banner" label="Pendentes" value={pending} hint="aguardando campo" />
-        <Card layout="banner" label="Em andamento" value={inProgress} hint="em execução" />
-        <Card layout="banner" label="Concluídas" value={completed} hint="finalizadas" />
+        <Card
+          layout="banner"
+          label="Pendentes"
+          value={pending}
+          hint={rangeHint ? `aguardando campo · ${rangeHint}` : 'aguardando campo'}
+        />
+        <Card
+          layout="banner"
+          label="Em andamento"
+          value={inProgress}
+          hint={rangeHint ? `em execução · ${rangeHint}` : 'em execução'}
+        />
+        <Card
+          layout="banner"
+          label="Concluídas"
+          value={completed}
+          hint={rangeHint ? `finalizadas · ${rangeHint}` : 'finalizadas'}
+        />
       </div>
+
+      <Filtros
+        period={filters.period}
+        onPeriod={(period) => setFilters((current) => ({ ...current, period }))}
+        dirty={filtersDirty}
+        onClear={() => setFilters(emptyFilters)}
+      >
+        <FiltroCampo label="Estação">
+          <select value={filters.station} onChange={updateFilter('station')}>
+            <option value="">Todas</option>
+            {lineStations.map((station) => (
+              <option key={station.code} value={station.code}>
+                {station.code} — {station.name}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Plataforma">
+          <select value={filters.platform} onChange={updateFilter('platform')}>
+            <option value="">Todas</option>
+            {filterPlatforms.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Prioridade">
+          <select value={filters.priority} onChange={updateFilter('priority')}>
+            <option value="">Todas</option>
+            {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+      </Filtros>
 
       <div className="inspecoes-tabs" role="tablist" aria-label="Filtro de status">
         {[
@@ -214,7 +306,9 @@ function Inspecoes() {
             </article>
           ))
         ) : (
-          <p className="page-empty">Nenhuma inspeção retornada pela API.</p>
+          <p className="page-empty">
+            {items.length ? 'Nenhuma inspeção com esses filtros.' : 'Nenhuma inspeção retornada pela API.'}
+          </p>
         )}
         <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </div>
