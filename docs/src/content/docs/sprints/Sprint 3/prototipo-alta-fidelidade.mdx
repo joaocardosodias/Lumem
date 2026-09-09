@@ -1,12 +1,24 @@
 ---
 title: "Protótipo de Alta Fidelidade"
-description: "Introdução do protótipo de alta fidelidade da plataforma de manutenção preditiva de Portas de Plataforma (PSDs), evoluído a partir dos wireframes da Sprint 2."
+description: "Documentação do protótipo de alta fidelidade da plataforma de manutenção preditiva de Portas de Plataforma (PSDs), evoluído a partir dos wireframes da Sprint 2."
 ---
 
 import { Image } from 'astro:assets';
 import Background from '../../../../assets/sprints/sprint1/background_title.png';
 import BarraNav from '../../../../assets/sprints/sprint3/protitipoAlta/Components/BarraNav.png';
-
+import Botao from '../../../../assets/sprints/sprint3/protitipoAlta/Components/Botão.png';
+import Input from '../../../../assets/sprints/sprint3/protitipoAlta/Components/Input.png';
+import Card from '../../../../assets/sprints/sprint3/protitipoAlta/Components/Card.png';
+import CardAlerta from '../../../../assets/sprints/sprint3/protitipoAlta/Components/Card Alerta.png';
+import telaDashboard from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Login.png';
+import telaAlertas from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Alertas.png';
+import telaAlertasCadastro from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Alertas-1.png';
+import telaManutencoes from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Manutenções.png';
+import telaManutencoesCadastro from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Manutenções-1.png';
+import telaPortas from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Portas-1.png';
+import telaPortasTooltip from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Portas.png';
+import telaPortasDetalhe from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Portas-2.png';
+import telaUsuarios from '../../../../assets/sprints/sprint3/protitipoAlta/Telas/Tela de Usuários.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -21,7 +33,9 @@ Primeiro, alinhar o time e o parceiro em torno de uma interface que já se parec
 
 Todo o protótipo de alta fidelidade foi desenvolvido utilizando a plataforma FIGMA e pode ser encontrado em LINK PARA O FIGMA.
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Componentes Utilizados</h2>
 </div>
@@ -32,6 +46,123 @@ Além de manter o padrão, essa estratégia ajuda na hora de separar os componen
 
 ### 2.1 Barra de Navegação
 
-A barra de navegação é a principal forma de acessar as diferentes do
+A barra de navegação é a principal forma de acessar as diferentes telas do sistema. Ela fica fixa à esquerda, com a logo da Motiva no topo, sete abas de navegação (Dashboard, Alertas, Manutenções, Portas, Análise, Configurações e Usuários) e, ao final, um botão de **Sair**. Essa barra garante que o usuário nunca perca a referência de onde está nem o acesso rápido aos demais fluxos.
 
-<Image src={BarraNav} alt="Barra de Navegação" width={250} />
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={BarraNav} alt="Barra de Navegação do protótipo de alta fidelidade" width={250} format="png" />
+</div>
+
+### 2.2 Botão
+
+O botão é o componente de ação primária da plataforma. No protótipo, ele aparece como uma pílula branca com o texto na cor da marca. No exemplo abaixo, **Logar**, usado na autenticação. O mesmo formato é reaproveitado em ações como **Cadastrar**, **Acessar**, **Realizar Previsão** e **Retreinar modelo**, mudando apenas o rótulo e o contexto.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={Botao} alt="Componente de botão Logar" width={360} format="png" />
+</div>
+
+### 2.3 Input
+
+O campo de entrada segue um padrão minimalista, com o rótulo acima e uma linha inferior para o valor digitado. O exemplo abaixo é o de **endereço de e-mail**, usado no login; a mesma estrutura aparece nos modais de cadastro de alarmes e de manutenções (TAG, estação, datas e tipo).
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={Input} alt="Componente de input de endereço de e-mail" width={420} format="png" />
+</div>
+
+### 2.4 Card
+
+O card concentra um indicador em destaque: um texto curto descrevendo a métrica e um valor grande abaixo. No Dashboard, ele resume informações da operação inteira, por exemplo a probabilidade de uma porta quebrar nos próximos 7 dias. O mesmo componente reaparece na tela de Portas para destacar a estação com maior risco e o total de alarmes da linha.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={Card} alt="Componente de card de indicador preditivo" width={520} format="png" />
+</div>
+
+### 2.5 Card de Alerta
+
+O card de alerta representa uma ocorrência operacional em uma única faixa: **tag** da PSD, data e hora, estação, tipo de alarme e data de normalização. Ele substitui as linhas genéricas do wireframe de Histórico e é reutilizado na listagem da tela de Alertas.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={CardAlerta} alt="Componente de card de alerta operacional" width={900} format="png" />
+</div>
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Desenvolvimento das Telas</h2>
+</div>
+
+As telas abaixo partem da estrutura validada no wireframe (Login, Dashboard, Estações, Manutenções, Histórico e Novos Dados) e ganham identidade visual, dados reais de PSD e os fluxos de cadastro que alimentam o modelo preditivo.
+
+### 3.1 Dashboard
+
+Tela inicial após o login. No topo, o título de boas vindas abre a jornada da Marta. Em seguida, **cards macro** resumem a operação: probabilidade de uma porta quebrar nos próximos 7 dias, número de alertas no mesmo horizonte em todas as estações e estação com maior volume recente de alarmes. É o equivalente de alta fidelidade do ranking de risco previsto no wireframe.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaDashboard} alt="Protótipo de alta fidelidade da tela de Dashboard" width={750} format="png" />
+</div>
+
+### 3.2 Alertas
+
+Evolução do **Histórico** de alarmes do wireframe. A lista apresenta tag da PSD, data e hora, estação, tipo de alarme e data de normalização, com ação de edição em cada linha.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaAlertas} alt="Protótipo de alta fidelidade da tela de Alertas" width={750} format="png" />
+</div>
+
+O botão **Cadastrar Alarmes +** abre um **popup** sobre a própria tela, o mesmo padrão de “não sair do contexto” usado no agendamento do wireframe, para registrar TAG, datas de início e de normalização, estação e tipo de alarme.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaAlertasCadastro} alt="Protótipo de alta fidelidade do modal de cadastro de alarmes" width={750} format="png" />
+</div>
+
+### 3.3 Manutenções
+
+Tela de gestão das ordens de manutenção. A listagem traz campos próximos do SAP (tipo, nota, ordem, indisponibilidade, falha, analisada, CCE e perfil do catálogo) no lugar da tabela genérica do wireframe.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoes} alt="Protótipo de alta fidelidade da tela de Manutenções" width={750} format="png" />
+</div>
+
+O cadastro de novas manutenções também ocorre em popup, reaproveitando o padrão visual do cadastro de alarmes. Essa tela absorve, em alta fidelidade, o papel que o wireframe reservava para **Novos Dados**: inserir registros sem sair do fluxo de manutenção.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoesCadastro} alt="Protótipo de alta fidelidade do modal de cadastro de manutenções" width={750} format="png" />
+</div>
+
+### 3.4 Portas
+
+Substitui o fluxo de **Estações** do wireframe por uma leitura espacial da Linha 4 Amarela. As estações aparecem sobre a linha, de Vila Sônia até Luz. Cards na base destacam a estação com maior probabilidade de defeito e o total de alarmes da linha.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortas} alt="Protótipo de alta fidelidade da tela de Portas com o mapa da Linha 4 Amarela" width={750} format="png" />
+</div>
+
+Ao clicar em uma estação, um tooltip com foto e o botão **Acessar** abre o caminho para o detalhe daquela estação, sem perder o mapa de contexto.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortasTooltip} alt="Protótipo de alta fidelidade da tela de Portas com tooltip da estação Butantã" width={750} format="png" />
+</div>
+
+**Portas, detalhes:** ao entrar em uma estação, no exemplo **Butantã**, o usuário encontra o total de portas, o gráfico de risco por porta e a tabela com risco, alarmes, última manutenção e status. As ações **Realizar Previsão** e **Retreinar modelo** ligam a interface ao modelo preditivo sem sair do contexto da estação.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaPortasDetalhe} alt="Protótipo de alta fidelidade do detalhe das portas da estação Butantã" width={750} format="png" />
+</div>
+
+### 3.5 Usuários
+
+Fluxo novo em relação ao wireframe. A tela lista as contas da plataforma, com nome, perfil e avatar, além das ações de editar e excluir. O botão **Cadastrar Usuários +** permite incluir novos acessos, controlando quem planeja manutenções e quem apenas consulta os alertas.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaUsuarios} alt="Protótipo de alta fidelidade da tela de Usuários" width={750} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Conclusão</h2>
+</div>
+
+O conjunto de telas acima cobre os fluxos centrais da plataforma (Dashboard, Alertas, Manutenções, Portas e Usuários) e materializa, em alta fidelidade, a jornada completa da Marta: da priorização de risco no Dashboard, passando pela consulta e cadastro de alarmes (Alertas), pelo acompanhamento e registro de ordens (Manutenções), pela investigação espacial da linha e das portas de cada estação (Portas), até o controle de quem acessa o sistema (Usuários).
+
+Os destinos **Análise** e **Configurações** já aparecem na barra de navegação, mas ainda não possuem tela acabada neste conjunto. Por ser a evolução direta do wireframe, este protótipo serve como base visual para a implementação da interface e para a ligação das ações **Realizar Previsão** e **Retreinar modelo** aos artefatos do modelo preditivo nas próximas sprints.
