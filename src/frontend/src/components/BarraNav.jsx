@@ -12,11 +12,17 @@ const items = [
 ]
 
 function BarraNav({ current, onNavigate, onLogout }) {
+  const activeIndex = Math.max(
+    items.findIndex((item) => item.id === current),
+    0,
+  )
+
   return (
     <aside className="barra-nav">
       <img className="barra-nav__logo" src={logo} alt="motiva" />
 
       <nav>
+        <div className="barra-nav__indicator" style={{ '--i': String(activeIndex) }} aria-hidden="true" />
         <ul>
           {items.map((item) => (
             <li key={item.id}>
@@ -70,18 +76,19 @@ function NavIcon({ id }) {
 
   if (id === 'portas') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16H6Z" />
-        <path d="M14 12h.01" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 21V5a2 2 0 0 1 2-2h7v18H6a2 2 0 0 1-2-2Z" />
+        <path d="M13 3.2 20 5v14l-7 1.8" />
+        <path d="M16.5 12h.01" />
       </svg>
     )
   }
 
   if (id === 'analise') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M12 3a9 9 0 1 0 9 9h-9V3Z" />
-        <path d="M13.5 3.2A9 9 0 0 1 20.8 10.5H13.5V3.2Z" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+        <path d="M22 12A10 10 0 0 0 12 2v10z" />
       </svg>
     )
   }

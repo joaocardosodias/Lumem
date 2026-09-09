@@ -16,44 +16,78 @@
 }
 
 .barra-nav nav {
+  position: relative;
   flex: 1;
 }
 
 .barra-nav ul {
+  position: relative;
+  z-index: 1;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.barra-nav__indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 42px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.16);
+  box-shadow: inset 3px 0 0 var(--white);
+  pointer-events: none;
+  transform: translateY(calc(var(--i, 0) * 46px));
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.barra-nav li {
+  height: 42px;
+}
+
 .barra-nav li + li {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .barra-nav button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 0 12px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--white);
+  font-size: 13px;
   text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.barra-nav li button {
+  height: 100%;
+}
+
+.barra-nav button:hover:not(.is-active) {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .barra-nav button svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.barra-nav button.is-active {
-  background: rgba(0, 0, 0, 0.16);
-  box-shadow: inset 3px 0 0 var(--white);
+.barra-nav button.is-active svg {
+  transform: scale(1.06);
 }
 
 .barra-nav__sair {
+  height: 42px;
+  flex-shrink: 0;
   margin-top: auto;
-  background: rgba(0, 0, 0, 0.18) !important;
+  background: rgba(229, 57, 53, 0.1) !important;
+  box-shadow: inset 3px 0 0 #e53935;
 }
