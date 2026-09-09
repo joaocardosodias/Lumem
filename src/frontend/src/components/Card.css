@@ -1,0 +1,132 @@
+.kpi-card {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  overflow: hidden;
+  min-height: 210px;
+  padding: 28px 30px 26px;
+  border-radius: 28px;
+  background: var(--grad-brand);
+  box-shadow: 0 18px 36px rgba(63, 0, 255, 0.2);
+  color: var(--white);
+  transition: transform 0.32s ease, box-shadow 0.32s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 26px 48px rgba(63, 0, 255, 0.34);
+  }
+
+  .kpi-card:hover .kpi-card__mark {
+    transform: scale(1.06);
+    opacity: 0.26;
+  }
+}
+
+.kpi-card__mark {
+  position: absolute;
+  left: -28px;
+  bottom: -36px;
+  width: min(58%, 220px);
+  height: auto;
+  opacity: 0.18;
+  pointer-events: none;
+  transform-origin: left bottom;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.kpi-card__content {
+  position: relative;
+  z-index: 1;
+  max-width: 78%;
+  text-align: right;
+}
+
+.kpi-card__content p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.kpi-card__value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.kpi-card__value strong {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-card__value strong span {
+  display: inline-block;
+  transform-origin: right center;
+}
+
+.kpi-card__content small {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.kpi-card__value i {
+  display: block;
+  width: 2px;
+  height: 46px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.kpi-card--banner {
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 16px 24px;
+  border-radius: 20px;
+}
+
+.kpi-card--banner .kpi-card__mark {
+  left: -12px;
+  bottom: -24px;
+  width: min(22%, 120px);
+}
+
+.kpi-card--banner .kpi-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: none;
+  text-align: left;
+}
+
+.kpi-card--banner .kpi-card__content p {
+  font-size: 15px;
+}
+
+.kpi-card--banner .kpi-card__content small {
+  margin-top: 4px;
+}
+
+.kpi-card--banner .kpi-card__value {
+  margin-top: 0;
+}
+
+.kpi-card--banner .kpi-card__value strong {
+  font-size: 36px;
+}
+
+.kpi-card--banner .kpi-card__value i {
+  height: 32px;
+}

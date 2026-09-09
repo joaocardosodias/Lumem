@@ -120,6 +120,8 @@ export default defineConfig({
 							label: 'Sprint 3',
 							collapsed: true,
 							items: [
+								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
+								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
 								backendSidebar,
 								{
 									label: 'Modelos Preditivos',
