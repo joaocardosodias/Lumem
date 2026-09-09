@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Card from '../components/Card'
 import { useAuth } from '../context/Auth'
-import { api, asList, errorMessage } from '../lib/api'
+import { api, asList, errorMessage, fetchInspectionCounts, mergeDashboard } from '../lib/api'
 import { stationLabel } from '../data/stations'
 import './Dashboard.css'
 
@@ -16,6 +16,7 @@ const emptySummary = {
 function Dashboard({ onNavigate }) {
   const { user } = useAuth()
   const [summary, setSummary] = useState(emptySummary)
+  const [inspectionKpis, setInspectionKpis] = useState({ pending: 0, completed: 0 })
   const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -27,16 +28,29 @@ function Dashboard({ onNavigate }) {
       setLoading(true)
       setError('')
       try {
-        const [dashboard, latest] = await Promise.all([api.dashboard(), api.predictionsLatest()])
+        const [dashboardResult, latestResult, inspectionsResult] = await Promise.allSettled([
+          api.dashboard(),
+          api.predictionsLatest(),
+          fetchInspectionCounts(),
+        ])
         if (cancelled) return
-        setSummary({
-          ...emptySummary,
-          ...(dashboard || {}),
-          critical_stations: Array.isArray(dashboard?.critical_stations)
-            ? dashboard.critical_stations
-            : [],
-        })
-        setPredictions(asList(latest))
+
+        if (dashboardResult.status === 'fulfilled') {
+          setSummary(mergeDashboard(dashboardResult.value, null))
+        } else {
+          setError(errorMessage(dashboardResult.reason))
+        }
+
+        if (latestResult.status === 'fulfilled') {
+          setPredictions(asList(latestResult.value))
+        }
+
+        if (inspectionsResult.status === 'fulfilled') {
+          const counts = inspectionsResult.value
+          setInspectionKpis({ pending: counts.pending, completed: counts.completed })
+        } else if (dashboardResult.status === 'fulfilled') {
+          setError(errorMessage(inspectionsResult.reason))
+        }
       } catch (err) {
         if (!cancelled) setError(errorMessage(err))
       } finally {
@@ -81,11 +95,11 @@ function Dashboard({ onNavigate }) {
         <div className="dashboard__tiles">
           <button type="button" onClick={() => onNavigate?.('inspecoes')}>
             <span>Inspeções pendentes</span>
-            <strong>{summary.pending_inspections}</strong>
+            <strong>{inspectionKpis.pending}</strong>
           </button>
           <button type="button" onClick={() => onNavigate?.('inspecoes')}>
             <span>Inspeções concluídas</span>
-            <strong>{summary.completed_inspections}</strong>
+            <strong>{inspectionKpis.completed}</strong>
           </button>
           <article>
             <span>Estação mais crítica</span>

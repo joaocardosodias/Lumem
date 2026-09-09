@@ -4,7 +4,7 @@ import CadastrarButton from '../components/CadastrarButton'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { lineStations, stationLabel } from '../data/stations'
-import { api, asList, errorMessage, normalizeDoors, relatedMaintenances } from '../lib/api'
+import { api, asList, errorMessage, fetchInspectionCounts, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
 import './Portas.css'
 
 function padDoor(value) {
@@ -73,13 +73,9 @@ function Portas({ onNavigate }) {
 
     async function loadSummary() {
       try {
-        const data = await api.dashboard()
+        const [data, counts] = await Promise.all([api.dashboard(), fetchInspectionCounts()])
         if (cancelled) return
-        setSummary({
-          ...emptySummary,
-          ...(data || {}),
-          critical_stations: Array.isArray(data?.critical_stations) ? data.critical_stations : [],
-        })
+        setSummary(mergeDashboard(data, counts))
       } catch (err) {
         if (!cancelled) setError(errorMessage(err))
       }

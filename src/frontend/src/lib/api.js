@@ -115,6 +115,127 @@ export function asList(payload) {
   return []
 }
 
+function pickNumber(source, ...keys) {
+  if (!source || typeof source !== 'object') return 0
+  for (const key of keys) {
+    const value = source[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+      return Number(value)
+    }
+  }
+  return 0
+}
+
+export function normalizeInspectionStatus(status) {
+  const value = String(status ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s-]+/g, '_')
+
+  if (!value) return 'pending'
+  if (['pending', 'pendente', 'open', 'todo', 'created', 'new', '0'].includes(value)) return 'pending'
+  if (['in_progress', 'inprogress', 'em_andamento', 'andamento'].includes(value)) return 'in_progress'
+  if (['completed', 'complete', 'concluida', 'done', 'closed', 'finalizada', '1'].includes(value)) {
+    return 'completed'
+  }
+  return 'pending'
+}
+
+function normalizeInspectionItem(item) {
+  const row = item && typeof item === 'object' ? item : { id: item }
+  return {
+    ...row,
+    status: normalizeInspectionStatus(
+      row.status ?? row.state ?? row.inspection_status ?? row.current_status,
+    ),
+  }
+}
+
+export function listInspections(payload) {
+  if (Array.isArray(payload)) return payload.map(normalizeInspectionItem)
+  if (!payload || typeof payload !== 'object') return []
+
+  for (const key of ['items', 'data', 'results', 'inspections']) {
+    if (Array.isArray(payload[key])) return payload[key].map(normalizeInspectionItem)
+  }
+
+  if (payload.data && typeof payload.data === 'object') {
+    const nested = listInspections(payload.data)
+    if (nested.length) return nested
+  }
+
+  const bucketed = []
+  for (const [key, value] of Object.entries(payload)) {
+    if (!Array.isArray(value) || !value.length) continue
+    const bucketStatus = normalizeInspectionStatus(key)
+    const fromStatusKey = ['pending', 'in_progress', 'completed'].includes(bucketStatus)
+    for (const item of value) {
+      const row = item && typeof item === 'object' ? item : { id: item }
+      bucketed.push(
+        normalizeInspectionItem({
+          ...row,
+          status: row.status ?? row.state ?? (fromStatusKey ? key : undefined),
+        }),
+      )
+    }
+  }
+  return bucketed
+}
+
+export function countInspections(payload) {
+  const items = listInspections(payload)
+  const pending = items.filter((item) => item.status === 'pending').length
+  const inProgress = items.filter((item) => item.status === 'in_progress').length
+  const completed = items.filter((item) => item.status === 'completed').length
+  const metaPending = pickNumber(
+    payload,
+    'pending',
+    'pending_count',
+    'pendingCount',
+    'pending_inspections',
+    'total_pending',
+  )
+  const metaCompleted = pickNumber(
+    payload,
+    'completed',
+    'completed_count',
+    'completedCount',
+    'completed_inspections',
+    'total_completed',
+  )
+
+  return {
+    items,
+    pending: pending || metaPending,
+    in_progress: inProgress,
+    completed: completed || metaCompleted,
+  }
+}
+
+export function mergeDashboard(dashboard, inspectionCounts) {
+  const source = dashboard && typeof dashboard === 'object' ? dashboard : {}
+  const nested = source.summary && typeof source.summary === 'object' ? source.summary : source
+
+  return {
+    total_doors: pickNumber(nested, 'total_doors', 'totalDoors'),
+    doors_at_risk: pickNumber(nested, 'doors_at_risk', 'doorsAtRisk'),
+    pending_inspections: inspectionCounts
+      ? inspectionCounts.pending
+      : pickNumber(nested, 'pending_inspections', 'pendingInspections'),
+    completed_inspections: inspectionCounts
+      ? inspectionCounts.completed
+      : pickNumber(nested, 'completed_inspections', 'completedInspections'),
+    critical_stations: Array.isArray(nested.critical_stations)
+      ? nested.critical_stations
+      : Array.isArray(nested.criticalStations)
+        ? nested.criticalStations
+        : [],
+  }
+}
+
 export function unwrapUser(payload) {
   const source = payload?.user && typeof payload.user === 'object' ? payload.user : payload
   if (!source || typeof source !== 'object') {
@@ -187,7 +308,10 @@ export const api = {
   login(email, password) {
     return request('/api/v1/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: {
+        email: String(email ?? '').trim(),
+        password: String(password ?? ''),
+      },
       auth: false,
     }).then((result) => result.data)
   },
@@ -244,4 +368,27 @@ export const api = {
   uploadStatus(id) {
     return request(`/api/v1/uploads/${encodeURIComponent(id)}`).then((result) => result.data)
   },
+}
+
+export async function fetchInspectionCounts() {
+  const all = await api.inspections()
+  const counted = countInspections(all)
+  if (counted.items.length) return counted
+
+  const [pendingPayload, completedPayload] = await Promise.all([
+    api.inspections('pending').catch(() => null),
+    api.inspections('completed').catch(() => null),
+  ])
+  const pendingItems = listInspections(pendingPayload).map((item) => ({ ...item, status: 'pending' }))
+  const completedItems = listInspections(completedPayload).map((item) => ({
+    ...item,
+    status: 'completed',
+  }))
+
+  return {
+    items: [...pendingItems, ...completedItems],
+    pending: pendingItems.length || pickNumber(pendingPayload, 'total', 'count', 'total_count'),
+    in_progress: 0,
+    completed: completedItems.length || pickNumber(completedPayload, 'total', 'count', 'total_count'),
+  }
 }

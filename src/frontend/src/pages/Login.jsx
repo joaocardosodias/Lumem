@@ -27,7 +27,10 @@ function Login() {
     setError('')
 
     try {
-      const profile = await authenticate(email.trim(), password)
+      const data = new FormData(event.currentTarget)
+      const identifier = String(data.get('email') ?? email).trim()
+      const secret = String(data.get('password') ?? password)
+      const profile = await authenticate(identifier, secret)
       await run({
         variant: 'login',
         mode: 'login',
@@ -97,6 +100,9 @@ function Login() {
             value={email}
             required
             autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             onChange={(event) => setEmail(event.target.value)}
           />
           <Input

@@ -4,7 +4,7 @@ import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import Input from '../components/Input'
 import { lineStations, stationLabel } from '../data/stations'
-import { api, asList, errorMessage } from '../lib/api'
+import { api, errorMessage, fetchInspectionCounts } from '../lib/api'
 import './Inspecoes.css'
 
 const emptyForm = {
@@ -49,7 +49,8 @@ function Inspecoes() {
     setLoading(true)
     setError('')
     try {
-      setItems(asList(await api.inspections()))
+      const counted = await fetchInspectionCounts()
+      setItems(counted.items)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
