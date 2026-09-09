@@ -29,6 +29,7 @@ export const dashboardSummary = {
 export const latestPredictions = [
   {
     door_id: 109,
+    station_code: 'BUT',
     station_name: 'Butantã',
     platform: 'P1',
     door_number: 9,
@@ -39,6 +40,7 @@ export const latestPredictions = [
   },
   {
     door_id: 204,
+    station_code: 'FAL',
     station_name: 'Faria Lima',
     platform: 'P2',
     door_number: 4,
@@ -49,6 +51,7 @@ export const latestPredictions = [
   },
   {
     door_id: 312,
+    station_code: 'PIN',
     station_name: 'Pinheiros',
     platform: 'P1',
     door_number: 12,
@@ -59,6 +62,7 @@ export const latestPredictions = [
   },
   {
     door_id: 401,
+    station_code: 'PAU',
     station_name: 'Paulista',
     platform: 'P2',
     door_number: 1,
@@ -155,10 +159,62 @@ export const users = [
   { id: 'usr-002', name: 'Marta Oliveira', role: 'Operadora' },
 ]
 
-export const portasResumo = [
-  { label: 'Total de portas', value: '24 portas' },
-  { label: 'Portas em risco', value: '8 portas' },
+export const lineStations = [
+  { code: 'VSO', name: 'Vila Sônia' },
+  { code: 'MBI', name: 'São Paulo-Morumbi' },
+  { code: 'BUT', name: 'Butantã' },
+  { code: 'PIN', name: 'Pinheiros' },
+  { code: 'FAL', name: 'Faria Lima' },
+  { code: 'FRA', name: 'Fradique Coutinho' },
+  { code: 'OSC', name: 'Oscar Freire' },
+  { code: 'PAU', name: 'Paulista' },
+  { code: 'HIG', name: 'Higienópolis-Mackenzie' },
+  { code: 'REP', name: 'República' },
+  { code: 'LUZ', name: 'Luz' },
 ]
+
+const stationRiskSeed = {
+  VSO: 0.28,
+  MBI: 0.33,
+  BUT: 0.78,
+  PIN: 0.54,
+  FAL: 0.61,
+  FRA: 0.41,
+  OSC: 0.36,
+  PAU: 0.42,
+  HIG: 0.31,
+  REP: 0.38,
+  LUZ: 0.35,
+}
+
+export function getStationDoors(stationCode) {
+  const base = stationRiskSeed[stationCode] ?? 0.3
+
+  return Array.from({ length: 24 }, (_, index) => {
+    const doorNumber = index + 1
+    const platform = doorNumber <= 12 ? 'P1' : 'P2'
+    const prediction = latestPredictions.find(
+      (item) => item.station_code === stationCode && item.door_number === doorNumber,
+    )
+    const wave = ((doorNumber * 17) % 45) / 100
+    const risk = prediction?.risk ?? Math.min(0.97, Math.round((base * (0.55 + wave)) * 100) / 100)
+    const willFail = prediction?.will_fail ?? risk >= 0.55
+
+    return {
+      door_id: Number(`${stationCode.charCodeAt(0)}${stationCode.charCodeAt(1)}${String(doorNumber).padStart(2, '0')}`),
+      station_code: stationCode,
+      platform,
+      door_number: doorNumber,
+      sap_tag: `PSD_${stationCode}_${platform}_PDM${String(doorNumber).padStart(2, '0')}`,
+      will_fail: willFail,
+      risk,
+      alarms: willFail ? 6 + (doorNumber % 8) : doorNumber % 4,
+      last_maintenance_days: willFail ? 8 + (doorNumber % 12) : 18 + (doorNumber % 20),
+      status: willFail ? 'at_risk' : 'stable',
+      last_evaluated_at: prediction?.last_evaluated_at ?? '2026-09-08 18:40:00',
+    }
+  })
+}
 
 export const alarms = [
   {

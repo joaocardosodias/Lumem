@@ -1,35 +1,385 @@
 .portas .page-head p {
   margin: 8px 0 0;
+  color: #6b4fe0;
+  font-size: 15px;
+}
+
+.portas__title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.portas__back {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--white);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.linha-map {
+  position: relative;
+  min-height: 240px;
+  margin: 28px 0 48px;
+  padding: 0 8px;
+}
+
+.linha-map__rail {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  left: 18px;
+  height: 8px;
+  border-radius: 99px;
+  background: #ffd000;
+  transform: translateY(-50%);
+}
+
+.linha-map__stops {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  height: 240px;
+}
+
+.linha-map__stop {
+  position: relative;
+  width: 28px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.linha-map__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffd000;
+  box-shadow: 0 0 0 5px color-mix(in srgb, #ffd000 28%, white);
+  transform: translate(-50%, -50%);
+}
+
+.linha-map__stop.is-active .linha-map__dot {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 35%, white);
+}
+
+.linha-map__name {
+  position: absolute;
+  left: 50%;
+  width: max-content;
+  max-width: 84px;
   color: var(--brand);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.linha-map__stop.is-up .linha-map__name {
+  bottom: 62%;
+}
+
+.linha-map__stop.is-down .linha-map__name {
+  top: 62%;
+}
+
+.portas-tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(280px, 72vw);
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  background: var(--brand);
+  color: var(--white);
+  box-shadow: 0 18px 40px rgba(20, 0, 80, 0.28);
+  transform: translateX(-50%);
+}
+
+.portas-tooltip.is-down {
+  top: auto;
+  bottom: 8px;
+}
+
+.portas-tooltip.is-start {
+  transform: none;
+}
+
+.portas-tooltip.is-end {
+  transform: translateX(-100%);
+}
+
+.portas-tooltip > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portas-tooltip span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.portas-tooltip strong {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.portas-tooltip i {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 52px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffd000 75%, white);
+  color: var(--brand);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.portas-tooltip button {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--brand);
+  font-weight: 700;
 }
 
 .portas__cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
-.card-metrica {
-  padding: 22px 26px;
+.portas__cards article {
+  padding: 18px 20px 16px;
   border-radius: 20px;
   background: var(--brand-soft);
   box-shadow: 0 10px 24px rgba(47, 0, 180, 0.08);
-  border-left: 6px solid var(--brand);
+  color: var(--brand);
 }
 
-.card-metrica span {
+.portas__cards span {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+  color: #6b4fe0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.portas__cards strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.portas__cards strong::before {
+  content: '';
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.portas__kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.portas__panel {
+  margin-bottom: 18px;
+  padding: 20px 22px 16px;
+  border-radius: 24px;
+  background: var(--brand-soft);
+  box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+}
+
+.portas__panel h2 {
+  margin: 0 0 16px;
+  color: var(--brand);
+  font-size: 16px;
+}
+
+.portas-risk-chart {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(18px, 1fr));
+  gap: 6px;
+  align-items: end;
+  min-height: 140px;
+  overflow-x: auto;
+}
+
+.portas-risk-chart__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.portas-risk-chart__col span {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 110px;
+  border-bottom: 2px solid var(--brand);
+}
+
+.portas-risk-chart__col i {
+  display: block;
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--brand);
+}
+
+.portas-risk-chart__col strong {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.portas__table {
+  display: flex;
+  flex-direction: column;
+}
+
+.portas__row {
+  display: grid;
+  grid-template-columns: 0.5fr 1.4fr 0.5fr 1fr 0.8fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(64, 0, 255, 0.14);
   color: var(--brand);
 }
 
-.card-metrica strong {
+.portas__row:last-child {
+  border-bottom: 0;
+}
+
+.portas__row--head {
+  padding-top: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.portas-risk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portas-risk b {
+  display: block;
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--brand) 12%, white);
+}
+
+.portas-risk b i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: #e23b4a;
+}
+
+.portas-risk em {
+  min-width: 36px;
+  color: #e23b4a;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.portas-status {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 88px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #e23b4a 14%, white);
+  color: #e23b4a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.portas-status.is-ok {
+  background: var(--brand-soft);
   color: var(--brand);
-  font-size: 32px;
+}
+
+.portas__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.portas__actions > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.portas__actions small,
+.portas__eval {
+  color: var(--brand);
+  font-size: 12px;
+}
+
+.portas__eval {
+  margin: 10px 0 0;
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .portas__cards,
+  .portas__kpis,
+  .portas__row,
+  .portas__row--head {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .portas-risk-chart {
+    grid-template-columns: repeat(12, minmax(22px, 1fr));
+  }
 }
 
 @media (max-width: 800px) {
-  .portas__cards {
+  .portas__cards,
+  .portas__kpis {
     grid-template-columns: 1fr;
+  }
+
+  .linha-map__name {
+    max-width: 52px;
+    font-size: 9px;
   }
 }
