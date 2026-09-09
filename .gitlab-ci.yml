@@ -93,6 +93,22 @@ test_migrations:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
+test_modelo:
+  stage: test
+  image: python:3.11-slim
+  before_script:
+    - cd src/modelo
+    - pip install --no-cache-dir -r requirements.txt pytest
+  script:
+    - python -m pytest tests/ -v
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
+
 security_audit:
   stage: security
   image: golang:1.26-alpine3.23
@@ -129,6 +145,30 @@ build_container:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
 
+build_container_modelo:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build -t "ml-linha4:$CI_COMMIT_SHORT_SHA" src/modelo
+    - docker save -o ml-service-image.tar "ml-linha4:$CI_COMMIT_SHORT_SHA"
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - ml-service-image.tar
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
+
 trivy_scan:
   stage: scan
   image:
@@ -149,6 +189,30 @@ trivy_scan:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
+
+trivy_scan_modelo:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  cache: []
+  dependencies:
+    - build_container_modelo
+  script:
+    - |
+      if [ -f ml-service-image.tar ]; then
+        trivy image --input ml-service-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+      else
+        echo "Missing image artifact; refusing to skip security scan" >&2
+        exit 1
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
 
 publish_container:
   stage: publish
@@ -179,6 +243,33 @@ publish_container:
       fi
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
+
+publish_container_modelo:
+  stage: publish
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies:
+    - build_container_modelo
+  script:
+    - docker load -i ml-service-image.tar
+    - |
+      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
+        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+        docker tag "ml-linha4:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA"
+        docker push "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA"
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+          docker tag "ml-linha4:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-ml-service:latest"
+          docker push "$ACR_REGISTRY/g04-ml-service:latest"
+        fi
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
+      changes:
+        - src/modelo/**/*
 
 pages:
   stage: deploy

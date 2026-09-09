@@ -1,10 +1,10 @@
-# syntax=docker/dockerfile:1.7
 FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt 'msgpack>=1.2.1' && \
+    pip uninstall -y setuptools wheel
 
 COPY app.py database.py pipeline.py ./
 COPY artifacts ./artifacts

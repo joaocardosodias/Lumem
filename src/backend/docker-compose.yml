@@ -14,6 +14,7 @@ services:
       OTEL_ENABLED: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
       OTEL_EXPORTER_OTLP_INSECURE: "true"
+      VPS_MODEL_URL: http://ml-service:8000
     cpus: ${LOAD_TEST_CPUS:-0}
     mem_limit: ${LOAD_TEST_MEMORY:-0}
     volumes:
@@ -210,3 +211,8 @@ volumes:
   loki-storage:
   tempo-storage:
   ingestion-tmp:
+
+networks:
+  default:
+    name: backend-network
+    external: true
