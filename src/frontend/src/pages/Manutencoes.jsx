@@ -219,6 +219,41 @@ function Manutencoes() {
       {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      <div className="manutencoes__hero">
+        <Card
+          layout="banner"
+          label="Ordens de manutenção"
+          value={visible.length}
+          hint={
+            topType
+              ? `${topType[1]} do tipo ${topType[0]}${filtersDirty ? ' · filtrado' : ''}`
+              : 'Nenhuma ordem na linha'
+          }
+        />
+        <div className="manutencoes__charts">
+          <article className="manutencoes__chart">
+            <h2>Ordens por tipo</h2>
+            {Object.entries(byType).map(([label, value]) => (
+              <div key={label} className="manutencoes__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxType) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+          <article className="manutencoes__chart">
+            <h2>Ordens por estação</h2>
+            {Object.entries(byStation).map(([label, value]) => (
+              <div key={label} className="manutencoes__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+        </div>
+      </div>
+
       <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
@@ -256,7 +291,7 @@ function Manutencoes() {
         <FiltroCampo label="Até">
           <input type="date" value={filters.to} onChange={updateFilter('to')} />
         </FiltroCampo>
-        <FiltroCampo label="Duração mín. (h)">
+        <FiltroCampo label="Mín. (h)">
           <input
             type="number"
             min="0"
@@ -265,7 +300,7 @@ function Manutencoes() {
             onChange={updateFilter('durationMin')}
           />
         </FiltroCampo>
-        <FiltroCampo label="Duração máx. (h)">
+        <FiltroCampo label="Máx. (h)">
           <input
             type="number"
             min="0"
@@ -275,41 +310,6 @@ function Manutencoes() {
           />
         </FiltroCampo>
       </Filtros>
-
-      <div className="manutencoes__hero">
-        <Card
-          layout="banner"
-          label="Ordens de manutenção"
-          value={visible.length}
-          hint={
-            topType
-              ? `${topType[1]} do tipo ${topType[0]}${filtersDirty ? ' · filtrado' : ''}`
-              : 'Nenhuma ordem na linha'
-          }
-        />
-        <div className="manutencoes__charts">
-          <article className="manutencoes__chart">
-            <h2>Ordens por tipo</h2>
-            {Object.entries(byType).map(([label, value]) => (
-              <div key={label} className="manutencoes__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxType) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-          <article className="manutencoes__chart">
-            <h2>Ordens por estação</h2>
-            {Object.entries(byStation).map(([label, value]) => (
-              <div key={label} className="manutencoes__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-        </div>
-      </div>
 
       <div className="manutencoes__list">
         {visible.length ? (

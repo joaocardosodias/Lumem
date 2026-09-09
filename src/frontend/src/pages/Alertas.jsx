@@ -154,6 +154,41 @@ function Alertas() {
       {loading ? <p className="page-status">Carregando alertas da última inferência…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      <div className="alertas__hero">
+        <Card
+          layout="banner"
+          label="Alertas preditivos"
+          value={atRisk}
+          hint={
+            visible.length
+              ? `${visible.length} portas na última rodada da IA${filtersDirty ? ' · filtrado' : ''}`
+              : 'Nenhum alerta na última rodada'
+          }
+        />
+        <div className="alertas__charts">
+          <article className="alertas__chart">
+            <h2>Alertas por diagnóstico</h2>
+            {Object.entries(byType).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxType) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+          <article className="alertas__chart">
+            <h2>Alertas por estação</h2>
+            {Object.entries(byStation).map(([label, value]) => (
+              <div key={label} className="alertas__bar">
+                <strong>{label}</strong>
+                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                <em>{value}</em>
+              </div>
+            ))}
+          </article>
+        </div>
+      </div>
+
       <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
@@ -189,41 +224,6 @@ function Alertas() {
           <input type="date" value={filters.to} onChange={updateFilter('to')} />
         </FiltroCampo>
       </Filtros>
-
-      <div className="alertas__hero">
-        <Card
-          layout="banner"
-          label="Alertas preditivos"
-          value={atRisk}
-          hint={
-            visible.length
-              ? `${visible.length} portas na última rodada da IA${filtersDirty ? ' · filtrado' : ''}`
-              : 'Nenhum alerta na última rodada'
-          }
-        />
-        <div className="alertas__charts">
-          <article className="alertas__chart">
-            <h2>Alertas por diagnóstico</h2>
-            {Object.entries(byType).map(([label, value]) => (
-              <div key={label} className="alertas__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxType) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-          <article className="alertas__chart">
-            <h2>Alertas por estação</h2>
-            {Object.entries(byStation).map(([label, value]) => (
-              <div key={label} className="alertas__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-        </div>
-      </div>
 
       <div className="alertas__list">
         {visible.length ? (
