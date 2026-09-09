@@ -1,0 +1,135 @@
+{
+  "versao": "experimental",
+  "alvo_final_validado": false,
+  "cobertura_confirmada": false,
+  "negativo": "ausência de início de falha ou ocorrência pendente nos registros disponíveis",
+  "outliers_zm01": "reintegrados; duração não é critério de exclusão de ocorrência",
+  "janela_historico_dias": 30,
+  "horizonte_dias": 7,
+  "instante_previsao": "final do dia D",
+  "disponibilidade_historica": "hipótese não confirmada: dados disponíveis pela data de ocorrência",
+  "inicio_validacao": "2025-07-03",
+  "inicio_teste": "2025-11-14",
+  "features_temporais": [
+    "qtd_alarmes_registrados_1d",
+    "qtd_alarmes_registrados_7d",
+    "qtd_alarmes_registrados_14d",
+    "variacao_alarmes_registrados_7d",
+    "qtd_fo_7d",
+    "qtd_lsd_7d",
+    "dias_com_registro_7d",
+    "dias_com_registro_14d",
+    "dias_desde_ultima_zm01",
+    "dias_desde_ultima_zm02",
+    "sem_historico_zm01",
+    "sem_historico_zm02"
+  ],
+  "features_estaticas_codificadas": [
+    "estacao_BUT",
+    "estacao_FAL",
+    "estacao_FRA",
+    "estacao_FRE",
+    "estacao_HIG",
+    "estacao_LUZ",
+    "estacao_MBI",
+    "estacao_PIN",
+    "estacao_PTA",
+    "estacao_REP",
+    "estacao_VSO",
+    "plataforma_1",
+    "plataforma_2"
+  ],
+  "objetivo_final": "novo início de falha documentada em D+1 a D+7",
+  "status_alvo_final": "experimental; negativos provisórios por ausência de início registrado",
+  "versao_rotulos": "experimental_inicio_documentado_v1",
+  "escopo_falha_definido": true,
+  "base_treinamento_atualizada": true,
+  "conjuntos_com_duas_classes": true,
+  "status_preparacao": "modelo experimental treinado; melhor época restaurada; teste final pendente",
+  "sequencias_criadas": true,
+  "formato_janela": [
+    30,
+    12
+  ],
+  "n_features_estaticas": 13,
+  "batch_size_proposto": 256,
+  "arquitetura_implementada": true,
+  "biblioteca_rede": "PyTorch",
+  "treinamento_executado": true,
+  "melhor_epoca": 1,
+  "parametros_treinamento": {
+    "semente": 42,
+    "epocas_maximas": 30,
+    "paciencia": 5,
+    "taxa_aprendizado": 0.001,
+    "batch_size": 256,
+    "limiar_inicial": 0.5,
+    "criterio_selecao": "menor perda de validação"
+  },
+  "escopo_incerteza": "início registrado em D+1 a D+7, respeitando as localizações conhecidas",
+  "arquitetura": {
+    "dias_historico": 30,
+    "features_temporais": [
+      "qtd_alarmes_registrados_1d",
+      "qtd_alarmes_registrados_7d",
+      "qtd_alarmes_registrados_14d",
+      "variacao_alarmes_registrados_7d",
+      "qtd_fo_7d",
+      "qtd_lsd_7d",
+      "dias_com_registro_7d",
+      "dias_com_registro_14d",
+      "dias_desde_ultima_zm01",
+      "dias_desde_ultima_zm02",
+      "sem_historico_zm01",
+      "sem_historico_zm02"
+    ],
+    "features_estaticas": [
+      "estacao_BUT",
+      "estacao_FAL",
+      "estacao_FRA",
+      "estacao_FRE",
+      "estacao_HIG",
+      "estacao_LUZ",
+      "estacao_MBI",
+      "estacao_PIN",
+      "estacao_PTA",
+      "estacao_REP",
+      "estacao_VSO",
+      "plataforma_1",
+      "plataforma_2"
+    ],
+    "unidades_lstm": 64,
+    "unidades_dense": 32,
+    "dropout": 0.3,
+    "saida": "sigmoid"
+  },
+  "amostras_por_particao": [
+    {
+      "particao": "treino",
+      "amostras": 206648,
+      "positivos": 10384,
+      "negativos_provisorios": 196264
+    },
+    {
+      "particao": "validacao",
+      "amostras": 42359,
+      "positivos": 2008,
+      "negativos_provisorios": 40351
+    },
+    {
+      "particao": "teste",
+      "amostras": 41239,
+      "positivos": 1711,
+      "negativos_provisorios": 39528
+    }
+  ],
+  "melhores_metricas_validacao": {
+    "epoca": 1.0,
+    "perda_treino": 0.20872437798424487,
+    "perda_validacao": 0.18491385271573765,
+    "ap_validacao": 0.09733467490156533,
+    "precisao_validacao": 1.0,
+    "recall_validacao": 0.00099601593625498,
+    "f1_validacao": 0.001990049751243781
+  }
+}

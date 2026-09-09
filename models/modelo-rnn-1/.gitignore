@@ -1,0 +1,10 @@
+# Pesos, preprocessadores e arrays gerados pelo modelo LSTM.
+/artefatos/**/*.pt
+/artefatos/**/*.pth
+/artefatos/**/*.joblib
+/artefatos/**/*.npy
+/artefatos/**/*.npz
+
+# Previsões individuais e checkpoints locais do notebook.
+/artefatos/**/predicoes_*.csv
+.ipynb_checkpoints/
