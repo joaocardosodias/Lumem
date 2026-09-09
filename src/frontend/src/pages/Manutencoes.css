@@ -10,7 +10,7 @@
   gap: 12px;
   padding: 22px 24px 16px;
   border-radius: 20px;
-  background: var(--grad-surface);
+  background: var(--brand-soft);
   box-shadow: 0 10px 24px rgba(47, 0, 180, 0.08);
 }
 

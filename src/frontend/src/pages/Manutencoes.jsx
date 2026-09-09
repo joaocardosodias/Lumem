@@ -7,7 +7,7 @@ function Manutencoes() {
     <section>
       <div className="page-head">
         <h1>Manutenções</h1>
-        <Button>Cadastrar Alarmes +</Button>
+        <Button>Cadastrar Manutenções +</Button>
       </div>
 
       <div className="manutencoes__list">

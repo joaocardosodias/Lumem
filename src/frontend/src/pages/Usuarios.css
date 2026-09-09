@@ -10,8 +10,8 @@
   gap: 18px;
   padding: 16px 20px;
   border-radius: 20px;
-  background: linear-gradient(90deg, #ece8f0 0%, #f7f4f8 100%);
-  box-shadow: 0 8px 20px rgba(47, 0, 180, 0.08);
+  background: var(--brand-soft);
+  box-shadow: 0 8px 20px rgba(63, 0, 255, 0.06);
   border-left: 7px solid var(--brand);
 }
 
@@ -19,7 +19,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--grad-button);
+  background: var(--brand);
 }
 
 .card-usuario strong {

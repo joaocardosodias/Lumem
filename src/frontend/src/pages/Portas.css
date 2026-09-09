@@ -12,7 +12,7 @@
 .card-metrica {
   padding: 22px 26px;
   border-radius: 20px;
-  background: var(--grad-surface);
+  background: var(--brand-soft);
   box-shadow: 0 10px 24px rgba(47, 0, 180, 0.08);
   border-left: 6px solid var(--brand);
 }

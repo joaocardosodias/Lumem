@@ -4,13 +4,13 @@
   width: var(--nav-width);
   min-height: 100vh;
   padding: 28px 16px 18px;
-  background: var(--grad-nav);
+  background: var(--brand);
   color: var(--white);
 }
 
 .barra-nav__logo {
   display: block;
-  width: 168px;
+  width: 118px;
   height: auto;
   margin: 0 10px 40px;
 }
@@ -43,8 +43,8 @@
 }
 
 .barra-nav button svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
@@ -55,5 +55,5 @@
 
 .barra-nav__sair {
   margin-top: auto;
-  background: var(--grad-sair) !important;
+  background: rgba(0, 0, 0, 0.18) !important;
 }
