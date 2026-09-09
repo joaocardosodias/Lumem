@@ -1,8 +1,8 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import gsap from 'gsap'
-import iconMotiva from '../assets/icon_motiva.svg'
 import logo from '../assets/logo.svg'
+import metro from '../assets/metro.svg'
 import Grainient from './Grainient'
 import './PredictionLoad.css'
 
@@ -44,34 +44,8 @@ function LinhaTrain() {
       <span className="linha-train__rail">
         <i className="linha-train__progress" />
       </span>
-      <span className="linha-train__glow" />
       <div className="linha-train__car">
-        <svg viewBox="0 0 220 86" fill="none">
-          <path d="M18 58h184c6 0 10-4 10-9V30c0-12-9-20-22-20H54L18 28v30Z" fill="#ffd000" />
-          <path d="M18 38h194v6H18V38Z" fill="#3f00ff" />
-          <rect x="58" y="22" width="28" height="16" rx="3" fill="#1a1464" opacity="0.85" />
-          <rect x="92" y="22" width="28" height="16" rx="3" fill="#1a1464" opacity="0.85" />
-          <rect x="126" y="22" width="28" height="16" rx="3" fill="#1a1464" opacity="0.85" />
-          <rect x="160" y="22" width="28" height="16" rx="3" fill="#1a1464" opacity="0.85" />
-          <path d="M18 28 54 10h8v28H18V28Z" fill="#fff59a" />
-          <g className="linha-train__wheel" transform="translate(58 66)">
-            <circle r="10" fill="#1a1464" />
-            <circle r="4" fill="#ffd000" />
-          </g>
-          <g className="linha-train__wheel" transform="translate(96 66)">
-            <circle r="10" fill="#1a1464" />
-            <circle r="4" fill="#ffd000" />
-          </g>
-          <g className="linha-train__wheel" transform="translate(158 66)">
-            <circle r="10" fill="#1a1464" />
-            <circle r="4" fill="#ffd000" />
-          </g>
-          <g className="linha-train__wheel" transform="translate(196 66)">
-            <circle r="10" fill="#1a1464" />
-            <circle r="4" fill="#ffd000" />
-          </g>
-          <circle cx="34" cy="24" r="4" fill="#fff" />
-        </svg>
+        <img src={metro} alt="" />
       </div>
     </div>
   )
@@ -81,7 +55,6 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
   const rootRef = useRef(null)
   const sceneRef = useRef(null)
   const logoRef = useRef(null)
-  const marksRef = useRef(null)
   const trainWrapRef = useRef(null)
   const stageRef = useRef(null)
   const percentRef = useRef(null)
@@ -96,7 +69,6 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
     const source = session.source ?? {}
     const brand = source.brand
     const logoEl = source.logo
-    const markEl = source.mark
     const fromLogin = session.variant === 'login' && brand
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const time = reduce ? 0.18 : 1
@@ -106,7 +78,6 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
 
     const loginChrome = document.querySelectorAll('.login__panel, .login__intro')
     const logoFly = logoRef.current
-    const markNodes = [...(marksRef.current?.children ?? [])]
     const scene = sceneRef.current
     const trainWrap = trainWrapRef.current
     const car = trainWrap?.querySelector('.linha-train__car')
@@ -147,42 +118,9 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
         gsap.set(logoFly, { top: r.top, left: r.left, width: r.width, autoAlpha: 1 })
         gsap.set(logoEl, { autoAlpha: 0 })
       }
-
-      if (markEl && markNodes[0]) {
-        const r = markEl.getBoundingClientRect()
-        gsap.set(markNodes[0], {
-          top: r.top,
-          left: r.left,
-          width: r.width,
-          height: r.height,
-          opacity: 0.12,
-        })
-        gsap.set(markEl, { autoAlpha: 0 })
-      }
-
-      markNodes.slice(1).forEach((node, index) => {
-        gsap.set(node, {
-          top: rect.top + rect.height * (0.2 + index * 0.18),
-          left: rect.left + rect.width * (0.15 + index * 0.22),
-          width: 64,
-          height: 54,
-          autoAlpha: 0,
-          scale: 0.55,
-        })
-      })
     } else {
       gsap.set(root, { top: 0, left: 0, width: vw, height: vh, autoAlpha: 0 })
       gsap.set(logoFly, { top: 28, left: 32, width: 150, autoAlpha: 0 })
-      const corners = [
-        { top: -48, left: -36 },
-        { top: -36, left: vw - 40 },
-        { top: vh - 80, left: -40 },
-        { top: vh - 64, left: vw - 48 },
-      ]
-      markNodes.forEach((node, index) => {
-        const spot = corners[index] ?? corners[0]
-        gsap.set(node, { top: spot.top, left: spot.left, width: 80, height: 68, autoAlpha: 0 })
-      })
     }
 
     const tl = gsap.timeline({
@@ -213,7 +151,7 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
     tl.to(
       logoFly,
       {
-        top: cy - 168,
+        top: cy - 120,
         left: cx - 84,
         width: 168,
         autoAlpha: 1,
@@ -223,26 +161,7 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
       fromLogin ? 0.28 : 0.05,
     )
 
-    markNodes.forEach((node, index) => {
-      const spread = (index - (markNodes.length - 1) / 2) * 62
-      tl.to(
-        node,
-        {
-          top: cy - 92,
-          left: cx + spread - 28,
-          width: 56,
-          height: 46,
-          autoAlpha: 0.95,
-          opacity: 0.95,
-          scale: 1,
-          duration: 0.9 * time,
-          ease: 'power3.inOut',
-        },
-        (fromLogin ? 0.34 : 0.08) + index * 0.05,
-      )
-    })
-
-    tl.to(scene, { autoAlpha: 1, y: 0, duration: 0.5 * time, ease: 'power2.out' }, '-=0.4')
+    tl.to(scene, { autoAlpha: 1, y: 0, duration: 0.5 * time, ease: 'power2.out' }, '-=0.45')
 
     tl.to(
       progressProxy,
@@ -297,12 +216,6 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
       </div>
 
       <img ref={logoRef} className="prediction-load__logo" src={logo} alt="motiva" />
-
-      <div ref={marksRef} className="prediction-load__marks">
-        {Array.from({ length: 4 }, (_, index) => (
-          <img key={index} src={iconMotiva} alt="" />
-        ))}
-      </div>
 
       <div ref={sceneRef} className="prediction-load__scene">
         <div ref={trainWrapRef} className="prediction-load__train">

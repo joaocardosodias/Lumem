@@ -13,17 +13,12 @@
   inset: 0;
 }
 
-.prediction-load__logo,
-.prediction-load__marks img {
+.prediction-load__logo {
   position: fixed;
   z-index: 2;
   display: block;
   pointer-events: none;
   will-change: transform, top, left, width, height, opacity;
-}
-
-.prediction-load__marks img {
-  filter: brightness(0) invert(1);
 }
 
 .prediction-load__scene {
@@ -67,19 +62,18 @@
 
 .linha-train {
   position: relative;
-  height: 108px;
+  height: 72px;
 }
 
 .linha-train__rail {
   position: absolute;
   right: 0;
-  bottom: 28px;
+  bottom: 10px;
   left: 0;
-  height: 8px;
+  height: 6px;
   overflow: hidden;
   border-radius: 99px;
-  background: color-mix(in srgb, #ffd000 42%, white);
-  box-shadow: 0 0 0 5px color-mix(in srgb, #ffd000 28%, transparent);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .linha-train__progress {
@@ -89,35 +83,21 @@
   transform: scaleX(0);
   transform-origin: left center;
   border-radius: inherit;
-  background: #ffd000;
-}
-
-.linha-train__glow {
-  position: absolute;
-  right: 8%;
-  bottom: 18px;
-  left: 8%;
-  height: 28px;
-  border-radius: 99px;
-  background: radial-gradient(circle, rgba(255, 208, 0, 0.45), transparent 70%);
-  filter: blur(8px);
+  background: var(--white);
 }
 
 .linha-train__car {
   position: absolute;
-  bottom: 18px;
+  bottom: 8px;
   left: 0;
-  width: 42%;
-  max-width: 220px;
+  width: 56px;
   will-change: transform;
 }
 
-.linha-train__car svg {
+.linha-train__car img {
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
-  filter: drop-shadow(0 12px 18px rgba(10, 0, 40, 0.28));
 }
 
 .login.is-loading {

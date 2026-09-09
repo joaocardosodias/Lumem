@@ -12,7 +12,6 @@ function Login({ onLogin }) {
   const { run, busy } = usePredictionLoad()
   const brandRef = useRef(null)
   const logoRef = useRef(null)
-  const markRef = useRef(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -37,7 +36,6 @@ function Login({ onLogin }) {
       source: {
         brand: brandRef.current,
         logo: logoRef.current,
-        mark: markRef.current,
       },
       onReady: onLogin,
     })
@@ -81,7 +79,7 @@ function Login({ onLogin }) {
       </aside>
 
       <div className="login__panel">
-        <img ref={markRef} className="login__panel-mark" src={iconMotiva} alt="" aria-hidden="true" />
+        <img className="login__panel-mark" src={iconMotiva} alt="" aria-hidden="true" />
 
         <form className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-head">
