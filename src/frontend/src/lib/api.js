@@ -1,6 +1,7 @@
 import { normalizeMaintenance } from '../data/stations'
 
 const TOKEN_KEY = 'motiva.token'
+const API_ORIGIN = String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 let onUnauthorized = null
 
@@ -67,7 +68,8 @@ export async function request(path, { method = 'GET', body, formData, auth = tru
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(path, {
+  const url = import.meta.env.DEV || !API_ORIGIN ? path : `${API_ORIGIN}${path}`
+  const response = await fetch(url, {
     method,
     headers,
     body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
