@@ -12,6 +12,10 @@ import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manuten
 import telaCadastrarManutencoes from '../../../../assets/sprints/sprint3/frontend/CadastrarManutencoes.png';
 import telaAlertas from '../../../../assets/sprints/sprint3/frontend/Alertas.png';
 import telaCadastrarAlarmes from '../../../../assets/sprints/sprint3/frontend/CadastrarAlarmes.png';
+import telaPortas from '../../../../assets/sprints/sprint3/frontend/Portas.png';
+import telaPortasEstacao from '../../../../assets/sprints/sprint3/frontend/PortasEstacao.png';
+import telaPortasEspec1 from '../../../../assets/sprints/sprint3/frontend/PortasEspec1.png';
+import telaPortasEspec2 from '../../../../assets/sprints/sprint3/frontend/PortasEspec2.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -154,5 +158,68 @@ O card azul *Alertas preditivos* conta só as portas com `will_fail`. Os gráfic
   />
   <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
 </figure>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Portas</h2>
+</div>
+
+A tela de Portas é o recorte espacial da linha: a Marta escolhe a estação, lê o risco por plataforma e entra no dossiê de uma PSD. O fluxo vive em `Portas.jsx` e tem três níveis, todos na mesma rota da sessão (mapa, estação e porta). O mapa em si não vem da API. As onze estações da Linha 4 Amarela, as fotos do tooltip e os códigos de três letras (VSO, MBI, BUT, PIN e as demais) estão no catálogo local `stations.js`. O que a API alimenta, neste nível, são os três cards do rodapé: estação mais crítica e portas em risco saem de `GET /api/v1/dashboard/summary`; as inspeções pendentes saem do mesmo catálogo pré-carregado no login, para o número bater com a tela de Inspeções. Sem ranking na última rodada, o primeiro card fica em travessão, como na Figura 8.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 8: Mapa da Linha 4 na tela de Portas</strong></figcaption>
+  <Image
+    src={telaPortas}
+    alt="Tela de Portas com o mapa amarelo da Linha 4 Amarela e três cards de resumo no rodapé"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Cada estação é um ponto no trilho amarelo, com o nome alternando acima e abaixo da linha. O clique abre um tooltip com o nome, a foto local e o botão **Acessar** (Figura 9). Trocar de estação fecha o cartão anterior antes de abrir o próximo. **Acessar** dispara `GET /api/v1/stations/{code}/doors/status`, some o mapa e monta a visão da estação.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 9: Tooltip da estação Pinheiros</strong></figcaption>
+  <Image
+    src={telaPortasEstacao}
+    alt="Mapa da Linha 4 com o tooltip da estação Pinheiros, foto e botão Acessar"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Na estação, o título passa a ser o nome (Pinheiros, na captura) com um botão de voltar ao mapa. Dois cards azuis mostram o total de portas devolvidas pela API e quantas estão com `will_fail`. As abas de plataforma (P1, P2) seguem **só as portas da resposta**, não o catálogo local: Pinheiros, República e Luz têm P3 e P4 em `stations.js`, mas essas abas só aparecem se a API as enviar. O painel **Riscos por porta** empilha uma barra por PSD da plataforma ativa; a tabela **Portas de Estação** lista número, TAG SAP, barra de risco, status (*Em risco* ou *Estável*) e data da última avaliação. Clique na barra ou na linha abre o dossiê daquela porta.
+
+O percentual de risco, no estado atual, quase nunca vem da API. Se o payload não trouxer `risk`, o frontend inventa **0,82** para *vai falhar* e **0,22** para *estável*. Por isso a Figura 10 mostra todas as barras iguais e 22% com status Estável, e a coluna *Avaliado em* fica em travessão quando `last_evaluated_at` não veio.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 10: Detalhe da estação Pinheiros, plataforma P1</strong></figcaption>
+  <Image
+    src={telaPortasEspec1}
+    alt="Tela da estação Pinheiros com cards de total e risco, abas P1 e P2, gráfico de barras e tabela de portas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+No rodapé da mesma tela ficam **Realizar Previsão** e **Re-treinar modelo**. Os dois disparam o overlay do metrô (o mesmo do login) e, por baixo, o **mesmo** `POST /api/v1/predictions/trigger` com horizonte de sete dias. Não há endpoint separado de retreino: a diferença é só o texto do overlay e o carimbo local *Último disparo*, gravado no cliente quando o segundo botão conclui. Ao terminar, a tela recarrega o status das portas da estação aberta.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 11: Ações de previsão na tela da estação</strong></figcaption>
+  <Image
+    src={telaPortasEspec2}
+    alt="Rodapé da tela da estação Pinheiros com a tabela de portas e os botões Realizar Previsão e Re-treinar modelo"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+O terceiro nível é o dossiê da porta. A Marta chega nele pela barra ou pela linha da tabela. O título vira a TAG SAP (ou o número da porta), com estação, plataforma e número no subtítulo. Dois cards trazem o diagnóstico (*Vai falhar* ou *Estável*) e a data da última avaliação. O painel **Dossiê da porta** preenche id, estação, plataforma, número, TAG, status e o flag *vai falhar*, mesclando o item da lista com `GET /api/v1/doors/{id}/timeline`. **Manutenções relacionadas** usam as ordens que o timeline devolver; se a API não as mandar, o frontend busca `GET /api/v1/maintenance` e tenta casar o local de instalação com `PP` mais o número da porta e a plataforma. Sem casamento, mostra até oito ordens da mesma estação. O formulário **Abrir inspeção** envia data, hora e notas em `POST /api/v1/inspections`, com prioridade alta se a porta estiver em risco, invalida o cache de inspeções e leva a Marta para a tela de Inspeções.
 
 
