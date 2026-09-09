@@ -8,7 +8,7 @@ const items = [
   { id: 'alertas', label: 'Alertas' },
   { id: 'manutencoes', label: 'Manutenções' },
   { id: 'portas', label: 'Portas' },
-  { id: 'analise', label: 'Analise' },
+  { id: 'inspecoes', label: 'Inspeções' },
   { id: 'configuracoes', label: 'Configurações' },
   { id: 'usuarios', label: 'Usuários' },
 ]
@@ -119,11 +119,12 @@ function NavIcon({ id }) {
     )
   }
 
-  if (id === 'analise') {
+  if (id === 'inspecoes') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-        <path d="M22 12A10 10 0 0 0 12 2v10z" />
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+        <rect x="9" y="3" width="6" height="4" rx="1" />
+        <path d="M9 12h6M9 16h4" />
       </svg>
     )
   }

@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Card from '../components/Card'
 import CadastrarButton from '../components/CadastrarButton'
+import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import {
+  addInspection,
   dashboardSummary,
+  getDoorTimeline,
   getStationDoors,
   lineStations,
+  maintenancesForDoor,
+  stationLabel,
 } from '../data/mock'
 import './Portas.css'
 
@@ -13,7 +18,7 @@ function padDoor(value) {
   return String(value).padStart(2, '0')
 }
 
-function Portas() {
+function Portas({ onNavigate }) {
   const [selectedCode, setSelectedCode] = useState(null)
   const [tooltipOpen, setTooltipOpen] = useState(false)
   const [openedCode, setOpenedCode] = useState(null)
@@ -21,10 +26,15 @@ function Portas() {
   const [lastTraining, setLastTraining] = useState('08/09/2026')
   const [lastPrediction, setLastPrediction] = useState(null)
   const [activePlatform, setActivePlatform] = useState('P1')
+  const [openedDoor, setOpenedDoor] = useState(null)
+  const [inspNotes, setInspNotes] = useState('')
+  const [inspWhen, setInspWhen] = useState({ date: '', time: '' })
   const { run, busy } = usePredictionLoad()
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
 
+  const timeline = getDoorTimeline(openedDoor)
+  const doorMaintenances = maintenancesForDoor(openedDoor)
   const openedStation = lineStations.find((item) => item.code === openedCode)
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
   const topStation = dashboardSummary.critical_stations[0]
@@ -109,6 +119,7 @@ function Portas() {
     setDoors(next)
     setActivePlatform(next[0]?.platform ?? 'P1')
     setOpenedCode(code)
+    setOpenedDoor(null)
     setSelectedCode(null)
     setTooltipOpen(false)
     setLastPrediction(next[0]?.last_evaluated_at ?? '2026-09-08 18:40:00')
@@ -133,6 +144,141 @@ function Portas() {
     const now = new Date()
     const stamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
     setLastTraining(stamp)
+  }
+
+  function handleOpenDoor(door) {
+    setOpenedDoor(door)
+    setInspNotes('')
+    setInspWhen({ date: '', time: '' })
+  }
+
+  function handleCreateInspection(event) {
+    event.preventDefault()
+    if (!openedDoor) return
+    addInspection({
+      station_code: openedDoor.station_code,
+      platform: openedDoor.platform,
+      door_number: openedDoor.door_number,
+      priority: openedDoor.will_fail ? 'high' : 'normal',
+      scheduled_for:
+        inspWhen.date && inspWhen.time
+          ? `${inspWhen.date} ${inspWhen.time.length === 5 ? `${inspWhen.time}:00` : inspWhen.time}`
+          : '',
+      notes: inspNotes.trim(),
+    })
+    onNavigate?.('inspecoes')
+  }
+
+  if (openedStation && timeline) {
+    return (
+      <section className="portas">
+        <div className="page-head">
+          <div className="portas__title">
+            <button type="button" className="portas__back" onClick={() => setOpenedDoor(null)} aria-label="Voltar">
+              ‹
+            </button>
+            <div>
+              <h1>{timeline.sap_tag}</h1>
+              <p>
+                {timeline.station_name} · {timeline.platform} · porta {padDoor(timeline.door_number)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="portas__kpis">
+          <Card
+            layout="banner"
+            label="Diagnóstico"
+            value={timeline.will_fail ? 'Vai falhar' : 'Estável'}
+            hint={`status ${timeline.status} · id ${timeline.door_id}`}
+          />
+          <Card
+            layout="banner"
+            label="Última avaliação"
+            value={String(timeline.last_evaluated_at).slice(0, 10)}
+            hint={timeline.last_evaluated_at}
+          />
+        </div>
+
+        <article className="portas__panel">
+          <h2>Dossiê da porta</h2>
+          <div className="portas__dossier">
+            <div>
+              <span>Id</span>
+              <strong>{timeline.door_id}</strong>
+            </div>
+            <div>
+              <span>Estação</span>
+              <strong>{timeline.station_name}</strong>
+            </div>
+            <div>
+              <span>Plataforma</span>
+              <strong>{timeline.platform}</strong>
+            </div>
+            <div>
+              <span>Porta</span>
+              <strong>{padDoor(timeline.door_number)}</strong>
+            </div>
+            <div>
+              <span>TAG</span>
+              <strong>{timeline.sap_tag}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{timeline.status}</strong>
+            </div>
+            <div>
+              <span>Vai falhar</span>
+              <strong>{timeline.will_fail ? 'Sim' : 'Não'}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="portas__panel">
+          <h2>Manutenções relacionadas</h2>
+          {doorMaintenances.length ? (
+            doorMaintenances.map((item) => (
+              <div key={item.id} className="portas__related">
+                <strong>{item.order_type}</strong>
+                <span>{item.start_timestamp}</span>
+                <em>{item.description || item.symptom || item.installation_location}</em>
+              </div>
+            ))
+          ) : (
+            <p className="portas__empty">Nenhuma ordem de manutenção ligada a esta porta.</p>
+          )}
+        </article>
+
+        <article className="portas__panel">
+          <h2>Abrir inspeção</h2>
+          <form className="portas__insp" onSubmit={handleCreateInspection}>
+            <Input
+              id="door-insp-date"
+              label="Data"
+              type="date"
+              value={inspWhen.date}
+              onChange={(event) => setInspWhen((current) => ({ ...current, date: event.target.value }))}
+            />
+            <Input
+              id="door-insp-time"
+              label="Hora"
+              type="time"
+              step="60"
+              value={inspWhen.time}
+              onChange={(event) => setInspWhen((current) => ({ ...current, time: event.target.value }))}
+            />
+            <Input
+              id="door-insp-notes"
+              label="Notas"
+              value={inspNotes}
+              onChange={(event) => setInspNotes(event.target.value)}
+            />
+            <CadastrarButton type="submit">Abrir ordem</CadastrarButton>
+          </form>
+        </article>
+      </section>
+    )
   }
 
   if (openedStation) {
@@ -179,12 +325,17 @@ function Portas() {
           <h2>Riscos por porta · {activePlatform}</h2>
           <div className="portas-risk-chart">
             {visibleDoors.map((item) => (
-              <div key={item.door_id} className="portas-risk-chart__col">
+              <button
+                key={item.door_id}
+                type="button"
+                className="portas-risk-chart__col"
+                onClick={() => handleOpenDoor(item)}
+              >
                 <span>
                   <i style={{ height: `${(item.risk / maxRisk) * 100}%` }} />
                 </span>
                 <strong>{padDoor(item.door_number)}</strong>
-              </div>
+              </button>
             ))}
           </div>
         </article>
@@ -200,7 +351,7 @@ function Portas() {
               <span>Avaliado em</span>
             </div>
             {visibleDoors.map((item) => (
-              <div key={item.door_id} className="portas__row">
+              <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
                 <strong>{padDoor(item.door_number)}</strong>
                 <strong>{item.sap_tag}</strong>
                 <div className="portas-risk">
@@ -213,7 +364,7 @@ function Portas() {
                   {item.will_fail ? 'Em risco' : 'Estável'}
                 </span>
                 <strong>{item.last_evaluated_at}</strong>
-              </div>
+              </button>
             ))}
           </div>
         </article>
@@ -276,12 +427,12 @@ function Portas() {
 
       <div className="portas__cards">
         <article>
-          <span>Estação com maior probabilidade de defeito</span>
-          <strong>{topStation.station_name}</strong>
+          <span>Estação mais crítica</span>
+          <strong>{stationLabel(topStation.station_code)}</strong>
         </article>
         <article>
-          <span>Número de alarmes total da Linha</span>
-          <strong>{dashboardSummary.alerts_last_7d}</strong>
+          <span>Inspeções pendentes</span>
+          <strong>{dashboardSummary.pending_inspections}</strong>
         </article>
         <article>
           <span>Portas em risco nos próximos 7 dias</span>

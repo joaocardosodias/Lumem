@@ -25,6 +25,7 @@
   gap: 12px;
 }
 
+.dashboard__tiles button,
 .dashboard__tiles article {
   display: flex;
   flex-wrap: wrap;
@@ -38,6 +39,11 @@
   color: var(--brand);
 }
 
+.dashboard__tiles button {
+  font: inherit;
+  text-align: left;
+}
+
 .dashboard__tiles span {
   width: 100%;
   color: #6b4fe0;
@@ -48,6 +54,7 @@
 .dashboard__tiles strong {
   font-size: 28px;
   line-height: 1;
+  color: var(--brand);
 }
 
 .dashboard__tiles em {

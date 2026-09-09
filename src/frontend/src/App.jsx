@@ -3,6 +3,7 @@ import AppLayout from './components/AppLayout'
 import { PredictionLoadProvider } from './components/PredictionLoad'
 import Alertas from './pages/Alertas'
 import Dashboard from './pages/Dashboard'
+import Inspecoes from './pages/Inspecoes'
 import Login from './pages/Login'
 import Manutencoes from './pages/Manutencoes'
 import Placeholder from './pages/Placeholder'
@@ -24,12 +25,12 @@ function App() {
   }
 
   function renderPage() {
-    if (page === 'dashboard') return <Dashboard />
+    if (page === 'dashboard') return <Dashboard onNavigate={setPage} />
     if (page === 'alertas') return <Alertas />
     if (page === 'manutencoes') return <Manutencoes />
-    if (page === 'portas') return <Portas />
+    if (page === 'portas') return <Portas onNavigate={setPage} />
+    if (page === 'inspecoes') return <Inspecoes />
     if (page === 'usuarios') return <Usuarios />
-    if (page === 'analise') return <Placeholder title="Analise" />
     return <Placeholder title="Configurações" />
   }
 

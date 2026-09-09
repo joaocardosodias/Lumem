@@ -5,9 +5,11 @@ import Card from '../components/Card'
 import CardAlerta from '../components/CardAlerta'
 import Input from '../components/Input'
 import PlanilhaImport from '../components/PlanilhaImport'
+import UploadStatus from '../components/UploadStatus'
 import { mapAlarmRows } from '../lib/importRows'
+import { runUploadProgress } from '../lib/runUpload'
 import { parseSpreadsheet } from '../lib/spreadsheet'
-import { alarms as initialAlarms } from '../data/mock'
+import { alarms as initialAlarms, createUpload } from '../data/mock'
 import './Alertas.css'
 
 const emptyForm = {
@@ -43,6 +45,7 @@ function Alertas() {
   const [file, setFile] = useState(null)
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
+  const [upload, setUpload] = useState(null)
 
   const byType = useMemo(() => countBy(items, 'alarm'), [items])
   const byStation = useMemo(() => countBy(items, 'station'), [items])
@@ -87,8 +90,11 @@ function Alertas() {
         return
       }
 
+      const job = createUpload({ fileName: file.name, fileType: 'alarms', rowCount: rows.length })
+      await runUploadProgress(job, rows.length, setUpload)
       setItems((current) => [...rows, ...current])
       setFile(null)
+      setUpload(null)
       setOpen(false)
     } catch (error) {
       setImportError(error.message || 'Não foi possível ler a planilha.')
@@ -101,6 +107,7 @@ function Alertas() {
     setMode('manual')
     setImportError('')
     setFile(null)
+    setUpload(null)
     setOpen(true)
   }
 
@@ -156,7 +163,7 @@ function Alertas() {
       </div>
 
       {open ? (
-        <div className="alertas-modal" onClick={() => setOpen(false)}>
+        <div className="alertas-modal" onClick={() => !importing && setOpen(false)}>
           <form
             onClick={(event) => event.stopPropagation()}
             onSubmit={mode === 'import' ? handleImport : handleSubmit}
@@ -178,12 +185,14 @@ function Alertas() {
                   onFile={(next) => {
                     setFile(next)
                     setImportError('')
+                    setUpload(null)
                   }}
                   hint="Planilha de alarmes de telemetria em CSV ou XLSX."
                   error={importError}
                 />
+                {upload ? <UploadStatus upload={upload} /> : null}
                 <Button type="submit" variant="light">
-                  {importing ? 'Importando…' : 'Importar planilha'}
+                  {importing ? 'Processando upload…' : 'Enviar planilha'}
                 </Button>
               </>
             ) : (

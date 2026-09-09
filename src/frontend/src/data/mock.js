@@ -15,14 +15,11 @@ export const dashboardSummary = {
   doors_at_risk: 150,
   pending_inspections: 12,
   completed_inspections: 48,
-  failure_probability_7d: 1,
-  alerts_last_7d: 150,
-  station_most_alarms: 'BUT',
   critical_stations: [
-    { station_code: 'BUT', station_name: 'Butantã', doors_at_risk: 18 },
-    { station_code: 'FAL', station_name: 'Faria Lima', doors_at_risk: 11 },
-    { station_code: 'PIN', station_name: 'Pinheiros', doors_at_risk: 9 },
-    { station_code: 'PAU', station_name: 'Paulista', doors_at_risk: 7 },
+    { station_code: 'BUT', doors_at_risk: 18 },
+    { station_code: 'FAL', doors_at_risk: 11 },
+    { station_code: 'PIN', doors_at_risk: 9 },
+    { station_code: 'PAU', doors_at_risk: 7 },
   ],
 }
 
@@ -154,6 +151,95 @@ export const maintenances = [
   },
 ]
 
+export let inspections = [
+  {
+    id: 'insp-001',
+    station_code: 'BUT',
+    platform: 'P1',
+    door_number: 9,
+    priority: 'critical',
+    scheduled_for: '2026-09-09 09:00:00',
+    notes: 'Verificacao solicitada apos alerta preditivo',
+    status: 'pending',
+  },
+  {
+    id: 'insp-002',
+    station_code: 'FAL',
+    platform: 'P2',
+    door_number: 4,
+    priority: 'high',
+    scheduled_for: '2026-09-09 14:30:00',
+    notes: 'Sensor LSD instavel na ultima semana',
+    status: 'in_progress',
+  },
+  {
+    id: 'insp-003',
+    station_code: 'PIN',
+    platform: 'P1',
+    door_number: 12,
+    priority: 'normal',
+    scheduled_for: '2026-09-08 22:00:00',
+    notes: 'Inspecao de rotina apos ZM01',
+    status: 'completed',
+  },
+  {
+    id: 'insp-004',
+    station_code: 'PAU',
+    platform: 'P1',
+    door_number: 2,
+    priority: 'low',
+    scheduled_for: '2026-09-10 06:00:00',
+    notes: '',
+    status: 'pending',
+  },
+]
+
+const inspectionListeners = new Set()
+
+export function subscribeInspections(listener) {
+  inspectionListeners.add(listener)
+  return () => inspectionListeners.delete(listener)
+}
+
+export function addInspection(input) {
+  const item = {
+    id: `insp-${Date.now()}`,
+    station_code: String(input.station_code || '').toUpperCase(),
+    platform: input.platform,
+    door_number: Number(input.door_number),
+    priority: input.priority || 'normal',
+    scheduled_for: input.scheduled_for || '',
+    notes: input.notes || '',
+    status: 'pending',
+  }
+  inspections = [item, ...inspections]
+  inspectionListeners.forEach((listener) => listener(inspections))
+  return item
+}
+
+export function updateInspectionStatus(id, payload) {
+  inspections = inspections.map((item) =>
+    item.id === id
+      ? { ...item, status: payload.status, notes: payload.notes ?? item.notes }
+      : item,
+  )
+  inspectionListeners.forEach((listener) => listener(inspections))
+  return inspections.find((item) => item.id === id)
+}
+
+export function createUpload({ fileName, fileType, rowCount }) {
+  return {
+    id: `upl-${Date.now()}`,
+    file_name: fileName,
+    file_type: fileType,
+    status: 0,
+    rows_processed: 0,
+    rows_inserted: 0,
+    created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    rowCount,
+  }
+}
+
 export const users = [
   { id: 'usr-001', name: 'João Pedro Gonçalves', role: 'Admin' },
   { id: 'usr-002', name: 'Marta Oliveira', role: 'Operadora' },
@@ -184,6 +270,34 @@ export const lineStations = [
   { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2', 'P3', 'P4'] },
   { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2', 'P3', 'P4'] },
 ]
+
+export function stationLabel(code) {
+  return lineStations.find((item) => item.code === code)?.name ?? code
+}
+
+export function getDoorTimeline(door) {
+  if (!door) return null
+  return {
+    door_id: door.door_id,
+    station_name: door.station_name,
+    platform: door.platform,
+    door_number: door.door_number,
+    sap_tag: door.sap_tag,
+    status: door.status,
+    will_fail: door.will_fail,
+    last_evaluated_at: door.last_evaluated_at,
+  }
+}
+
+export function maintenancesForDoor(door) {
+  if (!door) return []
+  const pad = String(door.door_number).padStart(2, '0')
+  return maintenances.filter(
+    (item) =>
+      item.station_code === door.station_code &&
+      String(item.installation_location || '').includes(`-P${String(door.platform).replace(/\D/g, '')}-PP${pad}`),
+  )
+}
 
 const stationRiskSeed = {
   VSO: 0.28,

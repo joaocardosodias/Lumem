@@ -1,0 +1,39 @@
+.upload-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--white);
+}
+
+.upload-status > p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.upload-status dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.upload-status div {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.upload-status dt {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.upload-status dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-all;
+}

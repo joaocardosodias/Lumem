@@ -5,9 +5,11 @@ import Card from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
 import Input from '../components/Input'
 import PlanilhaImport from '../components/PlanilhaImport'
+import UploadStatus from '../components/UploadStatus'
 import { mapMaintenanceRows } from '../lib/importRows'
+import { runUploadProgress } from '../lib/runUpload'
 import { parseSpreadsheet } from '../lib/spreadsheet'
-import { maintenances as initialMaintenances } from '../data/mock'
+import { createUpload, maintenances as initialMaintenances } from '../data/mock'
 import './Manutencoes.css'
 
 const emptyForm = {
@@ -55,6 +57,7 @@ function Manutencoes() {
   const [orderType, setOrderType] = useState('ZM01')
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
+  const [upload, setUpload] = useState(null)
 
   const byType = useMemo(() => countBy(items, 'order_type'), [items])
   const byStation = useMemo(() => countBy(items, 'station_code'), [items])
@@ -124,8 +127,11 @@ function Manutencoes() {
         return
       }
 
+      const job = createUpload({ fileName: file.name, fileType: 'maintenance', rowCount: rows.length })
+      await runUploadProgress(job, rows.length, setUpload)
       setItems((current) => [...rows, ...current])
       setFile(null)
+      setUpload(null)
       setOpen(false)
     } catch (error) {
       setImportError(error.message || 'Não foi possível ler a planilha.')
@@ -138,6 +144,7 @@ function Manutencoes() {
     setMode('manual')
     setImportError('')
     setFile(null)
+    setUpload(null)
     setOpen(true)
   }
 
@@ -198,7 +205,7 @@ function Manutencoes() {
       </div>
 
       {open ? (
-        <div className="manutencoes-modal" onClick={() => setOpen(false)}>
+        <div className="manutencoes-modal" onClick={() => !importing && setOpen(false)}>
           <form
             onClick={(event) => event.stopPropagation()}
             onSubmit={mode === 'import' ? handleImport : handleSubmit}
@@ -228,12 +235,14 @@ function Manutencoes() {
                   onFile={(next) => {
                     setFile(next)
                     setImportError('')
+                    setUpload(null)
                   }}
                   hint="Planilha ZM01, ZM02 ou ZM03 em CSV ou XLSX."
                   error={importError}
                 />
+                {upload ? <UploadStatus upload={upload} /> : null}
                 <Button type="submit" variant="light">
-                  {importing ? 'Importando…' : 'Importar planilha'}
+                  {importing ? 'Processando upload…' : 'Enviar planilha'}
                 </Button>
               </>
             ) : (
