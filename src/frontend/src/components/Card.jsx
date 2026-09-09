@@ -16,15 +16,5 @@ function Card({ label, value, hint }) {
     </article>
   )
 }
-        <p>{label}</p>
-        <div className="kpi-card__value">
-          <strong>{value}</strong>
-          <i />
-        </div>
-        {hint ? <small>{hint}</small> : null}
-      </div>
-    </article>
-  )
-}
 
 export default Card

@@ -124,4 +124,25 @@ export const alarms = [
     alarm: 'FO',
     normalized_at: '08/09/2026 17:09:21',
   },
+  {
+    tag: 'PSD_PAU_P1_PDM02_RCE',
+    started_at: '08/09/2026 11:42:09',
+    station: 'PAULISTA',
+    alarm: 'RCE',
+    normalized_at: '08/09/2026 11:48:33',
+  },
+  {
+    tag: 'PSD_FAL_P1_PDM11_OBS',
+    started_at: '07/09/2026 19:05:14',
+    station: 'FARIA LIMA',
+    alarm: 'OBS',
+    normalized_at: '07/09/2026 19:05:40',
+  },
+  {
+    tag: 'PSD_BUT_P2_PDM08_FO',
+    started_at: '07/09/2026 07:18:02',
+    station: 'BUTANTÃ',
+    alarm: 'FO',
+    normalized_at: '07/09/2026 07:22:11',
+  },
 ]

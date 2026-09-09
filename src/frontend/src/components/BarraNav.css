@@ -1,8 +1,9 @@
 .barra-nav {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   width: var(--nav-width);
-  min-height: 100vh;
+  height: 100%;
   padding: 28px 16px 18px;
   background: var(--brand);
   color: var(--white);
