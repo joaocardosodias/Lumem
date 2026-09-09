@@ -3,9 +3,12 @@ import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
+import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
+import { lineStations } from '../data/stations'
+import { inDateRange, inDurationRange } from '../lib/filters'
 import { api, asList, errorMessage } from '../lib/api'
 import { pollUpload } from '../lib/runUpload'
 import './Manutencoes.css'
@@ -22,6 +25,16 @@ const emptyForm = {
   duration_hours: '',
   symptom: '',
   description: '',
+}
+
+const emptyFilters = {
+  station: '',
+  orderType: '',
+  source: '',
+  from: '',
+  to: '',
+  durationMin: '',
+  durationMax: '',
 }
 
 function countBy(items, key) {
@@ -58,6 +71,7 @@ function Manutencoes() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
+  const [filters, setFilters] = useState(emptyFilters)
 
   async function load() {
     setLoading(true)
@@ -75,8 +89,37 @@ function Manutencoes() {
     load()
   }, [])
 
-  const byType = useMemo(() => countBy(items, 'order_type'), [items])
-  const byStation = useMemo(() => countBy(items, 'station_code'), [items])
+  const visible = useMemo(
+    () =>
+      items.filter((item) => {
+        if (
+          filters.station &&
+          String(item.station_code || '').toUpperCase() !== filters.station.toUpperCase()
+        ) {
+          return false
+        }
+        if (filters.orderType && item.order_type !== filters.orderType) return false
+        if (filters.source && item.source !== filters.source) return false
+        if (!inDateRange(item.start_timestamp, filters.from, filters.to)) return false
+        if (!inDurationRange(item.duration_hours, filters.durationMin, filters.durationMax)) return false
+        return true
+      }),
+    [items, filters],
+  )
+  const filtersDirty = Object.values(filters).some(Boolean)
+  const orderTypes = useMemo(() => {
+    const values = new Set(['ZM01', 'ZM02', 'ZM03'])
+    items.forEach((item) => {
+      if (item.order_type) values.add(item.order_type)
+    })
+    return [...values]
+  }, [items])
+  const sources = useMemo(() => {
+    const values = [...new Set(items.map((item) => item.source).filter(Boolean))]
+    return values.length ? values : ['manual', 'upload']
+  }, [items])
+  const byType = useMemo(() => countBy(visible, 'order_type'), [visible])
+  const byStation = useMemo(() => countBy(visible, 'station_code'), [visible])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
   const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
@@ -154,6 +197,10 @@ function Manutencoes() {
     }
   }
 
+  function updateFilter(field) {
+    return (event) => setFilters((current) => ({ ...current, [field]: event.target.value }))
+  }
+
   function openCadastro() {
     setMode('manual')
     setImportError('')
@@ -172,12 +219,73 @@ function Manutencoes() {
       {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
+        <FiltroCampo label="Estação">
+          <select value={filters.station} onChange={updateFilter('station')}>
+            <option value="">Todas</option>
+            {lineStations.map((station) => (
+              <option key={station.code} value={station.code}>
+                {station.code} — {station.name}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Tipo">
+          <select value={filters.orderType} onChange={updateFilter('orderType')}>
+            <option value="">Todos</option>
+            {orderTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Origem">
+          <select value={filters.source} onChange={updateFilter('source')}>
+            <option value="">Todas</option>
+            {sources.map((source) => (
+              <option key={source} value={source}>
+                {source}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="De">
+          <input type="date" value={filters.from} onChange={updateFilter('from')} />
+        </FiltroCampo>
+        <FiltroCampo label="Até">
+          <input type="date" value={filters.to} onChange={updateFilter('to')} />
+        </FiltroCampo>
+        <FiltroCampo label="Duração mín. (h)">
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            value={filters.durationMin}
+            onChange={updateFilter('durationMin')}
+          />
+        </FiltroCampo>
+        <FiltroCampo label="Duração máx. (h)">
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            value={filters.durationMax}
+            onChange={updateFilter('durationMax')}
+          />
+        </FiltroCampo>
+      </Filtros>
+
       <div className="manutencoes__hero">
         <Card
           layout="banner"
           label="Ordens de manutenção"
-          value={items.length}
-          hint={topType ? `${topType[1]} do tipo ${topType[0]}` : 'Nenhuma ordem na linha'}
+          value={visible.length}
+          hint={
+            topType
+              ? `${topType[1]} do tipo ${topType[0]}${filtersDirty ? ' · filtrado' : ''}`
+              : 'Nenhuma ordem na linha'
+          }
         />
         <div className="manutencoes__charts">
           <article className="manutencoes__chart">
@@ -204,8 +312,8 @@ function Manutencoes() {
       </div>
 
       <div className="manutencoes__list">
-        {items.length ? (
-          items.map((item) => (
+        {visible.length ? (
+          visible.map((item) => (
             <CardManutencao
               key={item.id}
               orderType={item.order_type}
@@ -221,7 +329,9 @@ function Manutencoes() {
             />
           ))
         ) : (
-          <p className="page-empty">Nenhuma ordem de manutenção retornada pela API.</p>
+          <p className="page-empty">
+            {filtersDirty ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
+          </p>
         )}
       </div>
 

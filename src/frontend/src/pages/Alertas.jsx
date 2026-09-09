@@ -3,9 +3,11 @@ import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import CardAlerta from '../components/CardAlerta'
+import Filtros, { FiltroCampo } from '../components/Filtros'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
-import { stationLabel } from '../data/stations'
+import { lineStations, stationLabel } from '../data/stations'
+import { inDateRange } from '../lib/filters'
 import { api, asList, errorMessage } from '../lib/api'
 import { pollUpload } from '../lib/runUpload'
 import './Alertas.css'
@@ -23,12 +25,23 @@ function mapPrediction(item) {
     tag: item.sap_tag || '—',
     started_at: item.last_evaluated_at || '—',
     station: item.station_name || stationLabel(item.station_code) || item.station_code || '—',
+    station_code: item.station_code || '',
+    platform: item.platform || '',
     alarm: item.will_fail ? 'Vai falhar' : 'Estável',
+    will_fail: Boolean(item.will_fail),
     normalized_at: [item.platform, item.door_number != null ? String(item.door_number).padStart(2, '0') : '']
       .filter(Boolean)
       .join(' · ') || '—',
     door_id: item.door_id,
   }
+}
+
+const emptyFilters = {
+  station: '',
+  diagnosis: '',
+  platform: '',
+  from: '',
+  to: '',
 }
 
 function Alertas() {
@@ -40,6 +53,7 @@ function Alertas() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
+  const [filters, setFilters] = useState(emptyFilters)
 
   async function load() {
     setLoading(true)
@@ -57,11 +71,35 @@ function Alertas() {
     load()
   }, [])
 
-  const byType = useMemo(() => countBy(items, 'alarm'), [items])
-  const byStation = useMemo(() => countBy(items, 'station'), [items])
+  const visible = useMemo(
+    () =>
+      items.filter((item) => {
+        if (
+          filters.station &&
+          String(item.station_code || '').toUpperCase() !== filters.station.toUpperCase()
+        ) {
+          return false
+        }
+        if (filters.diagnosis === 'fail' && !item.will_fail) return false
+        if (filters.diagnosis === 'ok' && item.will_fail) return false
+        if (filters.platform && item.platform !== filters.platform) return false
+        if (!inDateRange(item.started_at, filters.from, filters.to)) return false
+        return true
+      }),
+    [items, filters],
+  )
+  const filtersDirty = Object.values(filters).some(Boolean)
+  const platforms = useMemo(() => {
+    if (filters.station) {
+      return lineStations.find((station) => station.code === filters.station)?.platforms ?? []
+    }
+    return [...new Set(items.map((item) => item.platform).filter(Boolean))]
+  }, [items, filters.station])
+  const byType = useMemo(() => countBy(visible, 'alarm'), [visible])
+  const byStation = useMemo(() => countBy(visible, 'station'), [visible])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
-  const atRisk = items.filter((item) => item.alarm === 'Vai falhar').length
+  const atRisk = visible.filter((item) => item.will_fail).length
 
   async function handleImport(event) {
     event.preventDefault()
@@ -97,6 +135,15 @@ function Alertas() {
     setOpen(true)
   }
 
+  function updateFilter(field) {
+    return (event) =>
+      setFilters((current) => {
+        const next = { ...current, [field]: event.target.value }
+        if (field === 'station') next.platform = ''
+        return next
+      })
+  }
+
   return (
     <section className="alertas">
       <div className="page-head">
@@ -107,12 +154,52 @@ function Alertas() {
       {loading ? <p className="page-status">Carregando alertas da última inferência…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
+        <FiltroCampo label="Estação">
+          <select value={filters.station} onChange={updateFilter('station')}>
+            <option value="">Todas</option>
+            {lineStations.map((station) => (
+              <option key={station.code} value={station.code}>
+                {station.code} — {station.name}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Diagnóstico">
+          <select value={filters.diagnosis} onChange={updateFilter('diagnosis')}>
+            <option value="">Todos</option>
+            <option value="fail">Vai falhar</option>
+            <option value="ok">Estável</option>
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Plataforma">
+          <select value={filters.platform} onChange={updateFilter('platform')}>
+            <option value="">Todas</option>
+            {platforms.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="De">
+          <input type="date" value={filters.from} onChange={updateFilter('from')} />
+        </FiltroCampo>
+        <FiltroCampo label="Até">
+          <input type="date" value={filters.to} onChange={updateFilter('to')} />
+        </FiltroCampo>
+      </Filtros>
+
       <div className="alertas__hero">
         <Card
           layout="banner"
           label="Alertas preditivos"
           value={atRisk}
-          hint={items.length ? `${items.length} portas na última rodada da IA` : 'Nenhum alerta na última rodada'}
+          hint={
+            visible.length
+              ? `${visible.length} portas na última rodada da IA${filtersDirty ? ' · filtrado' : ''}`
+              : 'Nenhum alerta na última rodada'
+          }
         />
         <div className="alertas__charts">
           <article className="alertas__chart">
@@ -139,8 +226,8 @@ function Alertas() {
       </div>
 
       <div className="alertas__list">
-        {items.length ? (
-          items.map((alarm) => (
+        {visible.length ? (
+          visible.map((alarm) => (
             <CardAlerta
               key={`${alarm.tag}-${alarm.door_id}-${alarm.started_at}`}
               tag={alarm.tag}
@@ -151,7 +238,9 @@ function Alertas() {
             />
           ))
         ) : (
-          <p className="page-empty">Nenhum alerta na última inferência.</p>
+          <p className="page-empty">
+            {filtersDirty ? 'Nenhum alerta com esses filtros.' : 'Nenhum alerta na última inferência.'}
+          </p>
         )}
       </div>
 
