@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api, getToken, setToken, setUnauthorizedHandler, unwrapUser } from '../lib/api'
+import { invalidateMaintenance, loadMaintenance } from '../lib/maintenanceCache'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +11,7 @@ export function AuthProvider({ children }) {
   function logout() {
     setToken(null)
     setUser(null)
+    invalidateMaintenance()
   }
 
   useEffect(() => {
@@ -28,6 +30,11 @@ export function AuthProvider({ children }) {
 
       try {
         const profile = unwrapUser(await api.me())
+        try {
+          await loadMaintenance()
+        } catch {
+          // O painel abre mesmo se as ordens falharem; a tela de Manutenções mostra o erro.
+        }
         if (!cancelled) setUser(profile)
       } catch {
         setToken(null)

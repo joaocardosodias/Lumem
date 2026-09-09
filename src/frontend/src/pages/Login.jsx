@@ -7,6 +7,7 @@ import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
 import { errorMessage } from '../lib/api'
+import { loadMaintenance } from '../lib/maintenanceCache'
 import './Login.css'
 
 function Login() {
@@ -37,6 +38,13 @@ function Login() {
         source: {
           brand: brandRef.current,
           logo: logoRef.current,
+        },
+        task: async (onProgress) => {
+          try {
+            await loadMaintenance({ force: true, onProgress })
+          } catch {
+            // A tela de Manutenções tenta de novo se o cache vier vazio.
+          }
         },
         onReady: () => acceptUser(profile),
       })

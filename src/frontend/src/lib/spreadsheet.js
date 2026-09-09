@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { resolveStation } from '../data/stations'
 
 function normalizeKey(key) {
   return String(key)
@@ -110,6 +111,5 @@ export function pick(row, keys) {
 }
 
 export function stationFromLocation(location) {
-  const match = String(location).toUpperCase().match(/PSD[-_]?([A-Z]{3})/)
-  return match ? match[1] : ''
+  return resolveStation({ installation_location: location, station_code: location })
 }

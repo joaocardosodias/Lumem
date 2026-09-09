@@ -1,4 +1,5 @@
-import { pick, stationFromLocation } from './spreadsheet'
+import { resolveStation } from '../data/stations'
+import { pick } from './spreadsheet'
 
 function asNumber(value) {
   if (value == null || value === '') return null
@@ -11,7 +12,10 @@ export function mapMaintenanceRows(rows, orderType) {
     .map((row, index) => {
       const location = pick(row, ['installation_location', 'local_de_instalacao', 'local'])
       const station =
-        pick(row, ['station_code', 'estacao', 'station']).toUpperCase() || stationFromLocation(location)
+        resolveStation({
+          station_code: pick(row, ['station_code', 'estacao', 'station']),
+          installation_location: location,
+        }) || pick(row, ['station_code', 'estacao', 'station']).toUpperCase()
 
       return {
         id: `mnt-upload-${Date.now()}-${index}`,

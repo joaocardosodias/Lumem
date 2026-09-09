@@ -1,3 +1,5 @@
+import { normalizeMaintenance } from '../data/stations'
+
 const TOKEN_KEY = 'motiva.token'
 
 let onUnauthorized = null
@@ -113,6 +115,15 @@ export function asList(payload) {
   }
 
   return []
+}
+
+export function listTotal(payload, loaded = 0) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  for (const key of ['total', 'total_count', 'totalCount']) {
+    const value = Number(payload[key])
+    if (Number.isFinite(value) && value > loaded) return value
+  }
+  return null
 }
 
 function pickNumber(source, ...keys) {
@@ -291,9 +302,10 @@ export function normalizeDoors(payload, stationCode, stationName) {
 
 export function relatedMaintenances(items, door) {
   if (!door) return []
+  const list = (Array.isArray(items) ? items : asList(items)).map(normalizeMaintenance)
   const pad = String(door.door_number).padStart(2, '0')
   const platformDigit = String(door.platform || '').replace(/\D/g, '')
-  const byLocation = items.filter((item) => {
+  const byLocation = list.filter((item) => {
     const location = String(item.installation_location || '')
     const sameStation = !item.station_code || item.station_code === door.station_code
     const matchesDoor = location.includes(`PP${pad}`)
@@ -301,7 +313,12 @@ export function relatedMaintenances(items, door) {
     return sameStation && matchesDoor && matchesPlatform
   })
   if (byLocation.length) return byLocation
-  return items.filter((item) => item.station_code === door.station_code).slice(0, 8)
+  return list.filter((item) => item.station_code === door.station_code).slice(0, 8)
+}
+
+function maintenanceKey(item) {
+  if (item?.id != null && item.id !== '') return `id:${item.id}`
+  return `row:${item.sap_order_number}|${item.start_timestamp}|${item.end_timestamp}|${item.station_code}|${item.installation_location}|${item.order_type}`
 }
 
 export const api = {
@@ -332,6 +349,83 @@ export const api = {
   },
   maintenance(limit = 50, offset = 0) {
     return request(`/api/v1/maintenance${queryString({ limit, offset })}`).then((result) => result.data)
+  },
+  async listAllMaintenance({
+    pageSize = 500,
+    concurrency = 8,
+    onBatch,
+    onProgress,
+    isCancelled,
+  } = {}) {
+    const all = []
+    const seen = new Set()
+    let pages = 0
+
+    const ingest = (payload) => {
+      const batch = asList(payload)
+      let added = 0
+      batch.forEach((item) => {
+        const id = maintenanceKey(item)
+        if (seen.has(id)) return
+        seen.add(id)
+        all.push(normalizeMaintenance(item))
+        added += 1
+      })
+      pages += 1
+      onBatch?.(all.slice())
+      onProgress?.({ loaded: all.length, pages, total: null })
+      return { batch, added }
+    }
+
+    const firstPayload = await this.maintenance(pageSize, 0)
+    if (isCancelled?.()) return all
+    const first = ingest(firstPayload)
+    const chunk = first.batch.length
+    const knownTotal = listTotal(firstPayload, chunk)
+    if (knownTotal) onProgress?.({ loaded: all.length, pages, total: knownTotal })
+    if (!chunk) return all
+    if (knownTotal != null && all.length >= knownTotal) return all
+
+    let nextOffset = chunk
+    let finished = false
+    const maxRounds = 80
+
+    for (let round = 0; round < maxRounds && !finished; round += 1) {
+      if (isCancelled?.()) break
+
+      const offsets = []
+      for (let i = 0; i < concurrency; i += 1) {
+        const offset = nextOffset + i * chunk
+        if (knownTotal != null && offset >= knownTotal) break
+        offsets.push(offset)
+      }
+      nextOffset += offsets.length * chunk
+      if (!offsets.length) break
+
+      const results = await Promise.all(
+        offsets.map(async (offset) => ({ offset, payload: await this.maintenance(pageSize, offset) })),
+      )
+      results.sort((a, b) => a.offset - b.offset)
+
+      for (const { payload } of results) {
+        if (isCancelled?.()) {
+          finished = true
+          break
+        }
+        const { batch, added } = ingest(payload)
+        if (knownTotal) onProgress?.({ loaded: all.length, pages, total: knownTotal })
+        if (!batch.length || added === 0 || batch.length < chunk) {
+          finished = true
+          break
+        }
+        if (knownTotal != null && all.length >= knownTotal) {
+          finished = true
+          break
+        }
+      }
+    }
+
+    return all
   },
   createMaintenance(payload) {
     return request('/api/v1/maintenance', { method: 'POST', body: payload }).then((result) => result.data)

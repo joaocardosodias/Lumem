@@ -5,11 +5,13 @@ import Card from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
+import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
 import { lineStations } from '../data/stations'
-import { inDateRange, inDurationRange } from '../lib/filters'
-import { api, asList, errorMessage } from '../lib/api'
+import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
+import { api, errorMessage } from '../lib/api'
+import { loadMaintenance, getCachedMaintenance } from '../lib/maintenanceCache'
 import { pollUpload } from '../lib/runUpload'
 import './Manutencoes.css'
 
@@ -31,8 +33,7 @@ const emptyFilters = {
   station: '',
   orderType: '',
   source: '',
-  from: '',
-  to: '',
+  period: DEFAULT_PERIOD,
   durationMin: '',
   durationMax: '',
 }
@@ -60,8 +61,8 @@ function durationFrom(start, end) {
 }
 
 function Manutencoes() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems] = useState(() => getCachedMaintenance() ?? [])
+  const [loading, setLoading] = useState(() => !getCachedMaintenance())
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState('manual')
@@ -72,22 +73,30 @@ function Manutencoes() {
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
   const [filters, setFilters] = useState(emptyFilters)
-
-  async function load() {
-    setLoading(true)
-    setError('')
-    try {
-      setItems(asList(await api.maintenance(50, 0)))
-    } catch (err) {
-      setError(errorMessage(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [page, setPage] = useState(1)
+  const [reloadAt, setReloadAt] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const batch = await loadMaintenance({ force: Boolean(reloadAt) })
+        if (!cancelled) setItems(batch)
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
     load()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [reloadAt])
 
   const visible = useMemo(
     () =>
@@ -100,13 +109,19 @@ function Manutencoes() {
         }
         if (filters.orderType && item.order_type !== filters.orderType) return false
         if (filters.source && item.source !== filters.source) return false
-        if (!inDateRange(item.start_timestamp, filters.from, filters.to)) return false
+        if (!inPeriod(item.start_timestamp, filters.period)) return false
         if (!inDurationRange(item.duration_hours, filters.durationMin, filters.durationMax)) return false
         return true
       }),
     [items, filters],
   )
-  const filtersDirty = Object.values(filters).some(Boolean)
+  const filtersDirty =
+    Boolean(filters.station || filters.orderType || filters.source || filters.durationMin || filters.durationMax) ||
+    filters.period !== DEFAULT_PERIOD
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeHint = periodHint(filters.period)
   const orderTypes = useMemo(() => {
     const values = new Set(['ZM01', 'ZM02', 'ZM03'])
     items.forEach((item) => {
@@ -164,7 +179,8 @@ function Manutencoes() {
       })
       setForm(emptyForm)
       setOpen(false)
-      await load()
+      setPage(1)
+      setReloadAt(Date.now())
     } catch (err) {
       setImportError(errorMessage(err))
     }
@@ -189,7 +205,8 @@ function Manutencoes() {
       setFile(null)
       setUpload(null)
       setOpen(false)
-      await load()
+      setPage(1)
+      setReloadAt(Date.now())
     } catch (err) {
       setImportError(errorMessage(err))
     } finally {
@@ -198,7 +215,10 @@ function Manutencoes() {
   }
 
   function updateFilter(field) {
-    return (event) => setFilters((current) => ({ ...current, [field]: event.target.value }))
+    return (event) => {
+      setPage(1)
+      setFilters((current) => ({ ...current, [field]: event.target.value }))
+    }
   }
 
   function openCadastro() {
@@ -219,6 +239,8 @@ function Manutencoes() {
       {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      {loading ? null : (
+      <>
       <div className="manutencoes__hero">
         <Card
           layout="banner"
@@ -226,7 +248,7 @@ function Manutencoes() {
           value={visible.length}
           hint={
             topType
-              ? `${topType[1]} do tipo ${topType[0]}${filtersDirty ? ' · filtrado' : ''}`
+              ? `${topType[1]} do tipo ${topType[0]}${rangeHint ? ` · ${rangeHint}` : ''}`
               : 'Nenhuma ordem na linha'
           }
         />
@@ -254,7 +276,18 @@ function Manutencoes() {
         </div>
       </div>
 
-      <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
+      <Filtros
+        period={filters.period}
+        onPeriod={(period) => {
+          setPage(1)
+          setFilters((current) => ({ ...current, period }))
+        }}
+        dirty={filtersDirty}
+        onClear={() => {
+          setPage(1)
+          setFilters(emptyFilters)
+        }}
+      >
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
             <option value="">Todas</option>
@@ -285,12 +318,6 @@ function Manutencoes() {
             ))}
           </select>
         </FiltroCampo>
-        <FiltroCampo label="De">
-          <input type="date" value={filters.from} onChange={updateFilter('from')} />
-        </FiltroCampo>
-        <FiltroCampo label="Até">
-          <input type="date" value={filters.to} onChange={updateFilter('to')} />
-        </FiltroCampo>
         <FiltroCampo label="Mín. (h)">
           <input
             type="number"
@@ -312,10 +339,10 @@ function Manutencoes() {
       </Filtros>
 
       <div className="manutencoes__list">
-        {visible.length ? (
-          visible.map((item) => (
+        {paged.length ? (
+          paged.map((item) => (
             <CardManutencao
-              key={item.id}
+              key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
               orderType={item.order_type}
               sapOrder={item.sap_order_number}
               station={item.station_code}
@@ -330,10 +357,13 @@ function Manutencoes() {
           ))
         ) : (
           <p className="page-empty">
-            {filtersDirty ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
+            {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
           </p>
         )}
+        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </div>
+      </>
+      )}
 
       {open ? (
         <div className="manutencoes-modal" onClick={() => !importing && setOpen(false)}>

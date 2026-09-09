@@ -25,7 +25,7 @@ const STAGES = {
     [0, 'Autenticando o acesso'],
     [24, 'Disparando a inferência'],
     [52, 'Avaliando as portas da linha'],
-    [78, 'Carregando o painel'],
+    [78, 'Carregando as ordens de manutenção'],
   ],
 }
 
@@ -181,18 +181,42 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
       const runWork = async () => {
         try {
           if (session.task) {
-            const work = Promise.resolve().then(() => session.task())
-            gsap.to(progressProxy, {
-              value: 78,
-              duration: 2.2 * time,
-              ease: 'power1.out',
+            applyProgress(8)
+            const crawl = gsap.to(progressProxy, {
+              value: 72,
+              duration: 14 * time,
+              ease: 'none',
               onUpdate: () => applyProgress(progressProxy.value),
             })
-            await work
+            try {
+              await Promise.resolve().then(() =>
+                session.task((info = {}) => {
+                  if (cancelled) return
+                  const loaded = Number(info.loaded) || 0
+                  const total = Number(info.total)
+                  const pages = Number(info.pages) || 0
+                  const ratio =
+                    Number.isFinite(total) && total > 0
+                      ? loaded / total
+                      : 1 - Math.exp(-pages / 8)
+                  const pct = Math.min(96, 10 + 86 * Math.min(1, ratio))
+                  gsap.to(progressProxy, {
+                    value: pct,
+                    duration: 0.18,
+                    overwrite: true,
+                    ease: 'power1.out',
+                    onUpdate: () => applyProgress(progressProxy.value),
+                  })
+                }),
+              )
+            } finally {
+              crawl.kill()
+            }
             await new Promise((resolve) => {
               gsap.to(progressProxy, {
                 value: 100,
-                duration: 0.45 * time,
+                duration: 0.35 * time,
+                overwrite: true,
                 ease: 'power2.out',
                 onUpdate: () => applyProgress(progressProxy.value),
                 onComplete: resolve,

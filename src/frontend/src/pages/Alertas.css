@@ -59,6 +59,10 @@
   box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
 }
 
+.alertas__list .page-empty {
+  margin: 12px 0 8px;
+}
+
 .card-alerta {
   display: grid;
   grid-template-columns: 1.5fr 1.1fr 0.9fr 0.45fr 1.3fr;

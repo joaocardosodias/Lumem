@@ -1,14 +1,58 @@
 .filtros {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: end;
-  gap: 10px 12px;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 12px;
   margin: 0 0 16px;
   padding: 14px 22px 12px;
   border-radius: 24px;
   background: var(--brand-soft);
   box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+}
+
+.filtros__periodos {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.filtros__periodos > span {
+  color: #6b4fe0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filtros__periodos div {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filtros__periodos button {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: #6b4fe0;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filtros__periodos button.is-active {
+  color: var(--brand);
+  font-weight: 700;
+  border-bottom-color: var(--brand);
+}
+
+.filtros__campos {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: end;
+  gap: 10px 12px;
+  overflow-x: auto;
 }
 
 .filtros__campo {

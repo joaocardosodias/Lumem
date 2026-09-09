@@ -4,10 +4,11 @@ import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import CardAlerta from '../components/CardAlerta'
 import Filtros, { FiltroCampo } from '../components/Filtros'
+import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
 import { lineStations, stationLabel } from '../data/stations'
-import { inDateRange } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
 import { api, asList, errorMessage } from '../lib/api'
 import { pollUpload } from '../lib/runUpload'
 import './Alertas.css'
@@ -40,8 +41,7 @@ const emptyFilters = {
   station: '',
   diagnosis: '',
   platform: '',
-  from: '',
-  to: '',
+  period: DEFAULT_PERIOD,
 }
 
 function Alertas() {
@@ -54,6 +54,7 @@ function Alertas() {
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
   const [filters, setFilters] = useState(emptyFilters)
+  const [page, setPage] = useState(1)
 
   async function load() {
     setLoading(true)
@@ -83,12 +84,17 @@ function Alertas() {
         if (filters.diagnosis === 'fail' && !item.will_fail) return false
         if (filters.diagnosis === 'ok' && item.will_fail) return false
         if (filters.platform && item.platform !== filters.platform) return false
-        if (!inDateRange(item.started_at, filters.from, filters.to)) return false
+        if (!inPeriod(item.started_at, filters.period)) return false
         return true
       }),
     [items, filters],
   )
-  const filtersDirty = Object.values(filters).some(Boolean)
+  const filtersDirty =
+    Boolean(filters.station || filters.diagnosis || filters.platform) || filters.period !== DEFAULT_PERIOD
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeHint = periodHint(filters.period)
   const platforms = useMemo(() => {
     if (filters.station) {
       return lineStations.find((station) => station.code === filters.station)?.platforms ?? []
@@ -140,6 +146,7 @@ function Alertas() {
       setFilters((current) => {
         const next = { ...current, [field]: event.target.value }
         if (field === 'station') next.platform = ''
+        setPage(1)
         return next
       })
   }
@@ -161,7 +168,7 @@ function Alertas() {
           value={atRisk}
           hint={
             visible.length
-              ? `${visible.length} portas na última rodada da IA${filtersDirty ? ' · filtrado' : ''}`
+              ? `${visible.length} portas na última rodada da IA${rangeHint ? ` · ${rangeHint}` : ''}`
               : 'Nenhum alerta na última rodada'
           }
         />
@@ -189,7 +196,18 @@ function Alertas() {
         </div>
       </div>
 
-      <Filtros dirty={filtersDirty} onClear={() => setFilters(emptyFilters)}>
+      <Filtros
+        period={filters.period}
+        onPeriod={(period) => {
+          setPage(1)
+          setFilters((current) => ({ ...current, period }))
+        }}
+        dirty={filtersDirty}
+        onClear={() => {
+          setPage(1)
+          setFilters(emptyFilters)
+        }}
+      >
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
             <option value="">Todas</option>
@@ -217,17 +235,11 @@ function Alertas() {
             ))}
           </select>
         </FiltroCampo>
-        <FiltroCampo label="De">
-          <input type="date" value={filters.from} onChange={updateFilter('from')} />
-        </FiltroCampo>
-        <FiltroCampo label="Até">
-          <input type="date" value={filters.to} onChange={updateFilter('to')} />
-        </FiltroCampo>
       </Filtros>
 
       <div className="alertas__list">
-        {visible.length ? (
-          visible.map((alarm) => (
+        {paged.length ? (
+          paged.map((alarm) => (
             <CardAlerta
               key={`${alarm.tag}-${alarm.door_id}-${alarm.started_at}`}
               tag={alarm.tag}
@@ -239,9 +251,10 @@ function Alertas() {
           ))
         ) : (
           <p className="page-empty">
-            {filtersDirty ? 'Nenhum alerta com esses filtros.' : 'Nenhum alerta na última inferência.'}
+            {items.length ? 'Nenhum alerta com esses filtros.' : 'Nenhum alerta na última inferência.'}
           </p>
         )}
+        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </div>
 
       {open ? (

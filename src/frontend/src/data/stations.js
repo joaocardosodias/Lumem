@@ -24,6 +24,50 @@ export const lineStations = [
   { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2', 'P3', 'P4'] },
 ]
 
+const knownStations = new Set(lineStations.map((item) => item.code))
+
+const stationAliases = {
+  PTA: 'PAU',
+  FRE: 'OSC',
+}
+
+const genericCenters = new Set(['PVS', 'ENC', 'GER'])
+
+function mapStation(code) {
+  const mapped = stationAliases[code] || code
+  return genericCenters.has(mapped) ? '' : mapped
+}
+
+function extractStationCodes(value) {
+  const text = String(value || '').toUpperCase().trim()
+  if (!text) return []
+
+  const codes = []
+  const push = (code) => {
+    const mapped = mapStation(code)
+    if (mapped) codes.push(mapped)
+  }
+
+  if (/^[A-Z]{3}$/.test(text)) push(text)
+  for (const match of text.matchAll(/PSD[-_]?([A-Z]{3})/g)) push(match[1])
+  for (const match of text.matchAll(/SP04I([A-Z]{3})/g)) push(match[1])
+  return codes
+}
+
+export function resolveStation(item) {
+  if (!item || typeof item !== 'object') return ''
+  const fromLocation = extractStationCodes(item.installation_location)
+  const fromCode = extractStationCodes(item.station_code)
+  const candidates = [...fromLocation, ...fromCode]
+  return candidates.find((code) => knownStations.has(code)) || candidates[0] || ''
+}
+
 export function stationLabel(code) {
-  return lineStations.find((item) => item.code === code)?.name ?? code
+  const resolved = mapStation(String(code || '').toUpperCase()) || code
+  return lineStations.find((item) => item.code === resolved)?.name ?? resolved
+}
+
+export function normalizeMaintenance(item) {
+  if (!item || typeof item !== 'object') return item
+  return { ...item, station_code: resolveStation(item) || item.station_code || '' }
 }
