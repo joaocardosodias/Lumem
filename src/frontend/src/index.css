@@ -1,3 +1,27 @@
+@font-face {
+  font-family: 'Circular Std';
+  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Circular Std';
+  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Circular Std';
+  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --brand: #3f00ff;
   --brand-soft: rgba(63, 0, 255, 0.05);
@@ -5,7 +29,7 @@
   --white: #ffffff;
   --text: #3f00ff;
   --nav-width: 248px;
-  --font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font: 'Circular Std', sans-serif;
   --grad-brand: linear-gradient(145deg, #6a28ff 0%, #3f00ff 100%);
 }
 
@@ -19,6 +43,7 @@ html,
 body,
 #root {
   height: 100%;
+  font-family: var(--font);
 }
 
 body {
@@ -28,8 +53,15 @@ body {
   background: var(--paper);
 }
 
-button {
+button,
+input,
+textarea,
+select {
   font: inherit;
+  font-family: var(--font);
+}
+
+button {
   cursor: pointer;
 }
 
