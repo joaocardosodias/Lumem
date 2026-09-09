@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import Card from '../components/Card'
 import { useAuth } from '../context/Auth'
-import { api, asList, errorMessage, fetchInspectionCounts, mergeDashboard } from '../lib/api'
+import { api, asList, countInspections, errorMessage, mergeDashboard } from '../lib/api'
 import { stationLabel } from '../data/stations'
+import { loadInspections } from '../lib/inspectionCache'
 import './Dashboard.css'
 
 const emptySummary = {
@@ -31,7 +32,7 @@ function Dashboard({ onNavigate }) {
         const [dashboardResult, latestResult, inspectionsResult] = await Promise.allSettled([
           api.dashboard(),
           api.predictionsLatest(),
-          fetchInspectionCounts(),
+          loadInspections(),
         ])
         if (cancelled) return
 
@@ -46,7 +47,7 @@ function Dashboard({ onNavigate }) {
         }
 
         if (inspectionsResult.status === 'fulfilled') {
-          const counts = inspectionsResult.value
+          const counts = countInspections(inspectionsResult.value)
           setInspectionKpis({ pending: counts.pending, completed: counts.completed })
         } else if (dashboardResult.status === 'fulfilled') {
           setError(errorMessage(inspectionsResult.reason))

@@ -321,6 +321,112 @@ function maintenanceKey(item) {
   return `row:${item.sap_order_number}|${item.start_timestamp}|${item.end_timestamp}|${item.station_code}|${item.installation_location}|${item.order_type}`
 }
 
+function inspectionKey(item) {
+  if (item?.id != null && item.id !== '') return `id:${item.id}`
+  return `row:${item.station_code}|${item.platform}|${item.door_number}|${item.scheduled_for}|${item.status}|${item.notes}`
+}
+
+function mergeInspectionLists(...lists) {
+  const seen = new Set()
+  const all = []
+  for (const list of lists) {
+    for (const item of list || []) {
+      const row = normalizeInspectionItem(item)
+      const id = inspectionKey(row)
+      if (seen.has(id)) continue
+      seen.add(id)
+      all.push(row)
+    }
+  }
+  return all
+}
+
+async function paginateCollection({
+  fetchPage,
+  normalizeItem,
+  itemKey,
+  toList = asList,
+  pageSize = 500,
+  concurrency = 8,
+  onProgress,
+  isCancelled,
+}) {
+  const all = []
+  const seen = new Set()
+  let pages = 0
+  let stalled = false
+
+  const ingest = (payload) => {
+    const batch = toList(payload).map(normalizeItem)
+    let added = 0
+    batch.forEach((item) => {
+      const id = itemKey(item)
+      if (seen.has(id)) return
+      seen.add(id)
+      all.push(item)
+      added += 1
+    })
+    pages += 1
+    onProgress?.({ loaded: all.length, pages, total: null })
+    return { batch, added }
+  }
+
+  const firstPayload = await fetchPage(pageSize, 0)
+  if (isCancelled?.()) return { items: all, stalled }
+  const first = ingest(firstPayload)
+  const chunk = first.batch.length
+  const knownTotal = listTotal(firstPayload, chunk)
+  if (knownTotal) onProgress?.({ loaded: all.length, pages, total: knownTotal })
+  if (!chunk) return { items: all, stalled: true }
+  if (knownTotal != null && all.length >= knownTotal) return { items: all, stalled: false }
+
+  let nextOffset = chunk
+  let finished = false
+  const maxRounds = 80
+
+  for (let round = 0; round < maxRounds && !finished; round += 1) {
+    if (isCancelled?.()) break
+
+    const offsets = []
+    for (let i = 0; i < concurrency; i += 1) {
+      const offset = nextOffset + i * chunk
+      if (knownTotal != null && offset >= knownTotal) break
+      offsets.push(offset)
+    }
+    nextOffset += offsets.length * chunk
+    if (!offsets.length) break
+
+    const results = await Promise.all(
+      offsets.map(async (offset) => ({ offset, payload: await fetchPage(pageSize, offset) })),
+    )
+    results.sort((a, b) => a.offset - b.offset)
+
+    for (const { payload } of results) {
+      if (isCancelled?.()) {
+        finished = true
+        break
+      }
+      const { batch, added } = ingest(payload)
+      if (knownTotal) onProgress?.({ loaded: all.length, pages, total: knownTotal })
+      if (batch.length && added === 0) {
+        stalled = true
+        finished = true
+        break
+      }
+      if (!batch.length || batch.length < chunk) {
+        finished = true
+        break
+      }
+      if (knownTotal != null && all.length >= knownTotal) {
+        finished = true
+        break
+      }
+    }
+  }
+
+  return { items: all, stalled }
+}
+
 export const api = {
   login(email, password) {
     return request('/api/v1/auth/login', {
@@ -430,8 +536,58 @@ export const api = {
   createMaintenance(payload) {
     return request('/api/v1/maintenance', { method: 'POST', body: payload }).then((result) => result.data)
   },
-  inspections(status) {
-    return request(`/api/v1/inspections${queryString({ status })}`).then((result) => result.data)
+  inspections({ status, limit, offset } = {}) {
+    if (typeof arguments[0] === 'string') {
+      status = arguments[0]
+      limit = undefined
+      offset = undefined
+    }
+    return request(`/api/v1/inspections${queryString({ status, limit, offset })}`).then(
+      (result) => result.data,
+    )
+  },
+  async fetchInspectionPage(status, limit, offset) {
+    try {
+      return await this.inspections({ status, limit, offset })
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 400 || err.status === 422) && (limit != null || offset != null)) {
+        return this.inspections({ status })
+      }
+      throw err
+    }
+  },
+  async listAllInspections({
+    pageSize = 500,
+    concurrency = 8,
+    onProgress,
+    isCancelled,
+  } = {}) {
+    const paginate = (status) =>
+      paginateCollection({
+        fetchPage: (limit, offset) => this.fetchInspectionPage(status, limit, offset),
+        normalizeItem: normalizeInspectionItem,
+        itemKey: inspectionKey,
+        toList: listInspections,
+        pageSize,
+        concurrency,
+        onProgress: status ? undefined : onProgress,
+        isCancelled,
+      })
+
+    const unfiltered = await paginate()
+    if (!unfiltered.stalled && unfiltered.items.length > 50) return unfiltered.items
+
+    const buckets = await Promise.all([
+      paginate('pending'),
+      paginate('in_progress'),
+      paginate('completed'),
+    ])
+    return mergeInspectionLists(
+      unfiltered.items,
+      buckets[0].items,
+      buckets[1].items,
+      buckets[2].items,
+    )
   },
   createInspection(payload) {
     return request('/api/v1/inspections', { method: 'POST', body: payload }).then((result) => result.data)
@@ -465,24 +621,6 @@ export const api = {
 }
 
 export async function fetchInspectionCounts() {
-  const all = await api.inspections()
-  const counted = countInspections(all)
-  if (counted.items.length) return counted
-
-  const [pendingPayload, completedPayload] = await Promise.all([
-    api.inspections('pending').catch(() => null),
-    api.inspections('completed').catch(() => null),
-  ])
-  const pendingItems = listInspections(pendingPayload).map((item) => ({ ...item, status: 'pending' }))
-  const completedItems = listInspections(completedPayload).map((item) => ({
-    ...item,
-    status: 'completed',
-  }))
-
-  return {
-    items: [...pendingItems, ...completedItems],
-    pending: pendingItems.length || pickNumber(pendingPayload, 'total', 'count', 'total_count'),
-    in_progress: 0,
-    completed: completedItems.length || pickNumber(completedPayload, 'total', 'count', 'total_count'),
-  }
+  const items = await api.listAllInspections()
+  return countInspections(items)
 }

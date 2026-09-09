@@ -137,6 +137,9 @@ function Manutencoes() {
   const byStation = useMemo(() => countBy(visible, 'station_code'), [visible])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
+  const stationRows = Object.entries(byStation).sort((a, b) => b[1] - a[1])
+  const topStations = stationRows.slice(0, 6)
+  const otherStations = stationRows.slice(6)
   const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
 
   function updateField(field) {
@@ -265,13 +268,28 @@ function Manutencoes() {
           </article>
           <article className="manutencoes__chart">
             <h2>Ordens por estação</h2>
-            {Object.entries(byStation).map(([label, value]) => (
-              <div key={label} className="manutencoes__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                <em>{value}</em>
+            <div className="manutencoes__bars">
+              <div>
+                {topStations.map(([label, value]) => (
+                  <div key={label} className="manutencoes__bar">
+                    <strong>{label}</strong>
+                    <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                    <em>{value}</em>
+                  </div>
+                ))}
               </div>
-            ))}
+              {otherStations.length ? (
+                <div>
+                  {otherStations.map(([label, value]) => (
+                    <div key={label} className="manutencoes__bar">
+                      <strong>{label}</strong>
+                      <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                      <em>{value}</em>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </article>
         </div>
       </div>

@@ -133,3 +133,93 @@ h1 {
 .inspecoes__list .page-empty {
   padding: 18px 0;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .manutencoes__chart,
+  .alertas__chart,
+  .dashboard__panel,
+  .dashboard__tiles button,
+  .dashboard__tiles article,
+  .portas__cards article,
+  .portas__panel:not(:has(form)) {
+    transition: transform 0.28s ease, box-shadow 0.28s ease;
+  }
+
+  .manutencoes__chart:hover,
+  .alertas__chart:hover,
+  .dashboard__panel:hover,
+  .dashboard__tiles button:hover,
+  .dashboard__tiles article:hover,
+  .portas__cards article:hover,
+  .portas__panel:not(:has(form)):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 34px rgba(47, 0, 180, 0.14);
+  }
+
+  .dashboard__tiles button {
+    cursor: pointer;
+  }
+
+  .card-manutencao,
+  .card-alerta,
+  .card-inspecao,
+  .dashboard__prediction,
+  .dashboard__station,
+  .alertas__bar,
+  .manutencoes__bar,
+  .portas__related,
+  .portas__row:not(.portas__row--head) {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    border-radius: 12px;
+  }
+
+  .card-manutencao:hover,
+  .card-alerta:hover,
+  .card-inspecao:hover,
+  .dashboard__prediction:hover,
+  .dashboard__station:hover,
+  .portas__related:hover,
+  .portas__row:not(.portas__row--head):hover {
+    background: color-mix(in srgb, var(--brand) 6%, transparent);
+  }
+
+  .alertas__bar:hover,
+  .manutencoes__bar:hover {
+    transform: translateX(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card,
+  .kpi-card__mark,
+  .manutencoes__chart,
+  .alertas__chart,
+  .dashboard__panel,
+  .dashboard__tiles button,
+  .dashboard__tiles article,
+  .portas__cards article,
+  .portas__panel,
+  .inspecoes__list,
+  .card-manutencao,
+  .card-alerta,
+  .card-inspecao,
+  .dashboard__prediction,
+  .dashboard__station,
+  .alertas__bar,
+  .manutencoes__bar {
+    transition: none;
+  }
+
+  .kpi-card:hover,
+  .manutencoes__chart:hover,
+  .alertas__chart:hover,
+  .dashboard__panel:hover,
+  .dashboard__tiles button:hover,
+  .dashboard__tiles article:hover,
+  .portas__cards article:hover,
+  .portas__panel:hover,
+  .alertas__bar:hover,
+  .manutencoes__bar:hover {
+    transform: none;
+  }
+}

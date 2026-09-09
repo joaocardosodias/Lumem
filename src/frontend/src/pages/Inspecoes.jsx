@@ -3,8 +3,11 @@ import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import Paginacao from '../components/Paginacao'
 import { lineStations, stationLabel } from '../data/stations'
-import { api, errorMessage, fetchInspectionCounts } from '../lib/api'
+import { api, errorMessage } from '../lib/api'
+import { PAGE_SIZE } from '../lib/filters'
+import { getCachedInspections, loadInspections, patchCachedInspection } from '../lib/inspectionCache'
 import './Inspecoes.css'
 
 const emptyForm = {
@@ -37,35 +40,49 @@ function toTimestamp(date, time) {
 }
 
 function Inspecoes() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems] = useState(() => getCachedInspections() ?? [])
+  const [loading, setLoading] = useState(() => !getCachedInspections())
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
+  const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
-
-  async function load() {
-    setLoading(true)
-    setError('')
-    try {
-      const counted = await fetchInspectionCounts()
-      setItems(counted.items)
-    } catch (err) {
-      setError(errorMessage(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [reloadAt, setReloadAt] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const batch = await loadInspections({ force: Boolean(reloadAt) })
+        if (!cancelled) setItems(batch)
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
     load()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [reloadAt])
+
+  useEffect(() => {
+    setPage(1)
+  }, [filter])
 
   const visible = useMemo(
     () => (filter ? items.filter((item) => item.status === filter) : items),
     [items, filter],
   )
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const pending = items.filter((item) => item.status === 'pending').length
   const inProgress = items.filter((item) => item.status === 'in_progress').length
   const completed = items.filter((item) => item.status === 'completed').length
@@ -102,7 +119,7 @@ function Inspecoes() {
       })
       setForm(emptyForm)
       setOpen(false)
-      await load()
+      setReloadAt(Date.now())
     } catch (err) {
       setFormError(errorMessage(err))
     }
@@ -111,6 +128,7 @@ function Inspecoes() {
   async function handleStatus(id, status) {
     try {
       await api.updateInspectionStatus(id, { status })
+      patchCachedInspection(id, { status })
       setItems((current) => current.map((item) => (item.id === id ? { ...item, status } : item)))
     } catch (err) {
       setError(errorMessage(err))
@@ -155,7 +173,7 @@ function Inspecoes() {
 
       <div className="inspecoes__list">
         {visible.length ? (
-          visible.map((item) => (
+          paged.map((item) => (
             <article key={item.id} className="card-inspecao">
               <div>
                 <span>Estação</span>
@@ -198,6 +216,7 @@ function Inspecoes() {
         ) : (
           <p className="page-empty">Nenhuma inspeção retornada pela API.</p>
         )}
+        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </div>
 
       {open ? (

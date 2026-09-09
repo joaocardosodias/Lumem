@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api, getToken, setToken, setUnauthorizedHandler, unwrapUser } from '../lib/api'
 import { invalidateMaintenance, loadMaintenance } from '../lib/maintenanceCache'
+import { invalidateInspections, loadInspections } from '../lib/inspectionCache'
 
 const AuthContext = createContext(null)
 
@@ -12,6 +13,7 @@ export function AuthProvider({ children }) {
     setToken(null)
     setUser(null)
     invalidateMaintenance()
+    invalidateInspections()
   }
 
   useEffect(() => {
@@ -31,9 +33,9 @@ export function AuthProvider({ children }) {
       try {
         const profile = unwrapUser(await api.me())
         try {
-          await loadMaintenance()
+          await Promise.all([loadMaintenance(), loadInspections()])
         } catch {
-          // O painel abre mesmo se as ordens falharem; a tela de Manutenções mostra o erro.
+          // O painel abre mesmo se as ordens falharem; as telas mostram o erro.
         }
         if (!cancelled) setUser(profile)
       } catch {
