@@ -109,3 +109,27 @@ h1 {
   font-size: clamp(32px, 4vw, 44px);
   font-weight: 700;
 }
+
+.app-boot {
+  height: 100%;
+  background: var(--paper);
+}
+
+.page-status,
+.page-empty {
+  margin: 0 0 18px;
+  color: #6b4fe0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.page-status.is-error,
+.page-empty.is-error {
+  color: #d12b3a;
+}
+
+.alertas__list .page-empty,
+.manutencoes__list .page-empty,
+.inspecoes__list .page-empty {
+  padding: 18px 0;
+}

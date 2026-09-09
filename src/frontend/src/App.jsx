@@ -1,27 +1,21 @@
 import { useState } from 'react'
 import AppLayout from './components/AppLayout'
 import { PredictionLoadProvider } from './components/PredictionLoad'
+import { AuthProvider, useAuth } from './context/Auth'
 import Alertas from './pages/Alertas'
 import Dashboard from './pages/Dashboard'
 import Inspecoes from './pages/Inspecoes'
 import Login from './pages/Login'
 import Manutencoes from './pages/Manutencoes'
-import Placeholder from './pages/Placeholder'
 import Portas from './pages/Portas'
-import Usuarios from './pages/Usuarios'
 
-function App() {
-  const [loggedIn, setLoggedIn] = useState(false)
+function AppShell() {
+  const { user, ready, logout } = useAuth()
   const [page, setPage] = useState('dashboard')
 
-  function handleLogin() {
-    setPage('dashboard')
-    setLoggedIn(true)
-  }
-
   function handleLogout() {
-    setLoggedIn(false)
     setPage('dashboard')
+    logout()
   }
 
   function renderPage() {
@@ -29,21 +23,29 @@ function App() {
     if (page === 'alertas') return <Alertas />
     if (page === 'manutencoes') return <Manutencoes />
     if (page === 'portas') return <Portas onNavigate={setPage} />
-    if (page === 'inspecoes') return <Inspecoes />
-    if (page === 'usuarios') return <Usuarios />
-    return <Placeholder title="Configurações" />
+    return <Inspecoes />
   }
+
+  if (!ready) return <div className="app-boot" />
 
   return (
     <PredictionLoadProvider>
-      {!loggedIn ? (
-        <Login onLogin={handleLogin} />
+      {!user ? (
+        <Login />
       ) : (
         <AppLayout current={page} onNavigate={setPage} onLogout={handleLogout}>
           {renderPage()}
         </AppLayout>
       )}
     </PredictionLoadProvider>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   )
 }
 

@@ -5,40 +5,43 @@ import Button from '../components/Button'
 import Grainient from '../components/Grainient'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
-import { mockAuth } from '../data/mock'
+import { useAuth } from '../context/Auth'
+import { errorMessage } from '../lib/api'
 import './Login.css'
 
-function Login({ onLogin }) {
+function Login() {
+  const { authenticate, acceptUser } = useAuth()
   const { run, busy } = usePredictionLoad()
   const brandRef = useRef(null)
   const logoRef = useRef(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (busy || submitting) return
 
-    const validEmail = email.trim().toLowerCase() === mockAuth.email.toLowerCase()
-    const validPassword = password === mockAuth.password
-
-    if (!validEmail || !validPassword) {
-      setError('E-mail ou senha inválidos.')
-      return
-    }
-
-    if (busy) return
-
+    setSubmitting(true)
     setError('')
-    await run({
-      variant: 'login',
-      mode: 'login',
-      source: {
-        brand: brandRef.current,
-        logo: logoRef.current,
-      },
-      onReady: onLogin,
-    })
+
+    try {
+      const profile = await authenticate(email.trim(), password)
+      await run({
+        variant: 'login',
+        mode: 'login',
+        source: {
+          brand: brandRef.current,
+          logo: logoRef.current,
+        },
+        onReady: () => acceptUser(profile),
+      })
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -92,6 +95,7 @@ function Login({ onLogin }) {
             label="Endereço de e-mail"
             type="email"
             value={email}
+            required
             autoComplete="username"
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -100,13 +104,14 @@ function Login({ onLogin }) {
             label="Senha"
             type="password"
             value={password}
+            required
             autoComplete="current-password"
             onChange={(event) => setPassword(event.target.value)}
           />
 
           {error ? <p className="login__error">{error}</p> : null}
 
-          <Button type="submit">Logar</Button>
+          <Button type="submit">{submitting || busy ? 'Entrando…' : 'Logar'}</Button>
         </form>
       </div>
     </section>

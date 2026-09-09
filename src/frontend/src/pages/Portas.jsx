@@ -3,19 +3,20 @@ import Card from '../components/Card'
 import CadastrarButton from '../components/CadastrarButton'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
-import {
-  addInspection,
-  dashboardSummary,
-  getDoorTimeline,
-  getStationDoors,
-  lineStations,
-  maintenancesForDoor,
-  stationLabel,
-} from '../data/mock'
+import { lineStations, stationLabel } from '../data/stations'
+import { api, asList, errorMessage, normalizeDoors, relatedMaintenances } from '../lib/api'
 import './Portas.css'
 
 function padDoor(value) {
   return String(value).padStart(2, '0')
+}
+
+const emptySummary = {
+  total_doors: 0,
+  doors_at_risk: 0,
+  pending_inspections: 0,
+  completed_inspections: 0,
+  critical_stations: [],
 }
 
 function Portas({ onNavigate }) {
@@ -23,26 +24,31 @@ function Portas({ onNavigate }) {
   const [tooltipOpen, setTooltipOpen] = useState(false)
   const [openedCode, setOpenedCode] = useState(null)
   const [doors, setDoors] = useState([])
-  const [lastTraining, setLastTraining] = useState('08/09/2026')
+  const [summary, setSummary] = useState(emptySummary)
+  const [lastTraining, setLastTraining] = useState('—')
   const [lastPrediction, setLastPrediction] = useState(null)
   const [activePlatform, setActivePlatform] = useState('P1')
   const [openedDoor, setOpenedDoor] = useState(null)
+  const [doorMaintenances, setDoorMaintenances] = useState([])
   const [inspNotes, setInspNotes] = useState('')
   const [inspWhen, setInspWhen] = useState({ date: '', time: '' })
+  const [inspError, setInspError] = useState('')
+  const [error, setError] = useState('')
+  const [loadingDoors, setLoadingDoors] = useState(false)
   const { run, busy } = usePredictionLoad()
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
 
-  const timeline = getDoorTimeline(openedDoor)
-  const doorMaintenances = maintenancesForDoor(openedDoor)
+  const timeline = openedDoor
   const openedStation = lineStations.find((item) => item.code === openedCode)
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
-  const topStation = dashboardSummary.critical_stations[0]
+  const topStation = summary.critical_stations[0]
   const doorsAtRisk = doors.filter((item) => item.will_fail).length
-  const platforms = useMemo(
-    () => [...new Set(doors.map((item) => item.platform))],
-    [doors],
-  )
+  const platforms = useMemo(() => {
+    const fromDoors = [...new Set(doors.map((item) => item.platform))]
+    if (fromDoors.length) return fromDoors
+    return openedStation?.platforms ?? ['P1', 'P2']
+  }, [doors, openedStation])
   const visibleDoors = useMemo(
     () =>
       doors
@@ -51,7 +57,6 @@ function Portas({ onNavigate }) {
     [doors, activePlatform],
   )
   const selectedIndex = lineStations.findIndex((item) => item.code === selectedCode)
-
   const maxRisk = useMemo(
     () => Math.max(...visibleDoors.map((item) => item.risk), 0.01),
     [visibleDoors],
@@ -60,6 +65,29 @@ function Portas({ onNavigate }) {
   useEffect(() => {
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSummary() {
+      try {
+        const data = await api.dashboard()
+        if (cancelled) return
+        setSummary({
+          ...emptySummary,
+          ...(data || {}),
+          critical_stations: Array.isArray(data?.critical_stations) ? data.critical_stations : [],
+        })
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err))
+      }
+    }
+
+    loadSummary()
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -114,59 +142,112 @@ function Portas({ onNavigate }) {
     openTooltip(code)
   }
 
+  async function loadStationDoors(code) {
+    const station = lineStations.find((item) => item.code === code)
+    setLoadingDoors(true)
+    setError('')
+    try {
+      const next = normalizeDoors(await api.stationDoors(code), code, station?.name)
+      setDoors(next)
+      setActivePlatform(next[0]?.platform ?? station?.platforms?.[0] ?? 'P1')
+      setLastPrediction(next[0]?.last_evaluated_at || null)
+    } catch (err) {
+      setDoors([])
+      setError(errorMessage(err))
+    } finally {
+      setLoadingDoors(false)
+    }
+  }
+
   function handleOpenStation(code) {
-    const next = getStationDoors(code)
-    setDoors(next)
-    setActivePlatform(next[0]?.platform ?? 'P1')
     setOpenedCode(code)
     setOpenedDoor(null)
     setSelectedCode(null)
     setTooltipOpen(false)
-    setLastPrediction(next[0]?.last_evaluated_at ?? '2026-09-08 18:40:00')
+    loadStationDoors(code)
   }
 
   async function handlePredict() {
-    if (busy) return
-    await run({ variant: 'overlay', mode: 'predict' })
-    const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ')
-    setDoors((current) =>
-      current.map((item) => ({
-        ...item,
-        last_evaluated_at: stamp,
-      })),
-    )
-    setLastPrediction(stamp)
+    if (busy || !openedCode) return
+    setError('')
+    try {
+      await run({
+        variant: 'overlay',
+        mode: 'predict',
+        task: () => api.triggerPredictions('7'),
+      })
+      await loadStationDoors(openedCode)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
   }
 
   async function handleRetrain() {
     if (busy) return
-    await run({ variant: 'overlay', mode: 'retrain' })
-    const now = new Date()
-    const stamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
-    setLastTraining(stamp)
+    setError('')
+    try {
+      await run({
+        variant: 'overlay',
+        mode: 'retrain',
+        task: () => api.triggerPredictions('7'),
+      })
+      const now = new Date()
+      setLastTraining(
+        `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
+      )
+      if (openedCode) await loadStationDoors(openedCode)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
   }
 
-  function handleOpenDoor(door) {
+  async function handleOpenDoor(door) {
     setOpenedDoor(door)
+    setDoorMaintenances([])
     setInspNotes('')
     setInspWhen({ date: '', time: '' })
+    setInspError('')
+
+    try {
+      const dossier = await api.doorTimeline(door.door_id)
+      setOpenedDoor({ ...door, ...dossier, station_code: door.station_code })
+      const extra = asList(dossier?.maintenances || dossier?.maintenance)
+      if (extra.length) {
+        setDoorMaintenances(extra)
+        return
+      }
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+
+    try {
+      const items = asList(await api.maintenance(100, 0))
+      setDoorMaintenances(relatedMaintenances(items, door))
+    } catch {
+      setDoorMaintenances([])
+    }
   }
 
-  function handleCreateInspection(event) {
+  async function handleCreateInspection(event) {
     event.preventDefault()
     if (!openedDoor) return
-    addInspection({
-      station_code: openedDoor.station_code,
-      platform: openedDoor.platform,
-      door_number: openedDoor.door_number,
-      priority: openedDoor.will_fail ? 'high' : 'normal',
-      scheduled_for:
-        inspWhen.date && inspWhen.time
-          ? `${inspWhen.date} ${inspWhen.time.length === 5 ? `${inspWhen.time}:00` : inspWhen.time}`
-          : '',
-      notes: inspNotes.trim(),
-    })
-    onNavigate?.('inspecoes')
+    setInspError('')
+    try {
+      await api.createInspection({
+        station_code: openedDoor.station_code,
+        platform: openedDoor.platform,
+        door_number: String(openedDoor.door_number),
+        priority: openedDoor.will_fail ? 'high' : 'normal',
+        scheduled_for:
+          inspWhen.date && inspWhen.time
+            ? `${inspWhen.date} ${inspWhen.time.length === 5 ? `${inspWhen.time}:00` : inspWhen.time}`
+            : undefined,
+        notes: inspNotes.trim() || undefined,
+      })
+      onNavigate?.('inspecoes')
+    } catch (err) {
+      setInspError(errorMessage(err))
+    }
   }
 
   if (openedStation && timeline) {
@@ -178,13 +259,15 @@ function Portas({ onNavigate }) {
               ‹
             </button>
             <div>
-              <h1>{timeline.sap_tag}</h1>
+              <h1>{timeline.sap_tag || `Porta ${padDoor(timeline.door_number)}`}</h1>
               <p>
                 {timeline.station_name} · {timeline.platform} · porta {padDoor(timeline.door_number)}
               </p>
             </div>
           </div>
         </div>
+
+        {error ? <p className="page-status is-error">{error}</p> : null}
 
         <div className="portas__kpis">
           <Card
@@ -196,8 +279,8 @@ function Portas({ onNavigate }) {
           <Card
             layout="banner"
             label="Última avaliação"
-            value={String(timeline.last_evaluated_at).slice(0, 10)}
-            hint={timeline.last_evaluated_at}
+            value={timeline.last_evaluated_at ? String(timeline.last_evaluated_at).slice(0, 10) : '—'}
+            hint={timeline.last_evaluated_at || 'Sem avaliação gravada'}
           />
         </div>
 
@@ -222,7 +305,7 @@ function Portas({ onNavigate }) {
             </div>
             <div>
               <span>TAG</span>
-              <strong>{timeline.sap_tag}</strong>
+              <strong>{timeline.sap_tag || '—'}</strong>
             </div>
             <div>
               <span>Status</span>
@@ -242,7 +325,7 @@ function Portas({ onNavigate }) {
               <div key={item.id} className="portas__related">
                 <strong>{item.order_type}</strong>
                 <span>{item.start_timestamp}</span>
-                <em>{item.description || item.symptom || item.installation_location}</em>
+                <em>{item.description || item.symptom || item.installation_location || item.station_code}</em>
               </div>
             ))
           ) : (
@@ -252,6 +335,7 @@ function Portas({ onNavigate }) {
 
         <article className="portas__panel">
           <h2>Abrir inspeção</h2>
+          {inspError ? <p className="page-status is-error">{inspError}</p> : null}
           <form className="portas__insp" onSubmit={handleCreateInspection}>
             <Input
               id="door-insp-date"
@@ -296,6 +380,9 @@ function Portas({ onNavigate }) {
           </div>
         </div>
 
+        {loadingDoors ? <p className="page-status">Carregando o mapa térmico da estação…</p> : null}
+        {error ? <p className="page-status is-error">{error}</p> : null}
+
         <div className="portas__kpis">
           <Card
             layout="banner"
@@ -323,21 +410,25 @@ function Portas({ onNavigate }) {
 
         <article className="portas__panel">
           <h2>Riscos por porta · {activePlatform}</h2>
-          <div className="portas-risk-chart">
-            {visibleDoors.map((item) => (
-              <button
-                key={item.door_id}
-                type="button"
-                className="portas-risk-chart__col"
-                onClick={() => handleOpenDoor(item)}
-              >
-                <span>
-                  <i style={{ height: `${(item.risk / maxRisk) * 100}%` }} />
-                </span>
-                <strong>{padDoor(item.door_number)}</strong>
-              </button>
-            ))}
-          </div>
+          {visibleDoors.length ? (
+            <div className="portas-risk-chart">
+              {visibleDoors.map((item) => (
+                <button
+                  key={item.door_id}
+                  type="button"
+                  className="portas-risk-chart__col"
+                  onClick={() => handleOpenDoor(item)}
+                >
+                  <span>
+                    <i style={{ height: `${(item.risk / maxRisk) * 100}%` }} />
+                  </span>
+                  <strong>{padDoor(item.door_number)}</strong>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="portas__empty">Nenhuma porta retornada para esta plataforma.</p>
+          )}
         </article>
 
         <article className="portas__panel">
@@ -353,7 +444,7 @@ function Portas({ onNavigate }) {
             {visibleDoors.map((item) => (
               <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
                 <strong>{padDoor(item.door_number)}</strong>
-                <strong>{item.sap_tag}</strong>
+                <strong>{item.sap_tag || '—'}</strong>
                 <div className="portas-risk">
                   <b>
                     <i style={{ width: `${Math.round(item.risk * 100)}%` }} />
@@ -363,7 +454,7 @@ function Portas({ onNavigate }) {
                 <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
                   {item.will_fail ? 'Em risco' : 'Estável'}
                 </span>
-                <strong>{item.last_evaluated_at}</strong>
+                <strong>{item.last_evaluated_at || '—'}</strong>
               </button>
             ))}
           </div>
@@ -373,7 +464,7 @@ function Portas({ onNavigate }) {
           <CadastrarButton onClick={handlePredict}>Realizar Previsão</CadastrarButton>
           <div>
             <CadastrarButton onClick={handleRetrain}>Re-treinar modelo</CadastrarButton>
-            <small>Último treinamento {lastTraining}</small>
+            <small>Último disparo {lastTraining}</small>
           </div>
         </div>
         {lastPrediction ? <p className="portas__eval">Última predição {lastPrediction}</p> : null}
@@ -389,6 +480,8 @@ function Portas({ onNavigate }) {
           <p>Linha 4 - Amarela</p>
         </div>
       </div>
+
+      {error ? <p className="page-status is-error">{error}</p> : null}
 
       <div className="linha-map" onClick={(event) => event.stopPropagation()}>
         <div className="linha-map__rail" />
@@ -428,15 +521,15 @@ function Portas({ onNavigate }) {
       <div className="portas__cards">
         <article>
           <span>Estação mais crítica</span>
-          <strong>{stationLabel(topStation.station_code)}</strong>
+          <strong>{topStation ? stationLabel(topStation.station_code) : '—'}</strong>
         </article>
         <article>
           <span>Inspeções pendentes</span>
-          <strong>{dashboardSummary.pending_inspections}</strong>
+          <strong>{summary.pending_inspections}</strong>
         </article>
         <article>
           <span>Portas em risco nos próximos 7 dias</span>
-          <strong>{dashboardSummary.doors_at_risk}</strong>
+          <strong>{summary.doors_at_risk}</strong>
         </article>
       </div>
     </section>

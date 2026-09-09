@@ -123,12 +123,8 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
       gsap.set(logoFly, { top: 28, left: 32, width: 150, autoAlpha: 0 })
     }
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        document.body.style.overflow = ''
-        settledRef.current?.()
-      },
-    })
+    let cancelled = false
+    const tl = gsap.timeline()
 
     if (fromLogin) {
       tl.to(loginChrome, { autoAlpha: 0, duration: 0.32 * time, ease: 'power2.out' }, 0)
@@ -163,24 +159,67 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
 
     tl.to(scene, { autoAlpha: 1, y: 0, duration: 0.5 * time, ease: 'power2.out' }, '-=0.45')
 
-    tl.to(
-      progressProxy,
-      {
-        value: 100,
-        duration: (mode === 'login' ? 3.5 : 3) * time,
-        ease: 'power1.inOut',
-        onUpdate: () => applyProgress(progressProxy.value),
-      },
-      '-=0.15',
-    )
+    const finishOk = () => {
+      session.onReady?.()
+      gsap.to(root, {
+        autoAlpha: 0,
+        duration: 0.55 * time,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          document.body.style.overflow = ''
+          settledRef.current?.()
+        },
+      })
+    }
+
+    const finishErr = (error) => {
+      document.body.style.overflow = ''
+      settledRef.current?.(error)
+    }
 
     tl.add(() => {
-      session.onReady?.()
+      const runWork = async () => {
+        try {
+          if (session.task) {
+            const work = Promise.resolve().then(() => session.task())
+            gsap.to(progressProxy, {
+              value: 78,
+              duration: 2.2 * time,
+              ease: 'power1.out',
+              onUpdate: () => applyProgress(progressProxy.value),
+            })
+            await work
+            await new Promise((resolve) => {
+              gsap.to(progressProxy, {
+                value: 100,
+                duration: 0.45 * time,
+                ease: 'power2.out',
+                onUpdate: () => applyProgress(progressProxy.value),
+                onComplete: resolve,
+              })
+            })
+          } else {
+            await new Promise((resolve) => {
+              gsap.to(progressProxy, {
+                value: 100,
+                duration: (mode === 'login' ? 3.5 : 3) * time,
+                ease: 'power1.inOut',
+                onUpdate: () => applyProgress(progressProxy.value),
+                onComplete: resolve,
+              })
+            })
+          }
+          if (!cancelled) finishOk()
+        } catch (error) {
+          if (!cancelled) finishErr(error)
+        }
+      }
+
+      runWork()
     })
 
-    tl.to(root, { autoAlpha: 0, duration: 0.55 * time, ease: 'power2.inOut' }, '+=0.16')
-
     return () => {
+      cancelled = true
       tl.kill()
       document.body.style.overflow = ''
     }
@@ -236,23 +275,26 @@ export function PredictionLoadProvider({ children }) {
   const sessionRef = useRef(null)
 
   function run(options = {}) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       sessionRef.current = {
         variant: options.variant ?? 'overlay',
         mode: options.mode ?? 'predict',
         source: options.source ?? null,
+        task: options.task,
         onReady: options.onReady,
         resolve,
+        reject,
       }
       setOpen(true)
     })
   }
 
-  function handleSettled() {
+  function handleSettled(error) {
     const session = sessionRef.current
     sessionRef.current = null
     setOpen(false)
-    session?.resolve()
+    if (error) session?.reject?.(error)
+    else session?.resolve?.()
   }
 
   return (

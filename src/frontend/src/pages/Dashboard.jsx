@@ -1,12 +1,60 @@
+import { useEffect, useState } from 'react'
 import Card from '../components/Card'
-import { currentUser, dashboardSummary, latestPredictions, stationLabel } from '../data/mock'
+import { useAuth } from '../context/Auth'
+import { api, asList, errorMessage } from '../lib/api'
+import { stationLabel } from '../data/stations'
 import './Dashboard.css'
 
+const emptySummary = {
+  total_doors: 0,
+  doors_at_risk: 0,
+  pending_inspections: 0,
+  completed_inspections: 0,
+  critical_stations: [],
+}
+
 function Dashboard({ onNavigate }) {
-  const maxRisk = Math.max(...dashboardSummary.critical_stations.map((item) => item.doors_at_risk), 1)
-  const topStation = dashboardSummary.critical_stations[0]
-  const lastRun = latestPredictions[0]?.last_evaluated_at
-  const prioritized = latestPredictions.filter((item) => item.will_fail)
+  const { user } = useAuth()
+  const [summary, setSummary] = useState(emptySummary)
+  const [predictions, setPredictions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const [dashboard, latest] = await Promise.all([api.dashboard(), api.predictionsLatest()])
+        if (cancelled) return
+        setSummary({
+          ...emptySummary,
+          ...(dashboard || {}),
+          critical_stations: Array.isArray(dashboard?.critical_stations)
+            ? dashboard.critical_stations
+            : [],
+        })
+        setPredictions(asList(latest))
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const maxRisk = Math.max(...summary.critical_stations.map((item) => item.doors_at_risk), 1)
+  const topStation = summary.critical_stations[0]
+  const lastRun = predictions[0]?.last_evaluated_at
+  const prioritized = predictions.filter((item) => item.will_fail)
+  const firstName = user?.name?.split(' ')[0] || 'Operador'
 
   return (
     <section className="dashboard">
@@ -15,33 +63,37 @@ function Dashboard({ onNavigate }) {
           <p className="dashboard__kicker">Linha 4 Amarela</p>
           <h1>Dashboard</h1>
           <p className="dashboard__lead">
-            Olá, {currentUser.name.split(' ')[0]}. {dashboardSummary.doors_at_risk} portas em
-            risco na última rodada da IA
+            Olá, {firstName}. {summary.doors_at_risk} portas em risco na última rodada da IA
             {lastRun ? `, em ${lastRun}` : ''}.
           </p>
         </div>
       </div>
 
+      {loading ? <p className="page-status">Carregando o resumo operacional…</p> : null}
+      {error ? <p className="page-status is-error">{error}</p> : null}
+
       <div className="dashboard__hero">
         <Card
           label="Portas em risco nos próximos 7 dias"
-          value={dashboardSummary.doors_at_risk}
-          hint={`de ${dashboardSummary.total_doors} portas ativas na linha`}
+          value={summary.doors_at_risk}
+          hint={`de ${summary.total_doors} portas ativas na linha`}
         />
         <div className="dashboard__tiles">
           <button type="button" onClick={() => onNavigate?.('inspecoes')}>
             <span>Inspeções pendentes</span>
-            <strong>{dashboardSummary.pending_inspections}</strong>
+            <strong>{summary.pending_inspections}</strong>
           </button>
           <button type="button" onClick={() => onNavigate?.('inspecoes')}>
             <span>Inspeções concluídas</span>
-            <strong>{dashboardSummary.completed_inspections}</strong>
+            <strong>{summary.completed_inspections}</strong>
           </button>
           <article>
             <span>Estação mais crítica</span>
-            <strong>{topStation.station_code}</strong>
+            <strong>{topStation?.station_code || '—'}</strong>
             <em>
-              {stationLabel(topStation.station_code)} · {topStation.doors_at_risk} portas em risco
+              {topStation
+                ? `${stationLabel(topStation.station_code)} · ${topStation.doors_at_risk} portas em risco`
+                : 'Sem estações críticas nesta rodada'}
             </em>
           </article>
         </div>
@@ -50,40 +102,48 @@ function Dashboard({ onNavigate }) {
       <div className="dashboard__split">
         <section className="dashboard__panel">
           <h2>Estações críticas</h2>
-          {dashboardSummary.critical_stations.map((station) => (
-            <div key={station.station_code} className="dashboard__station">
-              <strong>{station.station_code}</strong>
-              <div>
-                <span>{stationLabel(station.station_code)}</span>
-                <i style={{ width: `${(station.doors_at_risk / maxRisk) * 100}%` }} />
+          {summary.critical_stations.length ? (
+            summary.critical_stations.map((station) => (
+              <div key={station.station_code} className="dashboard__station">
+                <strong>{station.station_code}</strong>
+                <div>
+                  <span>{stationLabel(station.station_code)}</span>
+                  <i style={{ width: `${(station.doors_at_risk / maxRisk) * 100}%` }} />
+                </div>
+                <em>{station.doors_at_risk}</em>
               </div>
-              <em>{station.doors_at_risk}</em>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="page-empty">Nenhuma estação crítica nesta rodada.</p>
+          )}
         </section>
 
         <section className="dashboard__panel">
           <h2>Portas priorizadas pela IA</h2>
-          {prioritized.map((item) => (
-            <div key={item.door_id} className="dashboard__prediction">
-              <div>
-                <span>TAG</span>
-                <strong>{item.sap_tag}</strong>
+          {prioritized.length ? (
+            prioritized.map((item) => (
+              <div key={item.door_id || item.sap_tag} className="dashboard__prediction">
+                <div>
+                  <span>TAG</span>
+                  <strong>{item.sap_tag || '—'}</strong>
+                </div>
+                <div>
+                  <span>Estação</span>
+                  <strong>{item.station_name || stationLabel(item.station_code)}</strong>
+                </div>
+                <div>
+                  <span>Plataforma</span>
+                  <strong>{item.platform || '—'}</strong>
+                </div>
+                <div>
+                  <span>Diagnóstico</span>
+                  <strong>{item.will_fail ? 'Vai falhar' : 'Estável'}</strong>
+                </div>
               </div>
-              <div>
-                <span>Estação</span>
-                <strong>{item.station_name}</strong>
-              </div>
-              <div>
-                <span>Plataforma</span>
-                <strong>{item.platform}</strong>
-              </div>
-              <div>
-                <span>Diagnóstico</span>
-                <strong>{item.will_fail ? 'Vai falhar' : 'Estável'}</strong>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="page-empty">Nenhuma porta priorizada na última inferência.</p>
+          )}
         </section>
       </div>
     </section>

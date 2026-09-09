@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
@@ -6,10 +6,8 @@ import CardManutencao from '../components/CardManutencao'
 import Input from '../components/Input'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
-import { mapMaintenanceRows } from '../lib/importRows'
-import { runUploadProgress } from '../lib/runUpload'
-import { parseSpreadsheet } from '../lib/spreadsheet'
-import { createUpload, maintenances as initialMaintenances } from '../data/mock'
+import { api, asList, errorMessage } from '../lib/api'
+import { pollUpload } from '../lib/runUpload'
 import './Manutencoes.css'
 
 const emptyForm = {
@@ -49,7 +47,9 @@ function durationFrom(start, end) {
 }
 
 function Manutencoes() {
-  const [items, setItems] = useState(initialMaintenances)
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState('manual')
   const [form, setForm] = useState(emptyForm)
@@ -58,6 +58,22 @@ function Manutencoes() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
+
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      setItems(asList(await api.maintenance(50, 0)))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
 
   const byType = useMemo(() => countBy(items, 'order_type'), [items])
   const byStation = useMemo(() => countBy(items, 'station_code'), [items])
@@ -82,7 +98,7 @@ function Manutencoes() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     const start_timestamp = toTimestamp(form.start_date, form.start_time)
@@ -90,24 +106,25 @@ function Manutencoes() {
     const computed = durationFrom(start_timestamp, end_timestamp)
     const duration = form.duration_hours === '' ? computed : Number(form.duration_hours)
 
-    setItems((current) => [
-      {
-        id: `mnt-${Date.now()}`,
+    setImportError('')
+    try {
+      await api.createMaintenance({
         order_type: form.order_type.trim().toUpperCase(),
-        sap_order_number: form.sap_order_number.trim(),
-        installation_location: form.installation_location.trim(),
+        sap_order_number: form.sap_order_number.trim() || undefined,
+        installation_location: form.installation_location.trim() || undefined,
         station_code: form.station_code.trim().toUpperCase(),
         start_timestamp,
-        end_timestamp,
-        duration_hours: Number.isFinite(duration) ? duration : null,
-        description: form.description.trim(),
-        symptom: form.symptom.trim(),
-        source: 'manual',
-      },
-      ...current,
-    ])
-    setForm(emptyForm)
-    setOpen(false)
+        end_timestamp: end_timestamp || undefined,
+        duration_hours: Number.isFinite(duration) ? duration : undefined,
+        description: form.description.trim() || undefined,
+        symptom: form.symptom.trim() || undefined,
+      })
+      setForm(emptyForm)
+      setOpen(false)
+      await load()
+    } catch (err) {
+      setImportError(errorMessage(err))
+    }
   }
 
   async function handleImport(event) {
@@ -121,20 +138,17 @@ function Manutencoes() {
     setImportError('')
 
     try {
-      const rows = mapMaintenanceRows(await parseSpreadsheet(file), orderType)
-      if (!rows.length) {
-        setImportError('Nenhuma ordem válida encontrada na planilha.')
-        return
+      const result = await api.uploadMaintenance(file, orderType)
+      const done = await pollUpload(result, setUpload)
+      if (done.status === 2) {
+        throw new Error('A API recusou o processamento deste arquivo.')
       }
-
-      const job = createUpload({ fileName: file.name, fileType: 'maintenance', rowCount: rows.length })
-      await runUploadProgress(job, rows.length, setUpload)
-      setItems((current) => [...rows, ...current])
       setFile(null)
       setUpload(null)
       setOpen(false)
-    } catch (error) {
-      setImportError(error.message || 'Não foi possível ler a planilha.')
+      await load()
+    } catch (err) {
+      setImportError(errorMessage(err))
     } finally {
       setImporting(false)
     }
@@ -154,6 +168,9 @@ function Manutencoes() {
         <h1>Manutenções</h1>
         <CadastrarButton onClick={openCadastro}>Cadastrar Manutenções +</CadastrarButton>
       </div>
+
+      {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
+      {error ? <p className="page-status is-error">{error}</p> : null}
 
       <div className="manutencoes__hero">
         <Card
@@ -187,21 +204,25 @@ function Manutencoes() {
       </div>
 
       <div className="manutencoes__list">
-        {items.map((item) => (
-          <CardManutencao
-            key={item.id}
-            orderType={item.order_type}
-            sapOrder={item.sap_order_number}
-            station={item.station_code}
-            location={item.installation_location}
-            startedAt={item.start_timestamp}
-            endedAt={item.end_timestamp}
-            durationHours={item.duration_hours}
-            symptom={item.symptom}
-            description={item.description}
-            source={item.source}
-          />
-        ))}
+        {items.length ? (
+          items.map((item) => (
+            <CardManutencao
+              key={item.id}
+              orderType={item.order_type}
+              sapOrder={item.sap_order_number}
+              station={item.station_code}
+              location={item.installation_location}
+              startedAt={item.start_timestamp}
+              endedAt={item.end_timestamp}
+              durationHours={item.duration_hours}
+              symptom={item.symptom}
+              description={item.description}
+              source={item.source}
+            />
+          ))
+        ) : (
+          <p className="page-empty">Nenhuma ordem de manutenção retornada pela API.</p>
+        )}
       </div>
 
       {open ? (
@@ -247,6 +268,7 @@ function Manutencoes() {
               </>
             ) : (
               <>
+                {importError ? <p className="page-status is-error">{importError}</p> : null}
                 <Input
                   id="mnt-type"
                   label="Tipo da ordem"

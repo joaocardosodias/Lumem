@@ -1,42 +1,26 @@
+import { api, uploadIdFrom } from './api'
+
 export function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function runUploadProgress(job, rowCount, onTick) {
-  const total = Math.max(rowCount, 1)
-  onTick({
-    id: job.id,
-    file_name: job.file_name,
-    file_type: job.file_type,
-    status: 0,
-    rows_processed: 0,
-    rows_inserted: 0,
-    created_at: job.created_at,
-  })
+export async function pollUpload(result, onTick) {
+  const initial = result?.data && typeof result.data === 'object' ? result.data : null
+  if (initial?.id) onTick(initial)
+  if (initial && (initial.status === 1 || initial.status === 2)) return initial
 
-  for (let index = 1; index <= total; index += 1) {
-    await wait(32)
-    onTick({
-      id: job.id,
-      file_name: job.file_name,
-      file_type: job.file_type,
-      status: 0,
-      rows_processed: index,
-      rows_inserted: 0,
-      created_at: job.created_at,
-    })
+  const id = uploadIdFrom(result) || initial?.id
+  if (!id) {
+    throw new Error('A API aceitou o arquivo, mas não devolveu o id do upload.')
   }
 
-  const done = {
-    id: job.id,
-    file_name: job.file_name,
-    file_type: job.file_type,
-    status: 1,
-    rows_processed: total,
-    rows_inserted: total,
-    created_at: job.created_at,
+  const started = Date.now()
+  while (Date.now() - started < 90000) {
+    const status = await api.uploadStatus(id)
+    onTick(status)
+    if (status.status === 1 || status.status === 2) return status
+    await wait(800)
   }
-  onTick(done)
-  await wait(400)
-  return done
+
+  throw new Error('Tempo esgotado no processamento do arquivo.')
 }

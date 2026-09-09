@@ -3,14 +3,8 @@ import Button from '../components/Button'
 import CadastrarButton from '../components/CadastrarButton'
 import Card from '../components/Card'
 import Input from '../components/Input'
-import {
-  addInspection,
-  inspections as initialInspections,
-  lineStations,
-  stationLabel,
-  subscribeInspections,
-  updateInspectionStatus,
-} from '../data/mock'
+import { lineStations, stationLabel } from '../data/stations'
+import { api, asList, errorMessage } from '../lib/api'
 import './Inspecoes.css'
 
 const emptyForm = {
@@ -43,12 +37,29 @@ function toTimestamp(date, time) {
 }
 
 function Inspecoes() {
-  const [items, setItems] = useState(initialInspections)
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [formError, setFormError] = useState('')
 
-  useEffect(() => subscribeInspections(setItems), [])
+  async function load() {
+    setLoading(true)
+    setError('')
+    try {
+      setItems(asList(await api.inspections()))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
 
   const visible = useMemo(
     () => (filter ? items.filter((item) => item.status === filter) : items),
@@ -76,18 +87,33 @@ function Inspecoes() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
-    addInspection({
-      station_code: form.station_code,
-      platform: form.platform,
-      door_number: form.door_number,
-      priority: form.priority,
-      scheduled_for: toTimestamp(form.date, form.time),
-      notes: form.notes.trim(),
-    })
-    setForm(emptyForm)
-    setOpen(false)
+    setFormError('')
+    try {
+      await api.createInspection({
+        station_code: form.station_code,
+        platform: form.platform,
+        door_number: String(form.door_number),
+        priority: form.priority,
+        scheduled_for: toTimestamp(form.date, form.time) || undefined,
+        notes: form.notes.trim() || undefined,
+      })
+      setForm(emptyForm)
+      setOpen(false)
+      await load()
+    } catch (err) {
+      setFormError(errorMessage(err))
+    }
+  }
+
+  async function handleStatus(id, status) {
+    try {
+      await api.updateInspectionStatus(id, { status })
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, status } : item)))
+    } catch (err) {
+      setError(errorMessage(err))
+    }
   }
 
   return (
@@ -96,6 +122,9 @@ function Inspecoes() {
         <h1>Inspeções</h1>
         <CadastrarButton onClick={() => setOpen(true)}>Abrir inspeção +</CadastrarButton>
       </div>
+
+      {loading ? <p className="page-status">Carregando inspeções…</p> : null}
+      {error ? <p className="page-status is-error">{error}</p> : null}
 
       <div className="inspecoes__kpis">
         <Card layout="banner" label="Pendentes" value={pending} hint="aguardando campo" />
@@ -124,52 +153,57 @@ function Inspecoes() {
       </div>
 
       <div className="inspecoes__list">
-        {visible.map((item) => (
-          <article key={item.id} className="card-inspecao">
-            <div>
-              <span>Estação</span>
-              <strong>{item.station_code}</strong>
-              <em>{stationLabel(item.station_code)}</em>
-            </div>
-            <div>
-              <span>Plataforma</span>
-              <strong>{item.platform}</strong>
-            </div>
-            <div>
-              <span>Porta</span>
-              <strong>{String(item.door_number).padStart(2, '0')}</strong>
-            </div>
-            <div>
-              <span>Prioridade</span>
-              <strong>{PRIORITY_LABEL[item.priority] || item.priority}</strong>
-            </div>
-            <div>
-              <span>Agendada para</span>
-              <strong>{item.scheduled_for || '—'}</strong>
-            </div>
-            <div>
-              <span>Notas</span>
-              <strong>{item.notes || '—'}</strong>
-            </div>
-            <label className="card-inspecao__status">
-              <span>Status</span>
-              <select
-                value={item.status}
-                onChange={(event) => updateInspectionStatus(item.id, { status: event.target.value })}
-              >
-                <option value="pending">{STATUS_LABEL.pending}</option>
-                <option value="in_progress">{STATUS_LABEL.in_progress}</option>
-                <option value="completed">{STATUS_LABEL.completed}</option>
-              </select>
-            </label>
-          </article>
-        ))}
+        {visible.length ? (
+          visible.map((item) => (
+            <article key={item.id} className="card-inspecao">
+              <div>
+                <span>Estação</span>
+                <strong>{item.station_code}</strong>
+                <em>{stationLabel(item.station_code)}</em>
+              </div>
+              <div>
+                <span>Plataforma</span>
+                <strong>{item.platform}</strong>
+              </div>
+              <div>
+                <span>Porta</span>
+                <strong>{String(item.door_number).padStart(2, '0')}</strong>
+              </div>
+              <div>
+                <span>Prioridade</span>
+                <strong>{PRIORITY_LABEL[item.priority] || item.priority}</strong>
+              </div>
+              <div>
+                <span>Agendada para</span>
+                <strong>{item.scheduled_for || '—'}</strong>
+              </div>
+              <div>
+                <span>Notas</span>
+                <strong>{item.notes || '—'}</strong>
+              </div>
+              <label className="card-inspecao__status">
+                <span>Status</span>
+                <select
+                  value={item.status}
+                  onChange={(event) => handleStatus(item.id, event.target.value)}
+                >
+                  <option value="pending">{STATUS_LABEL.pending}</option>
+                  <option value="in_progress">{STATUS_LABEL.in_progress}</option>
+                  <option value="completed">{STATUS_LABEL.completed}</option>
+                </select>
+              </label>
+            </article>
+          ))
+        ) : (
+          <p className="page-empty">Nenhuma inspeção retornada pela API.</p>
+        )}
       </div>
 
       {open ? (
         <div className="inspecoes-modal" onClick={() => setOpen(false)}>
           <form onClick={(event) => event.stopPropagation()} onSubmit={handleSubmit}>
             <h2>Abrir inspeção</h2>
+            {formError ? <p className="page-status is-error">{formError}</p> : null}
             <label className="cadastro-select">
               <span>Estação</span>
               <select value={form.station_code} required onChange={updateField('station_code')}>
