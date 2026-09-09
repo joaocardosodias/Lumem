@@ -7,6 +7,7 @@ import { Image } from 'astro:assets';
 import Background from '../../../../assets/sprints/sprint1/background_title.png';
 import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
 import telaCarregamento from '../../../../assets/sprints/sprint3/frontend/Carregamento.png';
+import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -55,3 +56,28 @@ O Dashboard não abre no instante em que o token chega. O painel esquerdo se exp
   />
   <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
 </figure>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Dashboard</h2>
+</div>
+
+O Dashboard é a primeira tela autenticada e o resumo operacional da linha. A Marta entra aqui depois do overlay de login: a barra lateral já está visível (Dashboard, Alertas, Manutenções, Portas, Inspeções e **Sair**), o kicker *Linha 4 Amarela* identifica o contexto e a saudação combina o primeiro nome do operador com o volume de portas em risco na última rodada da IA, incluindo a data da inferência quando a API a envia.
+
+Os números vêm de três leituras em paralelo. `GET /api/v1/dashboard/summary` abastece o total de portas ativas, as portas em risco nos próximos sete dias e o ranking de estações críticas. `GET /api/v1/predictions/latest` devolve a última inferência, da qual a tela destaca só as portas com diagnóstico *vai falhar*. As inspeções pendentes e concluídas não usam o campo de inspeção do summary: saem do catálogo já pré-carregado no login, para o indicador bater com a tela de Inspeções.
+
+No topo, o card azul concentra o indicador principal, *Portas em risco nos próximos 7 dias*, com o total da linha no rodapé. O número sobe com animação GSAP. Ao lado, três tiles empilhados mostram inspeções pendentes, inspeções concluídas e a estação mais crítica (código, nome e quantidade de portas em risco). Os dois primeiros tiles levam à tela de Inspeções. Abaixo, dois painéis fecham a leitura: **Estações críticas** lista o ranking com barra proporcional ao volume de risco, e **Portas priorizadas pela IA** mostra TAG, estação, plataforma e diagnóstico de cada PSD sinalizada. Quando a rodada não aponta risco, os painéis exibem estado vazio, como na Figura 3.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 3: Tela de Dashboard</strong></figcaption>
+  <Image
+    src={telaDashboard}
+    alt="Dashboard da plataforma Motiva com card de portas em risco, tiles de inspeção e painéis de estações críticas e portas priorizadas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
