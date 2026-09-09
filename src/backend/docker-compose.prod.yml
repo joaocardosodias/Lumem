@@ -65,7 +65,6 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_ROLLING_RESTART=true
-    command: backend-linha4 worker-linha4
     logging:
       driver: "json-file"
       options:

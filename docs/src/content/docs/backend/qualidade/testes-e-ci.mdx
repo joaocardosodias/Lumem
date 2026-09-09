@@ -124,10 +124,11 @@ O arquivo [`.gitlab-ci.yml`](file:///home/cardoso/GitHub/g04/.gitlab-ci.yml) aut
 | Estágio | Ferramentas e Comandos | Finalidade de Engenharia |
 |---|---|---|
 | **Lint** | `gofmt -l .` e `go vet ./...` | Verificação de conformidade de estilo e análise semântica básica |
-| **Test** | PostgreSQL 16 de serviço e `go test -race ./...` | Execução de testes unitários e de integração com detector de concorrência ativo |
+| **Test** | PostgreSQL 16 de serviço, `go test -race ./...` e `pytest` | Testes unitários e de integração em Go e validação de predições do microserviço de ML |
 | **Security** | `govulncheck ./...` | Varredura de vulnerabilidades conhecidas no grafo de dependências Go |
-| **Build** | `docker build` (multi-stage) | Compilação estática dos artefatos sem CGO em ambiente reprodutível |
-| **Scan** | `trivy image` | Auditoria de segurança na imagem gerada (bloqueia severidades alta e crítica) |
+| **Build** | `docker build` (multi-stage Go e Python slim) | Compilação estática dos artefatos Go e empacotamento do container de inferência |
+| **Scan** | `trivy image` | Auditoria de segurança nas imagens geradas da API, Worker e ML (bloqueia severidades alta e crítica) |
+| **Publish** | `docker push` para Azure Container Registry | Publicação independente das tags de `g04-backend-api`, `g04-backend-worker` e `g04-ml-service` no ACR |
 | **Deploy** | Astro Starlight build | Publicação contínua da documentação técnica no GitLab Pages |
 
 <figure style="margin: 2rem 0; text-align: center;">

@@ -79,6 +79,12 @@ Ao iniciar, a API executa as migrações SQL da aplicação e do River (`RUN_MIG
   </figcaption>
 </figure>
 
+### Topologia de rede externa e microsserviço de ML
+
+O backend e o microserviço de predição em Python (`src/modelo`) operam como pilhas de serviços desacopladas com arquivos Compose dedicados. Ambos comunicam-se através da rede bridge externa `backend-network`.
+
+Dessa forma, a API Go resolve internamente o serviço de inferência pelo hostname `http://ml-service:8000`, enquanto o microserviço de ML consulta o PostgreSQL de telemetria e ordens de manutenção de forma independente.
+
 ## 3. Gestão de migrações de banco de dados
 
 O backend opera com dois subsistemas de migração independentes:
@@ -89,23 +95,31 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
 
 ## 4. Roteiro de rollout seguro (Passo a Passo)
 
-1. **Configuração de Ambiente:** copiar `.env.example` para `.env` e preencher os segredos corporativos;
-2. **Auditoria de Configuração:** validar a sintaxe do compose sem exibir valores sensíveis:
+1. **Configuração de Ambiente:** copiar `.env.example` para `.env` dentro de `src/backend/` e preencher os segredos corporativos;
+2. **Criação da Rede Externa Compartilhada (feita uma única vez):**
    ```bash
-   docker compose config --quiet
+   docker network create backend-network
    ```
-3. **Compilação e Subida em Background:**
+3. **Auditoria de Configuração:** validar a sintaxe dos composes sem exibir valores sensíveis:
    ```bash
-   docker compose up --build -d
+   docker compose -f src/backend/docker-compose.yml config --quiet
+   docker compose -f src/modelo/docker-compose.yml config --quiet
    ```
-4. **Inspeção de Logs dos Serviços Principais:**
+4. **Compilação e Subida dos Serviços:**
    ```bash
-   docker compose logs --tail=100 backend worker
+   docker compose -f src/modelo/docker-compose.yml up --build -d
+   docker compose -f src/backend/docker-compose.yml up --build -d
    ```
-5. **Verificação de Healthchecks:**
+5. **Inspeção de Logs dos Serviços Principais:**
+   ```bash
+   docker compose -f src/backend/docker-compose.yml logs --tail=100 backend worker
+   docker compose -f src/modelo/docker-compose.yml logs --tail=100 ml-service
+   ```
+6. **Verificação de Healthchecks:**
    ```bash
    curl -f http://localhost/healthz/live
    curl -f http://localhost/healthz/ready
+   curl -f http://localhost:8000/health
    ```
 
 ## 5. Checklist de validação pós-deploy
@@ -114,6 +128,7 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
 |---|---|---|
 | **Liveness** | `GET /healthz/live` | Retorna HTTP 200 `{"status":"live"}` |
 | **Readiness** | `GET /healthz/ready` | Retorna HTTP 200 `{"status":"ready","database":"connected","storage":"connected"}` |
+| **Microserviço ML** | `GET http://localhost:8000/health` | Retorna HTTP 200 `{"status":"ok"}` |
 | **Documentação** | `GET /docs` | Swagger UI renderizado com endpoints da v1 |
 | **Métricas Prometheus** | `curl -s localhost:9090/targets` | Target `backend-linha4` com status **UP** |
 | **Fluxo E2E Sintético** | Upload de CSV de teste | Status transiciona de `processing` para `completed` em menos de 5s |
@@ -121,4 +136,4 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
 
 ## Publicação após verificação de segurança
 
-O pipeline separa `build`, `scan` e `publish`. O build gera arquivos tar da API e do worker; o Trivy verifica esses arquivos e uma etapa posterior carrega e publica exatamente as imagens verificadas. A ausência dos artefatos faz o scan falhar. A tag `latest` só é atualizada na branch principal após o sucesso das etapas anteriores, evitando que o Watchtower implante uma imagem antes do resultado do scan.
+O pipeline separa `build`, `scan` e `publish`. O build gera arquivos tar da API, do worker e do microserviço de ML (`g04-ml-service`); o Trivy verifica esses arquivos e uma etapa posterior carrega e publica exatamente as imagens verificadas no Azure Container Registry (ACR). A ausência dos artefatos faz o scan falhar. A tag `latest` só é atualizada na branch principal após o sucesso das etapas anteriores, evitando que o Watchtower implante uma imagem antes do resultado do scan.
