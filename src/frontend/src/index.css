@@ -24,7 +24,7 @@
 
 :root {
   --brand: #3f00ff;
-  --brand-soft: rgba(63, 0, 255, 0.05);
+  --brand-soft: color-mix(in srgb, var(--brand) 5%, white);
   --paper: #f6f3ee;
   --white: #ffffff;
   --text: #3f00ff;
