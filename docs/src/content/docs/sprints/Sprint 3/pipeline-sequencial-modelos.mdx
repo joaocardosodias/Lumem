@@ -7,25 +7,25 @@ description: "Contrato, execução e avaliação do pipeline sequencial entre o 
 
 ## 1. Objetivo
 
-O pipeline sequencial combina dois modelos desenvolvidos na Sprint 2 para produzir uma previsão em dois níveis. Primeiro, o **Modelo 7 — CatBoost** identifica quais sistemas de portas de uma plataforma apresentam risco de falha. Depois, o **Modelo 5 — Random Forest** analisa as portas das plataformas sinalizadas para tentar localizar quais delas devem ser priorizadas.
+O pipeline sequencial combina dois modelos desenvolvidos na Sprint 2 para produzir uma previsão em dois níveis. Primeiro, o **Modelo 7 — CatBoost** calcula o risco do sistema de portas da plataforma. Depois, esse score entra como uma feature do **Modelo 5 — Random Forest**, que estima o risco de cada porta e indica quais devem ser priorizadas.
 
-A diferença de granularidade é proposital. O Modelo 7 consegue indicar que **alguma porta da plataforma** poderá falhar, mas não identifica qual delas. O Modelo 5 complementa essa previsão ao estimar o risco de cada porta individual. Portanto, o objetivo não é escolher um modelo vencedor, e sim fazer com que a previsão ampla do primeiro reduza o espaço de busca do segundo.
+A diferença de granularidade é proposital. O Modelo 7 consegue indicar que **alguma porta da plataforma** poderá falhar, mas não identifica qual delas. O Modelo 5 complementa essa previsão ao estimar o risco de cada porta individual. A primeira versão usava o Modelo 7 como filtro rígido; a versão atual preserva mais falhas ao fornecer seu score diretamente ao segundo modelo.
 
 O fluxo proposto é:
 
 ```text
 Dados disponíveis na data de referência D
                     ↓
-Modelo 7 — CatBoost identifica a plataforma em risco
+Modelo 7 — CatBoost calcula o risco da plataforma
                     ↓
-Plataformas classificadas como risco
+Score da plataforma adicionado às features de cada porta
                     ↓
 Modelo 5 — Random Forest procura a porta em risco
                     ↓
 Portas priorizadas para inspeção
 ```
 
-O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 é executado somente para detalhar o risco das portas pertencentes às plataformas selecionadas na primeira etapa. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
+O Modelo 7 deve ser executado primeiro porque trabalha em um nível mais amplo. O Modelo 5 usa o resultado dessa etapa para detalhar o risco das portas. Essa estratégia é uma **inferência hierárquica em duas etapas**: plataforma primeiro, porta depois.
 
 Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 gerou e avaliou a lista final de portas. A Task 5 incorporou a preparação das features e a execução do CatBoost ao notebook. A Task 6 consolidou a configuração, o reuso dos modelos salvos e o tratamento dos casos sem cobertura. A Task 7 transformou o ranking em uma lista operacional limitada de portas para inspeção. As Tasks 8 e 9 acrescentaram a execução por comando, a validação automática e o guia de uso. A Task 10 avaliou o score do Modelo 7 como uma nova feature do Modelo 5.
 
@@ -377,6 +377,7 @@ A execução pode ser iniciada com **Executar tudo** no notebook. A primeira cé
 |---|---|---|
 | `RETREINAR_MODELO_5` | `False` | Reutiliza o modelo salvo; `True` refaz o experimento e substitui o artefato do Random Forest |
 | `TREINAR_MODELO_5_COM_SCORE_7` | `True` no notebook | Executa o experimento separado que adiciona o score do Modelo 7 ao Modelo 5 |
+| `USAR_MODELO_5_COM_SCORE_7` | `True` | Usa na inferência o Random Forest de 72 features e o limiar associado à meta de recall |
 | `META_RECALL_EXPERIMENTO` | `0.75` | Meta mínima de recall usada na validação para escolher os limiares do controle e do modelo combinado |
 | `AVALIAR_HISTORICO` | `True` | Calcula métricas quando há target disponível; `False` executa apenas a previsão |
 | `INICIO_INFERENCIA_MODELO_7` | `2025-10-01` | Primeiro dia a prever |
@@ -509,3 +510,33 @@ Permanecem como evoluções futuras, e não como etapas incompletas desta implem
 - definir com o parceiro quantas portas podem ser inspecionadas por plataforma e ajustar `MAXIMO_PORTAS_RECOMENDADAS_POR_PLATAFORMA` conforme essa capacidade.
 
 Essas limitações são exibidas explicitamente para evitar interpretar ausência de cobertura como ausência de risco. Elas não impedem a reprodução do experimento histórico nem a execução do encadeamento construído nesta sprint.
+
+## 22. Execução com Docker
+
+O arquivo `models/pipeline-sequencial/Dockerfile` reproduz o ambiente usado no desenvolvimento com Python 3.14 e versões fixas das bibliotecas. A imagem inclui somente as bases processadas, os modelos e os arquivos necessários à inferência. O arquivo `Dockerfile.dockerignore` reduz o contexto de construção e evita copiar os 2,3 GB completos do repositório.
+
+Na raiz do projeto, construa a imagem:
+
+```bash
+docker build \
+  --file models/pipeline-sequencial/Dockerfile \
+  --tag g04-pipeline:latest \
+  .
+```
+
+Para executar outubro de 2025 e manter os resultados no computador:
+
+```bash
+mkdir -p models/pipeline-sequencial/execucoes-docker
+
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  --volume "$(pwd)/models/pipeline-sequencial/execucoes-docker:/app/models/pipeline-sequencial/execucoes-docker" \
+  g04-pipeline:latest \
+  --inicio 2025-10-01 \
+  --fim 2025-10-31 \
+  --pasta-saida execucoes-docker \
+  --max-portas 1
+```
+
+O executor desativa o retreinamento e carrega `modelo_5_com_score_modelo_7.joblib` com o limiar `0,4413`. No teste realizado dentro do container, foram reproduzidos **78,67% de recall**, **9,88% de precisão**, 697 falhas detectadas e 7.053 alertas. As planilhas ficam em `execucoes-docker/planilhas/`; os JSONs de auditoria ficam diretamente em `execucoes-docker/`.

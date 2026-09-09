@@ -71,6 +71,7 @@ def configurar_notebook(notebook: dict, argumentos: argparse.Namespace) -> None:
     configuracoes = {
         "RETREINAR_MODELO_5": False,
         "TREINAR_MODELO_5_COM_SCORE_7": False,
+        "USAR_MODELO_5_COM_SCORE_7": True,
         "AVALIAR_HISTORICO": not argumentos.sem_avaliacao,
         "INICIO_INFERENCIA_MODELO_7": argumentos.inicio,
         "FIM_INFERENCIA_MODELO_7": argumentos.fim,
