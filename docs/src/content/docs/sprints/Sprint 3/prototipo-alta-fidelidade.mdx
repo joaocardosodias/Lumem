@@ -5,6 +5,8 @@ description: "Introdução do protótipo de alta fidelidade da plataforma de man
 
 import { Image } from 'astro:assets';
 import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import BarraNav from '../../../../assets/sprints/sprint3/protitipoAlta/Components/BarraNav.png';
+
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -16,3 +18,20 @@ Depois de desenvolver o wireframe do sistema na sprint passada, o próximo passo
 A estrutura de navegação, os fluxos principais e a jornada da persona **Marta** (operadora/planejadora de manutenção) foram preservados; o que muda é o nível de acabamento. Cores da Motiva, cards de indicador, tabelas com dados de PSD, mapa da Linha 4-Amarela e modais de cadastro substituem os retângulos genéricos e o texto sem significado.
 
 Primeiro, alinhar o time e o parceiro em torno de uma interface que já se parece com o produto final, reduzindo ambiguidades antes da implementação. Segundo, criar um canal para automatizar a comunicação com o modelo preditivo e permitir que os usuários responsáveis pela manutenção consigam acrescentar novos alarmes e ordens de manutenção.
+
+Todo o protótipo de alta fidelidade foi desenvolvido utilizando a plataforma FIGMA e pode ser encontrado em LINK PARA O FIGMA.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Componentes Utilizados</h2>
+</div>
+
+Para facilitar a criação do protótipo e da entrega final da plataforma e conseguir padronizar todo o front-end e seguir o mesmo estilo de cores e fontes, foram criados alguns componentes de partes específicas do sistema.
+
+Além de manter o padrão, essa estratégia ajuda na hora de separar os componentes da plataforma em React, permitindo que uma parte específica do front-end consiga ser reutilizada em diferentes partes, guardando essa parte em um arquivo específico, variando apenas de acordo com a linguagem ou stack escolhida pela equipe de desenvolvimento.
+
+### 2.1 Barra de Navegação
+
+A barra de navegação é a principal forma de acessar as diferentes do
+
+<Image src={BarraNav} alt="Barra de Navegação" width={250} />
