@@ -15,7 +15,7 @@ Um código roda no backend em Go, os modelos de ML rodam em Python, e a API é a
 
 Por que o Modelo 5 e não a RNN: os dois foram comparados na Sprint 3 (mesmo alvo, mesma partição temporal, mesma métrica) e o Modelo 5 venceu, PR-AUC 0,185 contra 0,154 da RNN (detalhes em [Modelo RNN](/sprints/sprint-3/modelos/modelo-rnn)). A RNN continua documentada como o experimento de comparação.
 
-O código está em src/modelo/.
+Houve também um segundo modelo de RNN testado nesta sprint ([RNN-LSTM](/sprints/sprint-3/modelos/rnn-lstm)), com desempenho um pouco pior. (PR-AUC 0,051), por isso a comparação acima usa a RNN de melhor desempenho entre as duas, e não a única disponível.
 
 ---
 
