@@ -104,28 +104,33 @@ A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes
    ```bash
    docker compose -f src/backend/docker-compose.yml config --quiet
    docker compose -f src/modelo/docker-compose.yml config --quiet
+   docker compose -f src/frontend/docker-compose.yml config --quiet
    ```
 4. **Compilação e Subida dos Serviços:**
    ```bash
    docker compose -f src/modelo/docker-compose.yml up --build -d
+   docker compose -f src/frontend/docker-compose.yml up --build -d
    docker compose -f src/backend/docker-compose.yml up --build -d
    ```
 5. **Inspeção de Logs dos Serviços Principais:**
    ```bash
    docker compose -f src/backend/docker-compose.yml logs --tail=100 backend worker
    docker compose -f src/modelo/docker-compose.yml logs --tail=100 ml-service
+   docker compose -f src/frontend/docker-compose.yml logs --tail=100 frontend
    ```
 6. **Verificação de Healthchecks:**
    ```bash
    curl -f http://localhost/healthz/live
    curl -f http://localhost/healthz/ready
    curl -f http://localhost:8000/health
+   curl -f http://localhost/
    ```
 
 ## 5. Checklist de validação pós-deploy
 
 | Verificação | Comando / Rota | Critério de aceitação |
 |---|---|---|
+| **Frontend SPA** | `GET /` | Retorna HTTP 200 com a interface React compilada |
 | **Liveness** | `GET /healthz/live` | Retorna HTTP 200 `{"status":"live"}` |
 | **Readiness** | `GET /healthz/ready` | Retorna HTTP 200 `{"status":"ready","database":"connected","storage":"connected"}` |
 | **Microserviço ML** | `GET http://localhost:8000/health` | Retorna HTTP 200 `{"status":"ok"}` |
