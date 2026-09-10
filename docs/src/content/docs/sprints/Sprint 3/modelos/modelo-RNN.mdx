@@ -76,8 +76,10 @@ O notebook executável está em `models/modelo-rnn/modelo_rnn.ipynb` (sequência
 
 | Modelo | Precisão | Recall | F1 | PR-AUC | ROC-AUC |
 |---|---|---|---|---|---|
-| Random Forest (Modelo 5) | 15,9% | 55,3% | 0,247 | 0,185 | 0,697 |
+| Random Forest (Modelo 5) | 15,28% | 59,16% | 0,243 | 0,184 | 0,695 |
 | RNN (LSTM) | 13,7% | 48,7% | 0,214 | 0,154 | 0,661 |
+
+O Modelo 5 não teve o objeto treinado da Sprint 2 salvo, então esses números vêm do bundle que a API realmente serve hoje (`src/modelo/artifacts/modelo_5.joblib`), reavaliado no mesmo teste — ligeiramente diferente do que o notebook original reportou (15,9%/55,3%), variação esperada de retreino com a mesma metodologia.
 
 Usar PR-AUC pra comparar aqui não contradiz o recall ser a prioridade de negócio (definida no Modelo 5), são perguntas diferentes: recall mede quantas falhas reais o modelo pega com o limiar já escolhido (o que importa na operação), enquanto PR-AUC mede o desempenho do modelo em todos os limiares possíveis, sem depender de qual cada um escolheu. Por isso é a métrica certa pra comparar duas arquiteturas diferentes.
 

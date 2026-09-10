@@ -6,7 +6,8 @@ uma API HTTP, no formato que o backend em Go já espera consumir
 
 O RNN (`models/modelo-rnn/`) continua documentado como o experimento de
 comparação da Sprint 3, mas quem serve a predição de verdade é o Modelo 5 
-ele venceu a comparação (PR-AUC 0,185 contra 0,154 da RNN).
+ele venceu a comparação (PR-AUC 0,184 contra 0,154 da RNN — números do bundle
+real exportado por `exportar_modelo.py`, ver detalhes em `modelo-RNN.mdx`).
 
 ## Contrato
 
