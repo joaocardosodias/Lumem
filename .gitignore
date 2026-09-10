@@ -6,3 +6,11 @@ venv/
 catboost_info/
 __pycache__/
 *.pyc
+
+# Go and Backend
+src/backend/.env
+src/backend/bin/
+*.db
+*.sqlite
+*.sqlite3
+src/.env

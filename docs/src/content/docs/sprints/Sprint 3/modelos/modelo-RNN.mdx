@@ -1,0 +1,86 @@
+---
+title: "Modelo RNN"
+description: "Evolução do Modelo 5 com uma rede neural recorrente (RNN) sobre a sequência de alarmes, mantendo o mesmo alvo e a mesma partição temporal, para medir o efeito da arquitetura frente ao Random Forest."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+O Modelo 5 (Random Forest) testou o histórico recente de alarmes e manutenção de uma porta para prever uma falha nos próximos 7 dias, usando features de janelas móveis (1/3/7/14/30 dias). Este modelo testa a mesma pergunta, mas com uma arquitetura que aprende sobre a sequência de alarmes, em vez de depender de agregações escolhidas manualmente.
+
+**Pergunta:** a mesma do Modelo 5, considerando o histórico recente de alarmes e manutenção de uma porta, qual a probabilidade dela quebrar nos próximos 7 dias? O alvo continua vindo da ZM01 (o chamado/ordem corretiva emergencial real), nunca do alarme em si: o alarme é um sinal que pode ou não virar chamado.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. O que é uma RNN e pra que serve</h2>
+</div>
+
+Uma Rede Neural Recorrente (RNN) processa uma sequência passo a passo, mantendo um estado interno que carrega informação dos passos anteriores. Diferente do Random Forest, que recebe uma linha por porta-dia com contagens já resumidas em janelas fixas, a RNN recebe a sequência bruta de alarmes ao longo do tempo e aprende sozinha quais padrões temporais importam. Por exemplo, diferenciar alarmes concentrados em poucos dias de alarmes espalhados ao longo do mês, distinção que uma contagem simples não captura.
+
+As variantes mais usadas na prática são LSTM e GRU, que resolvem o problema de uma RNN simples perder informação de muitos passos atrás.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Por que comparar com o Modelo 5</h2>
+</div>
+
+Na análise feita pelo grupo, o Modelo 5 e o Modelo 7 foram os que haviam perfomado melhor em relação aos seus respectivos objetivos. Mas eles não são diretamente comparáveis entre si: o Modelo 5 prevê falha por porta específica (porta-dia), e o Modelo 7 prevê falha por sistema PSD/plataforma (estação x plataforma x dia). Com bases de positivos diferentes (~8% contra ~52%).
+
+Este modelo continua a sequência de alarmes por porta, então mantém a mesma unidade de análise e a mesma definição de alvo do Modelo 5. Por isso a comparação justa é com o Modelo 5, não com o Modelo 7: só assim a diferença nas métricas pode ser atribuída à arquitetura (Random Forest sobre features agregadas vs. RNN sobre a sequência), e não a uma mudança do que está sendo previsto.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Comparabilidade com o Modelo 5</h2>
+</div>
+
+Para que a diferença observada entre os dois modelos possa ser atribuída à arquitetura, e não a uma mudança de problema, este modelo mantém fixo:
+
+- **Alvo:** mesma definição (`y = 1` se houve ZM01 nos 7 dias seguintes), mesma janela de observação e mesmo horizonte de 7 dias usados no Modelo 5.
+- **Partição temporal:** mesmo corte treino/teste do Modelo 5 (treino até 23/04/2025, teste a partir de 01/05/2025, com 7 dias de folga entre os dois).
+- **Métrica principal:** a mesma usada no Modelo 5, reportada junto com as métricas secundárias na tabela final.
+
+O que muda é só a forma de representar a entrada: em vez de uma linha com features já agregadas, cada porta entra como uma sequência de passos (dias) com os alarmes daquele intervalo, deixando o modelo aprender a agregação em vez de recebê-la pronta.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Metodologia</h2>
+</div>
+
+O notebook executável está em `models/modelo-rnn/modelo_rnn.ipynb` (sequências em `models/modelo-rnn/construir_sequencias.py`, que reaproveita as mesmas linhas e o mesmo alvo do `painel.parquet` do Modelo 5).
+
+- **Sequência:** 30 dias de contagem diária de alarme por porta (8 tipos + total, alarmes longos, duração máxima, contagem de técnico), sem nenhum dado do próprio dia previsto.
+- **Normalização:** z-score por feature, ajustado só no treino (o Random Forest não precisa disso; a RNN precisa).
+- **Arquitetura:** LSTM de uma camada, 32 unidades escondidas, seguida de uma camada linear — a versão mais simples que fazia sentido testar primeiro.
+- **Desbalanceamento:** `pos_weight` na função de perda, equivalente ao `class_weight='balanced'` do Random Forest.
+- **Épocas e limiar:** escolhidos na validação, do mesmo jeito que o Modelo 5 escolhe o limiar — o treino para quando o PR-AUC de validação não melhora por 3 épocas seguidas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Resultados</h2>
+</div>
+
+| Modelo | Precisão | Recall | F1 | PR-AUC | ROC-AUC |
+|---|---|---|---|---|---|
+| Random Forest (Modelo 5) | 15,9% | 55,3% | 0,247 | 0,185 | 0,697 |
+| RNN (LSTM) | 13,7% | 48,7% | 0,214 | 0,154 | 0,661 |
+
+Usar PR-AUC pra comparar aqui não contradiz o recall ser a prioridade de negócio (definida no Modelo 5), são perguntas diferentes: recall mede quantas falhas reais o modelo pega com o limiar já escolhido (o que importa na operação), enquanto PR-AUC mede o desempenho do modelo em todos os limiares possíveis, sem depender de qual cada um escolheu. Por isso é a métrica certa pra comparar duas arquiteturas diferentes.
+
+Nesta primeira versão, a RNN ficou abaixo do Random Forest em todas as métricas. Isso não invalida a arquitetura recorrente: a RNN usada aqui é uma LSTM simples, sem busca de hiperparâmetros, enquanto o Random Forest já passou por seleção de features via SHAP e por `RandomizedSearchCV`/`GridSearchCV`. Também é esperado que o Random Forest se saia bem, porque as janelas móveis (1/3/7/14/30 dias) já são um resumo desenhado à mão pra esse problema. A RNN precisaria redescobrir essas agregações sozinha, partindo de menos informação por linha (12 features cruas por dia contra 71 já elaboradas no Modelo 5) e sem nenhum ajuste de hiperparâmetros.
+
+Ainda assim, a RNN aprendeu sinal real: PR-AUC de 0,154 fica bem acima da taxa de falha do teste (8,71%), que seria a referência de um modelo sem poder preditivo nenhum. Assim, como próximos passos possíveis, seria aumentar a rede, testar GRU, ou rodar uma busca de hiperparâmetros equivalente à do Modelo 5 antes de comparar as arquiteturas de forma definitiva.
