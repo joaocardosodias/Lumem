@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import Card from '../components/Card'
 import { useAuth } from '../context/Auth'
-import { api, asList, countInspections, errorMessage, mergeDashboard } from '../lib/api'
+import { api, asList, errorMessage, mergeDashboard } from '../lib/api'
 import { stationLabel } from '../data/stations'
-import { loadInspections } from '../lib/inspectionCache'
 import './Dashboard.css'
 
 const emptySummary = {
@@ -29,28 +28,25 @@ function Dashboard({ onNavigate }) {
       setLoading(true)
       setError('')
       try {
-        const [dashboardResult, latestResult, inspectionsResult] = await Promise.allSettled([
+        const [dashboardResult, latestResult] = await Promise.allSettled([
           api.dashboard(),
           api.predictionsLatest(),
-          loadInspections(),
         ])
         if (cancelled) return
 
         if (dashboardResult.status === 'fulfilled') {
-          setSummary(mergeDashboard(dashboardResult.value, null))
+          const merged = mergeDashboard(dashboardResult.value, null)
+          setSummary(merged)
+          setInspectionKpis({
+            pending: merged.pending_inspections,
+            completed: merged.completed_inspections,
+          })
         } else {
           setError(errorMessage(dashboardResult.reason))
         }
 
         if (latestResult.status === 'fulfilled') {
           setPredictions(asList(latestResult.value))
-        }
-
-        if (inspectionsResult.status === 'fulfilled') {
-          const counts = countInspections(inspectionsResult.value)
-          setInspectionKpis({ pending: counts.pending, completed: counts.completed })
-        } else if (dashboardResult.status === 'fulfilled') {
-          setError(errorMessage(inspectionsResult.reason))
         }
       } catch (err) {
         if (!cancelled) setError(errorMessage(err))

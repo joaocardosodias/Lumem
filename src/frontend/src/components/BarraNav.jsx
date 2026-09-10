@@ -11,7 +11,7 @@ const items = [
   { id: 'inspecoes', label: 'Inspeções' },
 ]
 
-function BarraNav({ current, onNavigate, onLogout }) {
+function BarraNav({ current, user, onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
   const activeIndex = Math.max(
     items.findIndex((item) => item.id === current),
@@ -44,6 +44,18 @@ function BarraNav({ current, onNavigate, onLogout }) {
           ))}
         </ul>
       </nav>
+
+      {user ? (
+        <div className="barra-nav__user" title={`${user.name} (${user.email || user.role || 'Operador'})`}>
+          <div className="barra-nav__user-avatar">{user.name ? user.name.charAt(0).toUpperCase() : 'O'}</div>
+          {!collapsed ? (
+            <div className="barra-nav__user-info">
+              <strong>{user.name}</strong>
+              <small>{user.role || 'Operador Linha 4'}</small>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="barra-nav__footer">
         <button

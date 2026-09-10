@@ -110,6 +110,13 @@ h1 {
   font-weight: 700;
 }
 
+.page-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .app-boot {
   height: 100%;
   background: var(--paper);

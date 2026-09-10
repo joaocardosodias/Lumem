@@ -1,4 +1,13 @@
-function CardAlerta({ tag, startedAt, station, alarm, normalizedAt }) {
+function CardAlerta({
+  tag,
+  startedAt,
+  station,
+  alarm,
+  normalizedAt,
+  willFail,
+  onViewDoor,
+  onOpenInspection,
+}) {
   return (
     <article className="card-alerta">
       <div>
@@ -15,11 +24,29 @@ function CardAlerta({ tag, startedAt, station, alarm, normalizedAt }) {
       </div>
       <div>
         <span>Diagnóstico</span>
-        <strong>{alarm}</strong>
+        <strong className={willFail ? 'card-alerta__status--risk' : 'card-alerta__status--ok'}>
+          {alarm}
+        </strong>
       </div>
       <div>
         <span>Plataforma</span>
         <strong>{normalizedAt}</strong>
+      </div>
+      <div className="card-alerta__actions">
+        {onViewDoor ? (
+          <button type="button" className="card-alerta__btn" onClick={onViewDoor}>
+            Ver Porta
+          </button>
+        ) : null}
+        {onOpenInspection && willFail ? (
+          <button
+            type="button"
+            className="card-alerta__btn card-alerta__btn--primary"
+            onClick={onOpenInspection}
+          >
+            Inspecionar
+          </button>
+        ) : null}
       </div>
     </article>
   )

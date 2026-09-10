@@ -70,8 +70,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	db.SetMaxOpenConns(cfg.RiverMaxWorkers + 2)
-	db.SetMaxIdleConns(2)
+	db.SetMaxOpenConns(cfg.RiverMaxWorkers + 1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
 
 	startupCtx, startupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer startupCancel()
@@ -80,7 +82,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	riverPool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	riverPoolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("falha ao interpretar configuracao do pool River", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	riverPoolCfg.MaxConns = int32(cfg.RiverMaxWorkers + 2)
+	riverPoolCfg.MinConns = 1
+	riverPoolCfg.MaxConnLifetime = 10 * time.Minute
+	riverPoolCfg.MaxConnIdleTime = 2 * time.Minute
+
+	riverPool, err := pgxpool.NewWithConfig(context.Background(), riverPoolCfg)
 	if err != nil {
 		logger.Error("falha ao configurar pool River", slog.String("error", err.Error()))
 		os.Exit(1)

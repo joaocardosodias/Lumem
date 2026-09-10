@@ -7,8 +7,6 @@ import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
 import { errorMessage } from '../lib/api'
-import { loadMaintenance } from '../lib/maintenanceCache'
-import { loadInspections } from '../lib/inspectionCache'
 import './Login.css'
 
 function Login() {
@@ -41,14 +39,9 @@ function Login() {
           logo: logoRef.current,
         },
         task: async (onProgress) => {
-          try {
-            await Promise.all([
-              loadMaintenance({ force: true, onProgress }),
-              loadInspections({ force: true }),
-            ])
-          } catch {
-            // As telas tentam de novo se o cache vier vazio.
-          }
+          onProgress?.({ loaded: 45, pages: 1, total: 100 })
+          await new Promise((resolve) => setTimeout(resolve, 200))
+          onProgress?.({ loaded: 100, pages: 1, total: 100 })
         },
         onReady: () => acceptUser(profile),
       })

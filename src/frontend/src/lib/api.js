@@ -10,12 +10,19 @@ export function setUnauthorizedHandler(handler) {
 }
 
 export function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY)
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token) {
-  if (token) sessionStorage.setItem(TOKEN_KEY, token)
-  else sessionStorage.removeItem(TOKEN_KEY)
+  if (typeof window === 'undefined') return
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
+  }
 }
 
 export class ApiError extends Error {
@@ -249,16 +256,29 @@ export function mergeDashboard(dashboard, inspectionCounts) {
   }
 }
 
+function formatNameFromEmail(email) {
+  const clean = String(email || '').split('@')[0]
+  if (!clean) return 'Operador'
+  const parts = clean.split(/[._-]/).filter(Boolean)
+  if (!parts.length) return 'Operador'
+  return parts
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export function unwrapUser(payload) {
   const source = payload?.user && typeof payload.user === 'object' ? payload.user : payload
   if (!source || typeof source !== 'object') {
     return { id: '', name: 'Operador', email: '', role: '' }
   }
 
+  const email = source.email || ''
+  const name = source.name || formatNameFromEmail(email)
+
   return {
     id: String(source.id ?? ''),
-    name: source.name || source.email || 'Operador',
-    email: source.email || '',
+    name,
+    email,
     role: source.role || '',
   }
 }
@@ -278,8 +298,16 @@ export function uploadIdFrom(result) {
 }
 
 export function doorRisk(item) {
-  if (typeof item?.risk === 'number' && Number.isFinite(item.risk)) return item.risk
-  return item?.will_fail ? 0.82 : 0.22
+  if (typeof item?.probability === 'number' && Number.isFinite(item.probability)) {
+    return Math.max(0, Math.min(1, item.probability))
+  }
+  if (typeof item?.failure_probability === 'number' && Number.isFinite(item.failure_probability)) {
+    return Math.max(0, Math.min(1, item.failure_probability))
+  }
+  if (typeof item?.risk === 'number' && Number.isFinite(item.risk)) {
+    return Math.max(0, Math.min(1, item.risk))
+  }
+  return item?.will_fail ? 1.0 : 0.0
 }
 
 export function normalizeDoors(payload, stationCode, stationName) {
@@ -307,15 +335,13 @@ export function relatedMaintenances(items, door) {
   const list = (Array.isArray(items) ? items : asList(items)).map(normalizeMaintenance)
   const pad = String(door.door_number).padStart(2, '0')
   const platformDigit = String(door.platform || '').replace(/\D/g, '')
-  const byLocation = list.filter((item) => {
+  return list.filter((item) => {
     const location = String(item.installation_location || '')
     const sameStation = !item.station_code || item.station_code === door.station_code
     const matchesDoor = location.includes(`PP${pad}`)
     const matchesPlatform = !platformDigit || location.includes(`-P${platformDigit}-`)
     return sameStation && matchesDoor && matchesPlatform
   })
-  if (byLocation.length) return byLocation
-  return list.filter((item) => item.station_code === door.station_code).slice(0, 8)
 }
 
 function maintenanceKey(item) {

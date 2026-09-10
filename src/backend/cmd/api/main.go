@@ -97,9 +97,10 @@ func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
 		os.Exit(1)
 	}
 
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
 	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
 
 	checkDatabaseConnection(db, cfg, logger)
 	return db

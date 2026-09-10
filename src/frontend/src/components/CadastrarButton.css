@@ -10,4 +10,17 @@
   background: var(--brand);
   color: var(--white);
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cadastrar-button--secondary {
+  background: var(--white);
+  color: var(--brand);
+  border: 1.5px solid var(--brand);
+}
+
+.cadastrar-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
 }

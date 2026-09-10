@@ -5,8 +5,10 @@ import Card from '../components/Card'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
+import { useToast } from '../context/Toast'
 import { lineStations, resolveStation, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
+import { exportToCsv } from '../lib/exportCsv'
 import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
 import { getCachedInspections, loadInspections, patchCachedInspection } from '../lib/inspectionCache'
 import './Inspecoes.css'
@@ -51,17 +53,30 @@ function inspectionStation(item) {
   return resolveStation(item) || String(item.station_code || '').toUpperCase()
 }
 
-function Inspecoes() {
+function Inspecoes({ params }) {
+  const toast = useToast()
   const [items, setItems] = useState(() => getCachedInspections() ?? [])
   const [loading, setLoading] = useState(() => !getCachedInspections())
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(emptyFilters)
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [reloadAt, setReloadAt] = useState(0)
+
+  useEffect(() => {
+    if (params?.station || params?.door) {
+      setForm((prev) => ({
+        ...prev,
+        station_code: params.station || prev.station_code,
+        door_number: params.door ? String(params.door) : prev.door_number,
+      }))
+      setOpen(true)
+    }
+  }, [params])
 
   useEffect(() => {
     let cancelled = false
@@ -87,7 +102,7 @@ function Inspecoes() {
 
   useEffect(() => {
     setPage(1)
-  }, [filter, filters])
+  }, [filter, filters, search])
 
   const scoped = useMemo(
     () =>
@@ -96,16 +111,27 @@ function Inspecoes() {
         if (filters.platform && item.platform !== filters.platform) return false
         if (filters.priority && item.priority !== filters.priority) return false
         if (!inPeriod(item.scheduled_for, filters.period)) return false
+        if (search.trim()) {
+          const q = search.trim().toLowerCase()
+          const match =
+            String(item.door_number).includes(q) ||
+            (item.notes && item.notes.toLowerCase().includes(q)) ||
+            (item.station_code && item.station_code.toLowerCase().includes(q)) ||
+            (item.platform && item.platform.toLowerCase().includes(q))
+          if (!match) return false
+        }
         return true
       }),
-    [items, filters],
+    [items, filters, search],
   )
+
   const visible = useMemo(
     () => (filter ? scoped.filter((item) => item.status === filter) : scoped),
     [scoped, filter],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.platform || filters.priority) || filters.period !== DEFAULT_PERIOD
+    Boolean(filters.station || filters.platform || filters.priority || search) ||
+    filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -158,9 +184,12 @@ function Inspecoes() {
       })
       setForm(emptyForm)
       setOpen(false)
+      toast.success('Ordem de inspeção criada com sucesso!')
       setReloadAt(Date.now())
     } catch (err) {
-      setFormError(errorMessage(err))
+      const msg = errorMessage(err)
+      setFormError(msg)
+      toast.error(msg)
     }
   }
 
@@ -169,16 +198,43 @@ function Inspecoes() {
       await api.updateInspectionStatus(id, { status })
       patchCachedInspection(id, { status })
       setItems((current) => current.map((item) => (item.id === id ? { ...item, status } : item)))
+      toast.success(`Status atualizado para ${STATUS_LABEL[status] || status}`)
     } catch (err) {
-      setError(errorMessage(err))
+      const msg = errorMessage(err)
+      setError(msg)
+      toast.error(msg)
     }
+  }
+
+  function handleExportCsv() {
+    if (!visible.length) {
+      toast.info('Não há registros para exportar com os filtros atuais.')
+      return
+    }
+    const columns = [
+      { label: 'Estação', key: 'station_code' },
+      { label: 'Nome da Estação', value: (item) => stationLabel(item.station_code) },
+      { label: 'Plataforma', key: 'platform' },
+      { label: 'Porta', value: (item) => String(item.door_number).padStart(2, '0') },
+      { label: 'Prioridade', value: (item) => PRIORITY_LABEL[item.priority] || item.priority },
+      { label: 'Status', value: (item) => STATUS_LABEL[item.status] || item.status },
+      { label: 'Agendada para', key: 'scheduled_for' },
+      { label: 'Notas', key: 'notes' },
+    ]
+    exportToCsv('inspecoes.csv', columns, visible)
+    toast.success(`${visible.length} inspeções exportadas com sucesso!`)
   }
 
   return (
     <section className="inspecoes">
       <div className="page-head">
         <h1>Inspeções</h1>
-        <CadastrarButton onClick={() => setOpen(true)}>Abrir inspeção +</CadastrarButton>
+        <div className="page-head__actions">
+          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+            Exportar CSV
+          </CadastrarButton>
+          <CadastrarButton onClick={() => setOpen(true)}>Abrir inspeção +</CadastrarButton>
+        </div>
       </div>
 
       {loading ? <p className="page-status">Carregando inspeções…</p> : null}
@@ -209,8 +265,19 @@ function Inspecoes() {
         period={filters.period}
         onPeriod={(period) => setFilters((current) => ({ ...current, period }))}
         dirty={filtersDirty}
-        onClear={() => setFilters(emptyFilters)}
+        onClear={() => {
+          setSearch('')
+          setFilters(emptyFilters)
+        }}
       >
+        <FiltroCampo label="Busca">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por porta, notas..."
+          />
+        </FiltroCampo>
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
             <option value="">Todas</option>
@@ -358,8 +425,21 @@ function Inspecoes() {
               </select>
             </label>
             <div className="ui-input-row">
-              <Input id="insp-date" label="Data" type="date" value={form.date} onChange={updateField('date')} />
-              <Input id="insp-time" label="Hora" type="time" step="60" value={form.time} onChange={updateField('time')} />
+              <Input
+                id="insp-date"
+                label="Data"
+                type="date"
+                value={form.date}
+                onChange={updateField('date')}
+              />
+              <Input
+                id="insp-time"
+                label="Hora"
+                type="time"
+                step="60"
+                value={form.time}
+                onChange={updateField('time')}
+              />
             </div>
             <Input id="insp-notes" label="Notas" value={form.notes} onChange={updateField('notes')} />
             <Button type="submit" variant="light">

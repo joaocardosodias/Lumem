@@ -65,10 +65,10 @@
 
 .card-alerta {
   display: grid;
-  grid-template-columns: 1.5fr 1.1fr 0.9fr 0.45fr 1.3fr;
+  grid-template-columns: 1.2fr 1fr 0.9fr 0.7fr 0.9fr 1.3fr;
   gap: 14px;
   align-items: center;
-  padding: 18px 6px;
+  padding: 16px 6px;
   border-bottom: 1px solid rgba(64, 0, 255, 0.14);
   color: var(--brand);
 }
@@ -87,6 +87,48 @@
 
 .card-alerta strong {
   font-size: 15px;
+}
+
+.card-alerta__status--risk {
+  color: #dc2626 !important;
+}
+
+.card-alerta__status--ok {
+  color: #16a34a !important;
+}
+
+.card-alerta__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.card-alerta__btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.card-alerta__btn:hover {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.card-alerta__btn--primary {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.card-alerta__btn--primary:hover {
+  background: #2b00b3;
 }
 
 .alertas-modal {

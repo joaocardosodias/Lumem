@@ -3,9 +3,10 @@ import Card from '../components/Card'
 import CadastrarButton from '../components/CadastrarButton'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
+import { useToast } from '../context/Toast'
 import { lineStations, stationLabel } from '../data/stations'
-import { api, asList, countInspections, errorMessage, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
-import { invalidateInspections, loadInspections } from '../lib/inspectionCache'
+import { api, asList, errorMessage, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
+import { invalidateInspections } from '../lib/inspectionCache'
 import './Portas.css'
 
 function padDoor(value) {
@@ -20,17 +21,19 @@ const emptySummary = {
   critical_stations: [],
 }
 
-function Portas({ onNavigate }) {
+function Portas({ onNavigate, params = {} }) {
+  const toast = useToast()
   const [selectedCode, setSelectedCode] = useState(null)
   const [tooltipOpen, setTooltipOpen] = useState(false)
-  const [openedCode, setOpenedCode] = useState(null)
+  const [openedCode, setOpenedCode] = useState(params.station || null)
   const [doors, setDoors] = useState([])
   const [summary, setSummary] = useState(emptySummary)
-  const [lastTraining, setLastTraining] = useState('—')
   const [lastPrediction, setLastPrediction] = useState(null)
   const [activePlatform, setActivePlatform] = useState('P1')
   const [openedDoor, setOpenedDoor] = useState(null)
   const [doorMaintenances, setDoorMaintenances] = useState([])
+  const [doorSearch, setDoorSearch] = useState('')
+  const [doorFilter, setDoorFilter] = useState('all')
   const [inspNotes, setInspNotes] = useState('')
   const [inspWhen, setInspWhen] = useState({ date: '', time: '' })
   const [inspError, setInspError] = useState('')
@@ -57,6 +60,20 @@ function Portas({ onNavigate }) {
         .sort((a, b) => a.door_number - b.door_number),
     [doors, activePlatform],
   )
+  const filteredDoors = useMemo(() => {
+    return visibleDoors.filter((item) => {
+      if (doorFilter === 'risk' && !item.will_fail) return false
+      if (doorFilter === 'ok' && item.will_fail) return false
+      if (doorSearch) {
+        const query = doorSearch.toLowerCase().trim()
+        const tag = String(item.sap_tag || '').toLowerCase()
+        const num = String(item.door_number || '')
+        if (!tag.includes(query) && !num.includes(query)) return false
+      }
+      return true
+    })
+  }, [visibleDoors, doorFilter, doorSearch])
+
   const selectedIndex = lineStations.findIndex((item) => item.code === selectedCode)
   const maxRisk = useMemo(
     () => Math.max(...visibleDoors.map((item) => item.risk), 0.01),
@@ -74,9 +91,9 @@ function Portas({ onNavigate }) {
 
     async function loadSummary() {
       try {
-        const [data, items] = await Promise.all([api.dashboard(), loadInspections()])
+        const data = await api.dashboard()
         if (cancelled) return
-        setSummary(mergeDashboard(data, countInspections(items)))
+        setSummary(mergeDashboard(data, null))
       } catch (err) {
         if (!cancelled) setError(errorMessage(err))
       }
@@ -87,6 +104,22 @@ function Portas({ onNavigate }) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (params.station && params.station !== openedCode) {
+      handleOpenStation(params.station, false)
+    } else if (!params.station && openedCode) {
+      setOpenedCode(null)
+      setOpenedDoor(null)
+    }
+  }, [params.station])
+
+  useEffect(() => {
+    if (params.door && doors.length && (!openedDoor || String(openedDoor.door_number) !== String(params.door))) {
+      const match = doors.find((d) => String(d.door_number) === String(params.door))
+      if (match) handleOpenDoor(match, false)
+    }
+  }, [params.door, doors])
 
   function clearHide() {
     if (hideTimer.current) {
@@ -156,7 +189,10 @@ function Portas({ onNavigate }) {
     }
   }
 
-  function handleOpenStation(code) {
+  function handleOpenStation(code, updateUrl = true) {
+    if (updateUrl) {
+      onNavigate?.('portas', { station: code })
+    }
     setOpenedCode(code)
     setOpenedDoor(null)
     setSelectedCode(null)
@@ -173,32 +209,18 @@ function Portas({ onNavigate }) {
         mode: 'predict',
         task: () => api.triggerPredictions('7'),
       })
+      toast.success('Diagnóstico preditivo executado com sucesso!')
       await loadStationDoors(openedCode)
     } catch (err) {
       setError(errorMessage(err))
+      toast.error(errorMessage(err))
     }
   }
 
-  async function handleRetrain() {
-    if (busy) return
-    setError('')
-    try {
-      await run({
-        variant: 'overlay',
-        mode: 'retrain',
-        task: () => api.triggerPredictions('7'),
-      })
-      const now = new Date()
-      setLastTraining(
-        `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
-      )
-      if (openedCode) await loadStationDoors(openedCode)
-    } catch (err) {
-      setError(errorMessage(err))
+  async function handleOpenDoor(door, updateUrl = true) {
+    if (updateUrl && openedCode) {
+      onNavigate?.('portas', { station: openedCode, door: door.door_number })
     }
-  }
-
-  async function handleOpenDoor(door) {
     setOpenedDoor(door)
     setDoorMaintenances([])
     setInspNotes('')
@@ -242,10 +264,25 @@ function Portas({ onNavigate }) {
         notes: inspNotes.trim() || undefined,
       })
       invalidateInspections()
+      toast.success(`Ordem de inspeção para a porta ${padDoor(openedDoor.door_number)} cadastrada com sucesso!`)
       onNavigate?.('inspecoes')
     } catch (err) {
       setInspError(errorMessage(err))
+      toast.error(errorMessage(err))
     }
+  }
+
+  function handleBackFromDoor() {
+    setOpenedDoor(null)
+    if (openedCode) {
+      onNavigate?.('portas', { station: openedCode })
+    }
+  }
+
+  function handleBackFromStation() {
+    setOpenedCode(null)
+    setOpenedDoor(null)
+    onNavigate?.('portas', {})
   }
 
   if (openedStation && timeline) {
@@ -253,7 +290,7 @@ function Portas({ onNavigate }) {
       <section className="portas">
         <div className="page-head">
           <div className="portas__title">
-            <button type="button" className="portas__back" onClick={() => setOpenedDoor(null)} aria-label="Voltar">
+            <button type="button" className="portas__back" onClick={handleBackFromDoor} aria-label="Voltar">
               ‹
             </button>
             <div>
@@ -368,7 +405,7 @@ function Portas({ onNavigate }) {
       <section className="portas">
         <div className="page-head">
           <div className="portas__title">
-            <button type="button" className="portas__back" onClick={() => setOpenedCode(null)} aria-label="Voltar">
+            <button type="button" className="portas__back" onClick={handleBackFromStation} aria-label="Voltar">
               ‹
             </button>
             <div>
@@ -430,7 +467,39 @@ function Portas({ onNavigate }) {
         </article>
 
         <article className="portas__panel">
-          <h2>Portas de Estação · {activePlatform}</h2>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap' }}>
+            <h2>Portas de Estação · {activePlatform}</h2>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Buscar porta ou TAG…"
+                value={doorSearch}
+                onChange={(e) => setDoorSearch(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(63,0,255,0.2)',
+                  fontSize: '0.86rem',
+                  outline: 'none',
+                }}
+              />
+              <select
+                value={doorFilter}
+                onChange={(e) => setDoorFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(63,0,255,0.2)',
+                  fontSize: '0.86rem',
+                  background: '#ffffff',
+                }}
+              >
+                <option value="all">Todas as portas</option>
+                <option value="risk">Em risco</option>
+                <option value="ok">Estáveis</option>
+              </select>
+            </div>
+          </div>
           <div className="portas__table">
             <div className="portas__row portas__row--head">
               <span>Porta</span>
@@ -439,35 +508,38 @@ function Portas({ onNavigate }) {
               <span>Status</span>
               <span>Avaliado em</span>
             </div>
-            {visibleDoors.map((item) => (
-              <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
-                <strong>{padDoor(item.door_number)}</strong>
-                <strong>{item.sap_tag || '—'}</strong>
-                <div className="portas-risk">
-                  <b>
-                    <i style={{ width: `${Math.round(item.risk * 100)}%` }} />
-                  </b>
-                  <em>{Math.round(item.risk * 100)}%</em>
-                </div>
-                <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
-                  {item.will_fail ? 'Em risco' : 'Estável'}
-                </span>
-                <strong>{item.last_evaluated_at || '—'}</strong>
-              </button>
-            ))}
+            {filteredDoors.length ? (
+              filteredDoors.map((item) => (
+                <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
+                  <strong>{padDoor(item.door_number)}</strong>
+                  <strong>{item.sap_tag || '—'}</strong>
+                  <div className="portas-risk">
+                    <b>
+                      <i style={{ width: `${Math.round(item.risk * 100)}%` }} />
+                    </b>
+                    <em>{Math.round(item.risk * 100)}%</em>
+                  </div>
+                  <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
+                    {item.will_fail ? 'Em risco' : 'Estável'}
+                  </span>
+                  <strong>{item.last_evaluated_at || '—'}</strong>
+                </button>
+              ))
+            ) : (
+              <p className="portas__empty">Nenhuma porta encontrada com esses filtros.</p>
+            )}
           </div>
         </article>
 
         <div className="portas__actions">
           <div>
-            <CadastrarButton onClick={handlePredict}>Realizar Previsão</CadastrarButton>
+            <CadastrarButton onClick={handlePredict}>Executar Diagnóstico IA</CadastrarButton>
           </div>
           <div>
-            <CadastrarButton onClick={handleRetrain}>Re-treinar modelo</CadastrarButton>
-            <small>Último disparo {lastTraining}</small>
+            <CadastrarButton onClick={() => loadStationDoors(openedCode)}>Atualizar Dados</CadastrarButton>
           </div>
         </div>
-        {lastPrediction ? <p className="portas__eval">Última predição {lastPrediction}</p> : null}
+        {lastPrediction ? <p className="portas__eval">Última avaliação: {lastPrediction}</p> : null}
       </section>
     )
   }

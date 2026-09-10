@@ -8,9 +8,11 @@ import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
+import { useToast } from '../context/Toast'
 import { lineStations } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
 import { api, errorMessage } from '../lib/api'
+import { exportToCsv } from '../lib/exportCsv'
 import { loadMaintenance, getCachedMaintenance } from '../lib/maintenanceCache'
 import { pollUpload } from '../lib/runUpload'
 import './Manutencoes.css'
@@ -60,7 +62,8 @@ function durationFrom(start, end) {
   return Math.round(((ended - started) / 36e5) * 100) / 100
 }
 
-function Manutencoes() {
+function Manutencoes({ params }) {
+  const toast = useToast()
   const [items, setItems] = useState(() => getCachedMaintenance() ?? [])
   const [loading, setLoading] = useState(() => !getCachedMaintenance())
   const [error, setError] = useState('')
@@ -72,7 +75,11 @@ function Manutencoes() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
-  const [filters, setFilters] = useState(emptyFilters)
+  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState(() => ({
+    ...emptyFilters,
+    station: params?.station || '',
+  }))
   const [page, setPage] = useState(1)
   const [reloadAt, setReloadAt] = useState(0)
 
@@ -111,13 +118,29 @@ function Manutencoes() {
         if (filters.source && item.source !== filters.source) return false
         if (!inPeriod(item.start_timestamp, filters.period)) return false
         if (!inDurationRange(item.duration_hours, filters.durationMin, filters.durationMax)) return false
+        if (search.trim()) {
+          const q = search.trim().toLowerCase()
+          const match =
+            (item.sap_order_number && item.sap_order_number.toLowerCase().includes(q)) ||
+            (item.installation_location && item.installation_location.toLowerCase().includes(q)) ||
+            (item.symptom && item.symptom.toLowerCase().includes(q)) ||
+            (item.description && item.description.toLowerCase().includes(q)) ||
+            (item.station_code && item.station_code.toLowerCase().includes(q))
+          if (!match) return false
+        }
         return true
       }),
-    [items, filters],
+    [items, filters, search],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.orderType || filters.source || filters.durationMin || filters.durationMax) ||
-    filters.period !== DEFAULT_PERIOD
+    Boolean(
+      filters.station ||
+        filters.orderType ||
+        filters.source ||
+        filters.durationMin ||
+        filters.durationMax ||
+        search,
+    ) || filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -183,9 +206,12 @@ function Manutencoes() {
       setForm(emptyForm)
       setOpen(false)
       setPage(1)
+      toast.success('Ordem de manutenção cadastrada com sucesso!')
       setReloadAt(Date.now())
     } catch (err) {
-      setImportError(errorMessage(err))
+      const msg = errorMessage(err)
+      setImportError(msg)
+      toast.error(msg)
     }
   }
 
@@ -209,12 +235,36 @@ function Manutencoes() {
       setUpload(null)
       setOpen(false)
       setPage(1)
+      toast.success('Planilha de manutenções processada com sucesso!')
       setReloadAt(Date.now())
     } catch (err) {
-      setImportError(errorMessage(err))
+      const msg = errorMessage(err)
+      setImportError(msg)
+      toast.error(msg)
     } finally {
       setImporting(false)
     }
+  }
+
+  function handleExportCsv() {
+    if (!visible.length) {
+      toast.info('Não há registros para exportar com os filtros atuais.')
+      return
+    }
+    const columns = [
+      { label: 'Ordem SAP', key: 'sap_order_number' },
+      { label: 'Tipo', key: 'order_type' },
+      { label: 'Estação', key: 'station_code' },
+      { label: 'Local de Instalação', key: 'installation_location' },
+      { label: 'Início', key: 'start_timestamp' },
+      { label: 'Fim', key: 'end_timestamp' },
+      { label: 'Duração (h)', key: 'duration_hours' },
+      { label: 'Sintoma', key: 'symptom' },
+      { label: 'Descrição', key: 'description' },
+      { label: 'Origem', key: 'source' },
+    ]
+    exportToCsv('manutencoes.csv', columns, visible)
+    toast.success(`${visible.length} manutenções exportadas com sucesso!`)
   }
 
   function updateFilter(field) {
@@ -236,151 +286,168 @@ function Manutencoes() {
     <section className="manutencoes">
       <div className="page-head">
         <h1>Manutenções</h1>
-        <CadastrarButton onClick={openCadastro}>Cadastrar Manutenções +</CadastrarButton>
+        <div className="page-head__actions">
+          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+            Exportar CSV
+          </CadastrarButton>
+          <CadastrarButton onClick={openCadastro}>Cadastrar Manutenções +</CadastrarButton>
+        </div>
       </div>
 
       {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       {loading ? null : (
-      <>
-      <div className="manutencoes__hero">
-        <Card
-          layout="banner"
-          label="Ordens de manutenção"
-          value={visible.length}
-          hint={
-            topType
-              ? `${topType[1]} do tipo ${topType[0]}${rangeHint ? ` · ${rangeHint}` : ''}`
-              : 'Nenhuma ordem na linha'
-          }
-        />
-        <div className="manutencoes__charts">
-          <article className="manutencoes__chart">
-            <h2>Ordens por tipo</h2>
-            {Object.entries(byType).map(([label, value]) => (
-              <div key={label} className="manutencoes__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxType) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-          <article className="manutencoes__chart">
-            <h2>Ordens por estação</h2>
-            <div className="manutencoes__bars">
-              <div>
-                {topStations.map(([label, value]) => (
+        <>
+          <div className="manutencoes__hero">
+            <Card
+              layout="banner"
+              label="Ordens de manutenção"
+              value={visible.length}
+              hint={
+                topType
+                  ? `${topType[1]} do tipo ${topType[0]}${rangeHint ? ` · ${rangeHint}` : ''}`
+                  : 'Nenhuma ordem na linha'
+              }
+            />
+            <div className="manutencoes__charts">
+              <article className="manutencoes__chart">
+                <h2>Ordens por tipo</h2>
+                {Object.entries(byType).map(([label, value]) => (
                   <div key={label} className="manutencoes__bar">
                     <strong>{label}</strong>
-                    <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                    <i style={{ width: `${(value / maxType) * 100}%` }} />
                     <em>{value}</em>
                   </div>
                 ))}
-              </div>
-              {otherStations.length ? (
-                <div>
-                  {otherStations.map(([label, value]) => (
-                    <div key={label} className="manutencoes__bar">
-                      <strong>{label}</strong>
-                      <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                      <em>{value}</em>
+              </article>
+              <article className="manutencoes__chart">
+                <h2>Ordens por estação</h2>
+                <div className="manutencoes__bars">
+                  <div>
+                    {topStations.map(([label, value]) => (
+                      <div key={label} className="manutencoes__bar">
+                        <strong>{label}</strong>
+                        <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                        <em>{value}</em>
+                      </div>
+                    ))}
+                  </div>
+                  {otherStations.length ? (
+                    <div>
+                      {otherStations.map(([label, value]) => (
+                        <div key={label} className="manutencoes__bar">
+                          <strong>{label}</strong>
+                          <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                          <em>{value}</em>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
-              ) : null}
+              </article>
             </div>
-          </article>
-        </div>
-      </div>
+          </div>
 
-      <Filtros
-        period={filters.period}
-        onPeriod={(period) => {
-          setPage(1)
-          setFilters((current) => ({ ...current, period }))
-        }}
-        dirty={filtersDirty}
-        onClear={() => {
-          setPage(1)
-          setFilters(emptyFilters)
-        }}
-      >
-        <FiltroCampo label="Estação">
-          <select value={filters.station} onChange={updateFilter('station')}>
-            <option value="">Todas</option>
-            {lineStations.map((station) => (
-              <option key={station.code} value={station.code}>
-                {station.code} — {station.name}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Tipo">
-          <select value={filters.orderType} onChange={updateFilter('orderType')}>
-            <option value="">Todos</option>
-            {orderTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Origem">
-          <select value={filters.source} onChange={updateFilter('source')}>
-            <option value="">Todas</option>
-            {sources.map((source) => (
-              <option key={source} value={source}>
-                {source}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Mín. (h)">
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={filters.durationMin}
-            onChange={updateFilter('durationMin')}
-          />
-        </FiltroCampo>
-        <FiltroCampo label="Máx. (h)">
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={filters.durationMax}
-            onChange={updateFilter('durationMax')}
-          />
-        </FiltroCampo>
-      </Filtros>
+          <Filtros
+            period={filters.period}
+            onPeriod={(period) => {
+              setPage(1)
+              setFilters((current) => ({ ...current, period }))
+            }}
+            dirty={filtersDirty}
+            onClear={() => {
+              setPage(1)
+              setSearch('')
+              setFilters(emptyFilters)
+            }}
+          >
+            <FiltroCampo label="Busca">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+                placeholder="Buscar por ordem, sintoma..."
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Estação">
+              <select value={filters.station} onChange={updateFilter('station')}>
+                <option value="">Todas</option>
+                {lineStations.map((station) => (
+                  <option key={station.code} value={station.code}>
+                    {station.code} — {station.name}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Tipo">
+              <select value={filters.orderType} onChange={updateFilter('orderType')}>
+                <option value="">Todos</option>
+                {orderTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Origem">
+              <select value={filters.source} onChange={updateFilter('source')}>
+                <option value="">Todas</option>
+                {sources.map((source) => (
+                  <option key={source} value={source}>
+                    {source}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Mín. (h)">
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={filters.durationMin}
+                onChange={updateFilter('durationMin')}
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Máx. (h)">
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={filters.durationMax}
+                onChange={updateFilter('durationMax')}
+              />
+            </FiltroCampo>
+          </Filtros>
 
-      <div className="manutencoes__list">
-        {paged.length ? (
-          paged.map((item) => (
-            <CardManutencao
-              key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
-              orderType={item.order_type}
-              sapOrder={item.sap_order_number}
-              station={item.station_code}
-              location={item.installation_location}
-              startedAt={item.start_timestamp}
-              endedAt={item.end_timestamp}
-              durationHours={item.duration_hours}
-              symptom={item.symptom}
-              description={item.description}
-              source={item.source}
-            />
-          ))
-        ) : (
-          <p className="page-empty">
-            {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
-          </p>
-        )}
-        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-      </div>
-      </>
+          <div className="manutencoes__list">
+            {paged.length ? (
+              paged.map((item) => (
+                <CardManutencao
+                  key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
+                  orderType={item.order_type}
+                  sapOrder={item.sap_order_number}
+                  station={item.station_code}
+                  location={item.installation_location}
+                  startedAt={item.start_timestamp}
+                  endedAt={item.end_timestamp}
+                  durationHours={item.duration_hours}
+                  symptom={item.symptom}
+                  description={item.description}
+                  source={item.source}
+                />
+              ))
+            ) : (
+              <p className="page-empty">
+                {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
+              </p>
+            )}
+            <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+          </div>
+        </>
       )}
 
       {open ? (
@@ -391,10 +458,18 @@ function Manutencoes() {
           >
             <h2>Cadastrar manutenção</h2>
             <div className="cadastro-tabs">
-              <button type="button" className={mode === 'manual' ? 'is-active' : ''} onClick={() => setMode('manual')}>
+              <button
+                type="button"
+                className={mode === 'manual' ? 'is-active' : ''}
+                onClick={() => setMode('manual')}
+              >
                 Manual
               </button>
-              <button type="button" className={mode === 'import' ? 'is-active' : ''} onClick={() => setMode('import')}>
+              <button
+                type="button"
+                className={mode === 'import' ? 'is-active' : ''}
+                onClick={() => setMode('import')}
+              >
                 CSV / XLSX
               </button>
             </div>

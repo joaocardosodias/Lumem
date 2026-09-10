@@ -7,9 +7,11 @@ import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
+import { useToast } from '../context/Toast'
 import { lineStations, stationLabel } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
 import { api, asList, errorMessage } from '../lib/api'
+import { exportToCsv } from '../lib/exportCsv'
 import { pollUpload } from '../lib/runUpload'
 import './Alertas.css'
 
@@ -27,6 +29,7 @@ function mapPrediction(item) {
     started_at: item.last_evaluated_at || '—',
     station: item.station_name || stationLabel(item.station_code) || item.station_code || '—',
     station_code: item.station_code || '',
+    door_number: item.door_number,
     platform: item.platform || '',
     alarm: item.will_fail ? 'Vai falhar' : 'Estável',
     will_fail: Boolean(item.will_fail),
@@ -44,7 +47,8 @@ const emptyFilters = {
   period: DEFAULT_PERIOD,
 }
 
-function Alertas() {
+function Alertas({ onNavigate, params }) {
+  const toast = useToast()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -53,7 +57,11 @@ function Alertas() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
-  const [filters, setFilters] = useState(emptyFilters)
+  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState(() => ({
+    ...emptyFilters,
+    station: params?.station || '',
+  }))
   const [page, setPage] = useState(1)
 
   async function load() {
@@ -85,12 +93,22 @@ function Alertas() {
         if (filters.diagnosis === 'ok' && item.will_fail) return false
         if (filters.platform && item.platform !== filters.platform) return false
         if (!inPeriod(item.started_at, filters.period)) return false
+        if (search.trim()) {
+          const q = search.trim().toLowerCase()
+          const match =
+            item.tag.toLowerCase().includes(q) ||
+            item.station.toLowerCase().includes(q) ||
+            item.alarm.toLowerCase().includes(q) ||
+            item.normalized_at.toLowerCase().includes(q)
+          if (!match) return false
+        }
         return true
       }),
-    [items, filters],
+    [items, filters, search],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.diagnosis || filters.platform) || filters.period !== DEFAULT_PERIOD
+    Boolean(filters.station || filters.diagnosis || filters.platform || search) ||
+    filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -126,12 +144,33 @@ function Alertas() {
       setFile(null)
       setUpload(null)
       setOpen(false)
+      toast.success('Planilha de alarmes processada com sucesso!')
       await load()
     } catch (err) {
-      setImportError(errorMessage(err))
+      const msg = errorMessage(err)
+      setImportError(msg)
+      toast.error(msg)
     } finally {
       setImporting(false)
     }
+  }
+
+  function handleExportCsv() {
+    if (!visible.length) {
+      toast.info('Não há registros para exportar com os filtros atuais.')
+      return
+    }
+    const columns = [
+      { label: 'Tag SAP', key: 'tag' },
+      { label: 'Data e Hora', key: 'started_at' },
+      { label: 'Estação', key: 'station' },
+      { label: 'Código Estação', key: 'station_code' },
+      { label: 'Plataforma / Porta', key: 'normalized_at' },
+      { label: 'Diagnóstico', key: 'alarm' },
+      { label: 'Risco de Falha', value: (item) => (item.will_fail ? 'Sim' : 'Não') },
+    ]
+    exportToCsv('alertas_preditivos.csv', columns, visible)
+    toast.success(`${visible.length} registros exportados com sucesso!`)
   }
 
   function openCadastro() {
@@ -155,7 +194,12 @@ function Alertas() {
     <section className="alertas">
       <div className="page-head">
         <h1>Alertas</h1>
-        <CadastrarButton onClick={openCadastro}>Cadastrar Alarmes +</CadastrarButton>
+        <div className="page-head__actions">
+          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+            Exportar CSV
+          </CadastrarButton>
+          <CadastrarButton onClick={openCadastro}>Cadastrar Alarmes +</CadastrarButton>
+        </div>
       </div>
 
       {loading ? <p className="page-status">Carregando alertas da última inferência…</p> : null}
@@ -205,9 +249,21 @@ function Alertas() {
         dirty={filtersDirty}
         onClear={() => {
           setPage(1)
+          setSearch('')
           setFilters(emptyFilters)
         }}
       >
+        <FiltroCampo label="Busca">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setPage(1)
+            }}
+            placeholder="Filtrar por TAG, porta..."
+          />
+        </FiltroCampo>
         <FiltroCampo label="Estação">
           <select value={filters.station} onChange={updateFilter('station')}>
             <option value="">Todas</option>
@@ -247,6 +303,21 @@ function Alertas() {
               station={alarm.station}
               alarm={alarm.alarm}
               normalizedAt={alarm.normalized_at}
+              willFail={alarm.will_fail}
+              onViewDoor={() =>
+                onNavigate &&
+                onNavigate('portas', {
+                  station: alarm.station_code,
+                  door: alarm.door_number,
+                })
+              }
+              onOpenInspection={() =>
+                onNavigate &&
+                onNavigate('inspecoes', {
+                  station: alarm.station_code,
+                  door: alarm.door_number,
+                })
+              }
             />
           ))
         ) : (
