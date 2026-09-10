@@ -1,13 +1,10 @@
 ---
 title: "Arquitetura UML"
-description: "Arquitetura inicial da plataforma de manutenção preditiva de PSDs, documentada através de três diagramas UML: Componentes, Classes e Casos de Uso."
+description: "Arquitetura da plataforma de manutenção preditiva de PSDs, documentada através de quatro diagramas UML: Componentes, Classes, Casos de Uso e Sequência."
 ---
 
 import { Image } from 'astro:assets';
 import Background from '../../../../assets/sprints/sprint1/background_title.png';
-import DiagramaComponentes from '../../../../assets/sprints/sprint3/diagramas/diagrama-componentes.png';
-import DiagramaClasses from '../../../../assets/sprints/sprint3/diagramas/diagrama-classes.png';
-import DiagramaCasosUso from '../../../../assets/sprints/sprint3/diagramas/diagrama-casos-uso.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -27,11 +24,12 @@ Este documento descreve a **arquitetura inicial** da solução proposta, cujas t
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Diagramas Escolhidos</h2>
 </div>
 
-Nem todos os diagramas UML fazem sentido em toda fase de um projeto. Para esta arquitetura inicial, foram escolhidos três:
+Nem todos os diagramas UML fazem sentido em toda fase de um projeto. Para esta arquitetura, foram escolhidos quatro:
 
 - **Componentes**, por dar a visão macro de como Frontend, Backend, banco de dados e o modelo preditivo se conectam.
 - **Classes**, por registrar as entidades do domínio (Usuário, Estação, Porta, Manutenção, Predição) e como se relacionam, orientando o desenho do banco de dados.
-- **Casos de Uso**, por formalizar as ações que a persona Marta realiza na plataforma, conectando o wireframe aos requisitos funcionais do backend.
+- **Casos de Uso**, por formalizar as ações que a persona Marta realiza na plataforma, conectando o frontend implementado aos requisitos funcionais do backend.
+- **Sequência**, um por caso de uso, por detalhar a troca de mensagens entre Marta, Frontend, Backend e os demais componentes.
 
 Outros diagramas foram deixados de fora nesta etapa por dependerem de decisões que ainda não existem ou por não trazerem valor proporcional ao tamanho atual do projeto.
 
@@ -44,15 +42,35 @@ Outros diagramas foram deixados de fora nesta etapa por dependerem de decisões 
 
 O diagrama de componentes representa a visão macro da arquitetura da plataforma. O **Frontend**, em React, consome a API do **Backend**, em Go, que persiste os dados em um único banco **PostgreSQL** — guardando tanto os dados operacionais da plataforma (Usuário, Estação, Porta, Manutenção, Predição) quanto os dados de domínio derivados dos arquivos enviados pelo usuário (Alarmes, histórico de Manutenções).
 
-O upload de novos dados não é processado de forma síncrona: o Backend armazena o arquivo bruto em um **object storage (S3)** e enfileira um job para um **Worker** dedicado, que lê o arquivo do storage, interpreta seu conteúdo e grava os registros já estruturados no PostgreSQL. Essa separação evita que o upload de arquivos grandes bloqueie a API.
+O upload de novos dados não é processado de forma síncrona: o Backend armazena o arquivo bruto em um **object storage (S3)** e enfileira um job para um **Worker** dedicado, através da biblioteca de filas **River**, que usa o próprio PostgreSQL como armazenamento da fila em vez de um broker externo. O Worker lê o arquivo do storage, interpreta seu conteúdo e grava os registros já estruturados no PostgreSQL. Essa separação evita que o upload de arquivos grandes bloqueie a API.
 
-O Backend se comunica, via API, com uma **VPS que hospeda o modelo preditivo**, que expõe duas operações: gerar uma predição e retreinar o modelo. Ao clicar no botão de retreino no site, o Backend aciona a VPS, que lê os dados de treino diretamente do PostgreSQL, gera um novo modelo e grava novas predições no banco, refletindo automaticamente nas telas da plataforma.
+O Backend se comunica, via API, com uma **VPS que hospeda o modelo preditivo** através de uma única operação, `POST /predict`. Tanto o botão **Realizar Previsão** quanto o botão **Re-treinar modelo**, no frontend, disparam a mesma chamada `POST /api/v1/predictions/trigger` no Backend. A cada chamada, o Backend aciona a VPS, que lê os dados de treino diretamente do PostgreSQL, gera as predições e grava os resultados no banco, refletindo automaticamente nas telas da plataforma.
 
-<div style="margin: 1.5rem 0; text-align: center;">
-  <Image src={DiagramaComponentes} alt="Diagrama de Componentes da plataforma de manutenção preditiva" width={1300} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-</div>
+```mermaid
+flowchart LR
+    Usuario((Usuário))
 
-Essa separação entre Backend e o serviço do modelo existe porque os modelos preditivos são treinados e servidos em Python, enquanto o Backend é escrito em Go, linguagem que não carrega nativamente os artefatos de modelo Python. Isolar o modelo em sua própria VPS evita reescrever ou converter os modelos treinados, ao custo de uma chamada de rede entre Backend e VPS a cada predição ou retreino. O uso de um único banco de dados para os dados operacionais e os dados de domínio simplifica a arquitetura nesta fase inicial.
+    subgraph Plataforma["Plataforma de Manutenção Preditiva"]
+        Frontend["Frontend<br/>React SPA"]
+        Backend["Backend API<br/>Go"]
+        Worker["Worker<br/>Go"]
+        VPS["VPS do Modelo Preditivo<br/>Python"]
+        DB[("PostgreSQL<br/>Dados operacionais e de domínio<br/>+ fila River")]
+        Storage[("Object Storage<br/>Arquivos brutos de upload")]
+    end
+
+    Usuario --> Frontend
+    Frontend -- "REST/JSON HTTPS" --> Backend
+    Backend -- "POST /predict" --> VPS
+    VPS -- "Lê dados de treino e grava predições" --> DB
+    Backend -- "SQL" --> DB
+    Backend -- "Enfileira job de ingestão<br/>(fila River sobre o PostgreSQL)" --> Worker
+    Backend -- "Armazena arquivo" --> Storage
+    Worker -- "Lê arquivo" --> Storage
+    Worker -- "Grava dados" --> DB
+```
+
+Essa separação entre Backend e o serviço do modelo existe porque os modelos preditivos são treinados e servidos em Python, enquanto o Backend é escrito em Go, linguagem que não carrega nativamente os artefatos de modelo Python. Isolar o modelo em sua própria VPS evita reescrever ou converter os modelos treinados, ao custo de uma chamada de rede entre Backend e VPS a cada predição. O uso de um único banco de dados para os dados operacionais e os dados de domínio simplifica a arquitetura, assim como o uso do próprio PostgreSQL como backend da fila de ingestão evita a operação de um broker de mensageria adicional.
 
 ---
 
@@ -61,15 +79,71 @@ Essa separação entre Backend e o serviço do modelo existe porque os modelos p
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Diagrama de Classes</h2>
 </div>
 
-O diagrama de classes registra o modelo de domínio conceitual da plataforma: as entidades principais e como se relacionam, sem especificar tipos de dado ou o schema final do banco, já que o backend ainda está em desenvolvimento. As entidades identificadas são Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado. Uma Estação possui várias Portas; uma Porta acumula um histórico de Alarmes, de Manutenções e de Predições ao longo do tempo; um Usuário é responsável por Inspeções; e um Arquivo Enviado origina os registros de Alarme e Manutenção que ele contém.
+O diagrama de classes registra o modelo de domínio conceitual da plataforma, já revisado contra o schema real implementado no backend: as entidades principais e como se relacionam. As entidades identificadas são Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado. Uma Estação possui várias Portas, cada uma identificada também pela sua TAG SAP; uma Porta acumula um histórico de Alarmes, de Manutenções e de Predições ao longo do tempo; um Usuário é responsável por Inspeções; e um Arquivo Enviado origina os registros de Alarme e Manutenção que ele contém.
 
-**Manutenção** e **Inspeção** aparecem como entidades separadas, pois representam momentos distintos do processo: a Manutenção é um registro histórico de uma intervenção já realizada (com ordem SAP, sintoma, causa e ação tomada), enquanto a Inspeção é a ordem de trabalho — com status, prioridade e responsável — que ainda precisa ser executada. Uma Inspeção pode ser criada automaticamente pelo sistema quando uma Predição indica risco de falha, e também poderá ser criada manualmente por um Usuário.
+**Manutenção** e **Inspeção** aparecem como entidades separadas, pois representam momentos distintos do processo: a Manutenção é um registro histórico de uma intervenção já realizada, com ordem SAP, tipo, local de instalação, início, fim, duração, sintoma, causa, ação tomada e origem (manual ou upload); a Inspeção é a ordem de trabalho, com status, prioridade, data agendada e notas, além da data de conclusão quando finalizada, que ainda precisa ser executada. Uma Inspeção pode ser criada automaticamente pelo sistema quando uma Predição indica risco de falha, e também poderá ser criada manualmente por um Usuário.
 
-<div style="margin: 1.5rem 0; text-align: center;">
-  <Image src={DiagramaClasses} alt="Diagrama de Classes da plataforma de manutenção preditiva" width={800} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-</div>
+```mermaid
+classDiagram
+    class Estacao {
+        +codigo
+        +nome
+    }
+    class Porta {
+        +plataforma
+        +numero
+        +sapTag
+        +status
+    }
+    class Predicao {
+        +vaiFalhar
+        +dataReferencia
+    }
+    class Manutencao {
+        +numeroOrdemSAP
+        +tipoOrdem
+        +localInstalacao
+        +dataInicio
+        +dataFim
+        +duracaoHoras
+        +sintoma
+        +causa
+        +acaoTomada
+        +origem
+    }
+    class Inspecao {
+        +status
+        +prioridade
+        +agendadaPara
+        +notas
+        +concluidaEm
+    }
+    class Usuario {
+        +nome
+        +email
+        +papel
+    }
+    class Alarme {
+        +tipo
+        +dataEvento
+    }
+    class ArquivoEnviado {
+        +nomeArquivo
+        +status
+    }
 
-A Predição é um indicador booleano (a porta deve ou não falhar dentro do horizonte avaliado). O banco mantém um histórico completo de Predições por Porta, mas a plataforma sempre exibe ao usuário apenas a mais recente. O Arquivo Enviado guarda apenas os metadados do upload (nome, status de processamento); os dados em si são gravados diretamente nas entidades de domínio que referenciam esse arquivo como origem.
+    Estacao "1" --> "N" Porta : possui
+    Porta "1" --> "N" Predicao : possui historico
+    Porta "1" --> "N" Manutencao : possui historico
+    Porta "1" --> "N" Alarme : registra
+    Porta "1" --> "N" Inspecao : recebe
+    Predicao "0..1" --> "0..1" Inspecao : pode gerar automaticamente
+    Usuario "1" --> "N" Inspecao : responsavel por
+    ArquivoEnviado "0..1" --> "N" Manutencao : origina
+    ArquivoEnviado "0..1" --> "N" Alarme : origina
+```
+
+A Predição é um indicador booleano (a porta deve ou não falhar dentro do horizonte avaliado). O schema atual não guarda nenhum campo de probabilidade ou percentual de risco junto da Predição — é por isso que, quando o frontend precisa exibir um percentual, ele usa um valor de referência fixo até que o modelo passe a expor essa métrica. O banco mantém um histórico completo de Predições por Porta, mas a plataforma sempre exibe ao usuário apenas a mais recente. O Arquivo Enviado guarda apenas os metadados do upload (nome, status de processamento); os dados em si são gravados diretamente nas entidades de domínio que referenciam esse arquivo como origem.
 
 ---
 
@@ -78,21 +152,329 @@ A Predição é um indicador booleano (a porta deve ou não falhar dentro do hor
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Diagrama de Casos de Uso</h2>
 </div>
 
-O diagrama de casos de uso descreve as ações disponíveis para a persona **Marta**, operadora responsável por analisar dados e planejar manutenções, único ator do sistema nesta fase, enquanto Ronaldo, o mecânico, recebe as ordens de manutenção por fora da plataforma. Os casos de uso mapeados cobrem toda a jornada da Marta: autenticar-se na plataforma, visualizar as portas com maior probabilidade de falha, consultar detalhes de uma estação ou porta específica, agendar manutenções, consultar o histórico de alarmes e manutenções, enviar novos dados para o modelo e disparar o retreino.
+O diagrama de casos de uso descreve as ações disponíveis para a persona **Marta**, operadora responsável por analisar dados e planejar manutenções, único ator do sistema nesta fase, enquanto Ronaldo, o mecânico, recebe as ordens de manutenção por fora da plataforma. Diferente da primeira versão deste diagrama, que partia do [Wireframe da Sprint 2](/sprints/sprint-2/wireframe), os casos de uso abaixo foram conferidos contra o frontend e a API já implementados. Eles cobrem toda a jornada da Marta: autenticar-se na plataforma, visualizar as portas com maior probabilidade de falha, ver os alertas da última inferência, consultar detalhes de uma estação ou porta específica, consultar a timeline de uma porta e o catálogo de manutenções, registrar uma manutenção já realizada, abrir e atualizar o status de uma inspeção, cadastrar novos alarmes por planilha e disparar uma nova rodada de predição.
 
-<div style="margin: 1.5rem 0; text-align: center;">
-  <Image src={DiagramaCasosUso} alt="Diagrama de Casos de Uso da plataforma de manutenção preditiva" width={400} format="png" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-</div>
+```mermaid
+flowchart LR
+    Usuario((Usuário))
 
-O caso de uso "Agendar manutenção" convive com a criação automática de Inspeções pelo sistema: quando uma predição indica risco de falha, o sistema já cria a ordem de inspeção correspondente, e a Marta também poderá agendar uma manutenção manualmente, sem depender de uma predição prévia.
+    subgraph Plataforma["Plataforma de Manutenção Preditiva"]
+        UC1(["Login"])
+        UC2(["Visualizar portas em risco"])
+        UC3(["Ver alertas"])
+        UC4(["Consultar detalhes da estação/porta"])
+        UC5(["Consultar timeline da porta"])
+        UC6(["Consultar manutenções"])
+        UC7(["Registrar manutenção"])
+        UC8(["Abrir inspeção"])
+        UC9(["Atualizar status da inspeção"])
+        UC10(["Cadastrar alarmes"])
+        UC11(["Disparar predição"])
+    end
+
+    Usuario --- UC1
+    Usuario --- UC2
+    Usuario --- UC3
+    Usuario --- UC4
+    Usuario --- UC5
+    Usuario --- UC6
+    Usuario --- UC7
+    Usuario --- UC8
+    Usuario --- UC9
+    Usuario --- UC10
+    Usuario --- UC11
+```
+
+O caso de uso "Abrir inspeção" convive com a criação automática de Inspeções pelo sistema: quando uma predição indica risco de falha, o sistema já cria a ordem de inspeção correspondente, e a Marta também poderá abrir uma inspeção manualmente a partir dos detalhamentos da porta ou da tela de Inspeções, sem depender de uma predição prévia. Não existe, na API, um caso de uso de "retreino" separado do de "disparar predição": os botões **Realizar Previsão** e **Re-treinar modelo**, no frontend, acionam a mesma chamada.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Conclusão</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Diagramas de Sequência</h2>
 </div>
 
-Esta documentação descreve a arquitetura inicial da solução através de três diagramas UML complementares. O diagrama de **Componentes** mostrou como Frontend, Backend, Worker, banco de dados, object storage e a VPS do modelo preditivo se conectam, com destaque para a separação entre o Backend em Go e o modelo preditivo em Python, hospedado em sua própria VPS, e para o processamento assíncrono dos uploads via Worker. O diagrama de **Classes** registrou as entidades do domínio — Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado — e seus relacionamentos, distinguindo o histórico de manutenções já realizadas das inspeções ainda pendentes, e servindo de base conceitual para o schema do banco de dados. Por fim, o diagrama de **Casos de Uso** formalizou as ações da persona Marta na plataforma, incluindo o retreino do modelo e o agendamento manual de manutenções.
+Com o frontend e o backend já implementados em uma primeira versão, cada caso de uso do diagrama da seção anterior pode ser detalhado em um diagrama de sequência, mostrando a troca de mensagens entre Marta, o Frontend, o Backend, o PostgreSQL, a VPS do modelo preditivo, o Worker e o Object Storage. As rotas e o fluxo de cada diagrama refletem o código real, não uma proposta.
 
-Juntos, os três diagramas cobrem a estrutura, o domínio e o comportamento da solução. À medida que o projeto for se desenvolvendo, estes diagramas devem ser atualizados para continuar refletindo o sistema real.
+### 6.1 Login
+
+Marta entra com e-mail e senha; o Backend valida contra o PostgreSQL e devolve um JWT, guardado pelo Frontend em `sessionStorage`.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Preenche e-mail e senha, clica em Logar
+    Frontend->>Backend: POST /api/v1/auth/login
+    Backend->>PostgreSQL: Valida credenciais
+    PostgreSQL-->>Backend: Usuário encontrado
+    Backend-->>Frontend: 200 OK + JWT
+    Frontend->>Frontend: Grava token em sessionStorage (motiva.token)
+    alt perfil não veio na resposta do login
+        Frontend->>Backend: GET /api/v1/auth/me
+        Backend-->>Frontend: Perfil do operador
+    end
+    Frontend-->>Marta: Exibe overlay de carregamento e abre o Dashboard
+```
+
+### 6.2 Visualizar portas em risco
+
+Ao abrir o Dashboard, o Frontend busca o resumo operacional e a última inferência do modelo em paralelo, e combina o resultado com as inspeções já pré-carregadas no login.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Acessa o Dashboard
+    par Requisições em paralelo
+        Frontend->>Backend: GET /api/v1/dashboard/summary
+        Backend->>PostgreSQL: Consulta portas ativas, risco 7 dias, ranking de estações
+        PostgreSQL-->>Backend: Resultado agregado
+        Backend-->>Frontend: Resumo do dashboard
+    and
+        Frontend->>Backend: GET /api/v1/predictions/latest
+        Backend->>PostgreSQL: Consulta última rodada de predições
+        PostgreSQL-->>Backend: Predições (will_fail)
+        Backend-->>Frontend: Última inferência
+    end
+    Frontend->>Frontend: Combina com inspeções pré-carregadas no login
+    Frontend-->>Marta: Renderiza card de risco, tiles e painéis
+```
+
+### 6.3 Ver alertas
+
+A tela de Alertas mostra a última inferência do modelo mapeada como alerta por porta.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Acessa a tela de Alertas
+    Frontend->>Backend: GET /api/v1/predictions/latest
+    Backend->>PostgreSQL: Consulta última rodada de predições
+    PostgreSQL-->>Backend: Predições (will_fail) por porta
+    Backend-->>Frontend: Última inferência
+    Frontend->>Frontend: Filtra por período, estação, diagnóstico e plataforma
+    alt sem rodada calculada
+        Frontend-->>Marta: Exibe estado vazio ("Nenhum alerta na última inferência")
+    else com rodada calculada
+        Frontend-->>Marta: Renderiza card, gráficos e lista paginada (50/página)
+    end
+```
+
+### 6.4 Consultar detalhes da estação/porta
+
+O mapa e os dados da estação (nome, foto, código) vêm do catálogo local; só ao clicar em Acessar o Frontend busca as portas e seus status reais na API.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Clica em uma estação no mapa
+    Frontend->>Frontend: Lê nome, foto e código de stations.js (catálogo local)
+    Marta->>Frontend: Clica em Acessar
+    Frontend->>Backend: GET /api/v1/stations/{code}/doors/status
+    Backend->>PostgreSQL: Consulta portas da estação e status
+    PostgreSQL-->>Backend: Lista de portas
+    Backend-->>Frontend: Portas + will_fail por porta
+    Frontend-->>Marta: Renderiza abas de plataforma e tabela de portas
+```
+
+### 6.5 Consultar timeline da porta
+
+Ao abrir os detalhamentos de uma porta, o Frontend busca a timeline consolidada; se ela não trouxer manutenções, cai para o cache local e tenta casar pelo local de instalação.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Clica em uma porta na tabela
+    Frontend->>Backend: GET /api/v1/doors/{id}/timeline
+    Backend->>PostgreSQL: Consulta alarmes, manutenções e inspeções da porta
+    PostgreSQL-->>Backend: Timeline consolidada
+    Backend-->>Frontend: Dossiê da porta
+    alt timeline não retorna manutenções
+        Frontend->>Frontend: Usa cache local de /api/v1/maintenance e tenta casar local de instalação (PP + número + plataforma)
+    end
+    Frontend-->>Marta: Renderiza diagnóstico, dossiê e manutenções relacionadas
+```
+
+### 6.6 Consultar manutenções
+
+O catálogo de ordens SAP entra em cache já no login, em páginas paralelas; a tela de Manutenções só busca de novo se o cache estiver vazio.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Acessa a tela de Manutenções
+    alt cache de manutenções vazio
+        loop páginas em paralelo
+            Frontend->>Backend: GET /api/v1/maintenance?page=n
+            Backend->>PostgreSQL: Consulta ordens ZM01/ZM02/ZM03
+            PostgreSQL-->>Backend: Página de ordens
+            Backend-->>Frontend: Ordens de manutenção
+        end
+    end
+    Frontend->>Frontend: Aplica filtros (período, estação, tipo, origem, duração)
+    Frontend-->>Marta: Renderiza cards, gráficos e lista paginada (50/página)
+```
+
+### 6.7 Registrar manutenção
+
+A Marta registra uma manutenção já realizada, manualmente ou por planilha; o upload é assíncrono, processado pelo Worker depois de passar pelo Object Storage e pela fila.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant S3 as Object Storage
+    participant Worker
+    participant PostgreSQL
+
+    alt cadastro manual
+        Marta->>Frontend: Preenche formulário na aba Manual
+        Frontend->>Backend: POST /api/v1/maintenance
+        Backend->>PostgreSQL: Insere ordem de manutenção
+        PostgreSQL-->>Backend: OK
+        Backend-->>Frontend: 201 Created
+    else upload de planilha
+        Marta->>Frontend: Anexa CSV/XLSX na aba CSV/XLSX
+        Frontend->>Frontend: Lê planilha no cliente (SheetJS)
+        Frontend->>Backend: POST /api/v1/uploads/maintenance
+        Backend->>S3: Armazena arquivo bruto
+        Backend->>PostgreSQL: Enfileira job (fila River)
+        Backend-->>Frontend: 202 Accepted (status: processing)
+        Worker->>PostgreSQL: Consome job da fila
+        Worker->>S3: Lê arquivo
+        Worker->>PostgreSQL: Grava ordens de manutenção estruturadas
+    end
+    Frontend->>Backend: Recarrega GET /api/v1/maintenance
+    Frontend-->>Marta: Atualiza catálogo de manutenções
+```
+
+### 6.8 Abrir inspeção
+
+A ordem de inspeção nasce pelo dossiê da porta (com prioridade alta se houver risco) ou pelo modal da própria tela de Inspeções; os dois caminhos chamam o mesmo POST.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    alt a partir do dossiê da porta
+        Marta->>Frontend: Clica em Abrir inspeção (prioridade alta se a porta estiver em risco)
+    else a partir da tela de Inspeções
+        Marta->>Frontend: Preenche o modal Abrir inspeção +
+    end
+    Frontend->>Backend: POST /api/v1/inspections
+    Backend->>PostgreSQL: Insere inspeção (scheduled_for, prioridade, notas)
+    PostgreSQL-->>Backend: OK
+    Backend-->>Frontend: 201 Created
+    Frontend->>Frontend: Invalida cache de inspeções
+    Frontend-->>Marta: Leva Marta para a tela de Inspeções atualizada
+```
+
+### 6.9 Atualizar status da inspeção
+
+Trocar o seletor de status dispara um PATCH direto; o Backend valida a transição antes de gravar, e o Frontend atualiza o cache sem recarregar a página.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant PostgreSQL
+
+    Marta->>Frontend: Troca o seletor de status de uma inspeção
+    Frontend->>Backend: PATCH /api/v1/inspections/{id}/status
+    Backend->>Backend: Valida transição de estado permitida
+    Backend->>PostgreSQL: Atualiza status da inspeção
+    PostgreSQL-->>Backend: OK
+    Backend-->>Frontend: 200 OK
+    Frontend->>Frontend: Atualiza cache local sem recarregar a página
+    Frontend-->>Marta: Reflete o novo status na lista
+```
+
+### 6.10 Cadastrar alarmes
+
+O upload de alarmes segue o mesmo pipeline assíncrono via Worker; como não há GET de alarmes, o que a Marta vê depois é a inferência recarregada em "Ver alertas", não as linhas da planilha.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant S3 as Object Storage
+    participant Worker
+    participant PostgreSQL
+
+    Marta->>Frontend: Anexa planilha no modal Cadastrar Alarmes +
+    Frontend->>Backend: POST /api/v1/uploads/alarms
+    Backend->>S3: Armazena arquivo bruto
+    Backend->>PostgreSQL: Enfileira job (fila River)
+    Backend-->>Frontend: 202 Accepted (status: processing)
+    Worker->>PostgreSQL: Consome job da fila
+    Worker->>S3: Lê arquivo
+    Worker->>PostgreSQL: Grava alarmes estruturados
+    Frontend->>Backend: Recarrega GET /api/v1/predictions/latest
+    Backend-->>Frontend: Última inferência (alarmes não são listados diretamente)
+    Frontend-->>Marta: Atualiza a tela de Alertas
+```
+
+### 6.11 Disparar predição
+
+**Realizar Previsão** e **Re-treinar modelo** chamam exatamente o mesmo endpoint; a única diferença é o texto do overlay e um carimbo local salvo pelo Frontend.
+
+```mermaid
+sequenceDiagram
+    actor Marta
+    participant Frontend
+    participant Backend
+    participant VPS as VPS do Modelo
+    participant PostgreSQL
+
+    Marta->>Frontend: Clica em Realizar Previsão ou em Re-treinar modelo
+    Frontend->>Frontend: Exibe overlay do metrô
+    Frontend->>Backend: POST /api/v1/predictions/trigger (horizonte de 7 dias)
+    Backend->>VPS: POST /predict
+    VPS->>PostgreSQL: Lê dados de treino
+    VPS->>PostgreSQL: Grava novas predições
+    VPS-->>Backend: OK
+    Backend-->>Frontend: 200 OK
+    Frontend->>Frontend: Grava carimbo local "Último disparo" quando a ação foi Re-treinar
+    Frontend->>Backend: Recarrega o status das portas da estação aberta
+    Frontend-->>Marta: Remove o overlay e atualiza a tela
+```
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Conclusão</h2>
+</div>
+
+O diagrama de **Componentes** mostrou como Frontend, Backend, Worker, banco de dados, object storage e a VPS do modelo preditivo se conectam, com destaque para a separação entre o Backend em Go e o modelo preditivo em Python, hospedado em sua própria VPS, e para o processamento assíncrono dos uploads via Worker. O diagrama de **Classes** registrou as entidades do domínio — Usuário, Estação, Porta, Alarme, Manutenção, Inspeção, Predição e Arquivo Enviado — e seus relacionamentos, distinguindo o histórico de manutenções já realizadas das inspeções ainda pendentes, e servindo de base conceitual para o schema do banco de dados. O diagrama de **Casos de Uso** formalizou as ações da persona Marta na plataforma. Por fim, os onze **Diagramas de Sequência** detalharam, caso de uso a caso de uso, a troca de mensagens real entre Marta, Frontend, Backend, PostgreSQL, VPS, Worker e Object Storage.
+
+Juntos, os quatro diagramas cobrem a estrutura, o domínio, o comportamento e a interação em tempo de execução da solução. À medida que o projeto for se desenvolvendo, estes diagramas devem ser atualizados para continuar refletindo o sistema real.
