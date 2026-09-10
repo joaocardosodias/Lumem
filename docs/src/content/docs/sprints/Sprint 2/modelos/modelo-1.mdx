@@ -1,6 +1,6 @@
 ---
 title: "Modelo 1"
-description: "Documentação técnica do Modelo 1, detalhando a engenharia de features, tratamento de dados, hiperparâmetros e explicabilidade SHAP."
+description: "Documentação técnica completa do Modelo 1 estruturada segundo a metodologia CRISP-DM, cobrindo entendimento do negócio, dados, preparação, modelagem com ensemble, avaliação estrita e explicabilidade SHAP."
 ---
 
 import { Image } from 'astro:assets';
@@ -9,98 +9,107 @@ import GraficoShap from '../../../../../assets/sprints/sprint2/grafico-shap-mode
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral e Justificativa de Negócio</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Entendimento do Negócio (Business Understanding)</h2>
 </div>
 
-O **Modelo 1** é uma solução de inteligência artificial preditiva desenvolvida para antecipar ordens de manutenção corretiva emergencial (**ZM01**) nas **526 portas de plataforma (PSD)** da Linha 4-Amarela do Metrô de São Paulo.
+### 1.1 Contexto e Formulação do Problema
+As Portas de Plataforma (PSDs - Platform Screen Doors) são sistemas eletromecânicos críticos para a segurança e regularidade operacional da Linha 4-Amarela do Metrô de São Paulo. A ocorrência de falhas não programadas durante a operação comercial provoca a retenção de trens na plataforma, eleva o tempo de intervalo (headway) e gera superlotação de passageiros.
 
-### Por que priorizar o perfil de Maior Recall?
+O **Modelo 1** foi desenvolvido para antecipar ordens de manutenção corretiva emergencial (**ZM01**) em nível individual de porta e dia, transformando o regime de manutenção reativa em preditiva.
 
-No contexto da operação metroviária de alta densidade (mais de 800 mil passageiros transportados por dia), o impacto de uma falha não prevista em porta de plataforma gera custos desproporcionais:
-* **Interrupção do Carrossel de Trens:** Abertura não sincronizada ou falha de travamento mecânico impede a partida do trem, elevando o tempo de intervalo (*headway*) e causando efeito cascata em toda a linha.
-* **Risco de Segurança:** Aglomeração crítica nas plataformas em horários de pico.
-* **Custo Operacional vs. Preventivo:** O custo de deslocar um técnico para uma inspeção preventiva de 15 minutos é ordens de grandeza inferior ao custo de um atraso de linha ou reparo de emergência com trem retido.
-
-Por essa razão, a versão **Campeã de Recall** foi otimizada para maximizar a **taxa de detecção precoce de falhas**, garantindo que a equipe de manutenção receba aviso prévio para a grande maioria das quebras reais.
+### 1.2 Objetivo Técnico e Função de Negócio
+* **Tarefa:** Classificação binária supervisionada — estimar para cada porta na data de referência D a probabilidade de ocorrência de falha emergencial no horizonte móvel de 7 dias [D+1, D+7] (`target_falha_7d`).
+* **Unidade de Decisão:** Porta-dia (607.530 observações na matriz histórica).
+* **Priorização do Perfil de Alto Recall:** No ambiente metroviário, o custo de um falso negativo (quebra não prevista que paralisa a via) é ordens de magnitude superior ao custo de um falso positivo (inspeção preventiva de 15 minutos em que o componente ainda operava dentro da tolerância). Por isso, a calibração do modelo foca em maximizar a cobertura de falhas reais.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Fundamentação Científica: Mapeamento de Hipóteses e Features</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entendimento dos Dados (Data Understanding)</h2>
 </div>
 
-A seleção e engenharia de atributos do modelo foram construídas diretamente sobre as evidências empíricas validadas na Sprint 1:
+### 2.1 Fontes de Dados Integradas
+A base analítica do Modelo 1 consolida quatro fontes primárias de informação:
+1. **Telemetria de Alarmes:** 742.336 registros de alarmes unificados e desduplicados cobrindo todas as 11 estações da linha (BUT, FAL, FRA, FRE, HIG, LUZ, MBI, PIN, PTA, REP, VSO) e 526 portas monitoradas.
+2. **Ordens Corretivas Emergenciais (ZM01):** 9.357 registros históricos no SAP com data/hora de avaria e localização de instalação.
+3. **Ordens Corretivas Programadas (ZM02):** 1.010 ordens agendadas.
+4. **Ordens Preventivas Periódicas (ZM03):** 569 ordens de revisão sistemática por estação.
 
-| Hipótese / Origem | Evidência nos Dados | Feature Derivada no Modelo | Justificativa Física |
-| :--- | :--- | :--- | :--- |
-| **Hipótese 1 & 2** *(Ciclos Temporais)* | Variação de 30% a 52% nos finais de semana vs dias úteis. | `flag_fim_de_semana`, `dia_semana_num` | Modela a redução de ciclagens e carga mecânica fora dos dias de pico comercial. |
-| **Hipótese 3** *(Catracas)* | Correlação nula (p = 0,865, rho = -0,067). | Descartado | Evita a inserção de ruído estocástico que degradaria a capacidade de generalização. |
-| **Hipótese 4** *(Rampa de Degradação)* | Alarmes banais mascaram defeitos; anomalias graves (>= 15s e >= 30s) concentram o estresse. | `qtd_alarmes_1d`, `qtd_alarmes_7d`, `qtd_alarmes_14d`, `aceleracao_alarmes_7d`, `qtd_anomalias_15s_7d`, `qtd_anomalias_30s_14d` | Isola retenções anômalas e mede se a porta está em aceleração de defeitos semana contra semana. |
-| **Hipótese 6** *(Idade e Estação)* | Centro vs ponta teve diferença insignificante (< 1,74%), mas idade e estação impactam fortemente. | `idade_ativo_anos`, One-Hot Encoding de todas as 11 estações (incluindo Morumbi recuperado), `plataforma_bin` | Captura o tempo de vida acumulado das estações de 2010 (FRA, BUT, PIN) vs recentes (VSO - 2021). |
-| **Hipótese 7** *(Falhas Mecânicas)* | Mais de 70% das corretivas concentram esforço excessivo e travamento. | `qtd_rce_7d` (*Reabertura Excedida*), `qtd_fo_7d` (*Força Excessiva*), `qtd_lsd_7d` (*Chave de Segurança*) | Sinaliza atrito no trilho guia, desgaste de correia e desalinhamento das folhas de porta. |
-| **Histórico SAP** *(Ciclos de Fadiga)* | Pico de reincidência de quebras entre 30 e 90 dias após última manutenção. | `dias_desde_ultima_zm01`, `dias_desde_ultima_zm02`, `dias_desde_ultima_zm03`, `faixa_risco_zm01`, `fator_risco_ciclo_zm01` | Modela a curva de degradação pós-reparo com decaimento gaussiano centrado em 60 dias. |
+### 2.2 Mapeamento de Evidências Empíricas para Modelagem
+
+A engenharia de atributos baseou-se estritamente nas evidências quantitativas comprovadas na etapa exploratória:
+
+| Hipótese / Evidência Exploratória | Fato Numérico Comprovado | Decisão de Modelagem |
+| :--- | :--- | :--- |
+| **Hipótese 1 & 2 (Padrões Temporais)** | Queda comprovada de 30% a 52% no volume de alarmes aos finais de semana vs dias úteis. | Inclusão de `flag_fim_de_semana` e `dia_semana_num`. |
+| **Hipótese 3 (Fluxo de Catracas)** | Ausência de correlação estatística (p = 0,865, rho = -0,067). | Descarte completo da variável para evitar inserção de ruído. |
+| **Hipótese 4 (Rampa Pré-Corretiva)** | Alarmes genéricos geram ruído; anomalias severas (>= 15s e >= 30s) e aceleração indicam estresse pré-falha. | Criação de lags de anomalias (`qtd_anomalias_15s_7d`, `qtd_anomalias_30s_14d`, `aceleracao_alarmes_7d`). |
+| **Hipótese 6 (Posição e Estação)** | Centro vs extremidade apresentou diferença irrelevante (< 1,74%), mas a idade da estação tem impacto massivo (2010 vs 2021). | Inclusão de `idade_ativo_anos` e One-Hot Encoding das 11 estações. |
+| **Hipótese 7 (Falhas Mecânicas)** | Mais de 70% das quebras concentram esforço excessivo e falha de travamento. | Contagem de alarmes específicos: `qtd_rce_7d` (Reaberturas), `qtd_fo_7d` (Força) e `qtd_lsd_7d` (Chave de Segurança). |
+| **Histórico SAP (Ciclo Pós-Reparo)** | Pico de reincidência de falhas entre 30 e 90 dias após manutenção anterior. | Modelagem da curva gaussiana centrada em 60 dias (`fator_risco_ciclo_zm01` e `faixa_risco_zm01`). |
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Arquitetura do Pipeline em 3 Etapas</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Preparação dos Dados (Data Preparation)</h2>
 </div>
 
-O projeto está estruturado em 3 notebooks executáveis modulares na pasta `models/modelo-1/`:
+### 3.1 Construção da Grade Contínua Cartesiana
+Para permitir que o modelo aprenda tanto com os dias de falha quanto com os períodos saudáveis em que nada aconteceu, foi gerada uma matriz cartesiana contínua completa:
 
-* **Etapa 1:** `01_modelo_1_construcao_tabela_mestra.ipynb` - Gera `data/tabela_mestra_bruta.csv` (607.530 linhas).
-* **Etapa 2:** `02_modelo_1_preprocessamento.ipynb` - Gera `data/treino_pronto_modelagem_v2.csv` e `data/teste_pronto_modelagem_v2.csv`.
-* **Etapa 3:** `03_modelo_1_treinamento.ipynb` - Executa treinamento, explicabilidade SHAP e avaliação multicritério.
+* **Grade:** 526 portas x 1.155 dias (01/01/2023 a 28/02/2026) = 607.530 linhas.
 
-### 3.1 Blindagem Contra Vazamento de Dados (*Data Leakage*)
-Para garantir que o modelo seja 100% fidedigno e auditável:
-1. **Lags Causais Estritos:** Todas as métricas de telemetria utilizam `.shift(1)`, garantindo que apenas eventos ocorridos estritamente antes do dia D sejam utilizados para prever o horizonte [D+1, D+7].
+### 3.2 Blindagem Estrita Contra Vazamento de Dados (Data Leakage)
+1. **Lags Temporais Causais:** Todas as agregações de alarmes utilizam deslocamento `.shift(1)`, garantindo que apenas eventos ocorridos estritamente antes do dia D sejam utilizados para a previsão.
 2. **Merge Asof Temporal Causal:** O cálculo de dias desde manutenções anteriores utiliza `allow_exact_matches=False`, impedindo que uma quebra ocorrida no próprio dia de referência seja usada para prever a si mesma.
-3. **Ajuste de Escalonador Restrito ao Treino:** O `RobustScaler` é ajustado (*fit*) exclusivamente no conjunto de treino e apenas aplicado (*transform*) no teste.
+3. **Alinhamento do Target Causal:** A variável alvo indica se ocorreu ZM01 no intervalo estrito [D+1, D+7].
+
+### 3.3 Encodings e Escalonamento
+* **Variáveis Categóricas:** One-Hot Encoding para as 11 estações e binarização de plataforma (P1/P2).
+* **Escalonamento Robusto:** Aplicação do `RobustScaler` (baseado em mediana e intervalo interquartil IQR), ajustado exclusivamente nos dados de treino e aplicado no teste.
+* **Espaço Amostral:** 32 features finais de modelagem.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Hiperparâmetros e Configuração do Modelo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelagem (Modeling)</h2>
 </div>
 
-O modelo preditivo utiliza o algoritmo **XGBoost (Extreme Gradient Boosting)** com árvore de histogramas acelerada por hardware e penalização de classe desbalanceada via `scale_pos_weight`:
+### 4.1 Estratégia de Divisão Temporal (Holdout Cego)
+A validação foi estruturada em partição temporal estrita (Time-Series Split), sem embaralhamento aleatório:
+* **Treino:** 01/01/2023 a 31/12/2025 (576.496 amostras | Prevalência do Target: 8,49%).
+* **Teste Cego:** 01/01/2026 a 28/02/2026 (31.034 amostras | 388 falhas reais e distintas).
 
-```json
-{
-  "algoritmo": "XGBClassifier (Hist Gradient Boosting)",
-  "n_estimators": 350,
-  "max_depth": 4,
-  "learning_rate": 0.025,
-  "min_child_weight": 20,
-  "subsample": 0.80,
-  "colsample_bytree": 0.80,
-  "reg_alpha": 2.0,
-  "reg_lambda": 5.0,
-  "scale_pos_weight": 9.5,
-  "tree_method": "hist",
-  "eval_metric": "logloss"
-}
-```
+### 4.2 Arquitetura do Ensemble Híbrido
+O modelo combina dois estimadores complementares via votação suave (soft voting):
 
-* **`scale_pos_weight = 9.5`:** Atribui peso balanceado aos casos positivos de falha durante a minimização da função de perda (*logloss*), garantindo alta sensibilidade para capturar os sinais preliminares de falha.
-* **`reg_alpha = 2.0` e `reg_lambda = 5.0`:** Regularização L1 e L2 para controlar a complexidade das folhas e prevenir sobreajuste.
+1. **XGBoost Classifier (Peso 1.5):**
+   * `n_estimators = 350`, `max_depth = 4`, `learning_rate = 0.025`
+   * `min_child_weight = 20`, `subsample = 0.80`, `colsample_bytree = 0.80`
+   * `reg_alpha = 2.0`, `reg_lambda = 5.0` (regularização L1/L2 para evitar overfitting)
+   * `scale_pos_weight = 9.5` (penalização calibrada para eventos raros)
+   * `tree_method = 'hist'`, `eval_metric = 'logloss'`
+
+2. **HistGradientBoosting Classifier (Peso 1.0):**
+   * `max_iter = 250`, `max_depth = 5`, `learning_rate = 0.03`
+   * `min_samples_leaf = 30`, `class_weight = 'balanced'`
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Desempenho e Métricas Oficiais do Modelo</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Avaliação (Evaluation)</h2>
 </div>
 
-A avaliação oficial do modelo foi conduzida sob a **Régua Estrita de Episódios de Alerta e Falhas Reais**, que elimina qualquer artefato de esticamento de janela temporal e não duplica quebras. 
+### 5.1 Régua Estrita de Avaliação por Episódio e Evento Real
+A avaliação do modelo foi conduzida sob critério estrito de engenharia de manutenção, sem duplicação de ordens e sem esticamento de janelas temporais:
+* Quando o modelo emite um chamado no dia D, verifica-se se ocorreu uma falha real ZM01 no intervalo [D+1, D+7].
+* Para o cálculo de Recall, verifica-se se cada uma das 388 falhas reais e distintas ocorridas no período de teste recebeu alerta prévio na janela [T-7, T-1].
 
-Nesta régua, quando o modelo emite um chamado no dia D, verifica-se estritamente se ocorreu uma falha emergencial ZM01 real no intervalo [D+1, D+7]. Para o cálculo de recall, verifica-se se cada uma das 388 falhas reais e distintas ocorridas no período de teste recebeu aviso prévio na janela [T-7, T-1].
-
-### 5.1 Tabela Oficial de Desempenho por Limiar de Decisão (p)
+### 5.2 Resultados Oficiais por Limiar de Decisão (p)
 
 | Limiar de Decisão (p) | Chamados Emitidos | Acertos Confirmados | Precisão Estrita | Recall Global | F1-Score | Perfil Operacional de Manutenção |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
@@ -111,21 +120,34 @@ Nesta régua, quando o modelo emite um chamado no dia D, verifica-se estritament
 | **p >= 0,55** | **270** | **36** | **13,33%** | **13,40%** (52 / 388 falhas) | **0,1337** | **Filtro Severo:** Redução expressiva no volume de ordens. |
 | **p >= 0,65** | **3** | **1** | **33,33%** | **0,77%** (3 / 388 falhas) | **0,0151** | **Certeza Absoluta:** Disparo apenas em condições de altíssima certeza técnica. |
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Explicabilidade do Modelo (SHAP Values)</h2>
-</div>
+### 5.3 Explicabilidade Global e Importância das Features (SHAP Values)
 
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 2.5rem 0;">
   <Image src={GraficoShap} alt="Importância das Features no Modelo Preditivo (SHAP Values)" format="png" width={800} style="display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
   <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.75rem; text-align: center;">Figura: Gráfico de impacto e distribuição dos SHAP Values para as principais variáveis do modelo.</p>
 </div>
 
-A análise de explicabilidade via SHAP (*SHapley Additive exPlanations*) confirma que o modelo baseia suas decisões em mecanismos físicos reais de desgaste mecânico:
+A interpretabilidade via SHAP (SHapley Additive exPlanations) confirma a coerência com a física do ativo:
+1. **Ciclo Pós-Reparo (`dias_desde_ultima_zm01` e `fator_risco_ciclo_zm01`):** Portas no intervalo de 30 a 90 dias após intervenção anterior recebem a maior contribuição positiva para a probabilidade de falha.
+2. **Severidade Mecânica (`qtd_anomalias_30s_14d` e `qtd_anomalias_15s_7d`):** Retenções prolongadas e anomalias de normalização representam o principal gatilho de estresse mecânico.
+3. **Indicadores de Esforço (`qtd_rce_7d` e `qtd_fo_7d`):** Reaberturas repetidas e sobreforça atuadora diferenciam portas prestes a falhar de ciclagens normais.
+4. **Idade e Infraestrutura:** Estações pioneiras de 2010 (Faria Lima, Pinheiros, Butantã e Paulista) apresentam peso estrutural proporcional ao desgaste de mais de 15 anos de ciclagens contínuas.
 
-1. **`dias_desde_ultima_zm01` e `fator_risco_ciclo_zm01`:** Portas que atingem a faixa crítica de 30 a 90 dias após a última manutenção recebem o maior impulso de risco de quebra.
-2. **`qtd_anomalias_30s_14d` e `qtd_anomalias_15s_7d`:** O acúmulo de retenções de segurança prolongadas é o indicador de maior peso para o disparo do alarme prévio.
-3. **`qtd_rce_7d` e `qtd_fo_7d`:** Reaberturas repetidas e picos de força no motor atuador diferenciam portas em falha iminente de portas em ciclagem normal.
-4. **`idade_ativo_anos` e Estações Pioneiras:** As estações inauguradas em 2010 (Faria Lima, Pinheiros, Butantã e Paulista) possuem naturalmente maior suscetibilidade por fadiga acumulada em 16 anos de operação contínua.
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Implantação e Reprodutibilidade (Deployment)</h2>
+</div>
+
+### 6.1 Estrutura de Execução Modular em 3 Etapas
+O pipeline de modelagem é 100% reproduzível e está organizado na pasta `models/modelo-1/`:
+
+* **`01_modelo_1_construcao_tabela_mestra.ipynb`:** Processa 742k logs de alarmes, ordens SAP, gera a grade contínua diária e calcula os lags estritamente causais.
+* **`02_modelo_1_preprocessamento.ipynb`:** Executa o split temporal cego, One-Hot Encoding das 11 estações e ajusta o `RobustScaler`.
+* **`03_modelo_1_treinamento.ipynb`:** Realiza o ajuste do Ensemble, avalia os limiares de decisão, plota os gráficos de explicabilidade SHAP e salva os artefatos.
+
+### 6.2 Artefatos Serializados
+Os artefatos finais treinados estão persistidos no diretório `data/modelos_artefatos/`:
+* `modelo_ensemble_otimizado.joblib`: Estimador treinado pronto para inferência.
+* `robust_scaler.joblib`: Objeto de normalização com os parâmetros do conjunto de treino.

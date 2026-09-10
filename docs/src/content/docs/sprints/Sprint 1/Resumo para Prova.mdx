@@ -48,9 +48,9 @@ Cada base (Alarmes, `ZM01`, `ZM02`, `ZM03`) passou por um pipeline próprio ante
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Candidatas → Modelo Real</h2>
 </div>
 
-O catálogo de **[Features Candidatas](/sprints/sprint-1/features-candidatas)** reavaliou as 7 hipóteses e propôs um primeiro conjunto de atributos, descartando de cara `vol_passageiros_catraca` (H3), `vol_alarmes_acumulados_ante_corretiva` bruto (H4) e `posicao_centro_vs_extremidade` (H6) por falta de evidência.
+O catálogo de **[Features Candidatas](/2026-2a/t16/g04/sprints/sprint-1/features-candidatas)** reavaliou as 7 hipóteses e propôs um primeiro conjunto de atributos, descartando de cara `vol_passageiros_catraca` (H3), `vol_alarmes_acumulados_ante_corretiva` bruto (H4) e `posicao_centro_vs_extremidade` (H6) por falta de evidência.
 
-O **[Modelo 1](/sprints/sprint-2/models/modelo-1-features)**, já na Sprint 2, implementou uma versão adaptada dessas ideias (`dias_desde_ultima_manutencao`, `alarmes_ultimas_24h/7d`, `tendencia_alarmes`, `numero_manutencoes_anteriores`, features de preventiva, entre outras) e testou de novo, com dados reais, tanto a movimentação de passageiros quanto o volume de alarme `OBS` como sinal de degradação — **os dois continuaram sem mostrar efeito prático relevante**, confirmando H3 e H4 por um segundo ângulo, agora contra o alvo de falha real, não só contra taxa de alarme.
+O **[Modelo 1](/2026-2a/t16/g04/sprints/sprint-2/modelos/modelo-1/)**, já na Sprint 2, implementou uma versão adaptada dessas ideias (`dias_desde_ultima_manutencao`, `alarmes_ultimas_24h/7d`, `tendencia_alarmes`, `numero_manutencoes_anteriores`, features de preventiva, entre outras) e testou de novo, com dados reais, tanto a movimentação de passageiros quanto o volume de alarme `OBS` como sinal de degradação — **os dois continuaram sem mostrar efeito prático relevante**, confirmando H3 e H4 por um segundo ângulo, agora contra o alvo de falha real, não só contra taxa de alarme.
 
 ---
 
@@ -67,7 +67,7 @@ Alvo: `falha_proximos_7d` (a estação vai ter manutenção corretiva nos próxi
 | Precisão (teste) | 0,99 | 0,05 |
 | Recall (teste) | 0,94 | 0,26 |
 
-**Acurácia balanceada no teste: 59,83%** — acima de um classificador aleatório (50%), mas ainda um sinal fraco. O diagnóstico treino-vs-teste (77,57% → 59,83%) mostra que o modelo generaliza pior do que o treino sugere, e nenhuma feature testada — dentro ou fora do modelo — teve correlação forte com o alvo. Detalhes completos, incluindo tudo que foi testado e descartado no caminho, em **[Modelo 1: Previsão de Falha em 7 Dias](/sprints/sprint-2/models/modelo-1-features)**.
+**Acurácia balanceada no teste: 59,83%** — acima de um classificador aleatório (50%), mas ainda um sinal fraco. O diagnóstico treino-vs-teste (77,57% → 59,83%) mostra que o modelo generaliza pior do que o treino sugere, e nenhuma feature testada — dentro ou fora do modelo — teve correlação forte com o alvo. Detalhes completos, incluindo tudo que foi testado e descartado no caminho, em **[Modelo 1: Previsão de Falha em 7 Dias](/2026-2a/t16/g04/sprints/sprint-2/modelos/modelo-1/)**.
 
 ---
 

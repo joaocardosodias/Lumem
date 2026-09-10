@@ -1,0 +1,29 @@
+services:
+  ml-service:
+    image: ${ACR_REGISTRY}/g04-ml-service:latest
+    container_name: ml-linha4
+    restart: unless-stopped
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: backend-network
+    external: true

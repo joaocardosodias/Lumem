@@ -1,0 +1,31 @@
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 4px 6px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.paginacao span {
+  color: #6b4fe0;
+}
+
+.paginacao button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.paginacao button:disabled {
+  color: #b7a8f0;
+  cursor: default;
+}
+
+.paginacao button:not(:disabled):hover {
+  text-decoration: underline;
+}
