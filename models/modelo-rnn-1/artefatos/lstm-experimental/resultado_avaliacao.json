@@ -1,0 +1,75 @@
+{
+  "versao": "experimental",
+  "cobertura_confirmada": false,
+  "unidade_avaliacao": "janela por porta/dia; não representa ocorrências distintas",
+  "negativos": "ausência de início de falha ou ocorrência pendente nos registros disponíveis",
+  "selecao_limiar": {
+    "limiar": 0.08316838,
+    "criterio": "maior F1 na validação; empate exato pelo maior limiar",
+    "regra_alerta": "probabilidade >= limiar",
+    "precisao_validacao": 0.1152506030554811,
+    "recall_validacao": 0.21414342629482072,
+    "f1_validacao": 0.14985189057327059,
+    "assinaturas_sha256": {
+      "pesos_lstm.pt": "d2061146e7fca80c1f729b6c5e9f0a74da01cafab6a4c51be1b38d05541a4aa7",
+      "preprocessadores.joblib": "c34ab963255284ae81dd7d890141adafe16872f87f38820cc37039a5aca84bde",
+      "predicoes_validacao.csv": "b1ddc2611502f17628a75df9885900181a1bb7fc48d4eae3a3af0e07196c8d28"
+    }
+  },
+  "registro_avaliacao": {
+    "identificacao": {
+      "assinaturas_sha256": {
+        "pesos_lstm.pt": "d2061146e7fca80c1f729b6c5e9f0a74da01cafab6a4c51be1b38d05541a4aa7",
+        "preprocessadores.joblib": "c34ab963255284ae81dd7d890141adafe16872f87f38820cc37039a5aca84bde",
+        "predicoes_validacao.csv": "b1ddc2611502f17628a75df9885900181a1bb7fc48d4eae3a3af0e07196c8d28"
+      },
+      "base_teste_sha256": "e074efb13e07e58ac7c647327c2816c2092b2abac92924be532ddfeedab9a57b",
+      "limiar": 0.08316838
+    },
+    "avaliado_em_utc": "2026-09-09T23:42:48.438086+00:00",
+    "passagens_pelo_modelo_por_amostra": 1,
+    "predicoes_teste_sha256": "feed145263a5698bdad20bb1026157f28a0b4b68d909bd7189b9cdae61371596"
+  },
+  "metricas": [
+    {
+      "particao": "validacao",
+      "amostras": 42359,
+      "positivos": 2008,
+      "limiar": 0.08316838,
+      "alertas": 3731,
+      "proporcao_alertas": 0.08808045515710947,
+      "precisao": 0.1152506030554811,
+      "recall": 0.21414342629482072,
+      "f1": 0.1498518905732706,
+      "average_precision": 0.09733467490156533,
+      "referencia_ap_proporcao_positivos": 0.04740432965839609,
+      "roc_auc": 0.632792428215319,
+      "log_loss": 0.1849138536721393,
+      "brier": 0.04439937628931895,
+      "verdadeiros_negativos": 37050,
+      "falsos_positivos": 3301,
+      "falsos_negativos": 1578,
+      "verdadeiros_positivos": 430
+    },
+    {
+      "particao": "teste",
+      "amostras": 41239,
+      "positivos": 1711,
+      "limiar": 0.08316838,
+      "alertas": 1987,
+      "proporcao_alertas": 0.04818254564853658,
+      "precisao": 0.055359838953195774,
+      "recall": 0.06428988895382817,
+      "f1": 0.05949161709031909,
+      "average_precision": 0.051342901167440114,
+      "referencia_ap_proporcao_positivos": 0.041489851839278356,
+      "roc_auc": 0.579287447520721,
+      "log_loss": 0.1725029158966462,
+      "brier": 0.03996115002381341,
+      "verdadeiros_negativos": 37651,
+      "falsos_positivos": 1877,
+      "falsos_negativos": 1601,
+      "verdadeiros_positivos": 110
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+---
+title: "RNN-LSTM — treinamento e avaliação com CRISP-DM"
+description: "Documentação da preparação dos dados, definição dos rótulos, treinamento, validação e teste da LSTM experimental para portas de plataforma."
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 3
+---
+
+import { Image } from 'astro:assets';
+import CurvasTreinamento from '../../../../../assets/sprints/sprint3/lstm/curvas_validacao.png';
+import AvaliacaoFinal from '../../../../../assets/sprints/sprint3/lstm/avaliacao_final.png';
+
+Esta entrega registra o experimento implementado em `models/modelo-rnn-1/rnn-LSTM-1.ipynb`. O trabalho utilizou somente os arquivos já processados de `data/`, construiu sequências de 30 dias, treinou a arquitetura proposta e avaliou o teste com um limiar escolhido exclusivamente na validação.
+
+**Resultado da entrega:** o treinamento e a avaliação experimental foram concluídos, mas o desempenho foi insuficiente para orientar alertas de manutenção. No teste, a precisão foi de **5,54%** e o recall de **6,43%**. Os negativos são provisórios, pois a ausência de registro não comprova ausência de defeito. Não houve implantação operacional.
+
+Os resultados abaixo foram transcritos dos artefatos salvos do experimento. A elaboração desta documentação não executou novo treinamento nem nova inferência no teste.
+
+| Fase CRISP-DM | Trabalho realizado | Evidência no notebook |
+| --- | --- | --- |
+| Entendimento do negócio | Definição do horizonte, da unidade de previsão e do escopo de falha | Seção 7.1 |
+| Entendimento dos dados | Inventário, identificação das portas, auditorias e revisão documental | Seções 1, 3 e 6 |
+| Preparação dos dados | Tabela mestra, variáveis, rótulos, cortes e sequências | Seções 2, 4, 5, 7, 8 e 9; subseções 11.1 e 11.2 |
+| Modelagem | Arquitetura LSTM, rotina de treinamento e seleção da melhor época | Seção 10 e subseções 11.3 a 11.5 |
+| Avaliação | Escolha do limiar na validação e avaliação única do teste | Seção 12 |
+| Implantação | Persistência e rastreabilidade do experimento; uso operacional não realizado | Subseções 11.5 e 12.4 |
+
+## 1. Entendimento do negócio
+
+### 1.1 Objetivo e unidade de previsão
+
+A pergunta de negócio é: **a porta apresentará falha nos próximos sete dias?** A finalidade é antecipar situações que demandem manutenção, incluindo defeitos de componentes, mesmo quando não há comprovação de perda total da abertura ou do fechamento.
+
+Cada previsão representa uma porta ao final de um dia D. A entrada contém os 30 dias de D−29 até D. A saída é um único valor entre zero e um para o horizonte D+1 a D+7. Não são produzidas sete saídas diárias nem uma estimativa da data exata da quebra.
+
+Com as evidências disponíveis, o alvo implementado foi delimitado como **novo início de falha documentada nos próximos sete dias**. A data declarada de início da avaria é a referência documental; sua equivalência ao início físico do defeito não foi confirmada. A saída Sigmoid também não foi calibrada como probabilidade operacional.
+
+### 1.2 Escopo de falha
+
+O escopo contempla falhas funcionais e defeitos documentados de componentes da porta. Entre os componentes considerados pelas regras de diagnóstico estão sensores, motor, trava/fechadura, módulos de controle, atuadores, trolley, correia, soleira, LED, alto-falante, cabos, folha da porta, vidro, vedação e tampa.
+
+A presença de uma ZM01 ou ZM02, isoladamente, não confirma falha. A consolidação exige compatibilidade dos campos de diagnóstico e consistência da identificação e do episódio. Um alarme próximo fornece evidência complementar, mas sua presença não é obrigatória para confirmar um defeito documental.
+
+Uma preventiva programada, um registro administrativo ou a repetição da mesma ocorrência não gera automaticamente uma nova falha. Os textos e diagnósticos de manutenção foram usados para revisar o alvo, não como entradas disponíveis antecipadamente para a rede.
+
+### 1.3 Critério de sucesso e restrições
+
+Não foi definido um custo operacional para falsos alertas e falhas não detectadas, nem uma meta mínima de aprovação do modelo. Por isso, o maior F1 na validação foi adotado como critério inicial para selecionar o limiar. Essa escolha combina precisão e recall, mas não demonstra viabilidade operacional.
+
+O trabalho ficou limitado aos dados processados existentes. A completude dos registros ZM01/ZM02 e o momento histórico em que cada informação ficou disponível não puderam ser confirmados. Essas restrições foram mantidas explícitas na definição experimental e nos arquivos salvos.
+
+## 2. Entendimento dos dados
+
+### 2.1 Fontes e participação no modelo
+
+| Fonte | Arquivo utilizado em `data/` | Participação |
+| --- | --- | --- |
+| Alarmes | `Alarmes/alarmes_trata_limpos_consolidado.csv` | Histórico de ativações e contagens; cruzamento exploratório com ocorrências |
+| ZM01 — corretiva emergencial | `Corretiva Emergencial/processados/ZM01_limpa.xlsx` | Histórico temporal e evidências para o alvo; registros separados como outliers foram reintegrados à análise do alvo |
+| ZM02 — corretiva programada | `Corretiva Programada/processados/ZM02_limpa.xlsx` | Histórico temporal e evidências de defeitos para o alvo |
+| ZM03 — preventiva | `Preventiva/preventiva_zm03_limpa.csv` | Contexto exploratório por estação/plataforma; não integra as entradas finais nem gera positivos automaticamente |
+
+ZM01 e ZM02 foram, portanto, utilizadas tanto na preparação do histórico quanto na consolidação de falhas documentais. ZM03 foi lida e integrada como contexto durante a exploração, mas sua programação não foi tratada como comprovação de execução de manutenção.
+
+### 2.2 Identificação e granularidade
+
+A identificação foi extraída das TAGs de alarmes e dos locais de instalação das manutenções. A chave candidata combina estação, plataforma, número da porta e tipo de ativo, por exemplo `BUT|1|5|PDM`. O recorte final utiliza portas do tipo PDM; outros tipos não foram agrupados como se fossem a mesma porta.
+
+O calendário inicial compreende **528 portas**, entre **17/10/2023 e 28/03/2026**, totalizando **472.032 linhas de porta/dia**. Esse total representa a grade diária construída; nem todas as linhas possuem histórico suficiente ou rótulo utilizável.
+
+O `id_candidato` identifica uma combinação de porta e instante de início da avaria. Ele serve à rastreabilidade dos registros candidatos e não é um código oficial de falha nem uma variável fornecida à LSTM.
+
+### 2.3 Auditorias e problemas encontrados
+
+Foram inspecionados tipos de colunas, ausências, períodos, duplicidades, compatibilidade entre chaves, flags, durações e variantes das ocorrências. Também foram examinados candidatos de treino para confrontar diagnóstico, descrição, identificação e intervalos temporais.
+
+| Problema observado | Tratamento adotado |
+| --- | --- |
+| Repetições de registros de alarmes | A unidade de ativação foi definida por TAG e instante de início; contagens não representam todas as linhas repetidas do arquivo |
+| Porta ou plataforma citada no texto diverge do local de instalação | A divergência permanece como pendência e afeta a elegibilidade do rótulo |
+| Mesma nota ou ordem associada a locais ou inícios diferentes | O conflito é mantido para revisão, sem escolher uma versão arbitrariamente |
+| Identificadores ZM01 truncados | Não houve reconstrução de dígitos perdidos; os conflitos foram considerados nos bloqueios |
+| Registros ZM01 separados por duração | Foram reintegrados à análise do alvo, pois duração extrema não invalida automaticamente uma ocorrência |
+| Término ausente, divergente ou intervalos sobrepostos | O episódio permanece incerto quando não há evidência suficiente para consolidá-lo |
+| Ausência de registros | Não foi interpretada como comprovação de funcionamento normal |
+
+A inspeção da limpeza de ZM01 identificou uma expressão regular com ponto não escapado: `r".0$"` podia remover um dígito anterior ao zero final. A expressão foi corrigida para `r"\.0$"` no notebook de limpeza, mas as fontes brutas não foram reprocessadas neste experimento. Os identificadores dos arquivos processados disponíveis continuaram sujeitos às limitações observadas.
+
+## 3. Preparação dos dados
+
+### 3.1 Tabela mestra e variáveis históricas
+
+A preparação construiu uma linha por porta/dia e incorporou contagens diárias, janelas móveis, históricos de corretivas e contexto preventivo. Calendários auxiliares anteriores ao recorte permitiram calcular janelas iniciais; ocorrências anteriores também foram consideradas no histórico de ZM01/ZM02.
+
+Os dias desde a última ZM01/ZM02 representam tempo desde o **início de avaria registrado**, não tempo desde a execução ou conclusão da manutenção. O cálculo considera somente datas até D, sob a hipótese não confirmada de que o registro já estava disponível naquela data.
+
+A arquitetura proposta inicialmente usava 20 variáveis como exemplo. A versão efetivamente treinada contém **12 variáveis temporais**, nesta ordem:
+
+| Variável | Informação utilizada |
+| --- | --- |
+| `qtd_alarmes_registrados_1d` | Quantidade de ativações no dia |
+| `qtd_alarmes_registrados_7d` | Quantidade de ativações em sete dias |
+| `qtd_alarmes_registrados_14d` | Quantidade de ativações em 14 dias |
+| `variacao_alarmes_registrados_7d` | Variação das contagens entre duas semanas consecutivas |
+| `qtd_fo_7d` | Ativações classificadas como FO em sete dias |
+| `qtd_lsd_7d` | Ativações classificadas como LSD em sete dias |
+| `dias_com_registro_7d` | Dias com registro de alarme em sete dias |
+| `dias_com_registro_14d` | Dias com registro de alarme em 14 dias |
+| `dias_desde_ultima_zm01` | Dias desde o último início ZM01 registrado |
+| `dias_desde_ultima_zm02` | Dias desde o último início ZM02 registrado |
+| `sem_historico_zm01` | Indicador de ausência de histórico ZM01 conhecido até D |
+| `sem_historico_zm02` | Indicador de ausência de histórico ZM02 conhecido até D |
+
+As entradas estáticas são **estação e plataforma**, transformadas em **13 colunas por codificação one-hot**: 11 estações e duas plataformas. A chave individual da porta é mantida na rastreabilidade, mas não foi codificada como entrada estática.
+
+Durações, tempos de normalização e anomalias de 15/30 segundos foram explorados, mas ficaram fora das entradas finais por limitações de interpretação e disponibilidade histórica. Proporções de gravidade e tempo desde ZM03 também não integram esta versão.
+
+### 3.2 Consolidação dos episódios
+
+A consolidação reuniu registros ZM01 e ZM02, preservando sua origem. Registros da mesma porta e do mesmo instante de início foram examinados conjuntamente. Foram verificadas compatibilidade de objeto e defeito, evidências textuais, cancelamentos, conflitos de identificação, variantes de diagnóstico e consistência das datas.
+
+Os intervalos foram examinados por porta para detectar sobreposições e possíveis continuidades. Grupos temporais inconclusivos permaneceram pendentes; não foram transformados automaticamente em várias falhas independentes. A descrição e o texto longo também foram confrontados com o número da porta e da plataforma extraídos da chave.
+
+### 3.3 Evolução e definição dos rótulos
+
+O notebook preserva três momentos distintos da construção do alvo:
+
+| Versão | Significado | Situação |
+| --- | --- | --- |
+| Referência inicial ZM01 | Presença de registro ZM01 nos próximos sete dias | Referência exploratória; não equivale ao alvo final de defeito |
+| Rótulo conservador | Positivo documental; zero somente com acompanhamento confirmado; incertezas sem rótulo | Não produziu negativos confirmados suficientes para o treinamento binário |
+| `experimental_inicio_documentado_v1` | Novo início documental com negativos provisórios por ausência de início registrado | Versão efetivamente utilizada no treinamento e na avaliação |
+
+Na versão experimental, o rótulo é definido da seguinte forma:
+
+| Rótulo | Regra em D+1 a D+7 |
+| --- | --- |
+| **1** | Existe início de falha documental apta no horizonte completo |
+| **0 provisório** | O horizonte está dentro do recorte e não há início de falha apta nem início de ocorrência pendente encontrado |
+| **Ausente** | O horizonte é incompleto ou há pendência que impede atribuir zero, sem evidência suficiente para um positivo |
+
+Uma ocorrência pendente iniciada em T bloqueia os cortes D de T−7 a T−1 que poderiam recebê-la no horizonte. O escopo depende das localizações conhecidas: divergência de porta pode abranger a plataforma; divergência de plataforma pode abranger a estação; ausência de localização pode alcançar todas as portas. Notas conflitantes não bloqueiam automaticamente toda a rede quando existem localizações registradas.
+
+Um término ausente não é preenchido como recuperação nem bloqueia indefinidamente a previsão de **novos inícios registrados**. Essa decisão não permite concluir que um defeito anterior já terminou. Os rótulos conservadores foram preservados separadamente e não foram apresentados como negativos confirmados do experimento.
+
+### 3.4 Cortes cronológicos e elegibilidade
+
+Os cortes existentes foram mantidos, sem divisão aleatória de janelas entre conjuntos. A validação começa em **03/07/2025** e o teste em **14/11/2025**.
+
+| Conjunto | Regra temporal do corte D e do horizonte |
+| --- | --- |
+| Treino | D anterior à validação e D+7 anterior a 03/07/2025 |
+| Validação | D a partir de 03/07/2025, anterior ao teste, e D+7 anterior a 14/11/2025 |
+| Teste | D a partir de 14/11/2025 e D+7 até 28/03/2026 |
+
+Além do corte, uma amostra precisa de rótulo conhecido e 30 dias consecutivos da mesma porta, respeitando o início de histórico considerado utilizável. As janelas cujo alvo atravessa o corte seguinte são excluídas. As entradas podem usar histórico anterior ao início da partição, pois esse histórico precede a previsão; o alvo não pode atravessar a fronteira.
+
+As janelas de dias vizinhos se sobrepõem, e uma mesma ocorrência pode produzir vários positivos. Portanto, os totais e as métricas representam **janelas por porta/dia**, não falhas físicas distintas ou portas inéditas.
+
+| Conjunto | Janelas utilizáveis | Positivos | Negativos provisórios |
+| --- | ---: | ---: | ---: |
+| Treino | 206.648 | 10.384 | 196.264 |
+| Validação | 42.359 | 2.008 | 40.351 |
+| Teste | 41.239 | 1.711 | 39.528 |
+
+### 3.5 Pré-processamento e tensores
+
+As dez variáveis numéricas receberam imputação pela mediana e padronização com `StandardScaler`. Os dois indicadores de ausência de histórico foram mantidos como valores binários. Estação e plataforma receberam `OneHotEncoder`, com tratamento de categorias desconhecidas por `handle_unknown="ignore"`.
+
+O ajuste dos pré-processadores utilizou somente linhas diárias do período de treino, a partir do início de histórico considerado para cada porta. Validação e teste receberam somente as transformações já ajustadas. O conjunto de linhas para ajustar os pré-processadores não se restringe aos dias finais das janelas rotuladas de treino.
+
+```text
+X_temporal: (n_amostras, 30, 12), float32
+X_estatico: (n_amostras, 13), float32
+y:          (n_amostras, 1), float32
+
+Lote completo: (256, 30, 12) + (256, 13) → (256, 1)
+```
+
+As conferências verificaram valores finitos, rótulos binários, ordem das features, continuidade diária, permanência na mesma porta, alinhamento entre entradas e alvos e ausência de cruzamento do horizonte entre partições. Os metadados preservam a chave, o índice da linha, D, o início da janela e o fim do horizonte.
+
+## 4. Modelagem
+
+### 4.1 Arquitetura implementada
+
+A rede foi implementada em **PyTorch**, com **22.625 parâmetros treináveis**. A saída do último dia da LSTM é normalizada, recebe Dropout e é concatenada com as informações estáticas.
+
+```text
+Histórico temporal (30 dias × 12 variáveis)
+                  ↓
+               LSTM(64)
+                  ↓
+        Saída do último dia (64)
+                  ↓
+         LayerNormalization(64)
+                  ↓
+             Dropout(0,3)
+                  ↓
+     Concatenação ← Estáticas (13)
+                  ↓
+            Dense(32, ReLU)
+                  ↓
+             Dropout(0,3)
+                  ↓
+           Dense(1, Sigmoid)
+                  ↓
+        Escore para D+1 até D+7
+```
+
+### 4.2 Configuração do treinamento
+
+| Parâmetro | Valor utilizado |
+| --- | --- |
+| Otimizador | Adam |
+| Taxa de aprendizado | 0,001 |
+| Função de perda | Entropia cruzada binária, `nn.BCELoss`, após Sigmoid |
+| Batch size | 256; último lote menor preservado |
+| Limite de épocas | 30 |
+| Parada antecipada | Cinco épocas consecutivas sem melhora da perda de validação |
+| Critério de escolha dos pesos | Menor perda de validação |
+| Limite da norma do gradiente | 1,0 |
+| Semente | 42 |
+| Execução | CPU |
+| Embaralhamento | Somente a ordem das amostras de treino; os dias dentro de cada janela permanecem ordenados |
+| Ponderação de classes / reamostragem | Não utilizadas |
+| Limiar inicial para acompanhar classificação | 0,5 |
+
+A cada época, a perda foi acumulada proporcionalmente à quantidade de amostras de cada lote. A validação ocorreu em modo de avaliação, com Dropout desativado e sem cálculo de gradientes. Foram armazenados os melhores pesos e as respectivas probabilidades de validação.
+
+A execução terminou após **seis épocas**. A menor perda de validação ocorreu na **época 1**, cujos pesos foram restaurados. Não houve busca de hiperparâmetros, calibração probabilística ou comparação com outros modelos nesta execução.
+
+### 4.3 Histórico completo das épocas
+
+As métricas de classificação desta tabela pertencem à **validação no limiar 0,5**. No treino foi registrada somente a perda: precisão, recall, F1 e AP de treino não foram calculados.
+
+| Época | Perda treino | Perda validação | AP validação | Precisão validação | Recall validação | F1 validação |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **1 — selecionada** | 0,208724 | **0,184914** | 0,097335 | 100,00% | 0,0996% | 0,001990 |
+| 2 | 0,196365 | 0,186281 | 0,100104 | 100,00% | 0,1992% | 0,003976 |
+| 3 | 0,194434 | 0,187011 | 0,091915 | 100,00% | 0,3984% | 0,007937 |
+| 4 | 0,193248 | 0,186015 | 0,093411 | 71,43% | 0,2490% | 0,004963 |
+| 5 | 0,191458 | 0,186036 | 0,088848 | 42,86% | 0,1494% | 0,002978 |
+| 6 | 0,190562 | 0,186431 | 0,089712 | 33,33% | 0,3984% | 0,007874 |
+
+A AP da época 2 foi maior que a da época 1, mas o critério previamente adotado foi a perda de validação. Os pesos não foram trocados para maximizar outra métrica após a execução.
+
+<Image src={CurvasTreinamento} alt="Histórico das perdas de treino e validação e da Average Precision na validação ao longo das seis épocas." />
+
+A perda de treino diminuiu, enquanto a validação não melhorou após a primeira época. Esse comportamento não demonstra bom desempenho no treino nem identifica, sozinho, a causa do problema. A perda de treino foi medida durante as atualizações e com Dropout ativo; a de validação foi medida com pesos fixos ao final da época e Dropout desativado.
+
+No limiar inicial 0,5, os pesos selecionados emitiram apenas **dois alertas na validação**, ambos positivos, entre 2.008 janelas positivas. A precisão de 100% corresponde somente a esses dois alertas; o recall de aproximadamente 0,10% evidencia a baixa cobertura.
+
+## 5. Avaliação
+
+### 5.1 Seleção do limiar exclusivamente na validação
+
+As probabilidades de validação dos pesos selecionados foram utilizadas para calcular precisão, recall e F1 nos limiares candidatos. O limiar escolhido foi **0,08316838**, pelo maior F1. Em caso de empate exato, a regra escolhe o maior limiar. Um alerta é emitido quando o escore é **maior ou igual** ao valor salvo.
+
+A decisão foi persistida em `limiar_alerta.json` antes da inferência no teste, junto às assinaturas SHA-256 dos pesos, dos pré-processadores e das previsões de validação. Não houve ajuste do limiar a partir do teste.
+
+### 5.2 Protocolo do teste reservado
+
+A avaliação carregou os pesos e pré-processadores salvos. As transformações foram reaplicadas sem novo ajuste e conferidas contra as entradas preparadas. Cada janela de teste passou pelo modelo uma única vez, em lotes de até 256, com Dropout desativado.
+
+As probabilidades foram salvas em `predicoes_teste.csv`. O registro da avaliação contém assinaturas das entradas, dos rótulos e dos artefatos, além da data **09/09/2026, às 23:42:48 UTC**. A rotina reutiliza as previsões existentes quando as assinaturas coincidem, evitando nova inferência em consultas posteriores.
+
+### 5.3 Métricas finais no limiar escolhido
+
+| Métrica | Validação | Teste |
+| --- | ---: | ---: |
+| Janelas | 42.359 | 41.239 |
+| Positivos | 2.008 | 1.711 |
+| Alertas | 3.731 | 1.987 |
+| Proporção de janelas com alerta | 8,8080% | 4,8183% |
+| **Precisão** | **11,5251%** | **5,5360%** |
+| **Recall** | **21,4143%** | **6,4290%** |
+| **F1** | **0,149852** | **0,059492** |
+| Average Precision (AP) | 0,097335 | 0,051343 |
+| Proporção de positivos — referência para AP | 0,047404 | 0,041490 |
+| ROC-AUC | 0,632792 | 0,579287 |
+| Log loss | 0,184914 | 0,172503 |
+| Brier score | 0,044399 | 0,039961 |
+
+A precisão mede a proporção de alertas associados a rótulos positivos. O recall mede a proporção de janelas positivas que receberam alerta. O F1 combina essas duas medidas. A AP resume a relação precisão–recall ao variar o limiar; não foi calculada como área trapezoidal da curva. A ROC-AUC mede a ordenação relativa das classes. Log loss e Brier avaliam os escores probabilísticos, com valores menores preferíveis, mas precisam ser interpretados em conjunto com a distribuição dos rótulos.
+
+A menor log loss no teste não significa melhora na identificação de falhas: a proporção de positivos é diferente entre os períodos, e precisão, recall e AP pioraram. A AP do teste supera pouco sua referência de proporção de positivos, indicando capacidade de ordenação limitada.
+
+### 5.4 Matrizes de confusão
+
+| Resultado por janela | Validação | Teste |
+| --- | ---: | ---: |
+| Verdadeiro negativo: rótulo 0, sem alerta | 37.050 | 37.651 |
+| Falso positivo: rótulo 0, com alerta | 3.301 | 1.877 |
+| Falso negativo: rótulo 1, sem alerta | 1.578 | 1.601 |
+| Verdadeiro positivo: rótulo 1, com alerta | 430 | 110 |
+
+Os termos “verdadeiro” e “falso” acima são relativos aos rótulos do experimento. Como o rótulo 0 é provisório, a matriz não confirma fisicamente que todas as janelas negativas estavam livres de defeitos.
+
+<Image src={AvaliacaoFinal} alt="Curva de precisão e recall da validação com o limiar escolhido e matriz de confusão do teste, com 110 verdadeiros positivos e 1.877 falsos positivos." />
+
+No teste, **110 das 1.711 janelas positivas** foram identificadas e **1.601 não receberam alerta**. Dos **1.987 alertas**, **1.877** corresponderam a rótulos 0. Assim, aproximadamente 94% das janelas positivas foram perdidas e aproximadamente 94% dos alertas foram falsos em relação aos rótulos disponíveis. A conclusão é de **desempenho preditivo baixo**, apesar da conclusão técnica do treinamento.
+
+### 5.5 Limitações e hipóteses sobre o desempenho
+
+| Evidência ou limitação | Interpretação e investigação pendente |
+| --- | --- |
+| Negativos provisórios e identificadores divergentes | Pode haver ruído nos rótulos; a taxa de erro dos rótulos não foi medida |
+| Data documental e disponibilidade histórica não confirmadas | O horizonte pode estar desalinhado com o início físico ou com o momento em que a informação poderia ser utilizada |
+| Aproximadamente 5% de positivos no treino, sem ponderação de classes | O desbalanceamento pode favorecer escores baixos; sua contribuição não foi isolada experimentalmente |
+| Entradas baseadas em contagens e recência | Ainda não foi demonstrado que essas variáveis possuem sinal antecipatório suficiente |
+| Diferentes componentes agrupados no mesmo alvo | Tipos de defeito podem exigir sinais distintos; não houve avaliação separada por componente |
+| Desempenho pior no teste que na validação | Pode existir mudança entre períodos; não foi realizado diagnóstico conclusivo dessa mudança |
+| Janelas sobrepostas e avaliação por porta/dia | Os resultados não medem antecipação por episódio, alertas únicos ou capacidade diária da equipe de manutenção |
+| Ausência de métricas de classificação no treino | Não é possível afirmar que houve boa classificação no treino nem concluir que o único problema foi sobreajuste |
+
+Essas possibilidades são **hipóteses**, não causas comprovadas. Não foi realizado um novo treinamento para testar ponderação de classes, outras features ou outra arquitetura. Também não foi realizada comparação direta com os modelos da Sprint 2 sob os mesmos rótulos e cortes; métricas de experimentos com protocolos diferentes não são diretamente comparáveis.
+
+## 6. Implantação e continuidade
+
+### 6.1 Artefatos e rastreabilidade
+
+A fase de implantação ficou restrita à persistência do experimento e à preparação para sua reprodução. Não foram criados serviço de inferência, integração operacional, acionamento de manutenção ou monitoramento em produção.
+
+Os arquivos estão em `models/modelo-rnn-1/artefatos/lstm-experimental/`:
+
+| Arquivo | Conteúdo | Versionamento previsto |
+| --- | --- | --- |
+| `pesos_lstm.pt` | Pesos da época 1 selecionada | Local, ignorado pelo Git |
+| `arquitetura_lstm.py` | Classe necessária para reconstruir a rede | Versionável |
+| `preprocessadores.joblib` | Imputador, normalizador e codificador ajustados no treino | Local, ignorado pelo Git |
+| `configuracao.json` | Features e sua ordem, arquitetura, cortes, parâmetros, versões e hipóteses | Versionável |
+| `historico_treinamento.csv` | Perdas e métricas de validação das seis épocas | Versionável |
+| `limiar_alerta.json` | Limiar, regra de escolha e assinaturas dos arquivos | Versionável |
+| `predicoes_validacao.csv` e `predicoes_teste.csv` | Probabilidades e rastreabilidade por janela | Locais, ignorados pelo Git |
+| `metricas_avaliacao.csv` | Métricas agregadas de validação e teste | Versionável |
+| `matriz_confusao_teste.csv` | Matriz de confusão do teste | Versionável |
+| `registro_avaliacao.json` | Data da avaliação, assinaturas e registro da passagem única por amostra | Versionável |
+| `resultado_avaliacao.json` | Resultados consolidados e hipóteses do experimento | Versionável |
+| `curvas_validacao.png` e `avaliacao_final.png` | Gráficos do treinamento e da avaliação | Versionáveis |
+
+O `.gitignore` específico de `models/modelo-rnn-1/` também exclui arrays gerados e checkpoints locais do notebook. Um clone do repositório sem os arquivos locais não contém sozinho todos os artefatos necessários para repetir a inferência do modelo salvo.
+
+### 6.2 Ambiente e verificações realizadas
+
+| Componente | Versão registrada |
+| --- | --- |
+| Python | 3.13.14 |
+| PyTorch | 2.12.0+cpu |
+| NumPy | 2.4.6 |
+| pandas | 2.3.1 |
+| scikit-learn | 1.7.1 |
+| joblib | 1.5.2 |
+
+Foram realizadas conferências de formas e alinhamento dos tensores, elegibilidade temporal, finitude dos valores e presença das duas classes nos conjuntos usados para treinamento. A recarga dos pesos foi comparada com as saídas do modelo em memória na validação. Na avaliação final, as métricas foram conferidas a partir dos CSVs salvos, sem nova inferência no teste, e as assinaturas confirmaram a preservação dos pesos e pré-processadores.
+
+O notebook foi reorganizado em **12 seções principais**, com subseções e sumário. Essa reorganização preservou o processamento e os resultados. Em nova sessão, a preparação pode ser executada até **11.2**, seguida da seção **12**, utilizando os artefatos locais. As subseções de treinamento **11.3 a 11.5** não precisam ser repetidas. Há verificações para impedir que a execução sobrescreva os artefatos de uma avaliação já concluída.
+
+### 6.3 Próximo ciclo CRISP-DM
+
+A avaliação recomenda retornar ao entendimento e à preparação dos dados antes de ampliar a arquitetura. As ações abaixo permanecem propostas, sem resultados experimentais nesta entrega:
+
+1. Auditar exemplos positivos, negativos provisórios e erros, confrontando porta, início documental e alarmes anteriores.
+2. Verificar se as variáveis diferenciam períodos anteriores a falhas dos demais períodos, utilizando os conjuntos de desenvolvimento.
+3. Comparar regras simples de alarmes e regressão logística com a LSTM sob o mesmo protocolo de rótulos e cortes.
+4. Investigar mudanças entre períodos e diferenças entre tipos de componente.
+5. Avaliar ponderação de classes e novas entradas somente após a revisão dos dados, com seleção na validação.
+6. Definir critérios operacionais de alerta e, para uma nova avaliação independente, reservar um período ainda não utilizado quando isso for possível.
+
+O teste atual já foi consultado. Ele não poderá ser apresentado como avaliação inédita de modelos ajustados após a análise desses resultados. Sem novos dados, qualquer reutilização deverá ser identificada como análise exploratória, preservando a avaliação original.
+
+### 6.4 Fontes internas da documentação
+
+| Evidência | Caminho no repositório |
+| --- | --- |
+| Implementação e saídas executadas | `models/modelo-rnn-1/rnn-LSTM-1.ipynb` |
+| Relatório da etapa de treinamento | `models/modelo-rnn-1/resultado-treinamento-experimental.md` |
+| Relatório da avaliação final | `models/modelo-rnn-1/resultado-avaliacao-experimental.md` |
+| Configuração e versões | `models/modelo-rnn-1/artefatos/lstm-experimental/configuracao.json` |
+| Histórico por época | `models/modelo-rnn-1/artefatos/lstm-experimental/historico_treinamento.csv` |
+| Métricas e protocolo final | `models/modelo-rnn-1/artefatos/lstm-experimental/resultado_avaliacao.json` |
+
+Os números das tabelas foram arredondados apenas para exibição. Os CSVs e JSONs preservam os valores utilizados nos cálculos e o limiar exato.
