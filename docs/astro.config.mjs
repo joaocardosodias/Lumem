@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import mermaid from 'astro-mermaid';
 
 const backendSidebar = {
 	label: 'Backend',
@@ -58,6 +59,10 @@ export default defineConfig({
 		'/': '/2026-2a/t16/g04/readme',
 	},
 	integrations: [
+		mermaid({
+			theme: 'neutral',
+			autoTheme: true,
+		}),
 		starlight({
 			title: 'Documentação',
 			locales: {
@@ -121,6 +126,7 @@ export default defineConfig({
 							collapsed: true,
 							items: [
 								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
+								{ label: 'Arquitetura UML', slug: 'sprints/sprint-3/arquitetura-uml' },
 								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
 								backendSidebar,
 								{
