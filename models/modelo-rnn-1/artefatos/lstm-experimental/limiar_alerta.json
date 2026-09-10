@@ -1,0 +1,13 @@
+{
+  "limiar": 0.08316838,
+  "criterio": "maior F1 na validação; empate exato pelo maior limiar",
+  "regra_alerta": "probabilidade >= limiar",
+  "precisao_validacao": 0.1152506030554811,
+  "recall_validacao": 0.21414342629482072,
+  "f1_validacao": 0.14985189057327059,
+  "assinaturas_sha256": {
+    "pesos_lstm.pt": "d2061146e7fca80c1f729b6c5e9f0a74da01cafab6a4c51be1b38d05541a4aa7",
+    "preprocessadores.joblib": "c34ab963255284ae81dd7d890141adafe16872f87f38820cc37039a5aca84bde",
+    "predicoes_validacao.csv": "b1ddc2611502f17628a75df9885900181a1bb7fc48d4eae3a3af0e07196c8d28"
+  }
+}

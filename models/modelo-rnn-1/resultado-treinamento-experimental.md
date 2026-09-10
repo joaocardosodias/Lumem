@@ -1,6 +1,6 @@
 # LSTM experimental — etapa 5
 
-A arquitetura solicitada foi treinada com os registros disponíveis de ZM01 e ZM02. O rótulo 0 é provisório: significa ausência de novo início de falha ou ocorrência pendente no horizonte de sete dias, sob as regras documentadas na seção 87 do notebook. Ele não confirma ausência de defeitos não registrados.
+A arquitetura solicitada foi treinada com os registros disponíveis de ZM01 e ZM02. O rótulo 0 é provisório: significa ausência de novo início de falha ou ocorrência pendente no horizonte de sete dias, sob as regras documentadas na seção 11.1 do notebook. Ele não confirma ausência de defeitos não registrados.
 
 ## Configuração e seleção
 
@@ -46,3 +46,5 @@ A AP supera a proporção de positivos usada como referência, mas a identifica�
 
 A recarga dos pesos foi conferida comparando suas saídas com as do modelo em memória. Os rótulos e as sequências conservadoras foram preservados separadamente. As planilhas processadas não foram alteradas.
 
+
+A etapa 6 foi concluída posteriormente e está documentada no [relatório da avaliação final](resultado-avaliacao-experimental.md).

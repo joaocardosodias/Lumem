@@ -45,7 +45,7 @@
   "escopo_falha_definido": true,
   "base_treinamento_atualizada": true,
   "conjuntos_com_duas_classes": true,
-  "status_preparacao": "modelo experimental treinado; melhor época restaurada; teste final pendente",
+  "status_preparacao": "treinamento e avaliação experimental concluídos; limiar fixado na validação",
   "sequencias_criadas": true,
   "formato_janela": [
     30,
@@ -131,5 +131,36 @@
     "precisao_validacao": 1.0,
     "recall_validacao": 0.00099601593625498,
     "f1_validacao": 0.001990049751243781
+  },
+  "limiar_alerta": 0.08316838,
+  "criterio_limiar": "maior F1 na validação; empate exato pelo maior limiar",
+  "teste_avaliado": true,
+  "features_numericas": [
+    "qtd_alarmes_registrados_1d",
+    "qtd_alarmes_registrados_7d",
+    "qtd_alarmes_registrados_14d",
+    "variacao_alarmes_registrados_7d",
+    "qtd_fo_7d",
+    "qtd_lsd_7d",
+    "dias_com_registro_7d",
+    "dias_com_registro_14d",
+    "dias_desde_ultima_zm01",
+    "dias_desde_ultima_zm02"
+  ],
+  "features_indicadores": [
+    "sem_historico_zm01",
+    "sem_historico_zm02"
+  ],
+  "features_estaticas_originais": [
+    "estacao",
+    "plataforma"
+  ],
+  "versoes_execucao": {
+    "python": "3.13.14",
+    "torch": "2.12.0+cpu",
+    "numpy": "2.4.6",
+    "pandas": "2.3.1",
+    "scikit_learn": "1.7.1",
+    "joblib": "1.5.2"
   }
 }
