@@ -1,0 +1,123 @@
+.filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 14px 22px 12px;
+  border-radius: 24px;
+  background: var(--brand-soft);
+  box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+}
+
+.filtros__periodos {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.filtros__periodos > span {
+  color: #6b4fe0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filtros__periodos div {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filtros__periodos button {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: #6b4fe0;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filtros__periodos button.is-active {
+  color: var(--brand);
+  font-weight: 700;
+  border-bottom-color: var(--brand);
+}
+
+.filtros__campos {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: end;
+  gap: 10px 12px;
+  overflow-x: auto;
+}
+
+.filtros__campo {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: #6b4fe0;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.filtros__campo span {
+  white-space: nowrap;
+}
+
+.filtros__campo input,
+.filtros__campo select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 0 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(26, 20, 96, 0.28);
+  border-radius: 0;
+  background: transparent;
+  color: var(--brand);
+  outline: none;
+}
+
+.filtros__campo select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%233F00FF' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+}
+
+.filtros__campo input:focus,
+.filtros__campo select:focus {
+  border-bottom-color: var(--brand);
+}
+
+.filtros__campo input[type='date'],
+.filtros__campo input[type='number'] {
+  color-scheme: light;
+}
+
+.filtros__campo select option {
+  color: var(--brand);
+}
+
+.filtros__clear {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.filtros__clear:hover {
+  text-decoration: underline;
+}

@@ -118,14 +118,9 @@ export default defineConfig({
 						},
 						{
 							label: 'Sprint 3',
-							collapsed: true,
 							items: [
-								backendSidebar,
-								{
-									label: 'Modelos Preditivos',
-									collapsed: true,
-									items: [{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } }],
-								},
+								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
+								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
 							],
 						},
 						{
