@@ -128,6 +128,11 @@ export default defineConfig({
 									collapsed: true,
 									items: [{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } }],
 								},
+								{
+									label: 'API de Predição',
+									collapsed: true,
+									items: [{ autogenerate: { directory: 'sprints/Sprint 3/api' } }],
+								},
 							],
 						},
 						{

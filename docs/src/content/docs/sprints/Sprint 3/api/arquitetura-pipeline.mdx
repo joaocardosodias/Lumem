@@ -104,4 +104,4 @@ Foi confirmado que:
 
 Achado de performance: a chamada completa levou ~115 segundos. Isolando a causa: `PostgresPredictionRepository.SaveRun()`, no backend Go, grava as predições uma de cada vez (528 idas ao banco em sequência) em vez de um insert em lote. Isso é uma limitação importante porque pode estourar timeout de proxy em produção.
 
-Detalhes de cada peça isoladamente: [Modelo 5](/sprints/sprint-2/modelos/modelo-5), [API de Predição](/sprints/sprint-3/modelos/api-predicao), [Visão Geral do Backend](/sprints/sprint-3/backend/arquitetura/visao-geral).
+Detalhes de cada peça isoladamente: [Modelo 5](/sprints/sprint-2/modelos/modelo-5), [API de Predição](/sprints/sprint-3/api/api-predicao), [Visão Geral do Backend](/sprints/sprint-3/backend/arquitetura/visao-geral).
