@@ -1,0 +1,107 @@
+---
+title: "Arquitetura do Pipeline de Predição"
+description: "Visão de ponta a ponta de como uma predição acontece — do backend em Go até o modelo em Python, passando pelo banco, o deploy na VM e o pipeline de CI/CD."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import diagramaContexto from '../../../../../assets/sprints/sprint3/pipeline/diagrama-contexto-pipeline.png';
+import diagramaDeploy from '../../../../../assets/sprints/sprint3/pipeline/diagrama-deploy-pipeline.png';
+import diagramaSequencia from '../../../../../assets/sprints/sprint3/pipeline/diagrama-sequencia-predicao.png';
+import diagramaCicd from '../../../../../assets/sprints/sprint3/pipeline/diagrama-cicd-pipeline.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+Essa documentação fala sobre o pipeline inteiro, de onde vem a predição, como ela atravessa dois sistemas (Go e Python), chega no banco, e como tudo isso é construído e implantado.
+
+Serão explicados quatro camadas, cada uma com um diagrama:
+
+1. **Contexto** — quem/o que participa do sistema
+2. **Deploy** — onde cada peça roda fisicamente (containers, VM, rede)
+3. **Fluxo de uma predição**, a sequência exata de passos quando alguém dispara uma predição
+4. **CI/CD** — como o código vira container rodando em produção
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Diagrama de Contexto</h2>
+</div>
+
+O operador nunca se comunica com o modelo diretamente. Ele aciona o backend em Go (por enquanto), que decide quais portas avaliar e delega o cálculo de risco pro microsserviço em Python — que por sua vez consulta o mesmo banco de dados, mas só a parte de telemetria.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={diagramaContexto} alt="Diagrama de contexto: Operador aciona o Backend Go, que chama o Serviço de ML via POST /predict; os dois consultam e gravam no mesmo PostgreSQL (Supabase), dentro da rede Docker da VM Azure" width={900} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Topologia de Deploy</h2>
+</div>
+
+Backend e serviço de ML rodam na mesma VM, cada um no seu container, ligados por uma rede Docker interna (`backend-network`), nenhum dos dois é publicado direto pra internet, só o Nginx é. O PostgreSQL não roda na VM: é um serviço gerenciado (Supabase), acessado pela rede pelos dois containers.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={diagramaDeploy} alt="Diagrama de deploy: nginx, backend-linha4, worker-linha4 e ml-linha4 rodando na mesma VM Azure, ligados pela rede backend-network; PostgreSQL gerenciado (Supabase) fora da VM; Azure Container Registry alimentando o Watchtower" width={900} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Fluxo de uma Predição</h2>
+</div>
+
+Passo a passo do que acontece para o operador pedir uma predição e receber a resposta:
+
+1. Operador (ou um agendamento) dispara `POST /api/v1/predictions/trigger` no backend Go.
+2. Backend consulta `doors` no Postgres pra saber quais portas estão ativas.
+3. Backend monta a lista de portas e manda `POST /predict` pro serviço de ML — só com os identificadores, nenhum dado de telemetria viaja nessa chamada.
+4. Serviço de ML busca no Postgres os alarmes recentes (`telemetry_alarms`) e o histórico de manutenção (`maintenance_events`) das estações pedidas.
+5. Serviço de ML calcula as features ao vivo (janelas móveis, decaimento, histórico de corretivas) e roda o modelo.
+6. Serviço de ML devolve `will_fail` + `probability` por porta.
+7. Backend grava a rodada de predições no Postgres e cria uma inspeção automática pra cada porta em risco.
+8. Backend devolve a resposta pro operador.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={diagramaSequencia} alt="Diagrama de sequência dos 10 passos de uma predição, do POST /predictions/trigger do operador até a resposta final, passando pelas consultas e gravações no PostgreSQL e pelo cálculo do modelo no Serviço de ML" width={600} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Pipeline de CI/CD</h2>
+</div>
+
+Um .gitlab-ci.yml único cobre os dois lados (Go e Python). Cada mudança passa pelas mesmas sete etapas antes de virar container rodando:
+
+`lint → test → security → build → scan → publish → deploy`
+
+O deploy em si não é automatizado (não existe um estágio que conecte na VM), publicar a imagem no Azure Container Registry é o último passo automático. Depois, o Watchtower (rodando na VM) detecta a imagem nova e reinicia o container sozinho.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={diagramaCicd} alt="Pipeline de CI/CD em sete etapas: Lint, Test, Security, Build, Scan, Publish e Deploy — as seis primeiras automatizadas pelo GitLab CI, a última (Deploy) manual via Watchtower" width={900} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Validação</h2>
+</div>
+
+O pipeline inteiro foi testado de ponta a ponta contra o banco de staging real. Os dois containers (backend e serviço de ML) foram levantados juntos, ligados pela mesma rede, e o fluxo completo (login → trigger → predição → gravação) foi disparado de verdade para 528 portas.
+
+Foi confirmado que:
+- `doors.platform` usa o formato `"P1"`/`"P2"`, diferente de `telemetry_alarms.platform` (`"BUT1"`). O serviço de ML já lida com os dois formatos.
+- O serviço de ML responde em ~3,3 segundos para 528 portas, dentro do limite de 5 segundos que o cliente Go usa.
+
+Achado de performance: a chamada completa levou ~115 segundos. Isolando a causa: `PostgresPredictionRepository.SaveRun()`, no backend Go, grava as predições uma de cada vez (528 idas ao banco em sequência) em vez de um insert em lote. Isso é uma limitação importante porque pode estourar timeout de proxy em produção.
+
+Detalhes de cada peça isoladamente: [Modelo 5](/sprints/sprint-2/modelos/modelo-5), [API de Predição](/sprints/sprint-3/modelos/api-predicao), [Visão Geral do Backend](/sprints/sprint-3/backend/arquitetura/visao-geral).
