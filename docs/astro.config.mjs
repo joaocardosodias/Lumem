@@ -116,7 +116,7 @@ export default defineConfig({
 								},
 							],
 						},
-						{
+		{
 							label: 'Sprint 3',
 							collapsed: true,
 							items: [
