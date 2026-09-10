@@ -475,10 +475,10 @@ export const api = {
   predictionsLatest() {
     return request('/api/v1/predictions/latest').then((result) => result.data)
   },
-  triggerPredictions(horizonDays = '7') {
+  triggerPredictions(horizonDays = 7) {
     return request('/api/v1/predictions/trigger', {
       method: 'POST',
-      body: { horizon_days: String(horizonDays) },
+      body: { horizon_days: Number(horizonDays) || 7 },
     }).then((result) => result.data)
   },
   alarms(limit = 50, offset = 0, filters = {}) {

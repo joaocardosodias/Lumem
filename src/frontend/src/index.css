@@ -110,6 +110,23 @@ h1 {
   font-weight: 700;
 }
 
+.dashboard__kicker {
+  margin: 0 0 6px;
+  color: #6b4fe0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dashboard__lead {
+  margin: 8px 0 0;
+  max-width: 48rem;
+  color: #6b4fe0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
 .page-head__actions {
   display: flex;
   align-items: center;

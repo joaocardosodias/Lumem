@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import date, timedelta
 
@@ -6,11 +7,15 @@ import numpy as np
 import pandas as pd
 from scipy.signal import lfilter
 
-from database import buscar_manutencoes, buscar_telemetria_recente
+from database import buscar_manutencoes, buscar_telemetria_recente, obter_data_referencia
 
 TIPOS = ['CA', 'CSD', 'FC', 'FO', 'LSD', 'OA', 'OBS', 'RCE']
 JANELAS = (1, 3, 7, 14, 30)
 PAT_LOC = re.compile(r'^SP04-6-PSD-([A-Z]{3})(?:-PLT(\d)|-P(\d)S\d)?(?:-PP(\d{2})(PDM|PFX|PSE))?')
+ESTACAO_ALIAS = {
+    'PAU': 'PTA',
+    'OFR': 'FRA',
+}
 
 _bundle = None
 
@@ -60,7 +65,32 @@ def _janela_alarmes(alarmes: pd.DataFrame, hoje: date, dias: int) -> pd.DataFram
     return base
 
 
+_EMPTY_ALARM_FEATS = None
+
+
+def get_empty_alarm_feats() -> dict:
+    global _EMPTY_ALARM_FEATS
+    if _EMPTY_ALARM_FEATS is None:
+        out = {}
+        for w in JANELAS:
+            for t in TIPOS:
+                out[f'n_{t}_{w}d'] = 0.0
+            out[f'n_total_{w}d'] = 0.0
+            out[f'n_long30_{w}d'] = 0.0
+            out[f'n_tecnicos_{w}d'] = 0.0
+        out['dur_max_7d'] = 0.0
+        out['dur_max_30d'] = 0.0
+        for col, meias_vidas in [('n_total', (3, 7, 14)), ('n_tecnicos', (7,)), ('n_LSD', (7,))]:
+            for h in meias_vidas:
+                out[f'{col}_decaido_h{h}'] = 0.0
+        _EMPTY_ALARM_FEATS = out
+    return dict(_EMPTY_ALARM_FEATS)
+
+
 def _features_alarme_porta(alarmes_porta: pd.DataFrame, hoje: date) -> dict:
+    if alarmes_porta is None or alarmes_porta.empty:
+        return get_empty_alarm_feats()
+
     diario = _janela_alarmes(alarmes_porta, hoje, 60)
     cols_cnt = [c for c in diario.columns if c.startswith('n_')]
 
@@ -97,38 +127,51 @@ def _historico_ordens(eventos: pd.Series, hoje: date, janelas=(30, 90)) -> dict:
 
 def processar_e_prever(portas: list[dict]) -> list[dict]:
     bundle = carregar_bundle()
-    hoje = date.today()
-
     estacoes = sorted({p['station_code'] for p in portas})
+    hoje = obter_data_referencia(estacoes)
+
     alarmes = buscar_telemetria_recente(estacoes, hoje, janela_dias=60)
     manutencoes = buscar_manutencoes(estacoes)
 
+    alarmes_by_door = {}
+    alarmes_mdu_by_plat = {}
+    if not alarmes.empty:
+        porta_alarmes = alarmes[alarmes['door_number'].notna()]
+        if not porta_alarmes.empty:
+            for (st, pl, dn), grp in porta_alarmes.groupby(['station_code', 'platform', 'door_number']):
+                alarmes_by_door[(st, pl, int(dn))] = grp
+
+        mdu_alarmes = alarmes[alarmes['door_number'].isna()]
+        if not mdu_alarmes.empty:
+            for (st, pl), grp in mdu_alarmes.groupby(['station_code', 'platform']):
+                alarmes_mdu_by_plat[(st, pl)] = grp
+
+    m_by_door = {}
+    m_by_est = {}
     if not manutencoes.empty:
         loc = manutencoes['installation_location'].apply(extrai_local)
         manutencoes = manutencoes.assign(
             est_m=[x[0] for x in loc], via_m=[x[1] for x in loc], porta_m=[x[2] for x in loc],
         )
+        for est, grp in manutencoes.groupby('est_m'):
+            if est:
+                m_by_est[est] = grp
+        valid_porta = manutencoes[manutencoes['porta_m'].notna()]
+        if not valid_porta.empty:
+            for (est, via_m, porta_m), grp in valid_porta.groupby(['est_m', 'via_m', 'porta_m']):
+                m_by_door[(est, via_m, int(porta_m))] = grp
 
     linhas = []
     for p in portas:
         station_code, platform, door_number = p['station_code'], p['platform'], p['door_number']
         via = normaliza_via(platform)
 
-        alarmes_porta = alarmes[
-            (alarmes['station_code'] == station_code) &
-            (alarmes['platform'] == platform) &
-            (alarmes['door_number'] == door_number)
-        ] if not alarmes.empty else alarmes
-
-        alarmes_mdu = alarmes[
-            (alarmes['station_code'] == station_code) &
-            (alarmes['platform'] == platform) &
-            (alarmes['door_number'].isna())
-        ] if not alarmes.empty else alarmes
+        alarmes_porta = alarmes_by_door.get((station_code, platform, door_number))
+        alarmes_mdu = alarmes_mdu_by_plat.get((station_code, platform))
 
         feats = _features_alarme_porta(alarmes_porta, hoje)
 
-        if alarmes_mdu.empty:
+        if alarmes_mdu is None or alarmes_mdu.empty:
             feats['n_mdu_7d'] = 0.0
         else:
             am = alarmes_mdu.copy()
@@ -136,16 +179,13 @@ def processar_e_prever(portas: list[dict]) -> list[dict]:
             desde = pd.Timestamp(hoje) - pd.Timedelta(days=7)
             feats['n_mdu_7d'] = float((am['dia'] >= desde).sum())
 
-        if manutencoes.empty:
-            m_porta = manutencoes
+        m_porta = m_by_door.get((station_code, via, door_number))
+        if m_porta is not None and not m_porta.empty:
+            zm01_eventos = m_porta.loc[m_porta['order_type'] == 'ZM01', 'start_timestamp']
+            zm02_eventos = m_porta.loc[m_porta['order_type'] == 'ZM02', 'start_timestamp']
         else:
-            m_porta = manutencoes[
-                (manutencoes['est_m'] == station_code) &
-                (manutencoes['via_m'] == via) &
-                (manutencoes['porta_m'] == door_number)
-            ]
-        zm01_eventos = m_porta.loc[m_porta['order_type'] == 'ZM01', 'start_timestamp'] if not m_porta.empty else pd.Series(dtype='object')
-        zm02_eventos = m_porta.loc[m_porta['order_type'] == 'ZM02', 'start_timestamp'] if not m_porta.empty else pd.Series(dtype='object')
+            zm01_eventos = pd.Series(dtype='object')
+            zm02_eventos = pd.Series(dtype='object')
 
         h_zm01 = _historico_ordens(zm01_eventos, hoje, janelas=(30, 90))
         h_zm02 = _historico_ordens(zm02_eventos, hoje, janelas=(30, 90))
@@ -157,11 +197,11 @@ def processar_e_prever(portas: list[dict]) -> list[dict]:
         feats['zm02_90d'] = h_zm02['90d']
         feats['dias_desde_ultima_corretiva'] = min(h_zm01['dias_desde'], h_zm02['dias_desde'])
 
-        if manutencoes.empty:
-            m_estacao = manutencoes
+        m_estacao = m_by_est.get(station_code)
+        if m_estacao is not None and not m_estacao.empty:
+            zm03_eventos = m_estacao.loc[m_estacao['order_type'] == 'ZM03', 'start_timestamp']
         else:
-            m_estacao = manutencoes[manutencoes['est_m'] == station_code]
-        zm03_eventos = m_estacao.loc[m_estacao['order_type'] == 'ZM03', 'start_timestamp'] if not m_estacao.empty else pd.Series(dtype='object')
+            zm03_eventos = pd.Series(dtype='object')
         h_zm03 = _historico_ordens(zm03_eventos, hoje, janelas=(90,))
         feats['zm03_90d'] = h_zm03['90d']
         feats['dias_desde_zm03'] = h_zm03['dias_desde']
@@ -181,16 +221,20 @@ def processar_e_prever(portas: list[dict]) -> list[dict]:
         feats['frac_tecnicos_30d'] = feats['n_tecnicos_30d'] / (feats['n_total_30d'] + 1)
         feats['num_porta'] = door_number
         feats['via_cod'] = int(via)
-        feats['est_cod'] = (bundle['est_categorias'].index(station_code)
-                             if station_code in bundle['est_categorias'] else -1)
+        st_mapped = ESTACAO_ALIAS.get(station_code, station_code)
+        feats['est_cod'] = (bundle['est_categorias'].index(st_mapped)
+                             if st_mapped in bundle['est_categorias'] else -1)
 
         linhas.append(feats)
 
     X = pd.DataFrame(linhas)[bundle['features']].fillna(0)
     probs = bundle['model'].predict_proba(X)[:, 1]
 
+    limiar_env = os.environ.get('PREDICTION_THRESHOLD')
+    limiar = float(limiar_env) if limiar_env else 0.27
+
     return [
         {'station_code': p['station_code'], 'platform': p['platform'], 'door_number': p['door_number'],
-         'will_fail': bool(prob >= bundle['threshold']), 'probability': float(prob)}
+         'will_fail': bool(prob >= limiar), 'probability': float(prob)}
         for p, prob in zip(portas, probs)
     ]

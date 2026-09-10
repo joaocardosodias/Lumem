@@ -6,7 +6,7 @@ import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import { useToast } from '../context/Toast'
-import { lineStations, resolveStation, stationLabel } from '../data/stations'
+import { lineStations, mapStation, resolveStation, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
 import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
@@ -40,6 +40,7 @@ const emptyFilters = {
   station: '',
   platform: '',
   priority: '',
+  origin: '',
   period: DEFAULT_PERIOD,
 }
 
@@ -49,11 +50,16 @@ function toTimestamp(date, time) {
   return `${date} ${clock}`
 }
 
+function isAiInspection(item) {
+  const notes = String(item.notes || '').toLowerCase()
+  return notes.includes('automaticamente pela ia') || notes.includes('rodada #')
+}
+
 function inspectionStation(item) {
   return resolveStation(item) || String(item.station_code || '').toUpperCase()
 }
 
-function Inspecoes({ params }) {
+function Inspecoes({ onNavigate, params }) {
   const toast = useToast()
   const [items, setItems] = useState(() => getCachedInspections() ?? [])
   const [loading, setLoading] = useState(() => !getCachedInspections())
@@ -68,7 +74,19 @@ function Inspecoes({ params }) {
   const [reloadAt, setReloadAt] = useState(0)
 
   useEffect(() => {
-    if (params?.station || params?.door) {
+    if (params?.status) {
+      setFilter(params.status)
+    }
+    if (params?.origin === 'ai') {
+      setFilters((prev) => ({ ...prev, origin: 'ai' }))
+    }
+    if (params?.station) {
+      setFilters((prev) => ({ ...prev, station: params.station }))
+    }
+    if (params?.door) {
+      setSearch(String(params.door))
+    }
+    if (params?.openCreate) {
       setForm((prev) => ({
         ...prev,
         station_code: params.station || prev.station_code,
@@ -107,10 +125,12 @@ function Inspecoes({ params }) {
   const scoped = useMemo(
     () =>
       items.filter((item) => {
-        if (filters.station && inspectionStation(item) !== filters.station) return false
+        if (filters.station && mapStation(inspectionStation(item)) !== mapStation(filters.station)) return false
         if (filters.platform && item.platform !== filters.platform) return false
         if (filters.priority && item.priority !== filters.priority) return false
-        if (!inPeriod(item.scheduled_for, filters.period)) return false
+        if (filters.origin === 'ai' && !isAiInspection(item)) return false
+        if (filters.origin === 'manual' && isAiInspection(item)) return false
+        if (!inPeriod(item.scheduled_for || item.created_at, filters.period)) return false
         if (search.trim()) {
           const q = search.trim().toLowerCase()
           const match =
@@ -130,7 +150,7 @@ function Inspecoes({ params }) {
     [scoped, filter],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.platform || filters.priority || search) ||
+    Boolean(filters.station || filters.platform || filters.priority || filters.origin || search) ||
     filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
@@ -217,6 +237,7 @@ function Inspecoes({ params }) {
       { label: 'Plataforma', key: 'platform' },
       { label: 'Porta', value: (item) => String(item.door_number).padStart(2, '0') },
       { label: 'Prioridade', value: (item) => PRIORITY_LABEL[item.priority] || item.priority },
+      { label: 'Origem', value: (item) => (isAiInspection(item) ? 'IA Preditiva' : 'Manual') },
       { label: 'Status', value: (item) => STATUS_LABEL[item.status] || item.status },
       { label: 'Agendada para', key: 'scheduled_for' },
       { label: 'Notas', key: 'notes' },
@@ -228,7 +249,13 @@ function Inspecoes({ params }) {
   return (
     <section className="inspecoes">
       <div className="page-head">
-        <h1>Inspeções</h1>
+        <div>
+          <p className="dashboard__kicker">Ordens e Manutenção de Campo</p>
+          <h1>Inspeções</h1>
+          <p className="dashboard__lead">
+            Acompanhamento de ordens de serviço e inspeções geradas pela IA e equipe operacional.
+          </p>
+        </div>
         <div className="page-head__actions">
           <CadastrarButton variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
@@ -308,6 +335,13 @@ function Inspecoes({ params }) {
             ))}
           </select>
         </FiltroCampo>
+        <FiltroCampo label="Origem">
+          <select value={filters.origin} onChange={updateFilter('origin')}>
+            <option value="">Todas</option>
+            <option value="ai">Geradas por IA</option>
+            <option value="manual">Manuais</option>
+          </select>
+        </FiltroCampo>
       </Filtros>
 
       <div className="inspecoes-tabs" role="tablist" aria-label="Filtro de status">
@@ -335,25 +369,30 @@ function Inspecoes({ params }) {
           paged.map((item) => (
             <article key={item.id} className="card-inspecao">
               <div>
+                <span>TAG SAP</span>
+                <strong>{`SP04-6-PSD-${item.station_code}-${item.platform}-PP${String(item.door_number).padStart(2, '0')}`}</strong>
+              </div>
+              <div>
                 <span>Estação</span>
                 <strong>{item.station_code}</strong>
                 <em>{stationLabel(item.station_code)}</em>
               </div>
               <div>
-                <span>Plataforma</span>
-                <strong>{item.platform}</strong>
-              </div>
-              <div>
-                <span>Porta</span>
-                <strong>{String(item.door_number).padStart(2, '0')}</strong>
+                <span>Plat / Porta</span>
+                <strong>{item.platform} · P{String(item.door_number).padStart(2, '0')}</strong>
               </div>
               <div>
                 <span>Prioridade</span>
-                <strong>{PRIORITY_LABEL[item.priority] || item.priority}</strong>
+                <strong className={item.priority === 'critical' ? 'priority--critical' : undefined}>
+                  {PRIORITY_LABEL[item.priority] || item.priority}
+                </strong>
+                {isAiInspection(item) ? (
+                  <span className="badge-ia-inspecao">Gerada por IA</span>
+                ) : null}
               </div>
               <div>
                 <span>Agendada para</span>
-                <strong>{item.scheduled_for || '—'}</strong>
+                <strong>{item.scheduled_for || 'Imediata'}</strong>
               </div>
               <div>
                 <span>Notas</span>
@@ -370,6 +409,21 @@ function Inspecoes({ params }) {
                   <option value="completed">{STATUS_LABEL.completed}</option>
                 </select>
               </label>
+              <div className="card-inspecao-actions">
+                <button
+                  type="button"
+                  className="btn-inspecao-action"
+                  onClick={() =>
+                    onNavigate?.('portas', {
+                      station: item.station_code,
+                      platform: item.platform,
+                      door: item.door_number,
+                    })
+                  }
+                >
+                  Ver Porta
+                </button>
+              </div>
             </article>
           ))
         ) : (

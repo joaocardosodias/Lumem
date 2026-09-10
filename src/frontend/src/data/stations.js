@@ -17,7 +17,7 @@ export const lineStations = [
   { code: 'PIN', name: 'Pinheiros', photo: imgPin, platforms: ['P1', 'P2', 'P3', 'P4'] },
   { code: 'FAL', name: 'Faria Lima', photo: imgFal, platforms: ['P1', 'P2'] },
   { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra, platforms: ['P1', 'P2'] },
-  { code: 'OSC', name: 'Oscar Freire', photo: imgOsc, platforms: ['P1', 'P2'] },
+  { code: 'OFR', name: 'Oscar Freire', photo: imgOsc, platforms: ['P1', 'P2'] },
   { code: 'PAU', name: 'Paulista', photo: imgPau, platforms: ['P1', 'P2'] },
   { code: 'HIG', name: 'Higienópolis-Mackenzie', photo: imgHig, platforms: ['P1', 'P2'] },
   { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2', 'P3', 'P4'] },
@@ -28,12 +28,13 @@ const knownStations = new Set(lineStations.map((item) => item.code))
 
 const stationAliases = {
   PTA: 'PAU',
-  FRE: 'OSC',
+  OSC: 'OFR',
+  FRE: 'OFR',
 }
 
 const genericCenters = new Set(['PVS', 'ENC', 'GER'])
 
-function mapStation(code) {
+export function mapStation(code) {
   const mapped = stationAliases[code] || code
   return genericCenters.has(mapped) ? '' : mapped
 }

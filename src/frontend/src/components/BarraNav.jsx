@@ -5,9 +5,10 @@ import './BarraNav.css'
 
 const items = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'alertas', label: 'Alertas' },
-  { id: 'manutencoes', label: 'Manutenções' },
+  { id: 'predicoes', label: 'Predições' },
   { id: 'portas', label: 'Portas' },
+  { id: 'alarmes', label: 'Alarmes' },
+  { id: 'manutencoes', label: 'Manutenções' },
   { id: 'inspecoes', label: 'Inspeções' },
 ]
 
@@ -102,7 +103,15 @@ function NavIcon({ id }) {
     )
   }
 
-  if (id === 'alertas') {
+  if (id === 'predicoes') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    )
+  }
+
+  if (id === 'alarmes' || id === 'alertas') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M7 10a5 5 0 0 1 10 0c0 5 2 6 2 7H5c0-1 2-2 2-7Z" />

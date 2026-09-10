@@ -4,12 +4,13 @@ import { PredictionLoadProvider } from './components/PredictionLoad'
 import { AuthProvider, useAuth } from './context/Auth'
 import { ToastProvider } from './context/Toast'
 import { getCurrentPage, getCurrentParams, navigateTo, subscribeToNavigation } from './lib/router'
-import Alertas from './pages/Alertas'
+import Alarmes from './pages/Alarmes'
 import Dashboard from './pages/Dashboard'
 import Inspecoes from './pages/Inspecoes'
 import Login from './pages/Login'
 import Manutencoes from './pages/Manutencoes'
 import Portas from './pages/Portas'
+import Predicoes from './pages/Predicoes'
 
 function AppShell() {
   const { user, ready, logout } = useAuth()
@@ -36,10 +37,12 @@ function AppShell() {
 
   function renderPage() {
     if (page === 'dashboard') return <Dashboard onNavigate={handleNavigate} />
-    if (page === 'alertas') return <Alertas onNavigate={handleNavigate} params={params} />
-    if (page === 'manutencoes') return <Manutencoes onNavigate={handleNavigate} params={params} />
+    if (page === 'predicoes') return <Predicoes onNavigate={handleNavigate} params={params} />
     if (page === 'portas') return <Portas onNavigate={handleNavigate} params={params} />
-    return <Inspecoes onNavigate={handleNavigate} params={params} />
+    if (page === 'alarmes' || page === 'alertas') return <Alarmes onNavigate={handleNavigate} params={params} />
+    if (page === 'manutencoes') return <Manutencoes onNavigate={handleNavigate} params={params} />
+    if (page === 'inspecoes') return <Inspecoes onNavigate={handleNavigate} params={params} />
+    return <Dashboard onNavigate={handleNavigate} />
   }
 
   if (!ready) return <div className="app-boot" />

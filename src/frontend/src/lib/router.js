@@ -1,22 +1,27 @@
 const ROUTES = {
   dashboard: '/dashboard',
-  alertas: '/alertas',
-  manutencoes: '/manutencoes',
+  predicoes: '/predicoes',
   portas: '/portas',
+  alarmes: '/alarmes',
+  manutencoes: '/manutencoes',
   inspecoes: '/inspecoes',
+  alertas: '/alarmes',
 }
 
 const PATH_TO_PAGE = {
   '/': 'dashboard',
   '/dashboard': 'dashboard',
-  '/alertas': 'alertas',
+  '/predicoes': 'predicoes',
+  '/predictions': 'predicoes',
+  '/alarmes': 'alarmes',
+  '/alertas': 'alarmes',
+  '/alerts': 'alarmes',
   '/manutencoes': 'manutencoes',
+  '/maintenance': 'manutencoes',
   '/portas': 'portas',
+  '/doors': 'portas',
   '/inspecoes': 'inspecoes',
   '/inspections': 'inspecoes',
-  '/alerts': 'alertas',
-  '/maintenance': 'manutencoes',
-  '/doors': 'portas',
 }
 
 export function getCurrentPage() {

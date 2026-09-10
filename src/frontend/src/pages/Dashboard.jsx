@@ -84,17 +84,23 @@ function Dashboard({ onNavigate }) {
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       <div className="dashboard__hero">
-        <Card
-          label="Portas em risco nos próximos 7 dias"
-          value={summary.doors_at_risk}
-          hint={`de ${summary.total_doors} portas ativas na linha`}
-        />
+        <button
+          type="button"
+          onClick={() => onNavigate?.('predicoes', { status: 'fail' })}
+          style={{ padding: 0, border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+        >
+          <Card
+            label="Portas em risco nos próximos 7 dias"
+            value={summary.doors_at_risk}
+            hint={`de ${summary.total_doors} portas ativas na linha · clique para ver predições`}
+          />
+        </button>
         <div className="dashboard__tiles">
-          <button type="button" onClick={() => onNavigate?.('inspecoes')}>
+          <button type="button" onClick={() => onNavigate?.('inspecoes', { status: 'pending' })}>
             <span>Inspeções pendentes</span>
             <strong>{inspectionKpis.pending}</strong>
           </button>
-          <button type="button" onClick={() => onNavigate?.('inspecoes')}>
+          <button type="button" onClick={() => onNavigate?.('inspecoes', { status: 'completed' })}>
             <span>Inspeções concluídas</span>
             <strong>{inspectionKpis.completed}</strong>
           </button>
@@ -115,7 +121,12 @@ function Dashboard({ onNavigate }) {
           <h2>Estações críticas</h2>
           {summary.critical_stations.length ? (
             summary.critical_stations.map((station) => (
-              <div key={station.station_code} className="dashboard__station">
+              <div
+                key={station.station_code}
+                className="dashboard__station"
+                onClick={() => onNavigate?.('predicoes', { station: station.station_code, status: 'fail' })}
+                style={{ cursor: 'pointer' }}
+              >
                 <strong>{station.station_code}</strong>
                 <div>
                   <span>{stationLabel(station.station_code)}</span>
@@ -130,10 +141,36 @@ function Dashboard({ onNavigate }) {
         </section>
 
         <section className="dashboard__panel">
-          <h2>Portas priorizadas pela IA</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <h2 style={{ margin: 0 }}>Portas priorizadas pela IA</h2>
+            <button
+              type="button"
+              onClick={() => onNavigate?.('predicoes')}
+              style={{
+                border: 0,
+                background: 'transparent',
+                color: 'var(--brand)',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              Ver todas as predições →
+            </button>
+          </div>
           {prioritized.length ? (
             prioritized.map((item) => (
-              <div key={item.door_id || item.sap_tag} className="dashboard__prediction">
+              <div
+                key={item.door_id || item.sap_tag}
+                className="dashboard__prediction"
+                onClick={() =>
+                  onNavigate?.('portas', {
+                    station: item.station_code,
+                    door: item.door_number,
+                  })
+                }
+                style={{ cursor: 'pointer' }}
+              >
                 <div>
                   <span>TAG</span>
                   <strong>{item.sap_tag || '—'}</strong>
@@ -148,7 +185,9 @@ function Dashboard({ onNavigate }) {
                 </div>
                 <div>
                   <span>Diagnóstico</span>
-                  <strong>{item.will_fail ? 'Vai falhar' : 'Estável'}</strong>
+                  <strong style={{ color: item.will_fail ? '#dc2626' : '#16a34a' }}>
+                    {item.will_fail ? 'Risco de Falha' : 'Estável'}
+                  </strong>
                 </div>
               </div>
             ))

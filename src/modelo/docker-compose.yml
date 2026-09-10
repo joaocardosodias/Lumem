@@ -16,7 +16,10 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - default
+      default:
+        aliases:
+          - ml-service
+          - ml-linha4
 
 networks:
   default:

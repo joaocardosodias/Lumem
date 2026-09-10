@@ -4,7 +4,7 @@ import CadastrarButton from '../components/CadastrarButton'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useToast } from '../context/Toast'
-import { lineStations, stationLabel } from '../data/stations'
+import { lineStations, mapStation, stationLabel } from '../data/stations'
 import { api, asList, errorMessage, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
 import { invalidateInspections } from '../lib/inspectionCache'
 import './Portas.css'
@@ -107,20 +107,26 @@ function Portas({ onNavigate, params = {} }) {
   }, [])
 
   useEffect(() => {
-    if (params.station && params.station !== openedCode) {
-      handleOpenStation(params.station, false)
-    } else if (!params.station && openedCode) {
+    const targetStation = params.station ? mapStation(params.station) : null
+    if (targetStation && targetStation !== openedCode) {
+      handleOpenStation(targetStation, false)
+    } else if (!targetStation && openedCode) {
       setOpenedCode(null)
       setOpenedDoor(null)
     }
   }, [params.station])
 
   useEffect(() => {
-    if (params.door && doors.length && (!openedDoor || String(openedDoor.door_number) !== String(params.door))) {
-      const match = doors.find((d) => String(d.door_number) === String(params.door))
-      if (match) handleOpenDoor(match, false)
+    if (params.door && doors.length && (!openedDoor || String(openedDoor.door_number) !== String(params.door) || (params.platform && openedDoor.platform !== params.platform))) {
+      const match = doors.find(
+        (d) => String(d.door_number) === String(params.door) && (!params.platform || d.platform === params.platform),
+      )
+      if (match) {
+        if (match.platform) setActivePlatform(match.platform)
+        handleOpenDoor(match, false)
+      }
     }
-  }, [params.door, doors])
+  }, [params.door, params.platform, doors])
 
   function clearHide() {
     if (hideTimer.current) {
@@ -250,13 +256,12 @@ function Portas({ onNavigate, params = {} }) {
     }
 
     try {
-      const alarms = asList(
-        await api.alarms({
-          station_code: door.station_code || openedCode,
-          door_number: door.door_number,
-          limit: 10,
-        }),
-      )
+      const rawAlarms = await api.alarms({
+        station_code: door.station_code || openedCode,
+        door_number: door.door_number,
+        limit: 10,
+      })
+      const alarms = asList(rawAlarms?.data || rawAlarms?.alarms || rawAlarms)
       setDoorAlarms(alarms)
     } catch {
       setDoorAlarms([])
@@ -323,9 +328,9 @@ function Portas({ onNavigate, params = {} }) {
         <div className="portas__kpis">
           <Card
             layout="banner"
-            label="Diagnóstico"
-            value={timeline.will_fail ? 'Vai falhar' : 'Estável'}
-            hint={`status ${timeline.status} · id ${timeline.door_id}`}
+            label="Diagnóstico Preditivo"
+            value={timeline.will_fail ? 'Em risco de falha' : 'Estável'}
+            hint={`status ${timeline.status} · porta ${timeline.station_code}-${timeline.platform}-P${padDoor(timeline.door_number)}`}
           />
           <Card
             layout="banner"
@@ -363,10 +368,41 @@ function Portas({ onNavigate, params = {} }) {
               <strong>{timeline.status}</strong>
             </div>
             <div>
-              <span>Vai falhar</span>
-              <strong>{timeline.will_fail ? 'Sim' : 'Não'}</strong>
+              <span>Diagnóstico IA</span>
+              <strong style={{ color: timeline.will_fail ? '#dc2626' : '#16a34a' }}>
+                {timeline.will_fail ? 'Risco de Falha' : 'Operação Estável'}
+              </strong>
             </div>
           </div>
+          {timeline.will_fail ? (
+            <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="portas-link-insp"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  background: '#7c3aed',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+                onClick={() =>
+                  onNavigate?.('inspecoes', {
+                    station: timeline.station_code,
+                    door: timeline.door_number,
+                  })
+                }
+              >
+                Ver Ordens de Inspeção Desta Porta
+              </button>
+            </div>
+          ) : null}
         </article>
 
         <article className="portas__panel">
@@ -579,8 +615,11 @@ function Portas({ onNavigate, params = {} }) {
     <section className="portas" onClick={closeTooltip}>
       <div className="page-head">
         <div>
-          <h1>Portas</h1>
-          <p>Linha 4 - Amarela</p>
+          <p className="dashboard__kicker">Linha 4 Amarela</p>
+          <h1>Portas de Plataforma</h1>
+          <p className="dashboard__lead">
+            Visão topográfica, status operacional e dossiê detalhado das portas por estação.
+          </p>
         </div>
       </div>
 

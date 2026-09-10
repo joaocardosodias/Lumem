@@ -9,7 +9,7 @@ import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
 import { useToast } from '../context/Toast'
-import { lineStations } from '../data/stations'
+import { lineStations, mapStation } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
 import { api, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
@@ -110,7 +110,7 @@ function Manutencoes({ params }) {
       items.filter((item) => {
         if (
           filters.station &&
-          String(item.station_code || '').toUpperCase() !== filters.station.toUpperCase()
+          mapStation(item.station_code) !== mapStation(filters.station)
         ) {
           return false
         }
@@ -285,7 +285,13 @@ function Manutencoes({ params }) {
   return (
     <section className="manutencoes">
       <div className="page-head">
-        <h1>Manutenções</h1>
+        <div>
+          <p className="dashboard__kicker">Histórico e Registros SAP</p>
+          <h1>Manutenções</h1>
+          <p className="dashboard__lead">
+            Histórico consolidado de ordens de manutenção preventiva e corretiva da Linha 4.
+          </p>
+        </div>
         <div className="page-head__actions">
           <CadastrarButton variant="secondary" onClick={handleExportCsv}>
             Exportar CSV

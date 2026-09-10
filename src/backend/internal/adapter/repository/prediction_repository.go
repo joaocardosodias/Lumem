@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
@@ -69,29 +71,37 @@ func (r *PostgresPredictionRepository) SaveRun(ctx context.Context, run *domain.
 		return err
 	}
 
-	stmt, err := r.db.PrepareContext(ctx, `
-		INSERT INTO predictions (id, run_id, station_code, platform, door_number, will_fail, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`)
-	if err != nil {
-		return err
+	if len(items) == 0 {
+		return nil
 	}
-	defer stmt.Close()
 
-	for _, item := range items {
-		if item.ID == "" {
-			item.ID = uuid.New().String()
+	const batchSize = 100
+	for i := 0; i < len(items); i += batchSize {
+		end := i + batchSize
+		if end > len(items) {
+			end = len(items)
 		}
-		_, err := stmt.ExecContext(ctx,
-			item.ID,
-			run.ID,
-			item.StationCode,
-			item.Platform,
-			item.DoorNumber,
-			item.WillFail,
-			now,
-		)
-		if err != nil {
+		chunk := items[i:end]
+
+		var queryBuilder strings.Builder
+		queryBuilder.WriteString("INSERT INTO predictions (id, run_id, station_code, platform, door_number, will_fail, created_at) VALUES ")
+
+		args := make([]interface{}, 0, len(chunk)*7)
+		for j := range chunk {
+			if chunk[j].ID == "" {
+				chunk[j].ID = uuid.New().String()
+			}
+			if j > 0 {
+				queryBuilder.WriteString(", ")
+			}
+			idx := j * 7
+			fmt.Fprintf(&queryBuilder, "($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+				idx+1, idx+2, idx+3, idx+4, idx+5, idx+6, idx+7)
+
+			args = append(args, chunk[j].ID, run.ID, chunk[j].StationCode, chunk[j].Platform, chunk[j].DoorNumber, chunk[j].WillFail, now)
+		}
+
+		if _, err := r.db.ExecContext(ctx, queryBuilder.String(), args...); err != nil {
 			return err
 		}
 	}
@@ -120,8 +130,8 @@ func (r *PostgresPredictionRepository) GetLatestRun(ctx context.Context) (*domai
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, run_id, station_code, platform, door_number, will_fail
 		FROM predictions
-		WHERE run_id = $1 AND will_fail = TRUE
-		ORDER BY station_code ASC, platform ASC, door_number ASC
+		WHERE run_id = $1
+		ORDER BY will_fail DESC, station_code ASC, platform ASC, door_number ASC
 	`, run.ID)
 	if err == nil {
 		defer rows.Close()
