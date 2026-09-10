@@ -1,52 +1,98 @@
 ---
 title: "Análise Financeira do Projeto"
-description: "Estrutura inicial da análise financeira da POC e da solução implementada, ambas projetadas para um período de 12 meses."
+description: "Projeção de custos e de retorno econômico da Prova de Conceito e da solução implementada, ambas em horizonte de 12 meses, com premissas, fontes e critérios explicitados."
 ---
 
 # Análise Financeira do Projeto
 
-## 1. Introdução
+## Sumário executivo
 
-Esta documentação apresenta a estrutura da análise financeira do projeto de manutenção preditiva desenvolvido em parceria com a Motiva.
+Esta análise projeta os custos do projeto de manutenção preditiva das Portas de Plataforma
+(PSD), desenvolvido em parceria com a Motiva, em dois cenários independentes, ambos com
+horizonte de 12 meses.
 
-A análise considera dois cenários distintos, ambos projetados para um período mínimo de **12 meses**:
+| Indicador | POC — 12 meses | Projeto implementado — 12 meses |
+|---|---:|---:|
+| Custo incremental para a Motiva | R$ 0 | R$ 30.515,10 |
+| Custo de mercado equivalente | R$ 49.931,10 | R$ 30.515,10 |
+| Custo recorrente a partir do ano 2 | não aplicável | R$ 12.515,10 |
+| Receita direta projetada | R$ 0 | R$ 0 |
 
-1. **Prova de Conceito (POC)** — representa o protótipo desenvolvido pelos alunos do Inteli e mantido em funcionamento durante 12 meses.
-2. **Projeto implementado** — representa a evolução da POC para uma solução efetivamente incorporada ao ambiente operacional da Motiva e mantida em funcionamento durante 12 meses.
+Três conclusões orientam a leitura do documento:
 
-O objetivo é estimar, de forma progressiva e justificada, todos os custos diretamente relacionados ao projeto e, posteriormente, os benefícios financeiros que a solução poderá gerar para a Motiva.
+1. **A POC pode ser mantida por 12 meses sem desembolso incremental.** Isso não significa
+   ausência de consumo de recursos: a preço de mercado, a Prova de Conceito mobiliza
+   aproximadamente R$ 49.931, integralmente absorvidos por trabalho acadêmico,
+   infraestrutura já disponível e camadas gratuitas de serviços.
 
-Como esta é uma análise estimativa, todos os valores deverão ser acompanhados das premissas utilizadas para sua construção.
+2. **A implementação em ambiente operacional custa R$ 30.515,10 no primeiro ano**, dos
+   quais 59% correspondem a investimento inicial não recorrente. A partir do segundo ano, o
+   custo de sustentação cai para R$ 12.515,10 anuais.
 
-A documentação será atualizada à medida que novos custos forem identificados e precificados.
+3. **O projeto não gera receita direta.** Seu retorno é economia de custos, e essa economia
+   não foi convertida em um valor único porque dois dos quatro parâmetros necessários ainda
+   não estão disponíveis. Em vez de uma projeção arbitrária, a análise apresenta o modelo de
+   cálculo e o ponto de equilíbrio: com custo médio de R$ 5.000 por ocorrência corretiva
+   emergencial, o projeto se paga ao evitar cerca de **6 ocorrências em 12 meses**.
+
+---
+
+# 1. Introdução
+
+Esta documentação apresenta a análise financeira do projeto de manutenção preditiva
+desenvolvido em parceria com a Motiva.
+
+A análise considera dois cenários distintos, ambos projetados para um período mínimo de
+**12 meses**:
+
+1. **Prova de Conceito (POC)** — o protótipo desenvolvido pelos alunos do Inteli e mantido
+   em funcionamento durante 12 meses.
+2. **Projeto implementado** — a evolução da POC para uma solução incorporada ao ambiente
+   operacional da Motiva e mantida em funcionamento durante 12 meses.
+
+O objetivo é estimar, de forma justificada, os custos diretamente relacionados ao projeto e
+os benefícios financeiros que a solução poderá gerar para a Motiva.
+
+Trata-se de uma estimativa. Todos os valores estão acompanhados das premissas utilizadas
+para sua construção e das fontes consultadas, registradas na seção 8.9.
 
 ---
 
 # 2. Critérios gerais da análise
 
-A análise financeira seguirá os seguintes critérios:
+A análise financeira seguiu os seguintes critérios:
 
-- horizonte de **12 meses** para a POC;
-- horizonte de **12 meses** para o projeto implementado;
+- horizonte de **12 meses** para a POC e de **12 meses** para o projeto implementado;
 - separação entre custos da POC e custos da solução implementada;
-- utilização, sempre que possível, de preços públicos ou informações fornecidas pela Motiva;
+- utilização de preços públicos de fornecedores ou de pesquisas salariais de mercado,
+  sempre com registro da fonte e da data de consulta;
 - explicitação de todas as premissas utilizadas;
-- a análise priorizará **custos incrementais**, isto é, gastos adicionais gerados especificamente pela POC;
-- atividades que já fazem parte da operação normal da Motiva e não exigem contratação adicional, horas extras ou aumento de capacidade serão registradas como **R$ 0 de custo incremental**;
-- custos que não geram desembolso para a POC serão registrados como custo igual a zero ou descritos como fora do escopo;
-- os custos serão relacionados diretamente à arquitetura e ao funcionamento da solução;
-- quando não houver um valor exato disponível, serão utilizadas estimativas justificadas;
-- ao final, serão considerados diferentes cenários de contingência.
+- priorização de **custos incrementais**, isto é, gastos adicionais gerados especificamente
+  pelo projeto;
+- atividades que já fazem parte da operação normal da Motiva e não exigem contratação
+  adicional, horas extras ou aumento de capacidade foram registradas como **R$ 0 de custo
+  incremental**;
+- apresentação, para a POC, de uma segunda leitura em **custo de mercado equivalente**,
+  evidenciando o valor econômico dos recursos consumidos mesmo quando não há desembolso;
+- classificação dos valores em **investimentos iniciais, custos fixos recorrentes, custos
+  variáveis e custos operacionais incrementais**;
+- explicitação da ausência de receita direta, com o retorno econômico tratado como economia
+  potencial e redução de custos;
+- utilização de estimativas justificadas quando não havia valor exato disponível;
+- não incorporação artificial à projeção de benefícios que não puderam ser monetizados de
+  forma confiável;
+- consideração de diferentes cenários de contingência.
 
-Para os custos gerais do projeto serão considerados três cenários:
+Para os custos do projeto implementado foram considerados três cenários de margem:
 
 | Cenário | Critério |
-|---|---:|
+|---|---|
 | Base | custo estimado sem margem adicional |
 | Conservador | custo base acrescido de 5% |
 | Pior caso | custo base acrescido de 10% |
 
-As margens de 5% e 10% serão aplicadas apenas quando o custo-base de cada cenário estiver consolidado.
+Um quarto cenário, referente ao regime de contratação da mão de obra, está tratado na
+seção 5.13.
 
 ---
 
@@ -54,47 +100,50 @@ As margens de 5% e 10% serão aplicadas apenas quando o custo-base de cada cená
 
 ## 3.1. Definição da POC
 
-A Prova de Conceito corresponde à solução desenvolvida pelos alunos do Inteli para demonstrar a viabilidade técnica da previsão de falhas nas Portas de Plataforma (PSD).
+A Prova de Conceito corresponde à solução desenvolvida pelos alunos do Inteli para
+demonstrar a viabilidade técnica da previsão de falhas nas Portas de Plataforma (PSD).
 
-O desenvolvimento da POC é realizado pelos próprios alunos. Por esse motivo, **não será atribuído custo de mão de obra ao desenvolvimento realizado pelo grupo**.
+O desenvolvimento da POC é realizado pelos próprios alunos. Por esse motivo, **não foi
+atribuído custo incremental de mão de obra ao desenvolvimento realizado pelo grupo** — seu
+valor de mercado equivalente está calculado na seção 3.9.
 
-Também não serão considerados custos de aquisição de hardware específico para o protótipo, uma vez que o projeto utiliza a infraestrutura já disponível para os integrantes.
+Também não foram considerados custos de aquisição de hardware específico para o protótipo,
+uma vez que o projeto utiliza a infraestrutura já disponível para os integrantes.
 
-A arquitetura prevista para a POC contempla:
+A arquitetura da POC contempla:
 
 - modelo de Machine Learning já treinado;
 - empacotamento do modelo e de suas dependências em um container Docker;
-- utilização de ambiente Red Hat para realizar o deploy e executar o container;
-- banco de dados utilizando Azure SQL Database;
+- ambiente Red Hat para realizar o deploy e executar o container;
+- banco de dados em Azure SQL Database;
 - utilização de dados operacionais da Motiva;
 - armazenamento das previsões geradas;
-- possibilidade de validação dos resultados ao longo do período.
+- validação dos resultados ao longo do período.
 
-O frontend não será considerado no deploy da POC. Portanto, nesta etapa não haverá custo associado à hospedagem de interface web ou à Vercel.
-
-De forma simplificada:
+O frontend não é publicado no deploy da POC. Portanto, nesta etapa não há custo associado à
+hospedagem de interface web.
 
 ```text
-Dados da Motiva
+Dados operacionais da Motiva
       ↓
    Azure SQL Database
       ↓
- Ambiente Red Hat
+ Red Hat / OpenShift
       ↓
-Container Docker
+   Container Docker
       ↓
 Modelo de Machine Learning
       ↓
-Predições
+      Predições
       ↓
    Azure SQL Database
 ```
 
 ---
 
-## 3.2. Itens que não representam custo de desenvolvimento da POC
+## 3.2. Itens sem custo incremental de desenvolvimento
 
-Nesta etapa, não serão considerados como custos:
+Não foram considerados como custo incremental:
 
 - remuneração dos alunos;
 - desenvolvimento inicial dos modelos;
@@ -102,388 +151,395 @@ Nesta etapa, não serão considerados como custos:
 - documentação produzida pelo grupo;
 - reuniões internas do grupo;
 - gestão acadêmica do projeto;
-- energia elétrica utilizada pelos alunos;
-- conexão à internet dos alunos;
+- energia elétrica e conexão à internet dos alunos;
 - aquisição de computadores;
 - contratação de desenvolvedores externos para construir a POC.
 
-Esses itens não representam desembolsos incrementais para a elaboração do protótipo no contexto atual.
+Esses itens não representam desembolso incremental no arranjo atual. O valor de mercado do
+esforço de desenvolvimento está quantificado na seção 3.9.
 
 ---
 
-## 3.3. Categorias de custo que serão analisadas na POC
+## 3.3. Categorias de custo analisadas na POC
 
-Até o momento, foram identificadas as seguintes categorias com potencial de gerar custo durante os 12 meses:
+Foram identificadas e analisadas as seguintes categorias com potencial de gerar custo
+durante os 12 meses:
 
-1. atualização e disponibilização de novos dados operacionais, analisada como atividade existente da Motiva e, portanto, sem custo incremental no cenário-base;
-2. ambiente Red Hat utilizado para realizar o deploy do modelo;
+1. atualização e disponibilização de novos dados operacionais;
+2. ambiente Red Hat utilizado para o deploy do modelo;
 3. recursos computacionais necessários para executar o container;
 4. banco de dados Azure SQL Database;
 5. armazenamento de arquivos, modelos e previsões;
 6. armazenamento e execução do container Docker;
 7. logs e monitoramento da aplicação;
 8. transferência de dados;
-9. validação das previsões junto à Motiva, também tratada como atividade operacional já existente e sem custo incremental no cenário-base;
-10. eventuais serviços pagos que ultrapassem os planos gratuitos ou recursos disponíveis durante a POC.
+9. validação das previsões junto à Motiva;
+10. serviços pagos que ultrapassem os planos gratuitos disponíveis durante a POC.
 
-O frontend não será deployado durante a POC e, portanto, não será considerado como uma categoria de custo neste cenário.
+O frontend não é publicado durante a POC e, portanto, não constitui categoria de custo neste
+cenário.
 
-As principais bibliotecas de desenvolvimento e Machine Learning utilizadas no projeto são open source, portanto seu custo de licenciamento é considerado igual a zero.
+As principais bibliotecas de desenvolvimento e Machine Learning utilizadas no projeto são
+open source, com custo de licenciamento igual a zero: Python, Pandas, NumPy, Scikit-learn,
+CatBoost, XGBoost, LightGBM, Matplotlib e Docker.
 
-Exemplos:
-
-- Python;
-- Pandas;
-- NumPy;
-- Scikit-learn;
-- CatBoost;
-- XGBoost;
-- LightGBM;
-- Matplotlib;
-- Docker.
-
-O Docker será utilizado para empacotar o modelo, o código de inferência e suas dependências em um ambiente padronizado. Dessa forma, a aplicação poderá executar de maneira consistente em diferentes computadores e no ambiente de deploy.
-
-O uso do Docker em si não implica custo de licença para esta POC. Entretanto, recursos utilizados para armazenar, executar ou manter o container poderão gerar custo e serão analisados separadamente.
+O Docker é utilizado para empacotar o modelo, o código de inferência e suas dependências em
+um ambiente padronizado, permitindo que a aplicação execute de maneira consistente em
+diferentes computadores e no ambiente de deploy. Seu uso não implica custo de licença nesta
+POC, embora os recursos utilizados para armazenar e executar o container sejam analisados
+separadamente.
 
 ---
 
-# 3.4. Arquitetura de deploy da POC
+## 3.4. Ambiente Red Hat / OpenShift
 
-A arquitetura de deploy da POC foi refinada para manter o menor custo possível sem perder a padronização do ambiente de execução.
+A arquitetura de deploy da POC foi definida para manter o menor custo possível sem perder a
+padronização do ambiente de execução. O modelo é empacotado com **Docker** e executado em
+ambiente **Red Hat/OpenShift**, com dois objetivos:
 
-O modelo será empacotado utilizando **Docker** e executado em ambiente **Red Hat/OpenShift**.
-
-Essa escolha tem dois objetivos principais:
-
-1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes computadores;
+1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes
+   computadores;
 2. manter o ambiente de execução organizado e reproduzível durante a POC.
 
-O container deverá incluir, conforme necessário:
+O container inclui:
 
 ```text
-Código de inferência
-+
-Modelo treinado
-+
-Python
-+
-Bibliotecas de Machine Learning
-+
-Dependências da aplicação
+Código de inferência + Modelo treinado + Python
++ Bibliotecas de Machine Learning + Dependências da aplicação
 ```
 
-O fluxo previsto para a POC é:
+### 3.4.1. Estratégia adotada
 
-```text
-Dados operacionais
-       ↓
-    Azure SQL Database
-       ↓
- Red Hat / OpenShift
-       ↓
-Container Docker
-       ↓
-Modelo treinado
-       ↓
-   Predições
-       ↓
-    Azure SQL Database
-```
+A estratégia foi dividida em duas etapas:
 
-O frontend não será deployado durante a POC.
+**Primeiro mês.** Utilização do **Red Hat Developer Sandbox**, ambiente disponibilizado
+gratuitamente pela Red Hat para desenvolvimento e testes, como ambiente inicial para testar
+o container e validar o deploy.
 
-Por esse motivo, não serão considerados custos de Vercel ou de disponibilização pública de uma interface web neste cenário.
+**Meses 2 a 12.** Utilização do **Red Hat OpenShift Local** em um computador já disponível
+para o projeto. Como não está prevista a compra de máquina exclusiva para a POC, adotou-se a
+premissa de aquisição adicional de hardware igual a R$ 0.
 
-## 3.4.1. Docker
+### 3.4.2. Custo anual do ambiente Red Hat
 
-O Docker será utilizado para empacotar o modelo, o código de inferência e todas as dependências necessárias.
-
-Seu papel é garantir que o modelo funcione de forma consistente independentemente do computador ou ambiente utilizado.
-
-Para a POC:
-
-```text
-Custo de licença do Docker = R$ 0
-```
-
-A tecnologia de containerização não representa um custo direto para o projeto no escopo atual.
-
-Os recursos computacionais utilizados pelo container são analisados separadamente.
-
----
-
-## 3.4.2. Estratégia de menor custo com Red Hat/OpenShift
-
-Para reduzir o custo da POC, foi adotada uma estratégia dividida em duas etapas.
-
-### Primeiro mês
-
-Durante os primeiros 30 dias, será considerado o uso do **Red Hat Developer Sandbox**, ambiente disponibilizado gratuitamente pela Red Hat para desenvolvimento e testes.
-
-Premissa:
-
-```text
-Período: 30 dias
-Custo direto estimado: R$ 0
-```
-
-O Sandbox será utilizado como ambiente inicial para testar o container e validar o deploy.
-
-### Meses 2 a 12
-
-Após os primeiros 30 dias, será considerado o uso do **Red Hat OpenShift Local** em um computador já disponível para o projeto.
-
-O OpenShift Local permite executar um ambiente OpenShift localmente para desenvolvimento e testes.
-
-Como não está prevista a compra de uma nova máquina exclusivamente para a POC, será adotada a seguinte premissa:
-
-```text
-Aquisição adicional de hardware = R$ 0
-```
-
-Assim, para os 11 meses restantes:
-
-```text
-OpenShift Local
-+
-hardware já disponível
-=
-custo incremental estimado de infraestrutura = R$ 0
-```
-
-Essa premissa considera que o computador disponível possui recursos suficientes para executar o ambiente.
-
-Caso durante a implementação seja identificado que a máquina existente não suporta adequadamente o OpenShift Local, o custo de infraestrutura deverá ser revisto.
-
----
-
-## 3.4.3. Custo anual estimado do ambiente Red Hat
-
-Com a estratégia adotada:
-
-| Período | Ambiente | Custo direto estimado |
+| Período | Ambiente | Custo incremental |
 |---|---|---:|
 | Mês 1 | Red Hat Developer Sandbox | R$ 0 |
-| Meses 2 a 12 | Red Hat OpenShift Local | R$ 0 incremental |
-| Docker | Containerização | R$ 0 |
-| **Total estimado em 12 meses** |  | **R$ 0** |
+| Meses 2 a 12 | Red Hat OpenShift Local em hardware existente | R$ 0 |
+| 12 meses | Docker — containerização | R$ 0 |
+| **Total incremental em 12 meses** | | **R$ 0** |
 
-O valor acima representa **custo incremental direto**.
+O valor representa custo incremental direto. A tecnologia e o hardware têm valor econômico,
+quantificado na seção 3.9; o que a tabela registra é a ausência de contratação ou aquisição
+adicional especificamente para esta POC.
 
-Isso não significa que a tecnologia ou o hardware não tenham valor econômico, mas sim que não está prevista uma contratação ou aquisição adicional especificamente para esta POC.
+### 3.4.3. Capacidade do computador
 
----
+Mesmo sem custo incremental, o ambiente local consome recursos computacionais. Antes do
+deploy definitivo deve ser verificado se o computador utilizado comporta simultaneamente
+sistema operacional, OpenShift Local, container Docker, modelo de Machine Learning, conexão
+com o banco de dados e processos auxiliares.
 
-## 3.4.4. Recursos mínimos e capacidade do computador
+Ambientes locais de OpenShift exigem quantidade relevante de memória RAM, CPU e
+armazenamento. Esses recursos não foram precificados separadamente por serem atendidos por
+equipamentos já disponíveis, mas a capacidade da máquina constitui gatilho de revisão
+orçamentária (seção 3.11).
 
-Mesmo sem custo incremental, o ambiente local consome recursos computacionais.
+### 3.4.4. Logs e monitoramento
 
-Por isso, antes do deploy definitivo, deverá ser verificado se o computador utilizado possui capacidade suficiente para executar:
+Como a arquitetura não utiliza AWS, não há uso de CloudWatch. Os logs são registrados no
+próprio ambiente de execução do container, acompanhando início e fim de execução, erros,
+tempo de processamento, quantidade de registros processados, falhas de conexão e
+reinicializações.
 
-- sistema operacional;
-- OpenShift Local;
-- container Docker;
-- modelo de Machine Learning;
-- conexão com o banco de dados;
-- processos auxiliares de execução.
-
-Como referência técnica, ambientes locais de OpenShift podem exigir quantidade relevante de memória RAM, CPU e armazenamento.
-
-Para a análise financeira atual, esses recursos não serão precificados separadamente porque serão utilizados equipamentos já disponíveis para o projeto.
-
-A capacidade da máquina, porém, deverá ser validada antes da implantação da POC.
-
----
-
-## 3.4.5. Logs e monitoramento
-
-Como a arquitetura não utilizará AWS, também não haverá uso de CloudWatch.
-
-Os logs deverão ser registrados no próprio ambiente utilizado para executar o container.
-
-O objetivo dos logs será acompanhar informações operacionais como:
+Como a POC tem baixo volume de processamento, espera-se volume pequeno de logs.
 
 ```text
-início da execução
-fim da execução
-erros
-tempo de processamento
-quantidade de registros processados
-falhas de conexão
-reinicializações do container
+Custo incremental estimado de logs = R$ 0
 ```
 
-Como a POC terá baixo volume de processamento, espera-se um volume pequeno de logs.
+A premissa deve ser revista caso seja adotado serviço externo de observabilidade ou
+armazenamento dedicado.
 
-Neste momento:
+### 3.4.5. Itens fora do escopo da POC
 
-```text
-Custo adicional estimado de logs = R$ 0
-```
+Com a arquitetura definida, não são utilizados: AWS Lambda, AWS API Gateway, Amazon ECR, AWS
+CloudWatch, Vercel, frontend publicado, OpenShift Dedicated e cluster empresarial dedicado.
 
-Essa premissa deverá ser revisada caso seja utilizado algum serviço externo de observabilidade ou armazenamento dedicado.
+O OpenShift Dedicated não foi considerado porque sua estrutura e custo são desproporcionais
+ao porte de uma POC acadêmica.
 
----
+### 3.4.6. Premissa financeira adotada
 
-## 3.4.6. Itens removidos do escopo da POC
-
-Com a arquitetura atualmente definida, os seguintes itens não serão utilizados:
-
-- AWS Lambda;
-- AWS API Gateway;
-- Amazon ECR;
-- AWS CloudWatch;
-- Vercel;
-- frontend publicado;
-- OpenShift Dedicated;
-- contratação de cluster empresarial dedicado.
-
-O OpenShift Dedicated não foi considerado porque sua estrutura e custo são desproporcionais ao porte da POC acadêmica.
-
-A estratégia adotada prioriza o menor custo possível mantendo um ambiente reproduzível para execução do modelo.
+> Nos primeiros 30 dias é utilizado o Red Hat Developer Sandbox, sem custo direto. Nos 11
+> meses restantes é utilizado o Red Hat OpenShift Local, executado em hardware já disponível
+> para o projeto. Não foi considerado custo incremental de contratação de infraestrutura Red
+> Hat durante os 12 meses da POC.
 
 ---
 
-## 3.4.7. Premissa financeira adotada
+## 3.5. Banco de dados da POC — Azure SQL Database
 
-A premissa financeira para o deploy da POC fica registrada da seguinte forma:
+A POC utiliza **Azure SQL Database** como banco de dados. A escolha decorre da estrutura
+relacional dos dados envolvidos: estações, plataformas, portas, alarmes, ordens de
+manutenção, datas, previsões e probabilidades geradas pelo modelo.
 
-> Nos primeiros 30 dias será utilizado o Red Hat Developer Sandbox, sem custo direto. Nos 11 meses restantes será considerado o uso do Red Hat OpenShift Local executado em hardware já disponível para o projeto. Dessa forma, não foi considerado custo incremental de contratação de infraestrutura Red Hat durante os 12 meses da POC.
+O banco armazena tanto os dados necessários à execução da POC quanto as previsões produzidas
+pelo modelo.
 
-Essa premissa deverá ser reavaliada caso:
+### 3.5.1. Camada gratuita
 
-- seja necessário contratar infraestrutura externa;
-- o computador disponível não possua capacidade suficiente;
-- o projeto exija disponibilidade contínua em nuvem;
-- seja necessário utilizar uma assinatura paga;
-- seja adotado algum serviço externo de armazenamento ou monitoramento.
+A POC utiliza a camada gratuita do Azure SQL Database. Segundo a documentação oficial da
+Microsoft, a oferta gratuita disponibiliza por banco de dados e por mês:
 
----
-
-# 3.5. Banco de dados da POC — Azure SQL Database
-
-A arquitetura da POC foi atualizada para utilizar **Azure SQL Database** como banco de dados.
-
-A escolha foi feita porque os dados utilizados pela solução possuem estrutura relacional, envolvendo:
-
-- estações;
-- plataformas;
-- portas;
-- alarmes;
-- ordens de manutenção;
-- datas;
-- previsões;
-- probabilidades geradas pelo modelo.
-
-O banco será utilizado para armazenar tanto os dados necessários à execução da POC quanto as previsões produzidas pelo modelo.
-
-O fluxo atualizado fica:
-
-```text
-Dados novos da Motiva
-        ↓
-Azure SQL Database
-        ↓
-Red Hat / OpenShift
-        ↓
-Container Docker
-        ↓
-Modelo de Machine Learning
-        ↓
-Predições
-        ↓
-Azure SQL Database
-```
-
----
-
-## 3.5.1. Camada gratuita considerada
-
-Para a POC será considerada a camada gratuita do **Azure SQL Database**.
-
-Como premissa de orçamento, foi adotado que o volume de dados e o número de consultas permanecerão dentro dos limites gratuitos disponibilizados pela Microsoft.
-
-A referência considerada nesta análise é:
-
-- até **100.000 vCore-segundos de computação por mês**;
+- até **100.000 vCore-segundos de compute serverless**;
 - até **32 GB de armazenamento de dados**;
 - até **32 GB de armazenamento de backup**;
-- utilização dentro das condições vigentes da oferta gratuita.
-
-Assim, para o cenário-base da POC:
+- disponível para até 10 bancos por assinatura.
 
 ```text
-Custo anual estimado do Azure SQL Database = R$ 0
+Custo incremental anual do Azure SQL Database = R$ 0
 ```
 
-Esse valor considera que o projeto permanecerá dentro da capacidade gratuita durante os 12 meses.
+### 3.5.2. Justificativa de capacidade
+
+As fontes utilizadas pela solução são o histórico de alarmes, as ordens ZM01, ZM02 e ZM03,
+os dados processados para inferência e o histórico de previsões.
+
+O volume atual do projeto é reduzido em relação ao limite de 32 GB. Mesmo com a entrada de
+novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do
+limite da camada gratuita. Por esse motivo não foi considerada a contratação de plano pago.
+
+### 3.5.3. Controle de uso
+
+Durante a POC devem ser monitorados uso de processamento, armazenamento ocupado, crescimento
+mensal da base, volume de consultas e volume de backup. Caso algum indicador se aproxime dos
+limites gratuitos, a premissa financeira deve ser revisada.
+
+Deve também ser priorizada a configuração de auto-pause ao atingir o limite gratuito, que
+reduz o risco de cobranças inesperadas.
 
 ---
 
-## 3.5.2. Justificativa de capacidade
+## 3.6. Dados históricos e atualização dos dados operacionais
 
-As principais fontes utilizadas pela solução são:
+Os dados utilizados para o treinamento inicial dos modelos já foram disponibilizados pela
+Motiva. Não há necessidade de obter novas bases para finalizar o treinamento atual.
+
+```text
+Custo adicional de aquisição dos dados históricos = R$ 0
+```
+
+Novos dados passam a ser necessários caso a POC permaneça em funcionamento e gere previsões
+atualizadas ao longo dos 12 meses. Esses dados cumprem três funções: alimentar o modelo com
+informações recentes, permitir verificar posteriormente se as previsões estavam corretas e
+formar histórico para futuros ciclos de retreinamento. As três funções utilizam o mesmo fluxo
+de atualização e não constituem três custos separados.
+
+### 3.6.1. Critério de custo incremental
+
+Inicialmente foi avaliada a possibilidade de calcular o custo de atualização dos dados a
+partir do tempo gasto por um profissional da Motiva para registrar, extrair e disponibilizar
+informações de histórico de alarmes, ZM01, ZM02 e ZM03.
+
+Após revisão do processo operacional, essa abordagem foi alterada. A Motiva já possui
+profissionais contratados para executar atividades de registro, atualização e acompanhamento
+dessas informações como parte de suas funções regulares. No cenário-base, essas atividades
+não representam novo desembolso causado pelo projeto.
+
+```text
+Custo incremental de atualização e disponibilização dos dados = R$ 0
+```
+
+O fato de profissionais dedicarem tempo ao preenchimento das informações não implica que esse
+tempo deva ser imputado como novo custo da POC. Esse custo só seria adicional caso o projeto
+exigisse contratação de novo profissional, pagamento de horas extras, aumento formal da carga
+de trabalho, equipe exclusiva, contratação de serviço externo ou aquisição de ferramenta
+específica. Nenhuma dessas condições foi considerada necessária.
+
+Não se realiza, portanto, duplicação contábil do custo de funcionários que já fazem parte da
+operação regular da empresa.
+
+### 3.6.2. Exigência de qualidade dos dados
+
+Embora não exista custo incremental, a POC aumenta a importância da qualidade e precisão do
+preenchimento dos dados. O modelo depende diretamente da consistência das informações
+utilizadas para formar suas features.
+
+Erros como porta, estação ou plataforma incorretas, data ou horário incorretos, ordem de
+manutenção classificada incorretamente, registro ausente ou duplicidade podem alterar as
+features e reduzir a qualidade das previsões.
+
+A mudança operacional esperada não é a criação de nova atividade, mas maior necessidade de
+preenchimento correto, padronização dos registros, redução de erros e consistência entre
+sistemas. Essa exigência é tratada como **premissa operacional da POC**, não como custo
+adicional.
+
+### 3.6.3. Situações que exigiriam revisão
+
+| Situação futura | Impacto financeiro |
+|---|---|
+| Processo continua sendo executado pelos mesmos profissionais | R$ 0 incremental |
+| Necessidade de horas extras | novo custo a calcular |
+| Contratação de novo profissional | novo custo a calcular |
+| Automação paga de extração ou integração | novo custo a calcular |
+| Ferramenta adicional de qualidade de dados | novo custo a calcular |
+
+---
+
+## 3.7. Validação operacional das previsões
+
+A mesma lógica foi aplicada à validação dos alertas produzidos pelo modelo. A Motiva já
+possui profissionais responsáveis por acompanhar as condições das portas, registrar
+ocorrências e analisar eventos operacionais.
+
+Verificar se um alerta do modelo correspondeu a uma falha real é uma extensão das informações
+já analisadas pela operação, não uma nova função dedicada.
+
+```text
+Custo incremental de validação operacional = R$ 0
+```
+
+Não foi considerada a contratação de pessoa exclusiva para verificar as previsões. A validação
+utiliza os próprios registros posteriores de falha:
+
+```text
+previsão realizada → evento observado posteriormente
+→ acerto / falso alerta / falha não detectada
+```
+
+A premissa deve ser revista apenas se a validação exigir equipe adicional, horas extras,
+inspeções fora da rotina, processo formal de auditoria ou contratação de ferramenta
+específica.
+
+---
+
+## 3.8. Dados utilizados pelos modelos
+
+Os dois modelos considerados mais relevantes no projeto utilizam principalmente informações
+provenientes de quatro fontes:
 
 - histórico de alarmes;
-- ZM01;
-- ZM02;
-- ZM03;
-- dados processados para inferência;
-- histórico de previsões.
+- ZM01 — corretiva emergencial;
+- ZM02 — corretiva programada;
+- ZM03 — manutenção preventiva.
 
-O volume atual do projeto é reduzido em relação ao limite considerado para o banco.
-
-Mesmo com a entrada de novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do limite de armazenamento da camada gratuita.
-
-Por esse motivo, não será considerada inicialmente a contratação de um plano pago.
-
----
-
-## 3.5.3. Controle de uso
-
-Durante a POC deverão ser monitorados:
+Embora os modelos criem diversas features, a maior parte delas é derivada automaticamente
+dessas bases. A Motiva não precisa fornecer diretamente variáveis como:
 
 ```text
-uso de processamento
-armazenamento ocupado
-crescimento mensal da base
-volume de consultas
-volume de backup
+dias_desde_ultima_corretiva
+qtd_corretivas_emergenciais_30d
+duracao_maxima_alarme_7d
+intervalo_medio_zm01
 ```
 
-Caso algum desses indicadores se aproxime dos limites gratuitos, a premissa financeira deverá ser revisada.
-
-Também deverá ser priorizada uma configuração que reduza o risco de cobranças inesperadas caso a franquia gratuita seja ultrapassada.
+Essas informações são calculadas pelo pipeline a partir dos dados brutos. Para a análise
+financeira, a quantidade de features não constitui custo separado, e a disponibilização das
+fontes originais não constitui custo incremental no cenário-base.
 
 ---
 
-## 3.5.4. Cenário de contingência do banco
+## 3.9. Custo de mercado equivalente da POC
 
-O custo-base considerado para o Azure SQL Database será de R$ 0.
+### 3.9.1. Dupla leitura
 
-Caso o projeto ultrapasse a camada gratuita ou passe a exigir mais capacidade, o custo deverá ser recalculado conforme o plano necessário naquele momento.
+A POC foi deliberadamente projetada para operar sem desembolso. Isso não significa que ela
+não consuma recursos econômicos: significa que os recursos consumidos são absorvidos por
+trabalho acadêmico, infraestrutura já existente e camadas gratuitas de serviços.
 
-| Cenário | Tratamento financeiro |
+Para tornar a distinção explícita, a análise apresenta dois valores para cada categoria:
+
+- **custo de mercado equivalente:** quanto a mesma POC custaria se todos os recursos
+  precisassem ser contratados a preço de mercado;
+- **custo incremental:** quanto ela efetivamente representa de novo desembolso para a Motiva
+  no arranjo atual.
+
+### 3.9.2. Desenvolvimento
+
+Para estimar o valor de mercado do desenvolvimento realizado pelo grupo, foi adotada a
+seguinte parametrização:
+
+```text
+Integrantes do grupo  = 5 alunos
+Duração do módulo     = 10 semanas
+Dedicação média       = 20 h por aluno por semana
+Total de horas        = 5 × 10 × 20 = 1.000 horas
+```
+
+Para valorar a hora foi utilizada a faixa de Desenvolvedor Full-Stack Júnior do Guia Salarial
+2026 da Robert Half (R$ 6.050 a R$ 8.750 por mês), adotando-se o ponto médio aproximado de
+R$ 7.400:
+
+```text
+R$ 7.400 ÷ 176 horas mensais ≈ R$ 42 por hora
+1.000 horas × R$ 42 = R$ 42.000
+```
+
+O nível júnior foi escolhido por representar mais fielmente o estágio dos integrantes do que
+os níveis pleno ou sênior, evitando superestimar o valor do trabalho acadêmico.
+
+### 3.9.3. Infraestrutura
+
+Os ambientes utilizados na POC possuem equivalentes pagos, cujos preços públicos são os
+mesmos adotados no cenário implementado:
+
+| Item | Arranjo na POC | Equivalente pago em 12 meses |
+|---|---|---:|
+| Ambiente Red Hat/OpenShift | Developer Sandbox + OpenShift Local em hardware existente | R$ 6.431,10 |
+| Banco de dados | Azure SQL Database em camada gratuita | R$ 1.500,00 |
+| Hardware de execução | Equipamento já disponível | não precificado |
+| Docker e bibliotecas | Open source | R$ 0 |
+
+---
+
+## 3.10. Resultado financeiro consolidado da POC
+
+| Categoria | Custo de mercado equivalente | Custo incremental |
+|---|---:|---:|
+| Investimento inicial — desenvolvimento (1.000 h) | R$ 42.000,00 | R$ 0 |
+| Custos fixos recorrentes — ambiente Red Hat/OpenShift | R$ 6.431,10 | R$ 0 |
+| Custos variáveis — Azure SQL Database | R$ 1.500,00 | R$ 0 |
+| Custos operacionais incrementais — dados, validação, logs | não precificado | R$ 0 |
+| Licenciamento — Docker e bibliotecas open source | R$ 0 | R$ 0 |
+| **Total da POC em 12 meses** | **R$ 49.931,10** | **R$ 0** |
+
+A leitura correta da tabela é:
+
+> A Prova de Conceito mobiliza aproximadamente **R$ 49.931** em recursos a preço de mercado
+> durante 12 meses, integralmente absorvidos por trabalho acadêmico, infraestrutura já
+> disponível e camadas gratuitas de serviços. O desembolso incremental projetado para a
+> Motiva é de **R$ 0**.
+
+O custo incremental igual a zero decorre de quatro condições simultâneas, todas verificáveis:
+
+1. o desenvolvimento é realizado pelo grupo do Inteli, sem remuneração associada ao projeto;
+2. o ambiente de execução utiliza o Developer Sandbox nos primeiros 30 dias e o OpenShift
+   Local em hardware já disponível nos 11 meses seguintes;
+3. o banco de dados permanece dentro da camada gratuita do Azure SQL Database, cujos limites
+   são compatíveis com o volume estimado do projeto;
+4. as atividades de atualização de dados e validação operacional já integram a rotina de
+   profissionais contratados pela Motiva.
+
+---
+
+## 3.11. Contingência da POC por gatilhos
+
+Como o custo-base incremental é zero, aplicar margens percentuais de 5% ou 10% resultaria
+igualmente em zero. A contingência da POC é portanto tratada por **gatilhos de revisão**, com
+impacto financeiro estimado a partir dos preços públicos levantados:
+
+| Gatilho | Impacto estimado em 12 meses |
 |---|---:|
-| Uso dentro da camada gratuita | R$ 0/ano |
-| Uso acima dos limites | custo a recalcular |
+| Hardware disponível não suporta o OpenShift Local | migração para ambiente gerenciado: até R$ 6.431,10 |
+| Volume ultrapassa a camada gratuita do Azure SQL | até R$ 1.500,00 |
+| Necessidade de publicar o frontend durante a POC | R$ 1.224,00 |
+| Necessidade de serviço externo de observabilidade | a cotar |
+| Contratação de profissional adicional ou horas extras | a cotar |
+| Compra de hardware | a cotar |
 
-A decisão de não contratar capacidade paga antecipadamente evita superdimensionar a infraestrutura da POC.
-
----
-
-## 3.5.5. Premissa financeira adotada
-
-> Para a POC será utilizado Azure SQL Database em sua camada gratuita. Considerando o baixo volume estimado de dados, previsões e consultas, espera-se que o projeto permaneça dentro dos limites gratuitos durante os 12 meses. Dessa forma, o custo-base estimado do banco de dados é de R$ 0.
-
-Essa premissa deverá ser revista caso:
-
-- o volume de dados cresça acima do previsto;
-- a frequência de consultas aumente significativamente;
-- o limite de processamento gratuito seja atingido;
-- seja necessário aumentar o armazenamento;
-- sejam exigidos recursos adicionais não contemplados na camada gratuita.
+No pior caso quantificado, em que os três primeiros gatilhos se materializam, o custo
+incremental da POC chegaria a aproximadamente **R$ 9.155,10** em 12 meses.
 
 ---
 
@@ -491,233 +547,236 @@ Essa premissa deverá ser revista caso:
 
 ## 4.1. Definição do cenário implementado
 
-O segundo cenário representa a evolução da POC para uma solução efetivamente implantada e utilizada pela Motiva durante um período de 12 meses.
-
-Nesse estágio, a solução deixa de ser apenas um protótipo acadêmico e passa a exigir uma estrutura mínima de produção, com maior estabilidade, disponibilidade e capacidade de manutenção.
-
-A arquitetura considerada é:
+O segundo cenário representa a evolução da POC para uma solução implantada e utilizada pela
+Motiva durante 12 meses. Nesse estágio a solução deixa de ser um protótipo acadêmico e passa
+a exigir estrutura mínima de produção, com maior estabilidade, disponibilidade e capacidade
+de manutenção.
 
 ```text
 Dados operacionais da Motiva
           ↓
-Azure SQL Database
+   Azure SQL Database
           ↓
-Red Hat / OpenShift
+  Red Hat / OpenShift
           ↓
-Container Docker
+   Container Docker
           ↓
 Modelo de Machine Learning
           ↓
-Predições
+      Predições
           ↓
-Frontend publicado
+  Frontend publicado
 ```
-
-Diferentemente da POC, neste cenário foram considerados custos adicionais para transformar o protótipo em uma aplicação operacional.
-
----
 
 ## 4.2. Critério utilizado para estimar os custos
 
-A estimativa foi construída considerando o **menor cenário de produção considerado tecnicamente viável**, evitando superdimensionamento da infraestrutura.
+A estimativa foi construída considerando o **menor cenário de produção tecnicamente viável**,
+evitando superdimensionamento da infraestrutura, e considerando apenas custos incrementais
+relacionados à implementação.
 
-Foram considerados apenas custos incrementais relacionados à implementação.
+Atividades que já fazem parte da operação da Motiva — atualização dos dados, registro de
+eventos, acompanhamento das portas e validação operacional dos alertas — não foram imputadas
+como custo, por já serem executadas por profissionais contratados pela empresa.
 
-Atividades que já fazem parte da operação da Motiva, como:
-
-- atualização dos dados;
-- registro de eventos;
-- acompanhamento das portas;
-- validação operacional dos alertas;
-
-não foram novamente imputadas como custo, pois já são executadas por profissionais contratados pela empresa.
-
-Os principais custos adicionais considerados são:
+Os custos adicionais considerados são:
 
 1. aprimoramento técnico da solução;
 2. publicação do frontend;
 3. banco de dados em ambiente de produção;
 4. ambiente Red Hat/OpenShift;
-5. contingência financeira.
+5. sustentação da aplicação ao longo dos 12 meses;
+6. contingência financeira.
 
 ---
 
 ## 4.3. Aprimoramento da aplicação
 
-Para transformar a POC desenvolvida pelos alunos em uma aplicação mais adequada para uso operacional, foi considerada a contratação temporária de:
-
-```text
-2 desenvolvedores Full-Stack Pleno
-por aproximadamente 3 semanas
-```
-
-A função desses profissionais seria:
+Para transformar a POC em uma aplicação adequada ao uso operacional, foi considerada a
+contratação temporária de **dois desenvolvedores Full-Stack Pleno por aproximadamente três
+semanas**, com as seguintes atribuições:
 
 - revisar e organizar o código desenvolvido na POC;
-- preparar a aplicação para produção;
-- ajustar o backend;
+- preparar a aplicação para produção e ajustar o backend;
 - integrar a aplicação ao Azure SQL Database;
-- preparar o container definitivo;
-- configurar o deploy;
+- preparar o container definitivo e configurar o deploy;
 - finalizar e publicar o frontend;
 - implementar tratamento de erros;
-- realizar testes técnicos;
-- realizar ajustes finais de estabilidade.
+- realizar testes técnicos e ajustes finais de estabilidade.
 
-Foi adotada como premissa uma remuneração de referência de aproximadamente:
+### 4.3.1. Referência salarial
 
-```text
-R$ 12.000 por mês por desenvolvedor
-```
+O Guia Salarial 2026 da Robert Half indica, para Desenvolvedor(a) Full-Stack Pleno no Brasil,
+a faixa de **R$ 9.550 a R$ 15.900 por mês**. Foi adotado o valor de **R$ 12.000 por mês**,
+próximo ao ponto médio da faixa.
 
-Considerando três semanas como aproximadamente 75% de um mês:
+### 4.3.2. Regime de contratação
 
-```text
-R$ 12.000
-× 0,75
-× 2 desenvolvedores
-=
-R$ 18.000
-```
-
-Portanto:
+Trata-se de engajamento pontual de três semanas, sem vínculo continuado. Por esse motivo, o
+cenário-base considera **contratação PJ ou por contrato de projeto**, em que o valor pago
+corresponde ao honorário acordado, sem encargos trabalhistas patronais.
 
 ```text
-Custo estimado de aprimoramento e implantação = R$ 18.000
+R$ 12.000 × 0,75 mês × 2 desenvolvedores = R$ 18.000
 ```
 
-Esse custo é tratado como **investimento inicial**, e não como despesa recorrente durante os 12 meses.
+O fator 0,75 corresponde a três semanas arredondadas para cima a partir de 3 ÷ 4,33 ≈ 0,69,
+adotando-se margem para absorver ajustes finais de escopo.
+
+### 4.3.3. Cenário alternativo em regime CLT
+
+Caso a Motiva opte por contratação CLT, o custo total para a empresa não corresponde ao
+salário bruto. Somados INSS patronal (20%), FGTS (8%), RAT, contribuições a terceiros e as
+provisões de 13º e férias com o terço constitucional, o custo total de um empregado CLT em
+empresa de Lucro Presumido ou Lucro Real situa-se entre **1,7× e 1,8× o salário bruto**.
+
+Adotando o fator 1,8:
+
+```text
+R$ 12.000 × 1,8 = R$ 21.600 de custo mensal por desenvolvedor
+R$ 21.600 × 0,75 × 2 = R$ 32.400
+```
+
+| Regime | Custo do aprimoramento |
+|---|---:|
+| PJ ou contrato de projeto (cenário-base) | R$ 18.000,00 |
+| CLT, fator de encargos 1,8× | R$ 32.400,00 |
+
+Em ambos os regimes o valor é tratado como **investimento inicial**, não como despesa
+recorrente ao longo dos 12 meses. O cenário CLT está consolidado na seção 4.13.
 
 ---
 
 ## 4.4. Frontend em produção
 
-Na POC o frontend não será publicado.
+Na POC o frontend não é publicado. No cenário implementado é necessário disponibilizar uma
+interface para que a solução possa ser utilizada.
 
-No cenário implementado, entretanto, será necessário disponibilizar uma interface para que a solução possa ser utilizada.
-
-Foi considerado inicialmente o uso do **Vercel Pro**.
-
-Premissa adotada:
+Foi considerado o plano **Vercel Pro**, cujo preço público é de US$ 20 por membro por mês.
 
 ```text
-US$ 20 por mês
-× 12 meses
-=
-US$ 240 por ano
+US$ 20 × 12 meses = US$ 240 por ano
+US$ 240 × R$ 5,10 = R$ 1.224,00
 ```
 
-Para fins de estimativa foi utilizada uma conversão aproximada de:
+A premissa considera **um único assento**. A adição de membros eleva o custo
+proporcionalmente, o que constitui gatilho de revisão.
 
 ```text
-US$ 1 = R$ 5,10
+Custo estimado do frontend em 12 meses = R$ 1.224,00
 ```
-
-Assim:
-
-```text
-US$ 240 × R$ 5,10
-=
-R$ 1.224 por ano
-```
-
-Portanto:
-
-```text
-Custo estimado do frontend em 12 meses = R$ 1.224
-```
-
-Esse valor poderá ser revisto caso seja escolhido outro serviço de hospedagem ou plano.
 
 ---
 
 ## 4.5. Azure SQL Database em produção
 
-Na POC será utilizada a camada gratuita do Azure SQL Database.
+Na POC é utilizada a camada gratuita. Para o cenário implementado adotou-se postura mais
+conservadora: embora seja possível que o volume permaneça dentro da camada gratuita, não é
+adequado assumir que uma aplicação operacional dependerá integralmente do Free Tier.
 
-Para o cenário implementado, foi adotada uma postura mais conservadora.
-
-Embora seja possível que o volume continue dentro da camada gratuita, não é adequado assumir que uma aplicação operacional dependerá integralmente do Free Tier.
-
-Por isso foi criada uma **reserva orçamentária anual** para banco de dados.
-
-Premissa:
+Foi constituída uma **reserva orçamentária anual**, dimensionada a partir do preço público da
+camada General Purpose serverless, de **US$ 0,5218 por vCore-hora**:
 
 ```text
-Reserva anual para Azure SQL Database = R$ 1.500
+Reserva mensal adotada = US$ 24,51
+Equivale a aproximadamente 47 vCore-horas de compute por mês
+                           além do limite gratuito
+Reserva anual          = US$ 294,12
+US$ 294,12 × R$ 5,10   = R$ 1.500,00
 ```
 
-Esse valor não representa um preço fixo contratado da Microsoft.
+A reserva cobre consumo adicional de processamento, crescimento de armazenamento acima dos
+32 GB gratuitos, aumento no volume de consultas e armazenamento de backup. Caso a aplicação
+permaneça dentro dos limites gratuitos, o custo realizado será inferior à reserva.
 
-Ele funciona como uma estimativa orçamentária para cobrir:
+```text
+Reserva anual para Azure SQL Database = R$ 1.500,00
+```
 
-- maior processamento;
-- aumento de armazenamento;
-- maior volume de consultas;
-- backups;
-- eventual necessidade de migração para uma camada paga.
-
-Caso a aplicação continue dentro dos limites gratuitos, o custo real poderá ser inferior.
+Esse valor não representa preço fixo contratado da Microsoft, e sim estimativa orçamentária.
+Por depender de consumo, foi classificado como **custo variável**.
 
 ---
 
 ## 4.6. Red Hat / OpenShift em produção
 
-Na POC será utilizada uma combinação de:
+No cenário implementado não foi considerada a continuidade do ambiente local. Uma aplicação
+operacional exige infraestrutura adequada à execução contínua do container.
+
+Como referência de preço público foi adotado o **Red Hat OpenShift Service on AWS (ROSA)**,
+por publicar tabela aberta que permite dimensionamento mínimo verificável. A configuração
+considerada é a menor viável: um cluster com um worker node de 4 vCPU, com compromisso
+reservado de 1 ano.
+
+| Componente | Preço unitário | Custo anual |
+|---|---|---:|
+| Taxa de cluster | US$ 0,03 por hora | US$ 263,00 |
+| Worker node 4 vCPU, reserva de 1 ano | US$ 0,114 por 4vCPU/hora | US$ 998,00 |
+| **Subtotal do serviço** | | **US$ 1.261,00** |
 
 ```text
-30 dias de Red Hat Developer Sandbox
-+
-11 meses de OpenShift Local
+US$ 1.261 × R$ 5,10 = R$ 6.431,10
 ```
-
-No cenário implementado, entretanto, não foi considerada a continuidade do ambiente local.
-
-Uma aplicação operacional necessita de uma infraestrutura mais adequada para execução contínua do container.
-
-Como referência inicial mínima, foi adotado um custo estimado de:
 
 ```text
-US$ 1.000 por ano
+Custo estimado Red Hat/OpenShift em 12 meses = R$ 6.431,10
 ```
 
-para ambiente Red Hat/OpenShift.
+### 4.6.1. Observações sobre a estimativa
 
-Utilizando a mesma premissa cambial:
-
-```text
-US$ 1.000 × R$ 5,10
-=
-R$ 5.100 por ano
-```
-
-Portanto:
-
-```text
-Custo estimado Red Hat/OpenShift em 12 meses = R$ 5.100
-```
-
-Esse valor deve ser tratado como **estimativa mínima inicial**.
-
-A configuração definitiva deverá ser revisada de acordo com:
-
-- quantidade de CPU;
-- memória RAM;
-- armazenamento;
-- disponibilidade;
-- necessidade de redundância;
-- ambiente escolhido;
-- condições comerciais vigentes no momento da contratação.
+- A tabela do ROSA **não inclui a infraestrutura subjacente** (instâncias de computação,
+  tráfego de rede, armazenamento). Como a solução já utiliza Azure SQL Database, a
+  alternativa coerente em produção seria o Azure Red Hat OpenShift; o ROSA foi adotado como
+  referência por publicar preços abertos que permitem verificação, e a ordem de grandeza é
+  equivalente.
+- O valor corresponde ao **dimensionamento mínimo**. Necessidades de redundância, alta
+  disponibilidade ou mais vCPU elevam o custo proporcionalmente.
+- O preço reservado de 1 ano (US$ 0,114 por 4vCPU/hora) representa desconto relevante frente
+  ao consumo sob demanda (US$ 0,171 por 4vCPU/hora), o que justifica a escolha do compromisso
+  anual, coerente com o horizonte de 12 meses da análise.
 
 ---
 
-## 4.7. Docker e bibliotecas de Machine Learning
+## 4.7. Sustentação da aplicação
 
-O Docker continuará sendo utilizado para containerização da solução.
+Uma aplicação em produção com modelo de Machine Learning em operação contínua exige esforço
+técnico ao longo dos 12 meses, ainda que reduzido. Não seria realista projetar zero horas de
+manutenção após a implantação.
 
-As principais bibliotecas utilizadas permanecem open source.
+Foram consideradas as seguintes atividades de sustentação:
 
-Assim:
+- correção de falhas de execução do container;
+- ajustes decorrentes de mudanças no formato ou na disponibilidade dos dados de origem;
+- atualização de dependências e correções de segurança;
+- acompanhamento da degradação de desempenho do modelo ao longo do tempo;
+- pequenos ajustes de interface e de tratamento de erros.
+
+Premissa adotada:
+
+```text
+Esforço estimado    = 4 horas por mês
+Período             = 12 meses
+Total               = 48 horas
+Valor da hora (PJ)  = R$ 70
+48 × R$ 70          = R$ 3.360
+```
+
+O valor da hora foi derivado da mesma referência de Desenvolvedor Full-Stack Pleno
+(R$ 12.000 ÷ 176 horas ≈ R$ 68), arredondada para R$ 70 em razão do caráter pontual do
+atendimento.
+
+```text
+Custo estimado de sustentação em 12 meses = R$ 3.360,00
+```
+
+Não foi considerado retreinamento completo do modelo no primeiro ano. Caso a degradação de
+desempenho exija retreinamento, o esforço adicional constitui gatilho de revisão.
+
+---
+
+## 4.8. Docker e bibliotecas de Machine Learning
+
+O Docker permanece sendo utilizado para containerização da solução e as principais
+bibliotecas permanecem open source.
 
 | Item | Custo estimado |
 |---|---:|
@@ -729,353 +788,609 @@ Assim:
 | LightGBM | R$ 0 |
 | Pandas | R$ 0 |
 
-Esses componentes não geram custo incremental de licenciamento no cenário atualmente considerado.
+Esses componentes não geram custo incremental de licenciamento no cenário considerado.
 
 ---
 
-## 4.8. Dados e validação operacional
+## 4.9. Dados e validação operacional
 
-A mesma lógica utilizada na POC foi mantida.
-
-A Motiva já possui profissionais responsáveis por:
-
-- registrar informações das portas;
-- atualizar dados de alarmes e manutenção;
-- acompanhar eventos operacionais;
-- verificar condições das portas.
-
-Por esse motivo:
+Foi mantida a mesma lógica utilizada na POC. A Motiva já possui profissionais responsáveis por
+registrar informações das portas, atualizar dados de alarmes e manutenção, acompanhar eventos
+operacionais e verificar condições das portas.
 
 ```text
-Custo incremental de atualização dos dados = R$ 0
+Custo incremental de atualização dos dados      = R$ 0
+Custo incremental de validação operacional      = R$ 0
 ```
 
-e:
-
-```text
-Custo incremental de validação operacional = R$ 0
-```
-
-Esses valores deverão ser revistos apenas se a solução passar a exigir:
-
-- contratação adicional;
-- horas extras;
-- equipe dedicada;
-- novas inspeções não existentes atualmente;
-- novas ferramentas pagas.
+Esses valores devem ser revistos apenas se a solução passar a exigir contratação adicional,
+horas extras, equipe dedicada, novas inspeções ou ferramentas pagas.
 
 ---
 
-## 4.9. Consolidação dos custos da implementação
+## 4.10. Itens avaliados e considerados sem custo incremental
 
-Com as premissas atuais:
+Os itens abaixo foram avaliados e não geraram custo no cenário-base. O registro é feito para
+que a ausência seja compreendida como decisão fundamentada, e não como omissão.
 
-| Categoria | Item | Tipo | Custo em 12 meses |
-|---|---|---|---:|
-| Desenvolvimento | 2 desenvolvedores por 3 semanas | Investimento inicial | R$ 18.000 |
-| Frontend | Vercel Pro | Recorrente | R$ 1.224 |
-| Banco de dados | Azure SQL Database | Recorrente / reserva | R$ 1.500 |
-| Deploy | Red Hat/OpenShift | Recorrente | R$ 5.100 |
-| Containerização | Docker | Software | R$ 0 |
-| Bibliotecas | Ferramentas open source | Software | R$ 0 |
-| Dados | Atualização operacional | Operação existente | R$ 0 incremental |
-| Validação | Acompanhamento operacional | Operação existente | R$ 0 incremental |
-| **TOTAL BASE** |  |  | **R$ 25.824** |
+| Item | Tratamento | Justificativa |
+|---|---|---|
+| Integração com as fontes de dados | R$ 0 | A solução consome os dados já extraídos e disponibilizados pela operação, sem integração automatizada com sistemas de origem no escopo atual |
+| Adequação à LGPD | R$ 0 | Os dados tratados são operacionais de equipamentos (portas, alarmes, ordens de manutenção), sem dados pessoais |
+| Segurança e controle de acesso | R$ 0 | Atendido pelos controles nativos do Azure e do OpenShift, sem contratação de ferramenta adicional |
+| Treinamento de usuários | R$ 0 | Interface destinada a equipe já familiarizada com os indicadores operacionais |
+| Licenciamento de software | R$ 0 | Stack integralmente open source |
+
+Cada um desses itens constitui gatilho de revisão caso o escopo mude — em especial a
+integração automatizada com sistemas de origem, que exigiria esforço adicional de
+desenvolvimento.
 
 ---
 
-## 4.10. Cenários de contingência
+## 4.11. Consolidação dos custos da implementação
 
-Como se trata de uma estimativa, foram definidos dois cenários adicionais.
+### Investimento inicial
 
-### Cenário base
+| Item | Valor |
+|---|---:|
+| Aprimoramento e implantação — 2 desenvolvedores pleno, 3 semanas, regime PJ | R$ 18.000,00 |
+| **Total de investimento inicial** | **R$ 18.000,00** |
+
+### Custos fixos recorrentes
+
+| Item | Valor anual estimado |
+|---|---:|
+| Vercel Pro — 1 assento | R$ 1.224,00 |
+| Red Hat OpenShift — cluster mínimo com reserva de 1 ano | R$ 6.431,10 |
+| **Total de custos fixos recorrentes** | **R$ 7.655,10** |
+
+### Custos variáveis
+
+| Item | Valor anual estimado |
+|---|---:|
+| Reserva orçamentária para Azure SQL Database | R$ 1.500,00 |
+| **Total de custos variáveis estimados** | **R$ 1.500,00** |
+
+### Custos operacionais incrementais
+
+| Item | Valor anual estimado |
+|---|---:|
+| Sustentação da aplicação — 48 h | R$ 3.360,00 |
+| Atualização e disponibilização dos dados | R$ 0 incremental |
+| Validação operacional das previsões | R$ 0 incremental |
+| Docker e bibliotecas open source | R$ 0 |
+| **Total de custos operacionais incrementais** | **R$ 3.360,00** |
+
+### Total do projeto implementado
 
 ```text
-R$ 25.824
+Investimento inicial              = R$ 18.000,00
+Custos fixos recorrentes          = R$  7.655,10
+Custos variáveis estimados        = R$  1.500,00
+Custos operacionais incrementais  = R$  3.360,00
+
+Total base em 12 meses            = R$ 30.515,10
 ```
 
-### Cenário conservador
+| Categoria | Custo em 12 meses | Participação |
+|---|---:|---:|
+| Investimento inicial | R$ 18.000,00 | 59,0% |
+| Custos fixos recorrentes | R$ 7.655,10 | 25,1% |
+| Custos variáveis estimados | R$ 1.500,00 | 4,9% |
+| Custos operacionais incrementais | R$ 3.360,00 | 11,0% |
+| **TOTAL BASE** | **R$ 30.515,10** | **100%** |
 
-Aplicação de margem de 5%:
+---
+
+## 4.12. Cronograma de desembolso
+
+### 4.12.1. Distribuição mensal
+
+| Mês | Investimento inicial | Vercel | Red Hat | Azure SQL | Sustentação | Total do mês | Acumulado |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | R$ 18.000,00 | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 19.042,93 | R$ 19.042,93 |
+| 2 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 20.085,86 |
+| 3 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 21.128,79 |
+| 4 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 22.171,72 |
+| 5 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 23.214,65 |
+| 6 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 24.257,58 |
+| 7 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 25.300,51 |
+| 8 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 26.343,44 |
+| 9 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 27.386,37 |
+| 10 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 28.429,30 |
+| 11 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 29.472,23 |
+| 12 | — | R$ 102,00 | R$ 535,87 | R$ 125,00 | R$ 280,00 | R$ 1.042,87 | R$ 30.515,10 |
+| **Total** | **R$ 18.000,00** | **R$ 1.224,00** | **R$ 6.431,10** | **R$ 1.500,00** | **R$ 3.360,00** | **R$ 30.515,10** | |
+
+A diferença de R$ 0,06 no mês 12 corresponde ao arredondamento da mensalização do ambiente
+Red Hat.
+
+### 4.12.2. Critérios de distribuição
+
+- **Investimento inicial:** concentrado no mês 1, correspondente às três semanas de
+  desenvolvimento que antecedem a entrada em operação.
+- **Vercel e Red Hat:** diluídos linearmente, por serem assinaturas recorrentes. Na hipótese
+  de pagamento antecipado do compromisso anual do OpenShift, os R$ 6.431,10 migram
+  integralmente para o mês 1, elevando-o a R$ 24.938.
+- **Azure SQL:** diluído linearmente por representar reserva orçamentária, e não contrato. O
+  desembolso real ocorrerá apenas se e quando os limites gratuitos forem ultrapassados,
+  podendo concentrar-se nos meses finais conforme o crescimento da base.
+- **Sustentação:** diluída linearmente, refletindo a premissa de 4 horas mensais.
+
+### 4.12.3. Concentração do desembolso
 
 ```text
-R$ 25.824 × 1,05
-=
-R$ 27.115,20
+Mês 1        = R$ 19.042,93  (62,4% do total)
+Meses 2 a 12 = R$ 11.472,17  (37,6% do total)
 ```
 
-### Pior caso
+Aproximadamente 62% do custo total ocorre no primeiro mês. A partir do mês 2, o custo de
+manutenção estabiliza-se em cerca de **R$ 1.043 por mês**.
 
-Aplicação de margem de 10%:
+Essa concentração tem implicação relevante: o custo marginal de manter a solução em operação
+após o primeiro ano é substancialmente inferior, já que o investimento inicial não se repete.
 
 ```text
-R$ 25.824 × 1,10
-=
-R$ 28.406,40
+Custo estimado do ano 2 = R$ 12.515,10
 ```
 
-Resumo:
+### 4.12.4. Cronograma da POC
+
+Não se aplica cronograma de desembolso à POC, cujo custo incremental projetado é de R$ 0 em
+todos os meses. Os gatilhos de revisão listados na seção 3.11 permanecem como eventos
+potenciais, sem mês definido.
+
+---
+
+## 4.13. Cenários de contingência
+
+### 4.13.1. Margens percentuais
+
+| Cenário | Cálculo | Custo estimado em 12 meses |
+|---|---|---:|
+| Base | — | R$ 30.515,10 |
+| Conservador | base × 1,05 | R$ 32.040,85 |
+| Pior caso | base × 1,10 | R$ 33.566,61 |
+
+As margens de 5% e 10% representam incertezas relacionadas a variação cambial, reajuste de
+preços de infraestrutura e pequenos ajustes de esforço durante a implantação.
+
+### 4.13.2. Cenário adicional — contratação em regime CLT
+
+O regime de contratação é a variável isolada de maior impacto sobre a projeção:
+
+| Categoria | Cenário PJ (base) | Cenário CLT |
+|---|---:|---:|
+| Investimento inicial | R$ 18.000,00 | R$ 32.400,00 |
+| Custos fixos recorrentes | R$ 7.655,10 | R$ 7.655,10 |
+| Custos variáveis | R$ 1.500,00 | R$ 1.500,00 |
+| Custos operacionais incrementais | R$ 3.360,00 | R$ 3.360,00 |
+| **Total em 12 meses** | **R$ 30.515,10** | **R$ 44.915,10** |
+
+A diferença de R$ 14.400 corresponde exclusivamente aos encargos patronais e provisões
+trabalhistas incidentes sobre a mesma remuneração bruta.
+
+### 4.13.3. Sensibilidade cambial
+
+Aproximadamente R$ 7.655 da projeção — Vercel e Red Hat — estão originalmente denominados em
+dólar, correspondendo a 25% do custo-base:
+
+| Cotação | Parcela em dólar | Total em 12 meses | Variação |
+|---|---:|---:|---:|
+| R$ 4,60 | R$ 6.904,60 | R$ 29.764,60 | −2,5% |
+| R$ 5,10 (base) | R$ 7.655,10 | R$ 30.515,10 | — |
+| R$ 5,60 | R$ 8.405,60 | R$ 31.265,60 | +2,5% |
+| R$ 6,10 | R$ 9.156,10 | R$ 32.016,10 | +4,9% |
+
+A exposição cambial é moderada: uma valorização do dólar de 20% eleva o custo total em
+aproximadamente 4,9%, permanecendo dentro da margem de pior caso já adotada.
+
+### 4.13.4. Resumo dos cenários
 
 | Cenário | Custo estimado em 12 meses |
 |---|---:|
-| Base | R$ 25.824,00 |
-| Conservador +5% | R$ 27.115,20 |
-| Pior caso +10% | R$ 28.406,40 |
-
-Essas margens representam incertezas relacionadas a preços de infraestrutura, câmbio, ajustes técnicos e pequenas variações de esforço durante a implantação.
+| Base — PJ, dólar a R$ 5,10 | R$ 30.515,10 |
+| Conservador — base +5% | R$ 32.040,85 |
+| Pior caso — base +10% | R$ 33.566,61 |
+| Contratação CLT | R$ 44.915,10 |
 
 ---
 
-## 4.11. Premissas que podem alterar a estimativa
+## 4.14. Premissas que podem alterar a estimativa
 
-Os valores deverão ser revisados caso ocorram mudanças como:
+Os valores devem ser revisados caso ocorram mudanças como:
 
 - necessidade de mais de dois desenvolvedores;
 - período de implementação superior a três semanas;
-- contratação de suporte recorrente;
-- necessidade de ambiente Red Hat/OpenShift maior;
-- banco Azure com consumo acima da reserva prevista;
+- contratação em regime CLT em vez de PJ;
+- necessidade de suporte recorrente acima das 4 horas mensais previstas;
+- necessidade de retreinamento completo do modelo durante os 12 meses;
+- necessidade de ambiente Red Hat/OpenShift maior ou com redundância;
+- consumo do banco Azure acima da reserva prevista;
+- adição de membros ao plano Vercel;
+- necessidade de integração automatizada com os sistemas de origem;
 - maior necessidade de segurança ou observabilidade;
-- contratação de novas ferramentas;
 - aumento significativo do volume de dados;
-- necessidade de alta disponibilidade ou redundância;
-- mudança relevante na cotação do dólar.
+- variação relevante na cotação do dólar.
 
 ---
 
-## 4.12. Resultado financeiro preliminar da implementação
+# 5. Projeção de retorno econômico
 
-Com as premissas atualmente definidas, o custo estimado para transformar a POC em uma solução operacional e mantê-la durante 12 meses fica entre:
+## 5.1. Natureza do retorno financeiro
+
+A solução não tem como objetivo gerar **receita direta** para a Motiva. Trata-se de ferramenta
+interna de manutenção preditiva, cujo retorno financeiro se manifesta como **redução de custos
+e de riscos operacionais**.
 
 ```text
-R$ 25.824,00
-e
-R$ 28.406,40
+Receita direta projetada — POC                  = R$ 0
+Receita direta projetada — projeto implementado = R$ 0
 ```
 
-O primeiro valor representa o cenário-base.
+A ausência de receita não é lacuna da análise: é característica estrutural do projeto, e está
+refletida na forma como o retorno foi modelado.
 
-O segundo representa o cenário de pior caso com margem adicional de 10%.
+Os benefícios econômicos potenciais identificados são:
 
-A próxima etapa da análise financeira será estimar os **benefícios econômicos gerados pela solução**, permitindo comparar o custo de implementação com potenciais economias, ganhos operacionais e retorno sobre o investimento.
+- redução da exposição a multas e penalidades decorrentes de falhas operacionais;
+- redução de custos relacionados a falhas corretivas emergenciais;
+- redução de trocas de peças desnecessárias ou antecipação de intervenções;
+- melhor priorização das atividades de manutenção;
+- redução do tempo de indisponibilidade das portas;
+- redução de impactos operacionais causados por falhas não antecipadas.
 
+## 5.2. Por que a economia não foi convertida em valor único
 
-# 5. Dados utilizados pelos modelos
+Durante a construção desta análise foram consultados balanços patrimoniais, demonstrações
+financeiras e demais documentos disponíveis na plataforma de **Relacionamento com o Investidor
+da Motiva**, buscando isolar:
 
-Os dois modelos considerados mais relevantes no projeto utilizam principalmente informações provenientes das seguintes fontes:
+- o valor anual pago em multas relacionadas a falhas operacionais;
+- o valor médio de uma penalidade;
+- a parcela dessas penalidades atribuível a falhas de Portas de Plataforma;
+- o custo médio de uma ocorrência corretiva emergencial.
 
-- histórico de alarmes;
-- ZM01 — corretiva emergencial;
-- ZM02 — corretiva programada;
-- ZM03 — manutenção preventiva.
+Nenhuma dessas grandezas aparece isolada. Os valores relacionados a multas surgem agregados a
+provisões, despesas indedutíveis, contingências e processos administrativos, sem abertura por
+causa operacional. Não seria metodologicamente seguro calcular uma média a partir desses
+agregados e utilizá-la como economia projetada.
 
-Embora os modelos criem diversas features, a maior parte delas é derivada automaticamente dessas bases.
+A relação entre previsão e economia também não é determinística. Quando o modelo indica maior
+probabilidade de falha de um componente, podem ocorrer quatro situações distintas:
 
-Isso significa que a Motiva não precisa fornecer diretamente variáveis como:
+1. a peça realmente falharia e a intervenção antecipada evita a ocorrência corretiva;
+2. a peça continuaria operando normalmente durante o período analisado;
+3. a previsão é um falso positivo;
+4. mesmo com previsão correta, a manutenção continua exigindo a substituição da peça.
+
+Portanto, não é possível afirmar que uma falha prevista equivale a uma peça economizada.
+Utilizar diretamente o preço médio das peças superestimaria artificialmente o retorno do
+projeto.
+
+Por esses dois motivos, a análise **não atribui um valor único à economia anual**. Em vez
+disso, apresenta o modelo de cálculo com as variáveis explicitamente identificadas e o ponto
+de equilíbrio do projeto.
+
+## 5.3. Modelo de cálculo da economia
+
+A economia anual gerada pela solução é dada por:
 
 ```text
-dias_desde_ultima_corretiva
-qtd_corretivas_emergenciais_30d
-duracao_maxima_alarme_7d
-intervalo_medio_zm01
+Economia anual = F × R × A × C
 ```
 
-Essas informações são calculadas pelo pipeline a partir dos dados brutos.
+| Símbolo | Variável | Significado | Origem do dado |
+|---|---|---|---|
+| **F** | Falhas anuais | Ocorrências corretivas emergenciais em PSD por ano | Base histórica ZM01 |
+| **R** | Recall do modelo | Proporção das falhas efetivamente antecipadas | Métrica do modelo treinado |
+| **A** | Taxa de ação efetiva | Proporção dos alertas que geram intervenção capaz de evitar a ocorrência | Processo de manutenção da Motiva |
+| **C** | Custo médio evitado | Custo médio de uma ocorrência corretiva emergencial | A ser fornecido pela Motiva |
 
-Para a análise financeira, a quantidade de features não será tratada como um custo separado, pois elas são calculadas automaticamente pelo pipeline.
-
-A disponibilização das fontes originais também não será considerada como custo incremental no cenário-base, pois essa atividade já faz parte da operação normal da Motiva.
-
----
-
-# 6. Dados históricos já disponíveis
-
-Os dados utilizados para o treinamento inicial dos modelos já foram disponibilizados pela Motiva.
-
-Consequentemente, não existe necessidade de obter novas bases para finalizar o treinamento atual.
-
-Assim, para a construção inicial da POC:
+O termo C agrega três componentes:
 
 ```text
-Custo adicional de aquisição dos dados históricos = R$ 0
+C = custo da peça + custo de mão de obra da corretiva
+    + parcela de penalidade atribuível
 ```
 
-Entretanto, novos dados passam a ser necessários caso a POC permaneça funcionando e gere previsões atualizadas ao longo dos 12 meses.
+## 5.4. Estado atual dos parâmetros
 
-Esses novos dados possuem três funções principais:
+| Parâmetro | Situação | Observação |
+|---|---|---|
+| F | Obtenível | Extraível da base ZM01 já disponibilizada pela Motiva |
+| R | Obtenível | Métrica de recall do modelo treinado na POC |
+| A | Não disponível | Depende de validação operacional ao longo da POC |
+| C | Não disponível | Não isolável nos documentos públicos consultados |
 
-1. alimentar o modelo com informações recentes para gerar novas previsões;
-2. permitir verificar posteriormente se as previsões estavam corretas;
-3. formar um novo histórico que poderá ser utilizado em futuros ciclos de retreinamento.
+Dois dos quatro parâmetros dependem de informações que só existirão após a operação da POC.
+Por isso o modelo é apresentado como **estrutura de cálculo pronta**, a ser preenchida quando
+os dados existirem.
 
-Essas três funções utilizam o mesmo fluxo de atualização de dados e, portanto, não devem ser tratadas como três custos separados.
+## 5.5. Ponto de equilíbrio
 
----
-
-# 7. Atualização e disponibilização dos dados operacionais
-
-## 7.1. Revisão da premissa financeira
-
-Inicialmente foi considerada a possibilidade de calcular o custo de atualização dos dados a partir do tempo gasto por um profissional da Motiva para registrar, extrair e disponibilizar informações de:
-
-- histórico de alarmes;
-- ZM01;
-- ZM02;
-- ZM03.
-
-Após revisão do processo operacional, essa abordagem foi alterada.
-
-A Motiva já possui profissionais contratados para executar atividades relacionadas ao registro, atualização e acompanhamento dessas informações como parte de suas funções regulares.
-
-Portanto, no cenário-base da POC, essas atividades **não representam um novo desembolso causado pelo projeto**.
-
-A análise passa a utilizar o conceito de **custo incremental**.
+Ainda que a economia anual não possa ser cravada, é possível calcular a condição mínima para
+que o projeto se pague. O ponto de equilíbrio responde à pergunta inversa: **quantas
+ocorrências corretivas emergenciais precisam ser evitadas em 12 meses para cobrir o custo do
+projeto implementado?**
 
 ```text
-Custo incremental de atualização e disponibilização dos dados = R$ 0
+Ocorrências necessárias = Custo total do projeto ÷ Custo médio da ocorrência
+Ocorrências necessárias = R$ 30.515,10 ÷ C
 ```
 
+| Custo médio de uma ocorrência (C) | Ocorrências a evitar em 12 meses |
+|---:|---:|
+| R$ 2.000 | 15,3 |
+| R$ 3.000 | 10,2 |
+| R$ 5.000 | 6,1 |
+| R$ 8.000 | 3,8 |
+| R$ 10.000 | 3,1 |
+| R$ 15.000 | 2,0 |
+
+### 5.5.1. Interpretação
+
+O ponto de equilíbrio tem vantagem metodológica sobre a projeção de economia: ele **inverte a
+incerteza**. Em vez de exigir a estimativa de quanto o projeto vai economizar, estabelece o
+patamar mínimo de desempenho e permite que a Motiva julgue, com seu próprio conhecimento
+operacional, se esse patamar é plausível.
+
+> Se o custo médio de uma corretiva emergencial em PSD for de R$ 5.000, o projeto implementado
+> se paga ao evitar aproximadamente **6 ocorrências ao longo de 12 meses** — cerca de uma a
+> cada dois meses.
+
+Esse número deve ser confrontado com o volume histórico de ZM01 registrado nas PSD. Se o
+histórico indicar dezenas ou centenas de corretivas emergenciais por ano, o ponto de equilíbrio
+corresponde a fração pequena do total, e a viabilidade econômica do projeto não depende de
+desempenho excepcional do modelo.
+
+### 5.5.2. Ponto de equilíbrio nos demais cenários
+
+| Cenário | Custo total | Ocorrências a evitar (C = R$ 5.000) |
+|---|---:|---:|
+| Base — PJ | R$ 30.515,10 | 6,1 |
+| Pior caso — base +10% | R$ 33.566,61 | 6,7 |
+| Contratação CLT | R$ 44.915,10 | 9,0 |
+
+Mesmo no cenário mais custoso mapeado, o ponto de equilíbrio permanece em nove ocorrências
+evitadas ao longo de 12 meses.
+
+A partir do segundo ano, com custo recorrente de R$ 12.515,10, o ponto de equilíbrio cai para
+aproximadamente **2,5 ocorrências evitadas por ano** no mesmo cenário de custo médio.
+
+### 5.5.3. Ressalva
+
+O ponto de equilíbrio não constitui promessa de retorno. Ele estabelece a condição necessária
+para o projeto se pagar, sem afirmar que essa condição será atendida. Sua confirmação depende
+do parâmetro C, ainda não fornecido pela Motiva, e do desempenho real do modelo em operação.
+
+## 5.6. Tratamento adotado na projeção financeira
+
+| Cenário | Receita direta | Economia | Tratamento |
+|---|---:|---|---|
+| POC | R$ 0 | modelada, não convertida em valor único | parâmetros F e R obteníveis; A e C pendentes |
+| Projeto implementado | R$ 0 | modelada, não convertida em valor único | idem |
+
+A análise adota postura conservadora: a economia potencial **não foi incorporada ao resultado
+financeiro consolidado**. Os custos apresentados nas seções anteriores representam o custo
+bruto do projeto, sem abatimento de benefícios.
+
+Isso não significa que o projeto não gere retorno econômico. Significa que não existe, no
+momento, base suficientemente precisa para atribuir um valor financeiro confiável à economia
+potencial, e que a análise preferiu não construir projeção artificial sobre premissas frágeis.
+
+O retorno deverá ser recalculado com o modelo da seção 5.3 assim que a Motiva disponibilizar
+dados mais detalhados sobre:
+
+- multas e penalidades aplicadas e suas causas;
+- impacto financeiro de indisponibilidades;
+- falhas que efetivamente resultaram em troca de componentes;
+- intervenções evitadas após uma previsão;
+- custo total de uma ocorrência corretiva emergencial.
+
 ---
 
-## 7.2. Justificativa
+# 6. Comparação financeira dos dois cenários
 
-O fato de profissionais da Motiva dedicarem tempo ao preenchimento e atualização das informações não significa, por si só, que esse tempo deva ser imputado como novo custo da POC.
+## 6.1. Quadro comparativo
 
-Esse custo só seria adicional caso o projeto exigisse, por exemplo:
+| Indicador | POC — 12 meses | Projeto implementado — 12 meses |
+|---|---:|---:|
+| Investimento inicial | R$ 0 incremental | R$ 18.000,00 |
+| Custos fixos recorrentes | R$ 0 incremental | R$ 7.655,10 |
+| Custos variáveis estimados | R$ 0 incremental | R$ 1.500,00 |
+| Custos operacionais incrementais | R$ 0 incremental | R$ 3.360,00 |
+| **Custo total base** | **R$ 0** | **R$ 30.515,10** |
+| Cenário conservador +5% | R$ 0 | R$ 32.040,85 |
+| Pior caso +10% | R$ 0 | R$ 33.566,61 |
+| Cenário com contratação CLT | não aplicável | R$ 44.915,10 |
+| Custo de mercado equivalente | R$ 49.931,10 | R$ 30.515,10 |
+| Receita direta projetada | R$ 0 | R$ 0 |
+| Economia anual | modelada — seção 5.3 | modelada — seção 5.3 |
+| Ponto de equilíbrio (C = R$ 5.000) | não aplicável | 6,1 ocorrências evitadas |
+| Custo recorrente do ano 2 | não aplicável | R$ 12.515,10 |
 
-- contratação de um novo profissional;
-- pagamento de horas extras;
-- aumento formal da carga de trabalho;
-- criação de uma equipe exclusiva para a POC;
-- contratação de serviço externo;
-- aquisição de uma nova ferramenta especificamente para realizar o processo.
+## 6.2. Leitura do comparativo
 
-Nenhuma dessas condições foi considerada necessária no cenário-base atual.
+A coluna de **custo de mercado equivalente** revela um ponto que a coluna de custo incremental
+oculta: a POC mobiliza mais recursos econômicos que o projeto implementado (R$ 49.931 contra
+R$ 30.515). A diferença está na natureza do esforço — a POC concentra horas de desenvolvimento
+exploratório, absorvidas pelo trabalho acadêmico, enquanto o projeto implementado parte de uma
+base pronta e concentra custos de infraestrutura e de profissionalização.
 
-Assim, não será realizada uma duplicação contábil do custo de funcionários que já fazem parte da operação regular da empresa.
+A diferença de desembolso entre os dois cenários decorre de quatro fatores:
 
----
+1. **profissionalização da aplicação** — R$ 18.000 de investimento inicial inexistentes na POC;
+2. **publicação do frontend** — não realizada durante a POC;
+3. **infraestrutura de execução contínua** — substituição do OpenShift Local em hardware
+   existente por ambiente gerenciado;
+4. **sustentação** — esforço técnico de manutenção que na POC é absorvido pelo grupo.
 
-## 7.3. Maior exigência de qualidade dos dados
-
-Embora não exista custo incremental estimado, a POC aumenta a importância da **qualidade e precisão do preenchimento dos dados**.
-
-O modelo depende diretamente da consistência das informações utilizadas para formar suas features.
-
-Erros como:
+## 6.3. Síntese
 
 ```text
-porta incorreta
-estação incorreta
-plataforma incorreta
-data ou horário incorreto
-ordem de manutenção classificada incorretamente
-registro ausente
-duplicidade
+POC ...................... R$ 0 incremental em 12 meses
+                           (R$ 49.931,10 a preço de mercado)
+
+Projeto implementado ..... R$ 30.515,10 em 12 meses
+                           R$ 12.515,10 a partir do ano 2
+
+Ponto de equilíbrio ...... 6,1 ocorrências corretivas evitadas
+                           (assumindo C = R$ 5.000)
 ```
 
-podem alterar as features e reduzir a qualidade das previsões.
+---
 
-A mudança operacional esperada, portanto, não é a criação de uma nova atividade, mas uma maior necessidade de:
+# 7. Metodologia e critérios utilizados
 
-- preenchimento correto;
-- padronização dos registros;
-- redução de erros;
-- consistência entre sistemas;
-- atenção às chaves utilizadas pelo modelo.
+## 7.1. Horizonte de análise
 
-Essa exigência será tratada como **premissa operacional da POC**, e não como custo adicional no cenário-base.
+Foram considerados dois cenários independentes, ambos com duração de 12 meses: manutenção da
+POC durante 12 meses e implementação da solução em ambiente operacional por 12 meses. O
+horizonte comum permite comparar os dois cenários sob o mesmo período.
+
+## 7.2. Critério de custo incremental
+
+Foi considerado como custo do projeto apenas o que representa gasto adicional causado pela
+solução. Atividades que já fazem parte da rotina da Motiva e que não exigem contratação
+adicional, horas extras ou nova infraestrutura foram registradas como R$ 0 incremental. Esse
+critério evita contabilizar duas vezes despesas que existiriam mesmo sem o projeto.
+
+## 7.3. Critério de custo de mercado equivalente
+
+Para a POC, cujo custo incremental é zero, foi apresentada uma segunda leitura em custo de
+mercado equivalente. O objetivo é evidenciar que a ausência de desembolso decorre da forma de
+alocação dos recursos, não da ausência de consumo de recursos.
+
+## 7.4. Classificação dos custos
+
+Os custos foram organizados em quatro categorias:
+
+- **investimento inicial:** gasto necessário para colocar a solução em operação;
+- **custos fixos recorrentes:** gastos previstos independentemente de pequenas variações de
+  uso;
+- **custos variáveis:** gastos que podem variar conforme consumo;
+- **custos operacionais incrementais:** novos gastos relacionados à operação cotidiana da
+  solução.
+
+## 7.5. Uso de infraestrutura existente e ferramentas gratuitas
+
+Recursos já disponíveis foram registrados como R$ 0 incremental quando não exigem nova
+aquisição. O mesmo critério foi aplicado a ferramentas open source e a serviços utilizados
+dentro das condições de suas camadas gratuitas.
+
+## 7.6. Estimativas de mercado
+
+Quando não havia valor interno fornecido pela Motiva, foram utilizados preços públicos de
+fornecedores ou pesquisas salariais de mercado. No cenário implementado, isso se aplicou
+principalmente à mão de obra de desenvolvimento e aos serviços de infraestrutura.
+
+Todos os valores estão registrados com fonte e data de consulta na seção 7.9, e representam
+estimativa para fins acadêmicos, a ser atualizada no momento de uma eventual contratação real.
+
+## 7.7. Premissa cambial
+
+Para valores denominados em dólar foi utilizada a cotação comercial de **US$ 1 = R$ 5,10**,
+verificada em 09/09/2026. A cotação padroniza a projeção em reais; seu efeito sobre o total
+está quantificado na análise de sensibilidade da seção 4.13.3.
+
+## 7.8. Tratamento das incertezas
+
+Para o projeto implementado foram considerados três cenários de margem — base, conservador
+(+5%) e pior caso (+10%) — além de um cenário adicional de regime de contratação e de uma
+análise de sensibilidade cambial.
+
+Na POC, como o custo incremental base é igual a zero, a contingência é tratada por gatilhos de
+revisão com impacto financeiro quantificado, e não por acréscimo percentual.
+
+## 7.9. Fontes consultadas
+
+| Item | Valor adotado | Fonte | Data |
+|---|---:|---|---|
+| Cotação do dólar comercial | US$ 1 = R$ 5,10 | Cotação comercial de mercado | 09/09/2026 |
+| Red Hat OpenShift — taxa de cluster | US$ 263/ano | Preços públicos do Red Hat OpenShift Service on AWS (ROSA) | 10/09/2026 |
+| Red Hat OpenShift — worker node 4 vCPU | US$ 998/ano | ROSA, compromisso reservado de 1 ano (US$ 0,114 por 4vCPU/hora) | 10/09/2026 |
+| Azure SQL Database — camada gratuita | 100.000 vCore-segundos, 32 GB de dados, 32 GB de backup por mês | Documentação oficial da Microsoft | 10/09/2026 |
+| Azure SQL Database — compute serverless | US$ 0,5218 por vCore-hora | Tabela de preços do Azure SQL Database, General Purpose serverless | 10/09/2026 |
+| Vercel Pro | US$ 20 por membro/mês | Página oficial de planos da Vercel | 10/09/2026 |
+| Desenvolvedor Full-Stack Pleno | R$ 9.550 a R$ 15.900/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
+| Desenvolvedor Full-Stack Júnior | R$ 6.050 a R$ 8.750/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
+| Fator de encargos CLT (Lucro Presumido/Real) | 1,7× a 1,8× o salário bruto | INSS patronal (20%), FGTS (8%), RAT, Sistema S e provisões de 13º e férias | 10/09/2026 |
+
+### 7.9.1. Critério de aplicação das fontes
+
+- Quando a fonte apresenta uma **faixa**, adotou-se valor central e registrou-se a faixa
+  completa, permitindo que o leitor recalcule o cenário.
+- Quando o fornecedor oferece **compromisso anual com desconto**, adotou-se o preço com
+  compromisso de 1 ano, coerente com o horizonte de 12 meses.
+- Preços em dólar foram convertidos pela cotação comercial da data indicada, e a variação
+  cambial foi tratada como fonte de incerteza no cenário de contingência.
+- Valores de mão de obra foram registrados **com o regime de contratação explícito**, porque
+  salário bruto e custo total para a empresa são grandezas diferentes.
+
+### 7.9.2. Limitações das fontes
+
+- Os preços de nuvem variam por região e configuração; os valores adotados correspondem às
+  configurações mínimas descritas em cada seção.
+- O Guia Salarial informa remuneração bruta, não custo total de contratação. O tratamento
+  desse ponto está na seção 4.3.3.
+- Nenhum valor de custo foi obtido diretamente da Motiva. Todas as estimativas são referências
+  públicas de mercado e deverão ser substituídas por cotações reais no momento de uma eventual
+  contratação.
+
+## 7.10. Critério para o retorno econômico
+
+O projeto não foi tratado como gerador de receita direta, pois sua finalidade é apoiar a
+manutenção e reduzir custos e riscos operacionais. O retorno foi analisado sob a ótica de
+**economia potencial**, e essa economia não foi incorporada ao resultado consolidado.
+
+Como os documentos disponíveis no Relacionamento com o Investidor da Motiva não permitem
+isolar uma média confiável de multas, e como os custos de peças não podem ser diretamente
+associados a cada previsão do modelo, a análise apresenta o modelo de cálculo e o ponto de
+equilíbrio em lugar de um valor projetado de economia.
 
 ---
 
-## 7.4. Situações que exigiriam revisão do custo
+# 8. Conclusão
 
-A premissa de custo igual a zero deverá ser revisada caso a POC passe a exigir esforço adicional fora das funções já existentes.
+A Prova de Conceito pode ser mantida durante 12 meses com **custo incremental projetado de
+R$ 0**, desde que permaneçam válidas as premissas de utilização de infraestrutura existente,
+serviços dentro de suas camadas gratuitas e atividades operacionais já executadas pela Motiva.
+A preço de mercado, os recursos mobilizados pela POC equivalem a aproximadamente
+**R$ 49.931,10**.
 
-Exemplos:
+Para transformar a POC em solução implementada e mantê-la por 12 meses, o custo-base estimado
+é de **R$ 30.515,10**, dos quais 59% correspondem a investimento inicial não recorrente. A
+partir do segundo ano, o custo de sustentação cai para **R$ 12.515,10** anuais.
 
-| Situação futura | Impacto financeiro |
-|---|---|
-| Processo atual continua sendo executado pelos mesmos profissionais | R$ 0 incremental |
-| Necessidade de horas extras | novo custo a calcular |
-| Contratação de novo profissional | novo custo a calcular |
-| Automação paga de extração ou integração | novo custo a calcular |
-| Ferramenta adicional de qualidade de dados | novo custo a calcular |
-
-No cenário atualmente considerado:
-
-> **Custo incremental anual de atualização e disponibilização dos dados: R$ 0.**
-
----
-
-# 7.5. Validação operacional das previsões
-
-A mesma lógica foi aplicada à validação dos alertas produzidos pelo modelo.
-
-A Motiva já possui profissionais responsáveis por acompanhar as condições das portas, registrar ocorrências e analisar eventos operacionais.
-
-Dessa forma, verificar se um alerta do modelo correspondeu ou não a uma falha real é considerado uma extensão das informações já analisadas pela operação, e não uma nova função dedicada.
-
-No cenário-base:
+Considerando as margens e os cenários adotados, a projeção do primeiro ano varia entre:
 
 ```text
-Custo incremental de validação operacional = R$ 0
+R$ 30.515,10 no cenário-base
+R$ 32.040,85 no cenário conservador
+R$ 33.566,61 no pior caso
+R$ 44.915,10 caso a contratação seja em regime CLT
 ```
 
-Não será considerada a contratação de uma pessoa exclusiva para verificar as previsões.
+O projeto não constitui nova fonte de receita. Seu retorno financeiro está associado à
+**economia de custos**, principalmente por meio da redução do risco de multas, diminuição de
+falhas corretivas, melhor planejamento da manutenção e possível redução de trocas ou
+intervenções desnecessárias.
 
-A validação poderá utilizar os próprios registros posteriores de falha para comparar:
+Essa economia não foi convertida em valor único. A consulta aos balanços e demais documentos
+disponíveis no Relacionamento com o Investidor da Motiva não permitiu identificar média
+confiável de multas relacionadas a falhas operacionais, e não foi considerado adequado calcular
+a economia a partir do preço das peças, pois uma previsão de falha não garante que a peça
+efetivamente quebraria e a manutenção antecipada pode continuar exigindo a substituição do
+componente.
 
-```text
-previsão realizada
-       ↓
-evento observado posteriormente
-       ↓
-acerto / falso alerta / falha não detectada
-```
+Em lugar de uma projeção construída sobre premissas frágeis, a análise apresenta o modelo de
+cálculo da economia com as variáveis identificadas e o ponto de equilíbrio do projeto:
+assumindo custo médio de R$ 5.000 por ocorrência corretiva emergencial, o projeto implementado
+se paga ao evitar aproximadamente **6 ocorrências ao longo de 12 meses**, e cerca de **2,5 por
+ano** a partir do segundo ano.
 
-A premissa deverá ser revista apenas se a validação do modelo exigir:
-
-- equipe adicional;
-- horas extras;
-- inspeções extras que não fariam parte da rotina;
-- processo formal adicional de auditoria;
-- contratação de ferramenta ou serviço específico.
-
----
-
-# 8. Resultado parcial da análise da POC
-
-Com as premissas definidas até o momento, o cenário-base possui a seguinte estrutura:
-
-| Categoria | Item | Custo-base em 12 meses | Justificativa |
-|---|---|---:|---|
-| Desenvolvimento | Desenvolvimento pelos alunos | R$ 0 | realizado pelo grupo do Inteli |
-| Dados | Atualização e disponibilização de Alarmes, ZM01, ZM02 e ZM03 | R$ 0 incremental | atividade já existente na operação da Motiva |
-| Validação | Verificação operacional dos alertas | R$ 0 incremental | profissionais já acompanham os eventos das portas |
-| Containerização | Docker | R$ 0 | tecnologia utilizada sem custo incremental de licença |
-| Deploy | Red Hat Developer Sandbox — 30 dias | R$ 0 | ambiente gratuito utilizado no primeiro mês |
-| Deploy | OpenShift Local — 11 meses | R$ 0 incremental | executado em hardware já disponível |
-| Banco de dados | Azure SQL Database | R$ 0 | cenário-base dentro da camada gratuita |
-| Logs | Logs locais/OpenShift | R$ 0 | baixo volume e sem serviço externo dedicado |
-| Frontend | Deploy de interface | Fora do escopo | frontend não será publicado durante a POC |
-
-Até este estágio:
-
-```text
-Subtotal de custos incrementais mapeados = R$ 0
-```
-
-Esse resultado não significa que a solução não utilize recursos.
-
-Ele indica que, para a POC acadêmica definida, os componentes mapeados até agora utilizam:
-
-- trabalho dos próprios alunos;
-- profissionais que já fazem parte da operação da Motiva;
-- infraestrutura já disponível;
-- ferramentas open source;
-- camadas gratuitas de serviços.
-
-A análise continuará buscando custos que sejam efetivamente **adicionais ao cenário atual**, evitando imputar despesas que já existiriam independentemente do projeto.
-
----
+A projeção apresentada deve ser entendida como **estimativa financeira de 12 meses**,
+construída a partir do escopo técnico atual, das premissas documentadas e das fontes
+registradas na seção 7.9. Os valores deverão ser revisados caso o escopo, a infraestrutura, os
+preços dos serviços ou as necessidades operacionais sejam alterados.
