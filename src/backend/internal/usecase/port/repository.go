@@ -27,9 +27,20 @@ type MaintenanceRepository interface {
 	List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceEvent, error)
 }
 
+type AlarmFilter struct {
+	StationCode string
+	Platform    string
+	DoorNumber  int
+	AlarmType   string
+	Tag         string
+	Limit       int
+	Offset      int
+}
+
 type AlarmRepository interface {
 	BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error
 	DeleteByUploadID(ctx context.Context, uploadID string) error
+	List(ctx context.Context, filter AlarmFilter) ([]*domain.Alarm, error)
 }
 
 type UploadRepository interface {

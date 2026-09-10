@@ -32,6 +32,7 @@ function Portas({ onNavigate, params = {} }) {
   const [activePlatform, setActivePlatform] = useState('P1')
   const [openedDoor, setOpenedDoor] = useState(null)
   const [doorMaintenances, setDoorMaintenances] = useState([])
+  const [doorAlarms, setDoorAlarms] = useState([])
   const [doorSearch, setDoorSearch] = useState('')
   const [doorFilter, setDoorFilter] = useState('all')
   const [inspNotes, setInspNotes] = useState('')
@@ -223,6 +224,7 @@ function Portas({ onNavigate, params = {} }) {
     }
     setOpenedDoor(door)
     setDoorMaintenances([])
+    setDoorAlarms([])
     setInspNotes('')
     setInspWhen({ date: '', time: '' })
     setInspError('')
@@ -233,17 +235,31 @@ function Portas({ onNavigate, params = {} }) {
       const extra = asList(dossier?.maintenances || dossier?.maintenance)
       if (extra.length) {
         setDoorMaintenances(extra)
-        return
+      } else {
+        const items = asList(await api.maintenance(100, 0))
+        setDoorMaintenances(relatedMaintenances(items, door))
       }
     } catch (err) {
       setError(errorMessage(err))
+      try {
+        const items = asList(await api.maintenance(100, 0))
+        setDoorMaintenances(relatedMaintenances(items, door))
+      } catch {
+        setDoorMaintenances([])
+      }
     }
 
     try {
-      const items = asList(await api.maintenance(100, 0))
-      setDoorMaintenances(relatedMaintenances(items, door))
+      const alarms = asList(
+        await api.alarms({
+          station_code: door.station_code || openedCode,
+          door_number: door.door_number,
+          limit: 10,
+        }),
+      )
+      setDoorAlarms(alarms)
     } catch {
-      setDoorMaintenances([])
+      setDoorAlarms([])
     }
   }
 
@@ -351,6 +367,21 @@ function Portas({ onNavigate, params = {} }) {
               <strong>{timeline.will_fail ? 'Sim' : 'Não'}</strong>
             </div>
           </div>
+        </article>
+
+        <article className="portas__panel">
+          <h2>Alarmes de telemetria da porta</h2>
+          {doorAlarms.length ? (
+            doorAlarms.map((item) => (
+              <div key={item.id} className="portas__related">
+                <strong>{item.alarm_type}</strong>
+                <span>{item.event_timestamp}</span>
+                <em>Duração: {item.duration_seconds}s · TAG: {item.tag}</em>
+              </div>
+            ))
+          ) : (
+            <p className="portas__empty">Nenhum alarme de telemetria registrado para esta porta.</p>
+          )}
         </article>
 
         <article className="portas__panel">

@@ -125,6 +125,7 @@ type appHandlers struct {
 	auth      *httpAdapter.AuthHandler
 	upload    *httpAdapter.UploadHandler
 	maint     *httpAdapter.MaintenanceHandler
+	alarm     *httpAdapter.AlarmHandler
 	ins       *httpAdapter.InspectionHandler
 	dash      *httpAdapter.DashboardHandler
 	health    *httpAdapter.HealthHandler
@@ -152,6 +153,7 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.POST("/uploads/maintenance", h.upload.UploadMaintenance)
 		protected.GET("/uploads/:id", h.upload.GetUploadStatus)
 
+		protected.GET("/alarms", h.alarm.List)
 		protected.GET("/maintenance", h.maint.List)
 		protected.POST("/maintenance", h.maint.Create)
 
@@ -356,6 +358,7 @@ func main() {
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCaseWithQueue(alarmRepo, alarmRepo, ingestionStorage, alarmParser, ingestionQueue, uow, logger)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCaseWithQueue(maintRepo, alarmRepo, ingestionStorage, maintParser, ingestionQueue, uow, logger)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
+	listAlarmsUC := usecase.NewListAlarmsUseCase(alarmRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
 
@@ -363,6 +366,7 @@ func main() {
 		auth:      httpAdapter.NewAuthHandler(loginUC),
 		upload:    httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC),
 		maint:     httpAdapter.NewMaintenanceHandler(createMaintUC),
+		alarm:     httpAdapter.NewAlarmHandler(listAlarmsUC),
 		ins:       httpAdapter.NewInspectionHandler(insUC),
 		dash:      httpAdapter.NewDashboardHandler(dashUC),
 		health:    httpAdapter.NewHealthHandler(db),

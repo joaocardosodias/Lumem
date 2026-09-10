@@ -245,3 +245,31 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.alertas-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.alertas-tabs button {
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alertas-tabs button:hover {
+  opacity: 0.9;
+}
+
+.alertas-tabs button.is-active {
+  background: var(--brand);
+  color: var(--white);
+}

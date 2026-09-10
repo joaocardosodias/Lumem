@@ -184,6 +184,25 @@ func (r *intAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 	return nil
 }
 
+func (r *intAlarmRepo) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	r.store.mu.RLock()
+	defer r.store.mu.RUnlock()
+	if filter.Limit <= 0 {
+		filter.Limit = 50
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if filter.Offset > len(r.store.alarms) {
+		return []*domain.Alarm{}, nil
+	}
+	end := filter.Offset + filter.Limit
+	if end > len(r.store.alarms) {
+		end = len(r.store.alarms)
+	}
+	return r.store.alarms[filter.Offset:end], nil
+}
+
 type intMaintenanceRepo struct{ store *inMemoryStore }
 
 func (r *intMaintenanceRepo) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {

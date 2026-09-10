@@ -173,6 +173,10 @@ func (m *mockAlarmRepoForHTTP) DeleteByUploadID(ctx context.Context, uploadID st
 	return nil
 }
 
+func (m *mockAlarmRepoForHTTP) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	return nil, nil
+}
+
 type mockMaintRepoForHTTP struct {
 	insertErr error
 	createErr error

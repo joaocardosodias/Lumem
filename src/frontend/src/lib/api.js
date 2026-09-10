@@ -481,6 +481,10 @@ export const api = {
       body: { horizon_days: String(horizonDays) },
     }).then((result) => result.data)
   },
+  alarms(limit = 50, offset = 0, filters = {}) {
+    const query = typeof limit === 'object' ? limit : { limit, offset, ...filters }
+    return request(`/api/v1/alarms${queryString(query)}`).then((result) => result.data)
+  },
   maintenance(limit = 50, offset = 0) {
     return request(`/api/v1/maintenance${queryString({ limit, offset })}`).then((result) => result.data)
   },
