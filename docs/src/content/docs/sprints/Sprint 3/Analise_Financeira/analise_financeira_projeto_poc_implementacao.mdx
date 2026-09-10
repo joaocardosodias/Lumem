@@ -14,26 +14,35 @@ horizonte de 12 meses.
 | Indicador | POC — 12 meses | Projeto implementado — 12 meses |
 |---|---:|---:|
 | Custo incremental para a Motiva | R$ 0 | R$ 30.515,10 |
-| Custo de mercado equivalente | R$ 49.931,10 | R$ 30.515,10 |
+| Custo de mercado equivalente | R$ 37.331,10 | R$ 30.515,10 |
 | Custo recorrente a partir do ano 2 | não aplicável | R$ 12.515,10 |
 | Receita direta projetada | R$ 0 | R$ 0 |
+| Portas de plataforma monitoradas | 528 | 528 |
+| Ocorrências corretivas por ano | 1.680 | 1.680 |
 
-Três conclusões orientam a leitura do documento:
+Quatro conclusões orientam a leitura do documento:
 
 1. **A POC pode ser mantida por 12 meses sem desembolso incremental.** Isso não significa
    ausência de consumo de recursos: a preço de mercado, a Prova de Conceito mobiliza
-   aproximadamente R$ 49.931, integralmente absorvidos por trabalho acadêmico,
+   aproximadamente R$ 37.331, integralmente absorvidos por trabalho acadêmico,
    infraestrutura já disponível e camadas gratuitas de serviços.
 
 2. **A implementação em ambiente operacional custa R$ 30.515,10 no primeiro ano**, dos
    quais 59% correspondem a investimento inicial não recorrente. A partir do segundo ano, o
    custo de sustentação cai para R$ 12.515,10 anuais.
 
-3. **O projeto não gera receita direta.** Seu retorno é economia de custos, e essa economia
-   não foi convertida em um valor único porque dois dos quatro parâmetros necessários ainda
-   não estão disponíveis. Em vez de uma projeção arbitrária, a análise apresenta o modelo de
-   cálculo e o ponto de equilíbrio: com custo médio de R$ 5.000 por ocorrência corretiva
-   emergencial, o projeto se paga ao evitar cerca de **6 ocorrências em 12 meses**.
+3. **O projeto não gera receita direta**, e a economia não foi convertida em um valor único
+   porque dois parâmetros monetários ainda não estão disponíveis (seção 5.5). Em vez de
+   arbitrá-los, a análise resolve o modelo em função deles e calcula o limiar de viabilidade:
+   com 1.680 ocorrências corretivas por ano e recall de 60%, **o projeto se paga integralmente
+   no primeiro ano se evitar uma ocorrência valer mais de R$ 30,27**. Esse limiar é robusto —
+   mesmo que apenas uma em cada quatro previsões corretas evite de fato a falha, ele sobe
+   somente para R$ 121.
+
+4. **A precisão de 30% é a premissa crítica do projeto.** O modelo emitirá cerca de 2.352
+   alertas improdutivos por ano — aproximadamente 9 por dia útil — que geram verificações
+   inexistentes na rotina atual. O projeto deixa de gerar economia líquida se atender um
+   alerta falso custar mais de 43% do valor de evitar uma falha (seção 5.10).
 
 ---
 
@@ -92,7 +101,7 @@ Para os custos do projeto implementado foram considerados três cenários de mar
 | Pior caso | custo base acrescido de 10% |
 
 Um quarto cenário, referente ao regime de contratação da mão de obra, está tratado na
-seção 5.13.
+seção 4.13.2.
 
 ---
 
@@ -461,11 +470,15 @@ Para estimar o valor de mercado do desenvolvimento realizado pelo grupo, foi ado
 seguinte parametrização:
 
 ```text
-Integrantes do grupo  = 5 alunos
+Integrantes do grupo  = 7 alunos
 Duração do módulo     = 10 semanas
-Dedicação média       = 20 h por aluno por semana
-Total de horas        = 5 × 10 × 20 = 1.000 horas
+Dias úteis por semana = 5
+Dedicação média       = 2 h por aluno por dia útil
+Total de horas        = 7 × 10 × 5 × 2 = 700 horas
 ```
+
+Os parâmetros correspondem à composição real do grupo e à carga horária efetivamente praticada
+ao longo do módulo.
 
 Para valorar a hora foi utilizada a faixa de Desenvolvedor Full-Stack Júnior do Guia Salarial
 2026 da Robert Half (R$ 6.050 a R$ 8.750 por mês), adotando-se o ponto médio aproximado de
@@ -473,7 +486,7 @@ R$ 7.400:
 
 ```text
 R$ 7.400 ÷ 176 horas mensais ≈ R$ 42 por hora
-1.000 horas × R$ 42 = R$ 42.000
+700 horas × R$ 42 = R$ 29.400
 ```
 
 O nível júnior foi escolhido por representar mais fielmente o estágio dos integrantes do que
@@ -497,16 +510,16 @@ mesmos adotados no cenário implementado:
 
 | Categoria | Custo de mercado equivalente | Custo incremental |
 |---|---:|---:|
-| Investimento inicial — desenvolvimento (1.000 h) | R$ 42.000,00 | R$ 0 |
+| Investimento inicial — desenvolvimento (700 h) | R$ 29.400,00 | R$ 0 |
 | Custos fixos recorrentes — ambiente Red Hat/OpenShift | R$ 6.431,10 | R$ 0 |
 | Custos variáveis — Azure SQL Database | R$ 1.500,00 | R$ 0 |
 | Custos operacionais incrementais — dados, validação, logs | não precificado | R$ 0 |
 | Licenciamento — Docker e bibliotecas open source | R$ 0 | R$ 0 |
-| **Total da POC em 12 meses** | **R$ 49.931,10** | **R$ 0** |
+| **Total da POC em 12 meses** | **R$ 37.331,10** | **R$ 0** |
 
 A leitura correta da tabela é:
 
-> A Prova de Conceito mobiliza aproximadamente **R$ 49.931** em recursos a preço de mercado
+> A Prova de Conceito mobiliza aproximadamente **R$ 37.331** em recursos a preço de mercado
 > durante 12 meses, integralmente absorvidos por trabalho acadêmico, infraestrutura já
 > disponível e camadas gratuitas de serviços. O desembolso incremental projetado para a
 > Motiva é de **R$ 0**.
@@ -880,6 +893,27 @@ Total base em 12 meses            = R$ 30.515,10
 | Custos operacionais incrementais | R$ 3.360,00 | 11,0% |
 | **TOTAL BASE** | **R$ 30.515,10** | **100%** |
 
+### Reclassificação em CAPEX e OPEX
+
+Para a análise de retorno da seção 5, a mesma estrutura é reorganizada segundo a classificação
+de orçamento de investimento:
+
+| Classificação | Composição | Valor |
+|---|---|---:|
+| **CAPEX** — investimento inicial | Aprimoramento e implantação | R$ 18.000,00 |
+| **OPEX fixo anual** | Vercel Pro (R$ 1.224,00) + Red Hat/OpenShift (R$ 6.431,10) + sustentação (R$ 3.360,00) | R$ 11.015,10 |
+| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX total anual** | | R$ 12.515,10 |
+| **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
+
+A sustentação foi classificada como OPEX fixo por não variar com o número de portas
+monitoradas. O Azure SQL Database é o único item cujo consumo escala com o volume de dados e,
+portanto, com a quantidade de portas.
+
+```text
+Custo variável por porta ao ano = R$ 1.500,00 ÷ 528 portas = R$ 2,84
+```
+
 ---
 
 ## 4.12. Cronograma de desembolso
@@ -1017,6 +1051,14 @@ Os valores devem ser revisados caso ocorram mudanças como:
 
 # 5. Projeção de retorno econômico
 
+> **Status desta seção.** O modelo de retorno está construído e fechado: a estrutura de
+> cálculo, as premissas operacionais e os limiares de viabilidade estão resolvidos com os
+> dados disponíveis. **Três parâmetros monetários dependem de informações ainda não
+> fornecidas pela Motiva** e estão listados na seção 5.5, com a justificativa de cada
+> ausência e os campos a preencher na seção 5.5.5. Enquanto esses parâmetros não existirem,
+> a análise não apresenta valor projetado de economia — apresenta o modelo resolvido em
+> função deles e a condição mínima de viabilidade, que não depende dos dados pendentes.
+
 ## 5.1. Natureza do retorno financeiro
 
 A solução não tem como objetivo gerar **receita direta** para a Motiva. Trata-se de ferramenta
@@ -1028,19 +1070,144 @@ Receita direta projetada — POC                  = R$ 0
 Receita direta projetada — projeto implementado = R$ 0
 ```
 
-A ausência de receita não é lacuna da análise: é característica estrutural do projeto, e está
-refletida na forma como o retorno foi modelado.
+A ausência de receita não é lacuna da análise: é característica estrutural do projeto. Por
+esse motivo, a avaliação de viabilidade não utiliza indicadores de faturamento, e sim os
+indicadores de orçamento de investimento — margem de contribuição, ponto de equilíbrio, ROI e
+payback — aplicados sobre a **economia de custos** gerada pela solução.
 
 Os benefícios econômicos potenciais identificados são:
 
+- redução de custos de manutenção corretiva emergencial;
 - redução da exposição a multas e penalidades decorrentes de falhas operacionais;
-- redução de custos relacionados a falhas corretivas emergenciais;
-- redução de trocas de peças desnecessárias ou antecipação de intervenções;
-- melhor priorização das atividades de manutenção;
 - redução do tempo de indisponibilidade das portas;
-- redução de impactos operacionais causados por falhas não antecipadas.
+- melhor priorização das atividades de manutenção;
+- redução de trocas de peças em regime emergencial.
 
-## 5.2. Por que a economia não foi convertida em valor único
+## 5.2. Metodologia adotada
+
+A análise de retorno segue a estrutura de orçamento de investimento:
+
+| Elemento | Definição adotada |
+|---|---|
+| **CAPEX** | Investimento inicial não recorrente para colocar a solução em operação |
+| **OPEX fixo** | Custos anuais que independem do número de portas monitoradas |
+| **OPEX variável** | Custos anuais que variam com o número de portas monitoradas |
+| **Unidade de análise** | A porta de plataforma monitorada |
+| **"Receita" equivalente** | A economia de custos gerada por porta ao ano |
+
+A adoção da porta como unidade permite calcular margem de contribuição unitária e ponto de
+equilíbrio em unidades físicas, tornando comparável um projeto que não gera faturamento.
+
+Essa estrutura segue a metodologia de orçamento de investimento trabalhada em aula para este
+mesmo caso, aplicando os quatro indicadores de avaliação de viabilidade — margem de
+contribuição, ponto de equilíbrio, ROI e payback — sobre economia de custos em lugar de
+receita.
+
+## 5.3. Premissas operacionais
+
+| Premissa | Valor | Origem |
+|---|---:|---|
+| Portas de plataforma monitoradas | 528 portas | Informado pela Motiva |
+| Ocorrências corretivas por mês | 140 falhas/mês | Informado pela Motiva |
+| Ocorrências corretivas por ano | 1.680 falhas/ano | 140 × 12 |
+| Falhas corretivas por porta ao ano | 3,18 falhas/porta/ano | 1.680 ÷ 528 |
+| Recall esperado do modelo | 60% | Desempenho máximo estimado pelo grupo |
+| Precisão esperada do modelo | 30% | Desempenho máximo estimado pelo grupo |
+
+O recall e a precisão **não são métricas medidas em conjunto de teste final**: representam a
+expectativa de teto de desempenho do modelo, estabelecida pelo grupo a partir da qualidade das
+bases disponíveis.
+
+Essa expectativa decorre de limitações conhecidas dos dados de origem — inconsistências de
+preenchimento, granularidade dos registros de alarme e das ordens de manutenção, e ausência de
+rotulagem direta de causa raiz. São essas limitações que definem o teto de desempenho
+alcançável, e não a escolha do algoritmo.
+
+A análise financeira adota deliberadamente esse teto como premissa **conservadora do lado do
+benefício e agressiva do lado do custo operacional**: o recall de 60% limita a economia
+projetada, enquanto a precisão de 30% maximiza o volume de alertas improdutivos considerado na
+seção 5.10. Métricas melhores que as previstas deslocam o resultado favoravelmente nos dois
+sentidos.
+
+Ambos os valores devem ser substituídos pelas métricas efetivamente medidas ao final do
+treinamento, e constam entre os campos a preencher da seção 5.5.5.
+
+## 5.4. Estrutura de desempenho do modelo
+
+O recall e a precisão determinam simultaneamente o benefício e o custo operacional do sistema.
+A decomposição é a seguinte:
+
+```text
+Falhas corretivas por ano ......................... 1.680
+Falhas antecipadas pelo modelo (recall 60%) ....... 1.008
+Total de alertas emitidos (1.008 ÷ 0,30) .......... 3.360
+Alertas que não correspondem a falha real ......... 2.352
+```
+
+| Indicador | Valor |
+|---|---:|
+| Verdadeiros positivos por ano | 1.008 |
+| Falsos positivos por ano | 2.352 |
+| Falsos positivos por mês | 196 |
+| Falsos positivos por dia útil | aproximadamente 9 |
+| Razão entre falsos e verdadeiros positivos | 2,33 : 1 |
+| Falhas não antecipadas (falsos negativos) | 672 |
+
+Com precisão de 30%, o sistema emite **2,33 alertas improdutivos para cada falha corretamente
+antecipada**. Essa razão é estrutural: decorre diretamente da métrica de precisão e não pode
+ser reduzida sem melhorar o modelo.
+
+A consequência é registrada na seção 5.10 e constitui a principal premissa crítica desta
+análise.
+
+## 5.5. Parâmetros monetários não disponíveis
+
+O modelo de retorno depende de três parâmetros monetários que **não estão disponíveis no
+momento desta análise**. Esta seção registra quais são, por que não foram estimados e o que
+seria necessário para obtê-los.
+
+O registro é feito de forma explícita porque a decisão de não estimá-los é metodológica: cada
+um deles poderia ser preenchido com um valor plausível, e o resultado seria uma projeção
+aparentemente precisa e efetivamente arbitrária.
+
+### 5.5.1. Custo médio de manutenção corretiva por falha
+
+**Situação:** não fornecido pela Motiva.
+
+**Por que não foi estimado a partir do preço das peças.** A hipótese inicial era utilizar os
+custos históricos das peças utilizadas em manutenções corretivas para estimar quanto o modelo
+economizaria ao antecipar uma falha. Essa relação, porém, não é determinística.
+
+Quando o modelo indica que determinado componente tem maior probabilidade de falhar, podem
+ocorrer quatro situações distintas:
+
+1. a peça realmente falharia, e a intervenção antecipada evita a ocorrência corretiva;
+2. a peça continuaria operando normalmente durante todo o período analisado;
+3. o alerta é um falso positivo, e não havia degradação alguma;
+4. mesmo com previsão correta, a manutenção antecipada continua exigindo a substituição do
+   componente — a peça é trocada de qualquer forma, apenas em regime programado em vez de
+   emergencial.
+
+O quarto caso é o mais relevante e o mais frequentemente ignorado. **Não é possível prever, a
+partir de um alerta, se haverá ou não substituição de peça.** Se a peça é trocada nos dois
+regimes, o custo do componente não é economizado — o que muda é o regime da intervenção, e a
+economia se restringe ao diferencial entre uma corretiva emergencial e uma preventiva
+programada, não ao valor integral da peça.
+
+Além disso, o conjunto de peças envolvido nas PSD é amplo e heterogêneo, com preços que variam
+por componente. Uma média simples entre peças de valores muito distintos não representaria o
+custo de uma ocorrência típica.
+
+Utilizar diretamente o preço médio das peças, portanto, **superestimaria artificialmente o
+retorno do projeto**.
+
+**O que seria necessário:** o custo médio de uma ordem ZM01 fechada, incluindo peça, mão de
+obra e tempo de intervenção, comparado ao custo médio de uma ZM02 ou ZM03 equivalente. O
+diferencial entre os dois é a economia unitária real.
+
+### 5.5.2. Custo médio de indisponibilidade por falha
+
+**Situação:** não fornecido pela Motiva.
 
 Durante a construção desta análise foram consultados balanços patrimoniais, demonstrações
 financeiras e demais documentos disponíveis na plataforma de **Relacionamento com o Investidor
@@ -1048,145 +1215,329 @@ da Motiva**, buscando isolar:
 
 - o valor anual pago em multas relacionadas a falhas operacionais;
 - o valor médio de uma penalidade;
-- a parcela dessas penalidades atribuível a falhas de Portas de Plataforma;
-- o custo médio de uma ocorrência corretiva emergencial.
+- a parcela dessas penalidades atribuível especificamente a falhas de Portas de Plataforma.
 
 Nenhuma dessas grandezas aparece isolada. Os valores relacionados a multas surgem agregados a
 provisões, despesas indedutíveis, contingências e processos administrativos, sem abertura por
-causa operacional. Não seria metodologicamente seguro calcular uma média a partir desses
-agregados e utilizá-la como economia projetada.
+causa operacional. Não é possível determinar, a partir dos documentos públicos, qual parcela
+dessas penalidades decorre de falhas de PSD nem qual parcela seria evitável pela solução.
 
-A relação entre previsão e economia também não é determinística. Quando o modelo indica maior
-probabilidade de falha de um componente, podem ocorrer quatro situações distintas:
+Não seria metodologicamente seguro calcular uma média a partir desses agregados e utilizá-la
+como economia projetada.
 
-1. a peça realmente falharia e a intervenção antecipada evita a ocorrência corretiva;
-2. a peça continuaria operando normalmente durante o período analisado;
-3. a previsão é um falso positivo;
-4. mesmo com previsão correta, a manutenção continua exigindo a substituição da peça.
+**O que seria necessário:** o registro interno de penalidades aplicadas por indisponibilidade,
+com a causa raiz classificada, ou o custo operacional por minuto de indisponibilidade de uma
+porta.
 
-Portanto, não é possível afirmar que uma falha prevista equivale a uma peça economizada.
-Utilizar diretamente o preço médio das peças superestimaria artificialmente o retorno do
-projeto.
+### 5.5.3. Custo de atender um alerta falso
 
-Por esses dois motivos, a análise **não atribui um valor único à economia anual**. Em vez
-disso, apresenta o modelo de cálculo com as variáveis explicitamente identificadas e o ponto
-de equilíbrio do projeto.
+**Situação:** não disponível, e possivelmente próximo de zero em desembolso direto.
 
-## 5.3. Modelo de cálculo da economia
+Um alerta falso não gera multa nem penalidade: ele gera uma verificação preventiva de uma
+porta que estava operando normalmente. O custo dessa verificação é composto por tempo de
+equipe e eventual deslocamento, sem substituição de componente.
 
-A economia anual gerada pela solução é dada por:
+Como a equipe de manutenção já é contratada pela Motiva e a verificação não implica compra de
+peça, **o desembolso incremental direto de um alerta falso é considerado nulo no cenário-base**.
 
-```text
-Economia anual = F × R × A × C
-```
+Essa premissa, entretanto, só se sustenta enquanto o volume de verificações couber na
+capacidade instalada da equipe. Com 2.352 alertas falsos ao ano — cerca de 9 por dia útil —
+essa é a premissa mais frágil de toda a análise, e está tratada como premissa crítica na seção
+5.10.
 
-| Símbolo | Variável | Significado | Origem do dado |
+**O que seria necessário:** o tempo médio de uma verificação preventiva de PSD e a folga atual
+de capacidade da equipe de manutenção.
+
+### 5.5.4. Consolidação dos parâmetros
+
+| Parâmetro | Símbolo | Situação | Tratamento adotado |
 |---|---|---|---|
-| **F** | Falhas anuais | Ocorrências corretivas emergenciais em PSD por ano | Base histórica ZM01 |
-| **R** | Recall do modelo | Proporção das falhas efetivamente antecipadas | Métrica do modelo treinado |
-| **A** | Taxa de ação efetiva | Proporção dos alertas que geram intervenção capaz de evitar a ocorrência | Processo de manutenção da Motiva |
-| **C** | Custo médio evitado | Custo médio de uma ocorrência corretiva emergencial | A ser fornecido pela Motiva |
+| Portas monitoradas | P | Disponível — 528 | Valor fixo no modelo |
+| Falhas corretivas por ano | F | Disponível — 1.680 | Valor fixo no modelo |
+| Recall do modelo | R | Estimado — 60% | Premissa do grupo |
+| Precisão do modelo | Pr | Estimado — 30% | Premissa do grupo |
+| Taxa de troca efetiva | A | Não disponível | Variável de sensibilidade |
+| Economia por falha evitada | E | Não disponível | Variável do modelo |
+| Custo de um alerta falso | Cf | Não disponível | R$ 0 no cenário-base, com sensibilidade |
 
-O termo C agrega três componentes:
+Dois parâmetros permanecem abertos. Em vez de arbitrá-los, a análise apresenta o modelo
+resolvido **em função deles** e calcula o limiar a partir do qual o projeto é viável.
 
-```text
-C = custo da peça + custo de mão de obra da corretiva
-    + parcela de penalidade atribuível
-```
+### 5.5.5. Campos a preencher
 
-## 5.4. Estado atual dos parâmetros
+Os campos abaixo completam a projeção de retorno. Cada um está vinculado à fórmula que o
+utiliza, de modo que o preenchimento não exige refazer a análise: basta substituir o valor e
+recalcular os indicadores da seção 5.6.2.
 
-| Parâmetro | Situação | Observação |
-|---|---|---|
-| F | Obtenível | Extraível da base ZM01 já disponibilizada pela Motiva |
-| R | Obtenível | Métrica de recall do modelo treinado na POC |
-| A | Não disponível | Depende de validação operacional ao longo da POC |
-| C | Não disponível | Não isolável nos documentos públicos consultados |
+| # | Campo | Unidade | Valor | Origem do dado | Alimenta |
+|---|---|---|---|---|---|
+| 1 | Custo médio de uma ordem ZM01 fechada | R$/ocorrência | | Motiva — sistema de manutenção | Composição de E |
+| 2 | Custo médio de uma ZM02/ZM03 equivalente | R$/ocorrência | | Motiva — sistema de manutenção | Composição de E |
+| 3 | Custo médio de indisponibilidade por falha | R$/ocorrência | | Motiva — registro de penalidades | Composição de E |
+| 4 | Tempo médio de verificação preventiva de PSD | horas | | Motiva — equipe de manutenção | Cf |
+| 5 | Folga de capacidade da equipe de manutenção | verificações/dia | | Motiva — equipe de manutenção | Validação da premissa Cf = R$ 0 |
+| 6 | Taxa de troca efetiva medida | % | | Validação operacional da POC | A |
+| 7 | Recall medido em conjunto de teste | % | | Treinamento do modelo | Substitui a premissa de 60% |
+| 8 | Precisão medida em conjunto de teste | % | | Treinamento do modelo | Substitui a premissa de 30% |
 
-Dois dos quatro parâmetros dependem de informações que só existirão após a operação da POC.
-Por isso o modelo é apresentado como **estrutura de cálculo pronta**, a ser preenchida quando
-os dados existirem.
-
-## 5.5. Ponto de equilíbrio
-
-Ainda que a economia anual não possa ser cravada, é possível calcular a condição mínima para
-que o projeto se pague. O ponto de equilíbrio responde à pergunta inversa: **quantas
-ocorrências corretivas emergenciais precisam ser evitadas em 12 meses para cobrir o custo do
-projeto implementado?**
+Uma vez preenchidos os campos 1 a 3, o parâmetro E é obtido por:
 
 ```text
-Ocorrências necessárias = Custo total do projeto ÷ Custo médio da ocorrência
-Ocorrências necessárias = R$ 30.515,10 ÷ C
+E = (Custo médio ZM01 − Custo médio ZM02/ZM03) + Custo médio de indisponibilidade
 ```
 
-| Custo médio de uma ocorrência (C) | Ocorrências a evitar em 12 meses |
-|---:|---:|
-| R$ 2.000 | 15,3 |
-| R$ 3.000 | 10,2 |
-| R$ 5.000 | 6,1 |
-| R$ 8.000 | 3,8 |
-| R$ 10.000 | 3,1 |
-| R$ 15.000 | 2,0 |
+A subtração é o ponto central: conforme a seção 5.5.1, a economia não é o valor integral da
+ocorrência corretiva, e sim o **diferencial entre atendê-la em regime emergencial e em regime
+programado**. Aplicar o custo integral da ZM01 superestimaria o retorno.
 
-### 5.5.1. Interpretação
+Com o campo 4 preenchido, Cf é obtido multiplicando o tempo médio de verificação pelo custo-hora
+da equipe — e permanece igual a R$ 0 como custo incremental enquanto o campo 5 indicar folga
+suficiente para absorver as 9 verificações adicionais por dia útil.
 
-O ponto de equilíbrio tem vantagem metodológica sobre a projeção de economia: ele **inverte a
-incerteza**. Em vez de exigir a estimativa de quanto o projeto vai economizar, estabelece o
-patamar mínimo de desempenho e permite que a Motiva julgue, com seu próprio conhecimento
+## 5.6. Modelo de cálculo
+
+### 5.6.1. Estrutura de custos em CAPEX e OPEX
+
+| Elemento | Composição | Valor |
+|---|---|---:|
+| **CAPEX** | Aprimoramento e implantação (seção 4.3) | R$ 18.000,00 |
+| **OPEX fixo anual** | Vercel Pro + Red Hat/OpenShift + sustentação | R$ 11.015,10 |
+| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX total anual** | | R$ 12.515,10 |
+| **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
+
+```text
+Custo variável por porta ao ano = R$ 1.500,00 ÷ 528 = R$ 2,84
+```
+
+### 5.6.2. Fórmulas
+
+```text
+Falhas evitadas por ano   = F × R × A = 1.680 × 0,60 × A = 1.008 × A
+Economia gerada por ano   = Falhas evitadas × E − Falsos positivos × Cf
+Economia por porta ao ano = Economia gerada por ano ÷ 528
+
+Margem de contribuição unitária (MC) = Economia por porta − Custo variável por porta
+Índice de margem de contribuição     = MC ÷ Economia por porta
+
+Ponto de equilíbrio em unidades = OPEX fixo ÷ MC unitária
+Ponto de equilíbrio em valor    = OPEX fixo ÷ Índice de MC
+
+Resultado operacional anual = Economia gerada por ano − OPEX total anual
+ROI do ano 1                = (Resultado operacional − CAPEX) ÷ CAPEX
+Payback                     = CAPEX ÷ Resultado operacional anual
+ROI acumulado em 3 anos     = (3 × Resultado operacional − CAPEX) ÷ CAPEX
+```
+
+### 5.6.3. Simplificação do cenário-base
+
+No cenário-base, adota-se A = 100% e Cf = R$ 0, conforme justificado nas seções 5.5.1 e 5.5.3.
+Com isso:
+
+```text
+Falhas evitadas por ano   = 1.008
+Redução de falhas         = 60%
+Economia por porta ao ano = 1,9091 × E
+MC unitária               = 1,9091 × E − 2,84
+```
+
+O modelo fica reduzido a uma única incógnita: **E, a economia por falha evitada**.
+
+## 5.7. Simulação do modelo
+
+> **Esta seção não contém projeções.** O parâmetro E não é conhecido (seção 5.5.1). A tabela
+> abaixo é uma **simulação**: cada linha mostra o que o modelo produziria *se* E assumisse o
+> valor indicado. Nenhum dos valores de E foi estimado, arbitrado ou adotado pela análise, e
+> nenhum resultado desta tabela é transportado para a conclusão do documento. A finalidade da
+> simulação é demonstrar o comportamento do modelo e a ordem de grandeza dos indicadores.
+
+| Hipótese de E (R$/falha) | Economia anual | MC unitária | Ponto de equilíbrio | Resultado anual | ROI ano 1 | Payback |
+|---:|---:|---:|---:|---:|---:|---:|
+| R$ 100 | R$ 100.800 | R$ 188,07 | 59 portas | R$ 88.285 | 390% | 2,5 meses |
+| R$ 300 | R$ 302.400 | R$ 569,89 | 19 portas | R$ 289.885 | 1.510% | 0,8 mês |
+| R$ 500 | R$ 504.000 | R$ 951,70 | 12 portas | R$ 491.485 | 2.630% | 0,4 mês |
+| R$ 1.000 | R$ 1.008.000 | R$ 1.906,25 | 6 portas | R$ 995.485 | 5.430% | 0,2 mês |
+| R$ 2.000 | R$ 2.016.000 | R$ 3.815,34 | 3 portas | R$ 2.003.485 | 11.030% | 0,1 mês |
+
+Observações sobre a **estrutura** dos indicadores — válidas independentemente do valor que E
+venha a assumir:
+
+- O **índice de margem de contribuição supera 98%** em todas as faixas, porque o custo variável
+  do projeto — R$ 2,84 por porta ao ano — é desprezível diante de qualquer economia unitária
+  plausível. A solução é essencialmente um projeto de custo fixo.
+- O **ponto de equilíbrio em unidades é muito inferior às 528 portas** em todas as faixas. Ainda
+  com E = R$ 100, bastaria monitorar 59 portas para cobrir os custos fixos anuais. Isso indica
+  ampla folga de escala.
+- O **payback é medido em semanas, não em anos**, porque o CAPEX de R$ 18.000 é pequeno diante
+  do volume de 1.680 falhas anuais.
+
+## 5.8. Limiar de viabilidade
+
+Como E não é conhecido, o resultado mais útil da análise não é uma projeção de economia, mas o
+**limiar** a partir do qual o projeto se paga. Ele é obtido invertendo o modelo.
+
+```text
+E mínimo para cobrir o custo total do ano 1 = R$ 30.515,10 ÷ 1.008 = R$ 30,27
+E mínimo para cobrir o OPEX anual           = R$ 12.515,10 ÷ 1.008 = R$ 12,42
+```
+
+| Condição | Economia mínima por falha evitada |
+|---|---:|
+| Cobrir CAPEX e OPEX do ano 1 | **R$ 30,27** |
+| Cobrir apenas o OPEX anual (a partir do ano 2) | **R$ 12,42** |
+
+### 5.8.1. Interpretação
+
+O limiar inverte a incerteza. Em vez de exigir que se estime quanto o projeto vai economizar,
+ele estabelece o patamar mínimo e permite que a Motiva julgue, com seu próprio conhecimento
 operacional, se esse patamar é plausível.
 
-> Se o custo médio de uma corretiva emergencial em PSD for de R$ 5.000, o projeto implementado
-> se paga ao evitar aproximadamente **6 ocorrências ao longo de 12 meses** — cerca de uma a
-> cada dois meses.
+> Para que o projeto se pague integralmente no primeiro ano, basta que evitar uma ocorrência
+> corretiva emergencial em uma PSD represente economia superior a **R$ 30,27**.
 
-Esse número deve ser confrontado com o volume histórico de ZM01 registrado nas PSD. Se o
-histórico indicar dezenas ou centenas de corretivas emergenciais por ano, o ponto de equilíbrio
-corresponde a fração pequena do total, e a viabilidade econômica do projeto não depende de
-desempenho excepcional do modelo.
+Esse valor é de ordem de grandeza inferior ao custo de praticamente qualquer intervenção de
+manutenção — inclusive ao custo apenas do deslocamento de uma equipe. A conclusão que a análise
+sustenta, portanto, não é "o projeto economizará X reais", e sim:
 
-### 5.5.2. Ponto de equilíbrio nos demais cenários
+> A viabilidade econômica do projeto não depende de estimar a economia com precisão. Ela se
+> sustenta em qualquer cenário no qual evitar uma corretiva emergencial valha mais de trinta
+> reais.
 
-| Cenário | Custo total | Ocorrências a evitar (C = R$ 5.000) |
-|---|---:|---:|
-| Base — PJ | R$ 30.515,10 | 6,1 |
-| Pior caso — base +10% | R$ 33.566,61 | 6,7 |
-| Contratação CLT | R$ 44.915,10 | 9,0 |
+Essa formulação é robusta justamente por não depender dos parâmetros indisponíveis.
 
-Mesmo no cenário mais custoso mapeado, o ponto de equilíbrio permanece em nove ocorrências
-evitadas ao longo de 12 meses.
+## 5.9. Sensibilidade à taxa de troca efetiva
 
-A partir do segundo ano, com custo recorrente de R$ 12.515,10, o ponto de equilíbrio cai para
-aproximadamente **2,5 ocorrências evitadas por ano** no mesmo cenário de custo médio.
+A seção 5.5.1 registra que uma previsão correta não determina se haverá substituição de peça. O
+parâmetro A representa a proporção das falhas antecipadas em que a intervenção efetivamente
+evita a ocorrência corretiva, em vez de apenas antecipá-la.
 
-### 5.5.3. Ressalva
+| Taxa de troca efetiva (A) | Falhas evitadas/ano | Redução de falhas | E mínimo para viabilidade no ano 1 |
+|---:|---:|---:|---:|
+| 25% | 252 | 15,0% | R$ 121,09 |
+| 50% | 504 | 30,0% | R$ 60,55 |
+| 75% | 756 | 45,0% | R$ 40,36 |
+| 100% | 1.008 | 60,0% | R$ 30,27 |
 
-O ponto de equilíbrio não constitui promessa de retorno. Ele estabelece a condição necessária
-para o projeto se pagar, sem afirmar que essa condição será atendida. Sua confirmação depende
-do parâmetro C, ainda não fornecido pela Motiva, e do desempenho real do modelo em operação.
+Mesmo no cenário mais pessimista — em que apenas uma em cada quatro previsões corretas resulta
+em falha efetivamente evitada — o limiar de viabilidade permanece em R$ 121 por ocorrência.
 
-## 5.6. Tratamento adotado na projeção financeira
+A conclusão da seção 5.8 é, portanto, **robusta à incerteza sobre a troca de peças**. Essa é a
+razão pela qual a ausência do custo médio das peças, embora limite a precisão da projeção, não
+compromete a avaliação de viabilidade.
+
+## 5.10. Premissa crítica — custo dos falsos positivos
+
+Esta é a única variável capaz de inverter a conclusão da análise.
+
+### 5.10.1. O mecanismo
+
+Com precisão de 30%, o sistema gera 2.352 alertas improdutivos por ano. Cada um dispara uma
+verificação preventiva que **não existe na rotina atual da Motiva**. Diferentemente das 1.680
+corretivas, que já são atendidas hoje, essas verificações constituem atividade nova.
+
+A condição de economia líquida positiva é:
+
+```text
+1.008 × E > 2.352 × Cf
+```
+
+Que se reduz a:
+
+```text
+E > 2,33 × Cf
+```
+
+> O projeto gera economia líquida enquanto evitar uma falha valer mais do que **2,33 vezes** o
+> custo de atender um alerta falso.
+
+### 5.10.2. Sensibilidade
+
+Assumindo E = R$ 1.000 por falha evitada:
+
+| Custo de atender um alerta falso (Cf) | Economia líquida anual | Resultado anual | Situação |
+|---:|---:|---:|---|
+| R$ 0 | R$ 1.008.000 | R$ 995.485 | Cenário-base |
+| R$ 100 | R$ 772.800 | R$ 760.285 | Viável |
+| R$ 300 | R$ 302.400 | R$ 289.885 | Viável, margem reduzida |
+| R$ 429 | R$ 1.008 | −R$ 11.507 | Ponto de inversão |
+| R$ 500 | −R$ 168.000 | −R$ 180.515 | Inviável |
+
+### 5.10.3. Gatilho de revisão
+
+O cenário-base adota Cf = R$ 0 porque a verificação é realizada por equipe já contratada e não
+implica compra de componente. A premissa deve ser revista imediatamente caso ocorra qualquer
+uma das condições abaixo:
+
+- o volume de 9 verificações adicionais por dia útil exceder a capacidade da equipe de
+  manutenção;
+- for necessária contratação de pessoal ou pagamento de horas extras para absorver as
+  verificações;
+- as verificações passarem a exigir substituição preventiva de componentes;
+- a precisão medida do modelo ficar abaixo dos 30% previstos, elevando o número de alertas
+  improdutivos.
+
+### 5.10.4. Recomendação de mitigação
+
+O número de alertas improdutivos é função direta da precisão do modelo e do limiar de decisão
+adotado. Elevar o limiar de probabilidade a partir do qual um alerta é emitido reduz o recall e
+aumenta a precisão, diminuindo o volume de verificações.
+
+Dada a assimetria demonstrada na seção 5.9 — em que reduzir o recall pela metade ainda mantém o
+projeto amplamente viável — e o risco identificado nesta seção, a calibração do limiar de
+decisão deve **priorizar precisão sobre recall**. Um modelo que antecipe menos falhas, porém com
+menor volume de alertas improdutivos, produz resultado econômico superior neste caso.
+
+## 5.11. Premissas críticas consolidadas
+
+Em resposta à pergunta sobre quais premissas mais alteram o resultado:
+
+**Premissa crítica 1 — custo operacional dos falsos positivos.** É a única variável capaz de
+tornar o projeto inviável. Com precisão de 30%, o sistema gera 2,33 alertas improdutivos por
+falha antecipada, e o projeto deixa de gerar economia líquida se atender um alerta falso custar
+mais de 43% do valor de evitar uma falha.
+
+**Premissa crítica 2 — economia efetiva por falha evitada.** É o parâmetro de maior amplitude
+de incerteza, mas o limiar de viabilidade é tão baixo (R$ 30,27) que a incerteza não compromete
+a decisão de investir, apenas a precisão da projeção de retorno.
+
+## 5.12. Tratamento adotado na projeção financeira
 
 | Cenário | Receita direta | Economia | Tratamento |
 |---|---:|---|---|
-| POC | R$ 0 | modelada, não convertida em valor único | parâmetros F e R obteníveis; A e C pendentes |
-| Projeto implementado | R$ 0 | modelada, não convertida em valor único | idem |
+| POC | R$ 0 | não incorporada | modelo aplicável, parâmetros E e Cf pendentes |
+| Projeto implementado | R$ 0 | não incorporada | idem |
 
-A análise adota postura conservadora: a economia potencial **não foi incorporada ao resultado
-financeiro consolidado**. Os custos apresentados nas seções anteriores representam o custo
-bruto do projeto, sem abatimento de benefícios.
+A economia potencial **não foi incorporada ao resultado financeiro consolidado**. Os custos
+apresentados nas seções 3 e 4 representam o custo bruto do projeto, sem abatimento de
+benefícios.
 
-Isso não significa que o projeto não gere retorno econômico. Significa que não existe, no
-momento, base suficientemente precisa para atribuir um valor financeiro confiável à economia
-potencial, e que a análise preferiu não construir projeção artificial sobre premissas frágeis.
+Isso não significa que o projeto não gere retorno econômico. Significa que a análise optou por
+apresentar o modelo resolvido e o limiar de viabilidade, em lugar de uma projeção construída
+sobre parâmetros arbitrados.
 
-O retorno deverá ser recalculado com o modelo da seção 5.3 assim que a Motiva disponibilizar
-dados mais detalhados sobre:
+### 5.12.1. Encerramento da seção
 
-- multas e penalidades aplicadas e suas causas;
-- impacto financeiro de indisponibilidades;
-- falhas que efetivamente resultaram em troca de componentes;
-- intervenções evitadas após uma previsão;
-- custo total de uma ocorrência corretiva emergencial.
+Esta seção permanece **aberta para complemento**. O modelo está fechado; os parâmetros
+monetários não. Quando os campos da seção 5.5.5 forem preenchidos, os indicadores da seção 5.6.2
+produzem diretamente a projeção de economia, o resultado operacional, o ROI e o payback
+definitivos, sem necessidade de revisar a estrutura da análise.
+
+Até lá, o que a análise afirma é apenas o que os dados disponíveis sustentam:
+
+| A análise afirma | A análise não afirma |
+|---|---|
+| O custo do projeto em 12 meses | Quanto a Motiva vai economizar |
+| Quantas falhas o modelo tende a antecipar | Quanto vale evitar cada uma delas |
+| A economia mínima por falha que torna o projeto viável | Que essa economia será alcançada |
+| O volume de alertas improdutivos esperado | O custo de atendê-los |
+
+O modelo da seção 5.6 deve ser recalculado assim que a Motiva disponibilizar:
+
+- o custo médio de uma ordem ZM01 fechada, com peça e mão de obra;
+- o custo médio equivalente de uma ZM02 ou ZM03 programada, para apuração do diferencial;
+- o registro de penalidades por indisponibilidade com causa raiz classificada;
+- o tempo médio de uma verificação preventiva de PSD;
+- as métricas de recall e precisão efetivamente medidas ao final do treinamento.
 
 ---
 
@@ -1204,16 +1555,18 @@ dados mais detalhados sobre:
 | Cenário conservador +5% | R$ 0 | R$ 32.040,85 |
 | Pior caso +10% | R$ 0 | R$ 33.566,61 |
 | Cenário com contratação CLT | não aplicável | R$ 44.915,10 |
-| Custo de mercado equivalente | R$ 49.931,10 | R$ 30.515,10 |
+| Custo de mercado equivalente | R$ 37.331,10 | R$ 30.515,10 |
 | Receita direta projetada | R$ 0 | R$ 0 |
-| Economia anual | modelada — seção 5.3 | modelada — seção 5.3 |
-| Ponto de equilíbrio (C = R$ 5.000) | não aplicável | 6,1 ocorrências evitadas |
+| Economia anual | modelada — seção 5.6 | modelada — seção 5.6 |
+| Economia mínima por falha evitada para viabilidade | não aplicável | R$ 30,27 |
+| Ponto de equilíbrio em unidades (E = R$ 500) | não aplicável | 12 de 528 portas |
+| Payback (E = R$ 500) | não aplicável | 0,4 mês |
 | Custo recorrente do ano 2 | não aplicável | R$ 12.515,10 |
 
 ## 6.2. Leitura do comparativo
 
 A coluna de **custo de mercado equivalente** revela um ponto que a coluna de custo incremental
-oculta: a POC mobiliza mais recursos econômicos que o projeto implementado (R$ 49.931 contra
+oculta: a POC mobiliza mais recursos econômicos que o projeto implementado (R$ 37.331 contra
 R$ 30.515). A diferença está na natureza do esforço — a POC concentra horas de desenvolvimento
 exploratório, absorvidas pelo trabalho acadêmico, enquanto o projeto implementado parte de uma
 base pronta e concentra custos de infraestrutura e de profissionalização.
@@ -1230,13 +1583,19 @@ A diferença de desembolso entre os dois cenários decorre de quatro fatores:
 
 ```text
 POC ...................... R$ 0 incremental em 12 meses
-                           (R$ 49.931,10 a preço de mercado)
+                           (R$ 37.331,10 a preço de mercado)
 
 Projeto implementado ..... R$ 30.515,10 em 12 meses
                            R$ 12.515,10 a partir do ano 2
 
-Ponto de equilíbrio ...... 6,1 ocorrências corretivas evitadas
-                           (assumindo C = R$ 5.000)
+Base operacional ......... 528 portas monitoradas
+                           1.680 ocorrências corretivas por ano
+
+Limiar de viabilidade .... R$ 30,27 de economia por falha evitada
+                           (R$ 121 no cenário mais pessimista de troca efetiva)
+
+Premissa crítica ......... 2.352 alertas improdutivos por ano
+                           decorrentes da precisão de 30%
 ```
 
 ---
@@ -1346,8 +1705,13 @@ manutenção e reduzir custos e riscos operacionais. O retorno foi analisado sob
 
 Como os documentos disponíveis no Relacionamento com o Investidor da Motiva não permitem
 isolar uma média confiável de multas, e como os custos de peças não podem ser diretamente
-associados a cada previsão do modelo, a análise apresenta o modelo de cálculo e o ponto de
-equilíbrio em lugar de um valor projetado de economia.
+associados a cada previsão do modelo, a análise apresenta o modelo resolvido em função dos
+parâmetros indisponíveis e o limiar de viabilidade, em lugar de um valor projetado de economia.
+
+Os indicadores utilizados são os de orçamento de investimento — margem de contribuição, ponto
+de equilíbrio, ROI e payback — aplicados sobre economia de custos em vez de faturamento, com a
+porta de plataforma como unidade de análise. As fórmulas estão registradas na seção 5.6.2 e os
+parâmetros indisponíveis, com a justificativa de cada ausência, na seção 5.5.
 
 ---
 
@@ -1357,7 +1721,7 @@ A Prova de Conceito pode ser mantida durante 12 meses com **custo incremental pr
 R$ 0**, desde que permaneçam válidas as premissas de utilização de infraestrutura existente,
 serviços dentro de suas camadas gratuitas e atividades operacionais já executadas pela Motiva.
 A preço de mercado, os recursos mobilizados pela POC equivalem a aproximadamente
-**R$ 49.931,10**.
+**R$ 37.331,10**.
 
 Para transformar a POC em solução implementada e mantê-la por 12 meses, o custo-base estimado
 é de **R$ 30.515,10**, dos quais 59% correspondem a investimento inicial não recorrente. A
@@ -1382,13 +1746,30 @@ disponíveis no Relacionamento com o Investidor da Motiva não permitiu identifi
 confiável de multas relacionadas a falhas operacionais, e não foi considerado adequado calcular
 a economia a partir do preço das peças, pois uma previsão de falha não garante que a peça
 efetivamente quebraria e a manutenção antecipada pode continuar exigindo a substituição do
-componente.
+componente, apenas alterando o regime da intervenção de emergencial para programado.
 
-Em lugar de uma projeção construída sobre premissas frágeis, a análise apresenta o modelo de
-cálculo da economia com as variáveis identificadas e o ponto de equilíbrio do projeto:
-assumindo custo médio de R$ 5.000 por ocorrência corretiva emergencial, o projeto implementado
-se paga ao evitar aproximadamente **6 ocorrências ao longo de 12 meses**, e cerca de **2,5 por
-ano** a partir do segundo ano.
+Em lugar de uma projeção construída sobre parâmetros arbitrados, a análise resolve o modelo em
+função deles e calcula o limiar de viabilidade. Com 528 portas monitoradas, 1.680 ocorrências
+corretivas por ano e recall estimado de 60%, o projeto antecipa 1.008 falhas por ano. Disso
+decorre:
+
+```text
+Economia mínima por falha evitada para cobrir o ano 1 = R$ 30,27
+Economia mínima por falha evitada a partir do ano 2   = R$ 12,42
+```
+
+A conclusão que a análise sustenta não é que o projeto economizará determinado valor, e sim que
+**sua viabilidade econômica não depende de estimar a economia com precisão**: ela se sustenta em
+qualquer cenário no qual evitar uma ocorrência corretiva emergencial valha mais de trinta reais.
+Esse resultado é robusto à incerteza sobre a troca de peças — mesmo que apenas uma em cada
+quatro previsões corretas evite de fato a falha, o limiar sobe apenas para R$ 121 por ocorrência.
+
+A ressalva relevante não está no custo do projeto, e sim na precisão do modelo. Com precisão de
+30%, o sistema emitirá aproximadamente 2.352 alertas improdutivos por ano, cerca de 9 por dia
+útil, gerando verificações preventivas que não existem na rotina atual. O projeto deixa de gerar
+economia líquida caso atender um alerta falso custe mais de 43% do valor de evitar uma falha.
+Por essa razão, a calibração do limiar de decisão do modelo deve priorizar precisão sobre
+recall, conforme detalhado na seção 5.10.4.
 
 A projeção apresentada deve ser entendida como **estimativa financeira de 12 meses**,
 construída a partir do escopo técnico atual, das premissas documentadas e das fontes
