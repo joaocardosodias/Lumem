@@ -12,6 +12,97 @@ function DoorSymbol() {
   )
 }
 
+function PlanSymbol({ type }) {
+  const shapes = {
+    stairs: <><rect x="6" y="2" width="16" height="24" rx="2" /><path d="M9 6h10M9 10h10M9 14h10M9 18h10M9 22h10M8 3v22m12-22v22" /></>,
+    lift: <><rect x="3" y="3" width="22" height="22" rx="3" /><path d="M9 7v5m-2-2 2 2 2-2m8 2V7m-2 2 2-2 2 2M7 15h14v10m-7-10v10" /></>,
+    bench: <><rect x="2" y="7" width="24" height="13" rx="2" /><path d="M3 11h22M3 16h22M7 5v18M21 5v18" /></>,
+    planter: <><rect x="2" y="7" width="24" height="14" rx="2" /><path d="M10 14c0-5-5-5-5-1 0 4 5 1 5 1Zm0 0c0 5 5 5 5 1 0-4-5-1-5-1Zm8 0c0-5 5-5 5-1 0 4-5 1-5 1ZM10 14l8 1" /></>,
+    bin: <><rect x="7" y="5" width="14" height="20" rx="3" /><path d="M7 9h14M11 5V3h6v2M11 13v7m6-7v7" /></>,
+  }
+  return <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[type]}</svg>
+}
+
+function PlatformAccess() {
+  return (
+    <div className="station-plan__access" aria-hidden="true">
+      <span className="station-plan__stairs"><PlanSymbol type="stairs" /></span>
+      <span className="station-plan__lift"><PlanSymbol type="lift" /></span>
+    </div>
+  )
+}
+
+function Platform({ platform, doors, carCount, reverse, matchesDoor, selectedDoor, onSelectDoor }) {
+  const byNumber = new Map(doors.map((door) => [Number(door.door_number), door]))
+  const riskCount = doors.filter((door) => door.will_fail).length
+  const furniture = ['planter', 'bench', 'bin', 'bench', 'planter', 'bench']
+
+  return (
+    <section className={`station-plan__platform${reverse ? ' station-plan__platform--reverse' : ''}`} aria-label={`Plataforma ${platform}`}>
+      <header className="station-plan__platform-head">
+        <div className="station-plan__platform-name">
+          <b aria-hidden="true">{platform}</b>
+          <div><h3>Plataforma {platform}</h3><span>Portas de plataforma</span></div>
+        </div>
+        <span className="station-plan__platform-count">{doors.length} portas{riskCount > 0 && <span> · {riskCount} em risco</span>}</span>
+      </header>
+      <div className="station-plan__deck">
+        <PlatformAccess />
+        <div className="station-plan__drawing">
+          {Array.from({ length: carCount }, (_, carIndex) => (
+            <div className="station-plan__car" key={carIndex}>
+              <span className={`station-plan__furniture station-plan__furniture--${furniture[carIndex % furniture.length]}`} aria-hidden="true">
+                <PlanSymbol type={furniture[carIndex % furniture.length]} />
+              </span>
+              <div className="station-plan__doors">
+                {Array.from({ length: DOORS_PER_CAR }, (_, position) => {
+                  const number = carIndex * DOORS_PER_CAR + position + 1
+                  const label = String(number).padStart(2, '0')
+                  const door = byNumber.get(number)
+                  const matched = door && matchesDoor(door)
+                  const selected = Boolean(door && selectedDoor?.platform === platform && Number(selectedDoor?.door_number) === number)
+                  const status = !door ? 'sem registro' : door.will_fail ? 'em risco' : 'estável'
+                  return (
+                    <button
+                      key={number}
+                      type="button"
+                      className={`station-plan__door${door?.will_fail ? ' is-risk' : ''}${selected ? ' is-selected' : ''}${door && !matched ? ' is-dimmed' : ''}`}
+                      disabled={!matched}
+                      aria-label={`Porta ${label}, plataforma ${platform}, ${status}`}
+                      aria-pressed={selected}
+                      aria-haspopup={door ? 'dialog' : undefined}
+                      title={`Porta ${label} · ${platform} · ${status}${door?.sap_tag ? `\n${door.sap_tag}` : ''}`}
+                      onClick={() => onSelectDoor(door)}
+                    >
+                      <DoorSymbol />
+                      <span>{label}</span>
+                      {door?.will_fail && <i aria-hidden="true">!</i>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <PlatformAccess />
+      </div>
+      {!doors.length && <p className="station-plan__platform-empty">Nenhuma porta registrada nesta plataforma.</p>}
+    </section>
+  )
+}
+
+function TrackBed({ carCount }) {
+  return (
+    <div className="station-plan__tracks" aria-hidden="true">
+      <div className="station-plan__track" />
+      <div className="station-plan__car-labels">
+        {Array.from({ length: carCount }, (_, index) => <span key={index}>Carro {String(index + 1).padStart(2, '0')}</span>)}
+      </div>
+      <div className="station-plan__track" />
+    </div>
+  )
+}
+
 function StationPlan({
   station,
   platforms,
@@ -29,6 +120,8 @@ function StationPlan({
   const riskCount = doors.filter((door) => door.will_fail).length
   const matchingCount = doors.filter(matchesDoor).length
   const isFiltered = filter !== 'all' || Boolean(search.trim())
+  const carCount = Math.ceil(Math.max(24, ...doors.map((door) => Number(door.door_number))) / DOORS_PER_CAR)
+  const platformPairs = Array.from({ length: Math.ceil(platforms.length / 2) }, (_, index) => platforms.slice(index * 2, index * 2 + 2))
 
   return (
     <section className="station-plan" aria-labelledby="station-plan-title">
@@ -85,65 +178,41 @@ function StationPlan({
             </div>
           )}
           <div className="station-plan__platforms">
-            {platforms.map((platform) => {
-              const platformDoors = doors.filter((door) => door.platform === platform)
-              const byNumber = new Map(platformDoors.map((door) => [Number(door.door_number), door]))
-              const carCount = Math.ceil(Math.max(24, ...byNumber.keys()) / DOORS_PER_CAR)
-              const platformRisk = platformDoors.filter((door) => door.will_fail).length
-              return (
-                <section className="station-plan__platform" key={platform} aria-label={`Plataforma ${platform}`}>
-                  <header className="station-plan__platform-head">
-                    <span className="station-plan__platform-name"><b>{platform}</b>Plataforma {platform}</span>
-                    <span className="station-plan__platform-count">{platformDoors.length} portas{platformRisk > 0 && <span> · {platformRisk} em risco</span>}</span>
-                  </header>
-                  {!platformDoors.length ? (
-                    <p className="station-plan__platform-empty">Nenhuma porta registrada nesta plataforma.</p>
-                  ) : (
-                    <div className="station-plan__scroll" tabIndex={0} role="region" aria-label={`Portas da plataforma ${platform}; role horizontalmente para ver todas`}>
-                      <div className="station-plan__drawing" style={{ '--car-count': carCount }}>
-                        {Array.from({ length: carCount }, (_, carIndex) => (
-                          <div className="station-plan__car" key={carIndex}>
-                            <span className="station-plan__car-label">Carro {String(carIndex + 1).padStart(2, '0')}</span>
-                            <div className="station-plan__doors">
-                              {Array.from({ length: DOORS_PER_CAR }, (_, position) => {
-                                const number = carIndex * DOORS_PER_CAR + position + 1
-                                const label = String(number).padStart(2, '0')
-                                const door = byNumber.get(number)
-                                const matched = door && matchesDoor(door)
-                                const selected = Boolean(door && selectedDoor?.platform === platform && Number(selectedDoor?.door_number) === number)
-                                const status = !door ? 'sem registro' : door.will_fail ? 'em risco' : 'estável'
-                                return (
-                                  <button
-                                    key={number}
-                                    type="button"
-                                    className={`station-plan__door${door?.will_fail ? ' is-risk' : ''}${selected ? ' is-selected' : ''}${door && !matched ? ' is-dimmed' : ''}`}
-                                    disabled={!matched}
-                                    aria-label={`Porta ${label}, plataforma ${platform}, ${status}`}
-                                    aria-haspopup={door ? 'dialog' : undefined}
-                                    title={`Porta ${label} · ${platform} · ${status}${door?.sap_tag ? `\n${door.sap_tag}` : ''}`}
-                                    onClick={() => onSelectDoor(door)}
-                                  >
-                                    <DoorSymbol />
-                                    <span>{label}</span>
-                                    {door?.will_fail && <i aria-hidden="true">!</i>}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        ))}
+            <div className="station-plan__scroll" tabIndex={0} role="region" aria-label={`Planta de ${station.name}; role horizontalmente para ver todas as portas`}>
+              <div className="station-plan__map" style={{ '--car-count': carCount }}>
+                {platformPairs.map((pair) => (
+                  <div className="station-plan__pair" key={pair[0]}>
+                    {pair.map((platform, index) => (
+                      <div className="station-plan__platform-group" key={platform}>
+                        {index > 0 && <TrackBed carCount={carCount} />}
+                        <Platform
+                          platform={platform}
+                          doors={doors.filter((door) => door.platform === platform)}
+                          carCount={carCount}
+                          reverse={index > 0}
+                          matchesDoor={matchesDoor}
+                          selectedDoor={selectedDoor}
+                          onSelectDoor={onSelectDoor}
+                        />
                       </div>
-                    </div>
-                  )}
-                </section>
-              )
-            })}
+                    ))}
+                    {pair.length === 1 && <TrackBed carCount={carCount} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="station-plan__equipment-legend" aria-label="Elementos ilustrativos da planta">
+            <span><i className="station-plan__safety-key" />Linha de segurança</span>
+            {[
+              ['stairs', 'Escada'], ['lift', 'Elevador'], ['bench', 'Banco'], ['planter', 'Jardineira'], ['bin', 'Lixeira'],
+            ].map(([type, label]) => <span key={type}><PlanSymbol type={type} />{label}</span>)}
           </div>
         </>
       )}
 
       <footer className="station-plan__foot">
-        <span>Vista esquemática · sem escala</span>
+        <span>Vista esquemática, sem escala. Acessos e mobiliário ilustrativos.</span>
         <span className="station-plan__scroll-hint">Deslize para ver todas as portas <span aria-hidden="true">↔</span></span>
       </footer>
     </section>
