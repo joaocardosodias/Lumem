@@ -1,0 +1,127 @@
+---
+title: Fluxo de Ingestão
+description: Análise profunda do pipeline de telemetria, mensageria transacional River, armazenamento S3, idempotência e tratamento de falhas.
+---
+
+import { Image } from 'astro:assets';
+import sequenciaUploadApi from '../../../../../../assets/backend/sequencia-upload-api.png';
+import estadosUpload from '../../../../../../assets/backend/estados-upload.png';
+
+O fluxo de ingestão é o componente mais crítico do backend, responsável por processar planilhas extensas de telemetria da Linha 4-Amarela do Metrô de São Paulo. Os dados compreendem registros de alarmes operacionais de portas de plataforma (PSD) e ordens de manutenção (corretivas ZM01 e preventivas ZM02/ZM03).
+
+Esta página detalha o desenho do pipeline construído na Sprint 3, a separação em fases síncrona e assíncrona, a garantia de atomicidade transacional e as estratégias de tolerância a falhas.
+
+## 1. Por que a ingestão foi desenhada com S3 e River Queue
+
+Processar planilhas operacionais com milhares de linhas exige desacoplar a aceitação HTTP do processamento analítico. Na concepção do backend na Sprint 3, a arquitetura foi desenhada desde o início para resolver os desafios clássicos de processamento assíncrono:
+
+1. **Evitar volatilidade de memória:** processar arquivos em goroutines soltas na memória da API tornaria o sistema frágil a qualquer reinicialização de contêiner, causando perda silenciosa de tarefas;
+2. **Eliminar afinidade de contêiner:** armazenar arquivos em diretórios locais (como `/tmp`) impediria a execução de workers desacoplados em contêineres ou máquinas independentes;
+3. **Atomicidade garantida sem corretores externos:** o River foi escolhido por operar dentro do mesmo PostgreSQL dos dados de negócio, permitindo que o upload e o job sejam gravados sob a mesma transação ACID.
+
+## 2. O Pipeline Implementado: S3 + River Queue
+
+A solução implementada na Sprint 3 divide o pipeline em duas fases rigorosamente orquestradas:
+- **Etapa Síncrona (API):** recebe a requisição, valida extensões, gera hash SHA-256 em fluxo, transfere o arquivo para o S3 privado e registra atomicamente o upload e o job no PostgreSQL;
+- **Etapa Assíncrona (Worker):** o processo worker reserva o job da fila River, restaura o contexto de trace distribuído, faz streaming do arquivo do S3, processa lotes dentro de uma transação idempotente e agenda a remoção do objeto em uma fila durável após o término.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={sequenciaUploadApi}
+    alt="Diagrama de sequência do pipeline de ingestão dividida em etapa síncrona na API e etapa assíncrona no Worker com PostgreSQL e fila River."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Diagrama de sequência do pipeline de ingestão: fases síncrona (API/S3/River) e assíncrona (Worker/S3/PostgreSQL).
+  </figcaption>
+</figure>
+
+## 3. Detalhamento da Etapa Síncrona (API)
+
+A etapa síncrona é executada pelo contêiner `backend-linha4` com foco em responder rapidamente ao operador sem bloquear recursos da conexão HTTP:
+
+1. **Validação de cabeçalho e extensão:** o handler inspeciona o multipart e rejeita imediatamente arquivos que não terminem em `.csv` ou `.xlsx`;
+2. **Streaming e hashing simultâneo:** o leitor HTTP é consumido via `io.Copy(io.MultiWriter(tmpFile, hasher), reader)`. O hash SHA-256 é calculado na mesma passagem em que o arquivo temporário é escrito em disco;
+3. **Envio ao Supabase Storage:** o arquivo é enviado ao bucket privado através de `s3.PutObject`, utilizando uma chave segura composta por UUID v4 e prefixo (ex: `ingestion/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.csv`). Isso elimina colisões entre arquivos de nomes idênticos enviados por operadores diferentes;
+4. **Verificação de duplicidade:** o caso de uso consulta se o hash SHA-256 já existe em `file_uploads`. Se já tiver sido processado, a remoção do objeto recém-enviado ao S3 é enfileirada e a API retorna `409 Conflict` com o payload de Problem Details correspondente;
+5. **Transação atômica de enfileiramento:** se for inédito, uma transação `sql.Tx` insere o registro em `file_uploads` (com status `processing`) e chama `riverClient.InsertTx` para criar a linha na tabela `river_job`. As duas inserções são confirmadas no mesmo `COMMIT`;
+6. **Resposta ao cliente:** a API responde com código `202 Accepted`, informando o `upload_id` gerado.
+
+### Por que a transação precisa ser conjunta?
+
+Se a API gravasse `file_uploads` e fizesse o commit antes de inserir o job no River, qualquer interrupção de rede ou queda do contêiner nesse milissegundo resultaria em uma falha irrecuperável: o registro existiria no banco como `processing`, mas o River nunca saberia que precisa executá-lo. A transação única elimina essa janela de falha.
+
+## 4. Detalhamento da Etapa Assíncrona (Worker)
+
+A etapa assíncrona é executada pelo executável `cmd/worker`, consumindo jobs da fila `ingestion`:
+
+1. **Reserva e locking transacional:** o River executa um `SELECT ... FOR UPDATE SKIP LOCKED` nas tabelas internas do PostgreSQL, garantindo que múltiplos workers não peguem o mesmo job simultaneamente;
+2. **Propagação de observabilidade W3C:** o worker extrai o mapa de cabeçalhos de telemetria contido nos argumentos do job (`args.TraceContext`), criando o span `ingestion.process` vinculado ao trace original da requisição HTTP;
+3. **Leitura com memória limitada:** CSV é consumido com `csv.Reader.Read()`. Para XLSX, o download é copiado para um arquivo temporário e aberto com `excelize.OpenFile`, evitando o carregamento integral feito por `OpenReader`. O iterador `Rows` entrega uma linha por vez; XML acima de 4 MiB é descarregado em disco e o conteúdo descompactado tem limite de 256 MiB;
+4. **Parsing e validação:** o parser normaliza cabeçalhos e converte cada linha em entidades de domínio (`domain.NewAlarm` ou `domain.NewMaintenanceEvent`). Invariantes de datas, plataformas e códigos de falha são validadas individualmente;
+5. **Transação de gravação idempotente:**
+   - Para garantir idempotência em caso de repetição, a transação remove dados de execuções parciais anteriores (`DELETE FROM alarms WHERE upload_id = $1`);
+   - As entidades são inseridas em lotes de 500 registros utilizando comandos SQL preparados;
+   - O registro do upload é atualizado para `status = 'completed'`, preenchendo os campos `rows_processed` e `rows_inserted`;
+6. **Expurgo durável:** após o commit, o adaptador `CleanupStorage` persiste um job `delete_ingestion_file` na fila `ingestion_cleanup`. Um consumidor dedicado executa a exclusão. Falhas de storage reagendam esse job para cinco minutos depois, preservando o estado terminal do upload.
+
+## 5. Máquina de estados e ciclo de vida do upload
+
+O ciclo de vida de um arquivo de upload é modelado como uma máquina de estados finitos:
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={estadosUpload}
+    alt="Diagrama da máquina de estados finitos do ciclo de vida de um upload: estados processing, completed e failed com tratamento de retentativas."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Máquina de estados finitos do ciclo de vida de um arquivo de upload no backend.
+  </figcaption>
+</figure>
+
+### Matriz de estados e tratamentos de falha
+
+| Cenário de execução | Status do upload | Estado do job River | Objeto no S3 | Ação operacional |
+|---|---|---|---|---|
+| **Upload aceito pela API** | `processing` | `available` | Mantido | Aguarda consumo pelo worker |
+| **Instabilidade transitória (banco ou rede S3)** | `processing` | `retryable` | Mantido | Reagendado automaticamente (até 5x) |
+| **Arquivo vazio ou colunas inválidas** | `failed` | Concluído (`nil`) | Remoção enfileirada | Erro permanente: upload marcado como falho sem retentativas inúteis |
+| **Processamento bem-sucedido** | `completed` | `completed` | Remoção enfileirada | Linhas gravadas com sucesso no banco |
+| **Esgotamento das 5 tentativas** | `failed` | `discarded` | Remoção enfileirada | Falha definitiva: grava mensagem de erro e libera espaço no bucket |
+| **Upload duplicado (mesmo SHA-256)** | Não gerado (409) | Apenas job de limpeza | Remoção enfileirada | O arquivo duplicado aguarda exclusão assíncrona |
+
+## 6. Estratégia de Idempotência: "Pelo Menos Uma Vez"
+
+Em sistemas de mensageria distribuída, a garantia de entrega padrão é **at-least-once (pelo menos uma vez)**. Isso significa que, se um contêiner worker sofrer uma falha de energia imediatamente após confirmar a transação de banco mas antes de avisar o River que o job terminou, o River considerará o job pendente e o entregará a outro worker.
+
+Antes de abrir o arquivo, o caso de uso consulta o estado persistido. Uploads `completed` ou `failed` executam somente a etapa de limpeza. Assim, uma nova entrega após o commit não tenta ler um objeto já excluído nem altera dados concluídos. `FailJob` também preserva estados terminais.
+
+Para uploads ainda em processamento, a gravação mantém todos os lotes na mesma transação:
+
+```sql
+DELETE FROM alarms WHERE upload_id = $1;
+INSERT INTO alarms (id, upload_id, station, platform, line, door_id, code, description, timestamp, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10), ...;
+```
+
+Ao executar o `DELETE` do `upload_id` dentro da mesma transação em que os novos registros são inseridos, qualquer reprocessamento substitui integralmente a tentativa anterior sem deixar linhas órfãs ou duplicadas.
+
+## 7. Políticas de segurança do bucket Supabase S3
+
+Os arquivos de telemetria contêm histórico operacional de estações da Linha 4. Para assegurar a confidencialidade desses dados:
+- **Bucket estritamente privado:** o acesso público anônimo é bloqueado;
+- **Chaves de acesso segregadas:** credenciais de leitura e gravação no S3 são injetadas exclusivamente nas variáveis de ambiente dos contêineres (`S3_ACCESS_KEY_ID` e `S3_SECRET_ACCESS_KEY`);
+- **Restrição de MIME types no provedor:** o Supabase Storage rejeita uploads que não correspondam a `text/csv` ou à especificação OpenXML de planilhas Excel;
+- **Limite de tamanho de arquivo:** evita ataques de negação de serviço por esgotamento de disco nos contêineres temporários.
+
+
+## 8. Correções de resiliência e limites aceitos
+
+A revisão identificou uma janela entre o commit da ingestão e a confirmação do job no River. A consulta de estado terminal elimina a necessidade de reabrir o arquivo nessa situação. Se o banco não aceitar o agendamento da limpeza, o job de ingestão é adiado por um minuto; esse adiamento não consome as tentativas reservadas ao processamento.
+
+A limpeza foi separada porque uma indisponibilidade do S3 não deve invalidar dados já confirmados. O job fica persistido no PostgreSQL, usa deduplicação pela chave do objeto e pode ser retomado por outro processo. A exclusão local passou a aceitar arquivos já ausentes, permitindo repetir a operação após uma queda. A fila tem um consumidor próprio para não ocupar os consumidores de ingestão com falhas de exclusão.
+
+O processamento retém até 500 registros brutos por lote. As entidades são criadas e inseridas antes de ler o lote seguinte. Um erro de banco interrompe a leitura e permanece recuperável; um erro estrutural posterior a um lote provoca rollback de toda a transação. O custo dessa atomicidade é manter uma conexão e a transação abertas durante a leitura. XLSX também requer espaço temporário e memória para metadados; leitura por linhas não significa consumo zero de memória.
+
+A garantia de limpeza durável começa quando o PostgreSQL confirma seu job. Uma queda anterior ao registro do upload/job, durante a etapa entre S3 e banco, ainda requer reconciliação de objetos sem referência; não existe uma transação distribuída entre esses serviços.

@@ -1,10 +1,342 @@
-image: node:lts
-
 stages:
+  - lint
+  - test
+  - security
+  - build
+  - scan
+  - publish
   - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  GOPATH: "$CI_PROJECT_DIR/.go"
+
+cache:
+  key: go-mod-cache
+  paths:
+    - .go/pkg/mod
+
+lint_format:
+  stage: lint
+  image: golang:1.26-alpine3.23
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - cd src/backend
+  script:
+    - test -z "$(gofmt -l .)"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+lint_vet:
+  stage: lint
+  image: golang:1.26-alpine3.23
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - cd src/backend
+  script:
+    - go vet ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+test_suite:
+  stage: test
+  image: golang:1.26-alpine3.23
+  services:
+    - postgres:16-alpine
+  variables:
+    POSTGRES_DB: g04_test
+    POSTGRES_USER: test
+    POSTGRES_PASSWORD: test
+    POSTGRES_HOST_AUTH_METHOD: trust
+    TEST_DATABASE_URL: "postgresql://test:test@postgres:5432/g04_test?sslmode=disable"
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - apk add --no-cache build-base postgresql-client
+    - until pg_isready -h postgres -p 5432 -U test; do sleep 1; done
+    - cd src/backend
+  script:
+    - go test -race -coverpkg=./internal/... -coverprofile=coverage.out ./...
+    - go tool cover -func=coverage.out
+  coverage: '/total:\s+\(statements\)\s+(\d+.\d+\%)/'
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - src/backend/coverage.out
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+test_migrations:
+  stage: test
+  image: golang:1.26-alpine3.23
+  services:
+    - postgres:16-alpine
+  variables:
+    POSTGRES_DB: g04_test
+    POSTGRES_USER: test
+    POSTGRES_PASSWORD: test
+    POSTGRES_HOST_AUTH_METHOD: trust
+    DATABASE_URL: "postgresql://test:test@postgres:5432/g04_test?sslmode=disable"
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - apk add --no-cache postgresql-client
+    - until pg_isready -h postgres -p 5432 -U test; do sleep 1; done
+    - cd src/backend
+    - go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+  script:
+    - migrate -path migrations -database "$DATABASE_URL" up
+    - TEST_DATABASE_URL="$DATABASE_URL" go test -v -run TestPostgresRepositories ./tests/integration/...
+    - migrate -path migrations -database "$DATABASE_URL" down -all
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+test_modelo:
+  stage: test
+  image: python:3.11-slim
+  before_script:
+    - cd src/modelo
+    - pip install --no-cache-dir -r requirements.txt pytest
+  script:
+    - python -m pytest tests/ -v
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
+
+security_audit:
+  stage: security
+  image: golang:1.26-alpine3.23
+  before_script:
+    - export PATH="$GOPATH/bin:$PATH"
+    - cd src/backend
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+  script:
+    - govulncheck ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+build_container:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build --target api -t "backend-linha4-api:$CI_COMMIT_SHORT_SHA" src/backend
+    - docker build --target worker -t "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" src/backend
+    - docker save -o backend-api-image.tar "backend-linha4-api:$CI_COMMIT_SHORT_SHA"
+    - docker save -o backend-worker-image.tar "backend-linha4-worker:$CI_COMMIT_SHORT_SHA"
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - backend-api-image.tar
+      - backend-worker-image.tar
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+build_container_modelo:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build -t "ml-linha4:$CI_COMMIT_SHORT_SHA" src/modelo
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
+
+build_container_frontend:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker info
+    - docker build -t "frontend-linha4:$CI_COMMIT_SHORT_SHA" src/frontend
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/frontend/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/frontend/**/*
+
+
+trivy_scan:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  cache: []
+  dependencies:
+    - build_container
+  script:
+    - |
+      if [ -f backend-api-image.tar ] && [ -f backend-worker-image.tar ]; then
+        trivy image --input backend-api-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+        trivy image --input backend-worker-image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+      else
+        echo "Missing image artifacts; refusing to skip security scan" >&2
+        exit 1
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+trivy_scan_modelo:
+  stage: scan
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies: []
+  script:
+    - docker build -t "ml-linha4:$CI_COMMIT_SHORT_SHA" src/modelo
+    - docker create --name trivy_bin aquasec/trivy:latest
+    - docker cp trivy_bin:/usr/local/bin/trivy /usr/local/bin/trivy
+    - docker rm trivy_bin
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "ml-linha4:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/modelo/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/modelo/**/*
+
+trivy_scan_frontend:
+  stage: scan
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies: []
+  script:
+    - docker build -t "frontend-linha4:$CI_COMMIT_SHORT_SHA" src/frontend
+    - docker create --name trivy_bin aquasec/trivy:latest
+    - docker cp trivy_bin:/usr/local/bin/trivy /usr/local/bin/trivy
+    - docker rm trivy_bin
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "frontend-linha4:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/frontend/**/*
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - src/frontend/**/*
+
+
+publish_container:
+  stage: publish
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies:
+    - build_container
+  script:
+    - docker load -i backend-api-image.tar
+    - docker load -i backend-worker-image.tar
+    - |
+      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
+        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+        docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
+        docker push "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
+        docker push "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+          docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:latest"
+          docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:latest"
+          docker push "$ACR_REGISTRY/g04-backend-api:latest"
+          docker push "$ACR_REGISTRY/g04-backend-worker:latest"
+        fi
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
+
+publish_container_modelo:
+  stage: publish
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies: []
+  script:
+    - |
+      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
+        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+        docker build -t "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA" src/modelo
+        docker push "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA"
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+          docker tag "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-ml-service:latest"
+          docker push "$ACR_REGISTRY/g04-ml-service:latest"
+        fi
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
+      changes:
+        - src/modelo/**/*
+
+publish_container_frontend:
+  stage: publish
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  dependencies: []
+  script:
+    - |
+      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
+        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
+        docker build -t "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA" src/frontend
+        docker push "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA"
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+          docker tag "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-frontend:latest"
+          docker push "$ACR_REGISTRY/g04-frontend:latest"
+        fi
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
+      changes:
+        - src/frontend/**/*
+
 
 pages:
   stage: deploy
+  image: node:lts
+  cache: []
   script:
     - cd docs
     - npm ci

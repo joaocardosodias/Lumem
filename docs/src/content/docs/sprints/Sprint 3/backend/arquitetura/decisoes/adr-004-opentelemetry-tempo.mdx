@@ -1,0 +1,50 @@
+---
+title: ADR 004 — OpenTelemetry e Tempo
+description: Registro formal da decisão de instrumentar o backend com OpenTelemetry e Grafana Tempo para rastreamento de ponta a ponta através da fila River.
+---
+
+## 1. Contexto e Forças de Decisão
+
+A separação do processamento em uma etapa síncrona na API e uma etapa assíncrona no Worker introduziu um hiato temporal: uma planilha é aceita em um momento, mas o parsing e a persistência ocorrem minutos depois em outro processo.
+
+Com apenas logs tradicionais e métricas pontuais, a equipe enfrentava três dificuldades operacionais:
+1. **Perda da cadeia de causa e efeito:** saber que o worker falhou não indicava qual requisição HTTP originou aquele upload;
+2. **Invisibilidade da latência em fila:** não era possível medir quanto tempo uma mensagem aguardou na fila `river_job` antes de ser reservada pelo worker;
+3. **Falta de correlação unificada:** logs e métricas estavam no Grafana, mas faltava o elo causal para investigar gargalos de I/O em milissegundos.
+
+## 2. Decisão Arquitetural
+
+Adotar o padrão aberto **OpenTelemetry (OTel)** para instrumentação do código Go e o **Grafana Tempo** para persistência e consulta dos traces distribuídos, com agregação intermediária via **OpenTelemetry Collector**.
+
+### Mecanismos de propagação e semântica
+- **Padrão W3C TraceContext:** cabeçalhos `traceparent` são injetados em um mapa serializado nos argumentos do job River (`IngestionArgs.TraceContext`) e extraídos no worker via `otel.GetTextMapPropagator()`;
+- **Span consumidor:** o worker inicia o span `ingestion.process` com `SpanKind = Consumer`, preservando o `trace_id` original gerado pelo middleware `otelgin` da API;
+- **Convenções semânticas de mensageria:** os spans incluem atributos formais da especificação OpenTelemetry (`messaging.system = river`, `messaging.destination.name = ingestion`, `ingestion.upload_id`, `messaging.message.retry.count`);
+- **Exportação assíncrona OTLP:** API e Worker enviam spans via gRPC (porta 4317) para o contêiner `otel-collector`, que os agrupa em lotes e os repassa ao Tempo.
+
+## 3. Matriz de Alternativas Avaliadas
+
+| Alternativa avaliada | Prós | Contras | Veredito |
+|---|---|---|---|
+| **Apenas Logs com `request_id`** | Sem infraestrutura adicional | Requer correlação manual por texto; não mede durações de sub-etapas; sem visão hierárquica em árvore | **Rejeitada:** insuficiente para diagnosticar gargalos distribuídos |
+| **SDK Proprietário de APM (Datadog / New Relic)** | Instalação simples com agentes automáticos; interface rica | Dependência de fornecedor (vendor lock-in); custo financeiro elevado de licença | **Rejeitada:** incompatível com o modelo de código aberto do projeto |
+| **OpenTelemetry + Jaeger** | Padrão aberto; amplamente utilizado | Exigiria manter a interface web do Jaeger como portal operacional separado do Grafana | **Rejeitada:** fragmentaria a experiência de monitoramento da equipe |
+| **OpenTelemetry + Grafana Tempo** | **Padrão aberto OTel; integração nativa com o Grafana já existente; links derivados diretos do Loki** | Exige operar os contêineres do OTel Collector e Tempo na rede interna | **Aprovada:** máxima rastreabilidade unificada em um único painel |
+
+## 4. Consequências da Decisão
+
+### Consequências Positivas
+- **Investigação em um clique:** o operador visualiza um erro no Loki e clica no botão `TraceID` para ver instantaneamente a cascata de execução completa no Tempo;
+- **Isolamento de dependências:** o código do backend importa apenas a API do OpenTelemetry (`go.opentelemetry.io/otel`), desconhecendo por completo a existência do Tempo;
+- **Métricas de latência reais:** identificação exata de quanto tempo cada etapa consumiu (download S3, parsing de linhas, commits de banco).
+
+### Trade-offs e Custos Aceitos
+- **Consumo de recursos:** os contêineres `otel-collector` e `tempo` consomem CPU e memória na VPS, exigindo retenção de blocos limitada a 72 horas em desenvolvimento/homologação;
+- **Resiliência contra falhas de telemetria:** a exportação OTLP deve ser estritamente não-bloqueante; se o Collector cair, a API e o Worker continuam funcionando sem impactar as regras de negócio.
+
+
+## 5. Evidências de Conformidade no Código
+
+- [`internal/adapter/telemetry/telemetry.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/telemetry/telemetry.go): inicialização do `TracerProvider` e exportador gRPC OTLP;
+- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L101-L112): método `newIngestionArgs` injetando o contexto W3C no mapa do job;
+- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L130-L144): método `Work` extraindo o contexto W3C e iniciando o span consumidor.

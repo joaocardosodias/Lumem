@@ -1,0 +1,231 @@
+.manutencoes__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.manutencoes__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.manutencoes__chart {
+  padding: 22px 22px 14px;
+  border-radius: 24px;
+  background: var(--brand-soft);
+  box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+}
+
+.manutencoes__chart h2 {
+  margin: 0 0 16px;
+  color: var(--brand);
+  font-size: 18px;
+}
+
+.manutencoes__bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  align-content: start;
+}
+
+.manutencoes__bars .manutencoes__bar {
+  grid-template-columns: minmax(48px, 0.7fr) 1fr 40px;
+  gap: 8px;
+}
+
+.manutencoes__bar {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.85fr) 1fr 28px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  color: var(--brand);
+}
+
+.manutencoes__bar strong {
+  font-size: 13px;
+}
+
+.manutencoes__bar i {
+  display: block;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--brand);
+}
+
+.manutencoes__bar em {
+  font-style: normal;
+  font-weight: 700;
+  text-align: right;
+}
+
+.manutencoes__list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 22px 10px;
+  border-radius: 24px;
+  background: var(--brand-soft);
+  box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+}
+
+.manutencoes__list .page-empty {
+  margin: 12px 0 8px;
+}
+
+.card-manutencao {
+  display: grid;
+  grid-template-columns: 0.45fr 0.75fr 0.45fr 1.2fr 0.95fr 0.95fr 0.5fr 1fr 1fr 0.55fr;
+  gap: 12px;
+  align-items: start;
+  padding: 18px 6px;
+  border-bottom: 1px solid rgba(64, 0, 255, 0.14);
+  color: var(--brand);
+}
+
+.card-manutencao:last-of-type {
+  border-bottom: 0;
+}
+
+.card-manutencao span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b4fe0;
+}
+
+.card-manutencao strong {
+  font-size: 15px;
+  word-break: break-all;
+}
+
+.manutencoes-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 16, 40, 0.4);
+  animation: manutencoes-backdrop-in 0.22s ease;
+}
+
+.manutencoes-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(480px, 100%);
+  max-height: min(92vh, 820px);
+  overflow: auto;
+  padding: 36px 40px 28px;
+  border-radius: 16px;
+  background: var(--brand);
+  color: var(--white);
+  box-shadow: 0 24px 60px rgba(20, 0, 80, 0.35);
+  animation: manutencoes-modal-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes manutencoes-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes manutencoes-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.manutencoes-modal h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.manutencoes-modal .ui-input {
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.manutencoes-modal .ui-input span {
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.manutencoes-modal .ui-input input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 0 8px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: var(--white);
+}
+
+.manutencoes-modal .ui-input input:focus {
+  border-color: var(--white);
+}
+
+.manutencoes-modal .ui-input input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.manutencoes-modal .ui-input input[type='date'],
+.manutencoes-modal .ui-input input[type='time'],
+.manutencoes-modal .ui-input input[type='number'] {
+  color-scheme: dark;
+}
+
+.manutencoes-modal .ui-input input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.manutencoes-modal .ui-button {
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  margin-top: 4px;
+  border-radius: 8px;
+}
+
+@media (max-width: 1100px) {
+  .manutencoes__charts {
+    grid-template-columns: 1fr;
+  }
+
+  .card-manutencao {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .manutencoes__bars {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .manutencoes__charts {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,12 @@
+n_CA
+n_CSD
+n_FC
+n_FO
+n_LSD
+n_OA
+n_OBS
+n_RCE
+n_total
+n_long30
+dur_max
+n_tecnicos
