@@ -132,6 +132,33 @@
   align-self: flex-end;
   margin-top: 8px;
   border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.login .ui-button:hover {
+  background: color-mix(in srgb, var(--brand) 78%, #000);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 32%, transparent);
+}
+
+.login .ui-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login .ui-button {
+    transition: background-color 0.2s ease;
+  }
+
+  .login .ui-button:hover,
+  .login .ui-button:active {
+    transform: none;
+  }
 }
 
 .login__error {
