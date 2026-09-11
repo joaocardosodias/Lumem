@@ -300,7 +300,10 @@ function Alarmes({ onNavigate, params }) {
                 <span className="alarmes__metric-top">
                   <span>Tipo mais recorrente</span>
                 </span>
-                <strong className="alarmes__metric-value alarmes__metric-value--code" title={topAlarmType?.[0]}>
+                <strong
+                  className={`alarmes__metric-value alarmes__metric-value--code${String(topAlarmType?.[0] || '').length <= 5 ? ' is-short' : ''}`}
+                  title={topAlarmType?.[0]}
+                >
                   {topAlarmType?.[0] || '—'}
                 </strong>
                 <span className="alarmes__metric-description">

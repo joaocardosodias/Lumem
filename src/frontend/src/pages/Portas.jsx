@@ -409,7 +409,9 @@ function Portas({ onNavigate, params = {} }) {
         <div className="page-head">
           <div className="portas__title">
             <button type="button" className="portas__back" onClick={handleBackFromStation} aria-label="Voltar para a Linha 4">
-              ‹
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m14.5 5.5-6.5 6.5 6.5 6.5" />
+              </svg>
             </button>
             <div>
               <p className="portas__eyebrow">Linha 4 Amarela · Estação {openedStation.code}</p>
@@ -431,12 +433,14 @@ function Portas({ onNavigate, params = {} }) {
 
         <div className="station-summary" aria-label="Resumo da estação">
           <article>
-            <div><p>Portas monitoradas</p><span>Distribuídas em {platforms.length} plataformas</span></div>
+            <p>Portas monitoradas</p>
             <strong>{loadingDoors || (error && !doors.length) ? '—' : <CountValue value={doors.length} />}</strong>
+            <span>Distribuídas em {platforms.length} plataformas</span>
           </article>
           <article>
-            <div><p>Em risco de falha</p><span>Classificação da última análise</span></div>
+            <p>Em risco de falha</p>
             <strong>{loadingDoors || (error && !doors.length) ? '—' : <CountValue value={doorsAtRisk} />}</strong>
+            <span>Classificação da última análise</span>
           </article>
         </div>
 
@@ -456,43 +460,76 @@ function Portas({ onNavigate, params = {} }) {
         />
 
         {/* TABELA REGISTROS DAS PORTAS (REFERÊNCIA OPERACIONAL) */}
-        <article className="portas__panel">
-          <div className="portas__doors-header">
+        <article className="portas__panel portas__records-panel" aria-labelledby="door-records-title">
+          <header className="portas__doors-header portas__records-head">
             <div>
-              <h2>Registros de portas</h2>
+              <h2 id="door-records-title">Registros de portas</h2>
               <p className="portas__panel-sub">Identificação, diagnóstico e última avaliação por plataforma.</p>
             </div>
-            <div className="portas-tabs" role="tablist" aria-label="Plataformas da estação">
-              {platforms.map((platform) => (
-                <button
-                  key={platform}
-                  type="button"
-                  role="tab"
-                  aria-selected={activePlatform === platform}
-                  className={activePlatform === platform ? 'is-active' : ''}
-                  onClick={() => setActivePlatform(platform)}
-                >
-                  {platform}
-                </button>
-              ))}
+            <div className="portas__records-controls">
+              <span className="portas__record-count">
+                {filteredDoors.length} {filteredDoors.length === 1 ? 'porta' : 'portas'}
+              </span>
+              <div className="portas-tabs" role="tablist" aria-label="Plataformas da estação">
+                {platforms.map((platform) => (
+                  <button
+                    key={platform}
+                    type="button"
+                    role="tab"
+                    aria-selected={activePlatform === platform}
+                    className={activePlatform === platform ? 'is-active' : ''}
+                    onClick={() => setActivePlatform(platform)}
+                  >
+                    {platform}
+                  </button>
+                ))}
+              </div>
             </div>
+          </header>
+          <div className="portas__table-head" aria-hidden="true">
+            <span>Porta</span>
+            <span>Identificação</span>
+            <span>Diagnóstico</span>
+            <span>Última avaliação</span>
+            <span>Ação</span>
           </div>
-          <div className="portas__table">
-            <div className="portas__row portas__row--head">
-              <span>Porta</span>
-              <span>TAG</span>
-              <span>Status</span>
-              <span>Avaliado em</span>
-            </div>
+          <div className="portas__records">
             {filteredDoors.length ? (
               filteredDoors.map((item) => (
-                <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
-                  <strong>{padDoor(item.door_number)}</strong>
-                  <strong>{item.sap_tag || '—'}</strong>
-                  <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
-                    {item.will_fail ? 'Em risco' : 'Estável'}
-                  </span>
-                  <strong>{item.last_evaluated_at || '—'}</strong>
+                <button
+                  key={item.door_id}
+                  type="button"
+                  className="portas__record"
+                  onClick={() => handleOpenDoor(item)}
+                >
+                  <div>
+                    <span className="portas__record-label">Porta</span>
+                    <strong>Porta {padDoor(item.door_number)}</strong>
+                  </div>
+                  <div>
+                    <span className="portas__record-label">Identificação</span>
+                    <strong title={item.sap_tag}>{item.sap_tag || '—'}</strong>
+                    <em>Plataforma {item.platform}</em>
+                  </div>
+                  <div>
+                    <span className="portas__record-label">Diagnóstico</span>
+                    <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
+                      {item.will_fail ? 'Em risco' : 'Estável'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="portas__record-label">Última avaliação</span>
+                    <strong>{item.last_evaluated_at || '—'}</strong>
+                  </div>
+                  <div className="portas__record-action">
+                    <span className="portas__record-label">Ação</span>
+                    <em>
+                      Ver detalhes
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                        <path d="M3 8h10m-4-4 4 4-4 4" />
+                      </svg>
+                    </em>
+                  </div>
                 </button>
               ))
             ) : (

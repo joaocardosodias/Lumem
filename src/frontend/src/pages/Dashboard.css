@@ -110,55 +110,54 @@
 
 .overview-metrics {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #ffffff;
   margin-bottom: 28px;
 }
 
 .overview-metric {
-  position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-width: 0;
-  overflow: hidden;
-  padding: 23px 22px 0;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  min-height: 132px;
+  padding: 20px 22px;
+  border: 0;
+  border-left: 1px solid #e8edf4;
+  border-radius: 0;
   background: white;
-  box-shadow: 0 3px 5px #233b6703, 0 12px 30px #233b6703;
+  box-shadow: none;
   color: var(--ink);
 }
 
-.overview-metric > :not(.overview-metric__watermark) {
-  position: relative;
+.overview-metric:first-child {
+  border-left: 0;
 }
 
 .overview-metric__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 28px;
-  color: #536782;
+  display: block;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
-  white-space: nowrap;
-}
-
-.overview-metric__top svg {
-  width: 18px;
-  height: 18px;
-  color: #7a91b6;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
 }
 
 .overview-metric__value {
   display: block;
-  margin: 22px 0 10px;
-  font-size: clamp(32px, 3.2vw, 44px);
-  line-height: 1;
+  overflow: hidden;
+  margin: 14px 0 7px;
+  font-size: clamp(30px, 3vw, 40px);
+  line-height: 1.15;
   font-weight: 800;
-  letter-spacing: -1.8px;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .overview-metric__value > span {
@@ -167,93 +166,40 @@
 
 .overview-metric__description {
   display: block;
-  min-height: 22px;
-  margin-bottom: 20px;
+  min-height: 0;
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.5;
+  font-weight: 500;
+  line-height: 1.45;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .overview-metric__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 48px;
-  margin-top: auto;
-  margin-inline: -22px;
-  padding: 12px 22px;
-  border-top: 1px solid var(--line);
-  color: #536782;
+  display: block;
+  min-height: 0;
+  margin-top: 5px;
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.overview button.overview-metric:not(.overview-metric--primary) .overview-metric__foot {
-  background: var(--interactive);
-  border-color: var(--interactive-border);
-  color: var(--brand);
-  font-weight: 700;
-}
-
-.overview-metric__foot svg {
-  width: 15px;
-  height: 15px;
-  color: currentColor;
-  transition: transform 200ms ease;
-}
-
 .overview-metric--primary {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: white;
-  box-shadow: 0 8px 20px #3f00ff18, inset 0 1px 0 #ffffff24;
-}
-
-.overview-metric--primary .overview-metric__top {
-  color: white;
-}
-
-.overview-metric--primary .overview-metric__top svg {
-  color: #e3ebff;
-}
-
-.overview-metric--primary .overview-metric__description, .overview-metric--primary .overview-metric__foot {
-  color: #e3ebff;
-}
-
-.overview-metric--primary .overview-metric__foot {
-  border-color: #ffffff30;
-  background: #ffffff12;
-}
-
-.overview-metric__watermark {
-  position: absolute;
-  pointer-events: none;
-  right: -23px;
-  top: 43px;
-  width: 146px;
-  opacity: 0.075;
+  background: #ffffff;
 }
 
 .overview-metric--station {
-  background: #fafbfe;
-  border-color: var(--line);
+  background: #ffffff;
 }
 
 .overview-metric--station .overview-metric__value {
   color: var(--ink);
-}
-
-.overview-metric--station .overview-metric__foot {
-  border-color: var(--line);
-  background: #f6f8fb;
-  color: var(--muted);
 }
 
 .overview-panels {
@@ -602,10 +548,6 @@
   margin: 22px 0 10px;
 }
 
-.overview-metric--primary .overview-skeleton {
-  background: #ffffff30;
-}
-
 .overview-footer {
   display: flex;
   align-items: center;
@@ -669,22 +611,12 @@
 
 @media (hover: hover) and (pointer: fine) {
   .overview button.overview-metric {
-    transition: transform 220ms var(--ease-out), border-color 220ms ease, box-shadow 220ms ease;
+    transition: background-color 180ms ease, box-shadow 180ms ease;
   }
 
   .overview button.overview-metric:hover {
-    transform: translateY(-3px);
-    border-color: #a6b4f5;
-    box-shadow: 0 9px 22px #234f9410;
-  }
-
-  .overview button.overview-metric--primary:hover {
-    border-color: var(--brand-hover);
-    box-shadow: 0 10px 24px #3f00ff28;
-  }
-
-  .overview-metric:hover .overview-metric__foot svg {
-    transform: translateX(3px);
+    background: #f7f9fc;
+    box-shadow: inset 0 3px 0 var(--brand);
   }
 
   .overview button.overview-station, .overview button.overview-prediction {
@@ -706,6 +638,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .overview-metric:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .overview-metric:nth-child(n + 3) {
+    border-top: 1px solid #e8edf4;
+  }
+
   .overview-panels {
     grid-template-columns: 1fr;
   }
@@ -714,6 +654,14 @@
 @media (max-width: 900px) {
   .overview-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-metric:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .overview-metric:nth-child(n + 3) {
+    border-top: 1px solid #e8edf4;
   }
 
   .overview-panels {
@@ -734,28 +682,20 @@
   }
 
   .overview-metrics {
-    gap: 10px;
     margin-bottom: 20px;
   }
 
   .overview-metric {
-    padding: 16px 14px 0;
-    border-radius: 12px;
+    min-height: 122px;
+    padding: 18px;
   }
 
   .overview-metric__top {
-    align-items: flex-start;
     font-size: 11px;
-    min-height: 22px;
-  }
-
-  .overview-metric__top svg {
-    display: none;
   }
 
   .overview-metric__value {
     font-size: 32px;
-    margin-top: 14px;
   }
 
   .overview-metric__description {
@@ -763,14 +703,7 @@
   }
 
   .overview-metric__foot {
-    margin-inline: -14px;
-    padding-inline: 14px;
     font-size: 10px;
-    min-height: 44px;
-  }
-
-  .overview-metric__watermark {
-    width: 110px;
   }
 
   .overview-panel__head {
@@ -840,6 +773,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .overview-metric {
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+
+  .overview-metric:first-child {
+    border-top: 0;
+  }
+
   .overview-metric__top {
     font-size: 12px;
   }
@@ -851,7 +793,7 @@
     transition: none !important;
   }
 
-  .overview button.overview-metric:hover, .overview-metric:hover .overview-metric__foot svg, .overview-text-action:hover svg,
+  .overview button.overview-metric:hover, .overview-text-action:hover svg,
   .overview button:is(.overview-action, .overview-text-action, .overview-metric, .overview-station, .overview-prediction):active {
     transform: none;
   }

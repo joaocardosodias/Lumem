@@ -19,6 +19,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
 .portas__eyebrow {
@@ -64,58 +65,83 @@
 .station-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #ffffff;
   margin-bottom: 22px;
 }
 
 .station-summary article {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px;
-  border: 1px solid var(--line, #e1e8f2);
-  border-radius: 14px;
-  background: #fff;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 132px;
+  padding: 20px 22px;
+  border: 0;
+  border-left: 1px solid #e8edf4;
+  border-radius: 0;
+  background: #ffffff;
   color: var(--ink, #172e52);
 }
 
+.station-summary article:first-child {
+  border-left: 0;
+}
+
 .station-summary p {
-  margin: 0 0 6px;
+  margin: 0;
+  color: var(--muted, #52647f);
   font-size: 12px;
   font-weight: 700;
 }
 
-.station-summary div > span {
+.station-summary > article > span {
   color: var(--muted, #52647f);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .station-summary strong {
-  font-size: 32px;
+  margin: 14px 0 7px;
+  font-size: clamp(30px, 3vw, 40px);
   font-weight: 800;
-  letter-spacing: -1px;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 600px) {
-  .station-summary { grid-template-columns: 1fr; gap: 10px; }
-  .station-summary article { padding: 16px; }
+  .station-summary { grid-template-columns: 1fr; }
+  .station-summary article {
+    min-height: 122px;
+    padding: 18px;
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+  .station-summary article:first-child { border-top: 0; }
 }
 
 .portas__back {
   display: grid;
   place-items: center;
+  flex: 0 0 42px;
+  align-self: center;
   width: 42px;
   height: 42px;
   border: 0;
   border-radius: 9px;
   background: var(--brand, #3f00ff);
   color: var(--white, #ffffff);
-  font-size: 28px;
-  line-height: 1;
   cursor: pointer;
   transition: background 180ms ease, transform 180ms ease;
+}
+
+.portas__back svg {
+  width: 20px;
+  height: 20px;
 }
 
 .portas__back:hover {

@@ -267,6 +267,14 @@
   -webkit-line-clamp: 2;
 }
 
+.alarmes__metric-value--code.is-short {
+  min-height: 1.15em;
+  font-size: clamp(32px, 3.2vw, 42px);
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+  -webkit-line-clamp: 1;
+}
+
 /* Desktop data rows use one shared header instead of repeating labels in cards. */
 :is(.manutencoes__table-head, .inspecoes__table-head, .alarmes__table-head) {
   display: grid;
@@ -311,6 +319,184 @@
 .alarmes__table-head,
 .card-alarme {
   grid-template-columns: minmax(190px, 1.35fr) minmax(150px, 1fr) minmax(180px, 1.25fr) minmax(160px, 1.15fr) minmax(170px, 1.15fr) minmax(86px, 0.55fr);
+}
+
+/* Door records use the same ledger treatment as alarms, with a narrower operational schema. */
+.portas__records-panel {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.portas__records-head {
+  min-height: 61px;
+  margin: 0;
+  padding: 19px 22px 17px;
+}
+
+.portas__records-head h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.025em;
+}
+
+.portas__records-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.portas__record-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.portas__records-panel .portas-tabs {
+  margin: 0;
+  border: 0;
+}
+
+.portas__records-panel .portas-tabs button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.portas__records-panel .portas-tabs button:hover {
+  background: #edf2fb;
+  color: var(--ink);
+}
+
+.portas__records-panel .portas-tabs button.is-active {
+  border-color: var(--interactive-border, #d7dffd);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(35, 59, 103, 0.08);
+}
+
+.portas__table-head,
+.portas__record {
+  grid-template-columns: minmax(92px, 0.6fr) minmax(210px, 1.65fr) minmax(126px, 0.85fr) minmax(162px, 1fr) minmax(104px, 0.7fr);
+}
+
+.portas__table-head {
+  display: grid;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 20px;
+  border-top: 1px solid #e9eef5;
+  border-bottom: 1px solid #dfe6f0;
+  background: #f6f8fb;
+  color: #63758f;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.portas__records {
+  display: grid;
+  padding: 0;
+}
+
+.portas__record {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  gap: 18px;
+  padding: 15px 20px;
+  border: 0;
+  border-bottom: 1px solid #e8edf4;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.portas__record:last-child {
+  border-bottom: 0;
+}
+
+.portas__record > div {
+  min-width: 0;
+}
+
+.portas__record-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.portas__record strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink, #172e52);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portas__record em {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portas__record-action {
+  justify-self: end;
+}
+
+.portas__record-action em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.portas__record-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.portas__records-panel .portas__empty {
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.portas__record:hover {
+  background: #f7f8ff;
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.portas__record:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -3px;
 }
 
 :is(.manutencoes__records, .inspecoes__records, .alarmes__records) {
@@ -591,6 +777,34 @@
   }
 }
 
+@media (max-width: 900px) {
+  .portas__table-head {
+    display: none;
+  }
+
+  .portas__record {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+    margin: 10px;
+    padding: 16px;
+    border: 1px solid #dfe6f0;
+    border-radius: 10px;
+  }
+
+  .portas__record-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+  }
+
+  .portas__record-action {
+    justify-self: start;
+  }
+}
+
 @media (max-width: 520px) {
   :is(.manutencoes__metrics, .alarmes__metrics) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -652,6 +866,17 @@
 
   :is(.card-inspecao, .card-alarme) strong {
     overflow-wrap: anywhere;
+  }
+
+  .portas__records-head,
+  .portas__records-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .portas__record {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 }
 
