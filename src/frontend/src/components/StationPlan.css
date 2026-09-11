@@ -198,10 +198,8 @@
 
 .station-plan__map {
   --car-width: 148px;
-  --access-width: 40px;
   --deck-padding: 12px;
-  --deck-gap: 14px;
-  min-width: calc(var(--car-count) * var(--car-width) + 2 * (var(--access-width) + var(--deck-padding) + var(--deck-gap)) + 4px);
+  min-width: calc(var(--car-count) * var(--car-width) + 2 * var(--deck-padding) + 4px);
 }
 
 .station-plan__pair + .station-plan__pair {
@@ -279,11 +277,7 @@
 
 .station-plan__deck {
   position: relative;
-  display: grid;
-  grid-template-columns: var(--access-width) minmax(0, 1fr) var(--access-width);
-  align-items: stretch;
-  gap: var(--deck-gap);
-  padding: 6px var(--deck-padding) 18px;
+  padding: 12px var(--deck-padding) 16px;
   overflow: hidden;
   border: 2px solid #becbd9;
   border-radius: 10px;
@@ -303,49 +297,13 @@
 }
 
 .station-plan__platform--reverse .station-plan__deck {
-  padding-block: 18px 6px;
+  padding: 16px var(--deck-padding) 12px;
 }
 
 .station-plan__platform--reverse .station-plan__deck::after {
   top: 6px;
   bottom: auto;
 }
-
-.station-plan__access {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding-block: 3px;
-  color: #7d8fa5;
-}
-
-.station-plan__platform--reverse .station-plan__access { flex-direction: column-reverse; }
-
-.station-plan__stairs {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  flex: 1;
-  border: 1px solid #bac7d6;
-  border-radius: 3px;
-  background: #e5ecf3;
-}
-
-.station-plan__stairs svg { width: 30px; height: 46px; }
-
-.station-plan__lift {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 4px;
-  background: #74869e;
-  color: #fff;
-}
-
-.station-plan__lift svg { width: 22px; height: 22px; }
 
 .station-plan__drawing {
   display: grid;
@@ -354,68 +312,275 @@
 }
 
 .station-plan__car {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
 }
 
-.station-plan__platform--reverse .station-plan__car { flex-direction: column-reverse; }
-
-.station-plan__furniture {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  color: #899ab0;
-}
-
-.station-plan__furniture svg { width: 30px; height: 24px; }
-.station-plan__furniture--bin svg { width: 17px; height: 20px; }
-.station-plan__furniture--bench svg { transform: scaleX(1.3); }
-
 .station-plan__tracks {
   position: relative;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  margin: 9px 0;
-  padding: 6px calc(var(--access-width) + var(--deck-gap) + var(--deck-padding) + 2px);
+  margin: 14px 0;
+  padding: 10px calc(var(--deck-padding) + 2px);
   overflow: hidden;
-  border-block: 1px solid #dbe3ed;
-  background: #f0f4f8;
+  border-block: 1px solid var(--line, #e1e8f2);
+  border-radius: 8px;
+  background: #ffffff;
 }
 
-.station-plan__tracks::before,
-.station-plan__tracks::after {
-  content: '';
+.station-plan__track-row {
+  position: relative;
+  height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.station-plan__track-bed {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 30px;
-  border: 1px solid #bac7d5;
-  background: #dfe7ef;
+  left: calc(-1 * (var(--deck-padding) + 2px) - 24px);
+  right: calc(-1 * (var(--deck-padding) + 2px) - 24px);
+  background: #f8fafc;
+  border-block: 1px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.station-plan__tracks::before { left: -10px; border-radius: 0 50% 50% 0; }
-.station-plan__tracks::after { right: -10px; border-radius: 50% 0 0 50%; }
+.station-plan__sleepers {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 10px,
+    #7c90a6 10px 14px,
+    #62758b 14px 15px,
+    transparent 15px 16px
+  );
+  opacity: 0.95;
+}
 
-.station-plan__track {
+.station-plan__rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(180deg, #475569 0%, #1e293b 60%, #0f172a 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.station-plan__rail--top {
+  top: 9px;
+}
+
+.station-plan__rail--bottom {
+  bottom: 9px;
+}
+
+.station-plan__train {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--car-count, 6), minmax(0, 1fr));
+  gap: 10px;
+}
+
+.station-plan__train-car {
+  position: relative;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #64748b;
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    #94a3b8 0%,
+    #cbd5e1 15%,
+    #f1f5f9 45%,
+    #ffffff 50%,
+    #f1f5f9 55%,
+    #cbd5e1 85%,
+    #94a3b8 100%
+  );
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.16);
+  box-sizing: border-box;
+}
+
+.station-plan__train-car--lead {
+  border-radius: 16px 4px 4px 16px;
+  border-left-color: #475569;
+}
+
+.station-plan__train-car--trail {
+  border-radius: 4px 16px 16px 4px;
+  border-right-color: #475569;
+}
+
+.station-plan__cab {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.station-plan__cab--lead {
+  left: 2px;
+}
+
+.station-plan__cab--trail {
+  right: 2px;
+}
+
+.station-plan__cab--lead .station-plan__cab-windshield {
+  width: 10px;
   height: 22px;
-  background:
-    linear-gradient(#7d91a9, #7d91a9) 0 4px / 100% 2px no-repeat,
-    linear-gradient(#7d91a9, #7d91a9) 0 calc(100% - 4px) / 100% 2px no-repeat,
-    repeating-linear-gradient(90deg, #c1cedc 0 3px, transparent 3px 10px);
+  border-radius: 9px 2px 2px 9px;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid #475569;
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.station-plan__cab--trail .station-plan__cab-windshield {
+  width: 10px;
+  height: 22px;
+  border-radius: 2px 9px 9px 2px;
+  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #475569;
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.station-plan__cab-light {
+  position: absolute;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+}
+
+.station-plan__cab--lead .station-plan__cab-light {
+  left: 1px;
+  background: #fef08a;
+  box-shadow: 0 0 2px #eab308;
+}
+
+.station-plan__cab--trail .station-plan__cab-light {
+  right: 1px;
+  background: #f87171;
+  box-shadow: 0 0 2px #ef4444;
+}
+
+.station-plan__cab-light--top {
+  top: 4px;
+}
+
+.station-plan__cab-light--bottom {
+  bottom: 4px;
+}
+
+.station-plan__roof {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+
+.station-plan__train-car--lead .station-plan__roof {
+  padding-left: 18px;
+}
+
+.station-plan__train-car--trail .station-plan__roof {
+  padding-right: 18px;
+}
+
+.station-plan__hvac {
+  width: 36px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid #dfba6b;
+  background: linear-gradient(180deg, #fde68a 0%, #fff3c4 50%, #fde68a 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 1px 2px rgba(180, 130, 20, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 1px;
+}
+
+.station-plan__hvac-fan {
+  width: 14px;
+  height: 12px;
+  border-radius: 1px;
+  border: 1px solid #d4a956;
+  background: repeating-linear-gradient(
+    180deg,
+    #f2cc6e 0 1.5px,
+    #fffdf0 1.5px 2.5px
+  );
+}
+
+.station-plan__hatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 1px;
+  border: 1px solid #dfba6b;
+  background: #fffbe8;
+  box-shadow: 0 1px 1px rgba(180, 130, 20, 0.08);
+}
+
+.station-plan__gangway {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 22px;
+  border-block: 1px solid #0f172a;
+  background: repeating-linear-gradient(
+    90deg,
+    #1e293b 0 2px,
+    #475569 2px 3px
+  );
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+
+.station-plan__center-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  background: #ffffff;
 }
 
 .station-plan__car-labels {
   display: grid;
   grid-template-columns: repeat(var(--car-count, 6), minmax(0, 1fr));
   gap: 10px;
-  color: #63758c;
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1.4;
-  text-align: center;
+  width: 100%;
+}
+
+.station-plan__car-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted, #52647f);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .3px;
   font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  height: 18px;
 }
 
 .station-plan__doors {
@@ -534,26 +699,13 @@
   font-size: 12px;
 }
 
-.station-plan__equipment-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 24px;
-  margin: 0 24px;
-  padding: 14px 0 18px;
-  color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 500;
+.station-plan__safety-key {
+  display: inline-block;
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: #e7c575;
 }
-
-.station-plan__equipment-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.station-plan__equipment-legend svg { width: 22px; height: 22px; color: #71859f; }
-.station-plan__safety-key { width: 24px; height: 4px; background: #e7c575; }
 
 .station-plan__foot {
   display: flex;
@@ -612,7 +764,6 @@
   .station-plan__map { --car-width: 204px; }
   .station-plan__door { min-height: 72px; font-size: 12px; }
   .station-plan__door svg { width: 24px; height: 24px; }
-  .station-plan__equipment-legend { margin-inline: 16px; gap: 10px 18px; }
   .station-plan__foot { padding-inline: 16px; }
 }
 

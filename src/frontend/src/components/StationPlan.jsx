@@ -12,30 +12,9 @@ function DoorSymbol() {
   )
 }
 
-function PlanSymbol({ type }) {
-  const shapes = {
-    stairs: <><rect x="6" y="2" width="16" height="24" rx="2" /><path d="M9 6h10M9 10h10M9 14h10M9 18h10M9 22h10M8 3v22m12-22v22" /></>,
-    lift: <><rect x="3" y="3" width="22" height="22" rx="3" /><path d="M9 7v5m-2-2 2 2 2-2m8 2V7m-2 2 2-2 2 2M7 15h14v10m-7-10v10" /></>,
-    bench: <><rect x="2" y="7" width="24" height="13" rx="2" /><path d="M3 11h22M3 16h22M7 5v18M21 5v18" /></>,
-    planter: <><rect x="2" y="7" width="24" height="14" rx="2" /><path d="M10 14c0-5-5-5-5-1 0 4 5 1 5 1Zm0 0c0 5 5 5 5 1 0-4-5-1-5-1Zm8 0c0-5 5-5 5-1 0 4-5 1-5 1ZM10 14l8 1" /></>,
-    bin: <><rect x="7" y="5" width="14" height="20" rx="3" /><path d="M7 9h14M11 5V3h6v2M11 13v7m6-7v7" /></>,
-  }
-  return <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[type]}</svg>
-}
-
-function PlatformAccess() {
-  return (
-    <div className="station-plan__access" aria-hidden="true">
-      <span className="station-plan__stairs"><PlanSymbol type="stairs" /></span>
-      <span className="station-plan__lift"><PlanSymbol type="lift" /></span>
-    </div>
-  )
-}
-
 function Platform({ platform, doors, carCount, reverse, matchesDoor, selectedDoor, onSelectDoor }) {
   const byNumber = new Map(doors.map((door) => [Number(door.door_number), door]))
   const riskCount = doors.filter((door) => door.will_fail).length
-  const furniture = ['planter', 'bench', 'bin', 'bench', 'planter', 'bench']
 
   return (
     <section className={`station-plan__platform${reverse ? ' station-plan__platform--reverse' : ''}`} aria-label={`Plataforma ${platform}`}>
@@ -47,13 +26,9 @@ function Platform({ platform, doors, carCount, reverse, matchesDoor, selectedDoo
         <span className="station-plan__platform-count">{doors.length} portas{riskCount > 0 && <span> · {riskCount} em risco</span>}</span>
       </header>
       <div className="station-plan__deck">
-        <PlatformAccess />
         <div className="station-plan__drawing">
           {Array.from({ length: carCount }, (_, carIndex) => (
             <div className="station-plan__car" key={carIndex}>
-              <span className={`station-plan__furniture station-plan__furniture--${furniture[carIndex % furniture.length]}`} aria-hidden="true">
-                <PlanSymbol type={furniture[carIndex % furniture.length]} />
-              </span>
               <div className="station-plan__doors">
                 {Array.from({ length: DOORS_PER_CAR }, (_, position) => {
                   const number = carIndex * DOORS_PER_CAR + position + 1
@@ -84,21 +59,90 @@ function Platform({ platform, doors, carCount, reverse, matchesDoor, selectedDoo
             </div>
           ))}
         </div>
-        <PlatformAccess />
       </div>
       {!doors.length && <p className="station-plan__platform-empty">Nenhuma porta registrada nesta plataforma.</p>}
     </section>
   )
 }
 
+function TrainCar({ index, carCount }) {
+  const isLead = index === 0
+  const isTrail = index === carCount - 1
+  const hasGangway = index < carCount - 1
+
+  return (
+    <div
+      className={`station-plan__train-car${isLead ? ' station-plan__train-car--lead' : ''}${isTrail ? ' station-plan__train-car--trail' : ''}`}
+      title={`Carro ${String(index + 1).padStart(2, '0')}`}
+    >
+      {isLead && (
+        <div className="station-plan__cab station-plan__cab--lead" aria-hidden="true">
+          <span className="station-plan__cab-windshield" />
+          <span className="station-plan__cab-light station-plan__cab-light--top" />
+          <span className="station-plan__cab-light station-plan__cab-light--bottom" />
+        </div>
+      )}
+
+      <div className="station-plan__roof" aria-hidden="true">
+        <div className="station-plan__hvac">
+          <span className="station-plan__hvac-fan" />
+          <span className="station-plan__hvac-fan" />
+        </div>
+        <div className="station-plan__hatch" />
+        <div className="station-plan__hvac">
+          <span className="station-plan__hvac-fan" />
+          <span className="station-plan__hvac-fan" />
+        </div>
+      </div>
+
+      {isTrail && (
+        <div className="station-plan__cab station-plan__cab--trail" aria-hidden="true">
+          <span className="station-plan__cab-windshield" />
+          <span className="station-plan__cab-light station-plan__cab-light--top" />
+          <span className="station-plan__cab-light station-plan__cab-light--bottom" />
+        </div>
+      )}
+
+      {hasGangway && <div className="station-plan__gangway" aria-hidden="true" />}
+    </div>
+  )
+}
+
+function TrackRow({ carCount, trackNumber }) {
+  return (
+    <div className="station-plan__track-row">
+      <div className="station-plan__track-bed" aria-hidden="true">
+        <div className="station-plan__sleepers" />
+        <div className="station-plan__rail station-plan__rail--top" />
+        <div className="station-plan__rail station-plan__rail--bottom" />
+      </div>
+      <div className="station-plan__train" aria-label={`Composição da Via ${trackNumber}`}>
+        {Array.from({ length: carCount }, (_, carIndex) => (
+          <TrainCar
+            key={carIndex}
+            index={carIndex}
+            carCount={carCount}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TrackBed({ carCount }) {
   return (
-    <div className="station-plan__tracks" aria-hidden="true">
-      <div className="station-plan__track" />
-      <div className="station-plan__car-labels">
-        {Array.from({ length: carCount }, (_, index) => <span key={index}>Carro {String(index + 1).padStart(2, '0')}</span>)}
+    <div className="station-plan__tracks" aria-label="Leito das vias férreas e composições">
+      <TrackRow carCount={carCount} trackNumber={1} />
+      <div className="station-plan__center-divider" aria-hidden="true">
+        <div className="station-plan__car-labels">
+          {Array.from({ length: carCount }, (_, index) => (
+            <span key={index} className="station-plan__car-badge">
+              Carro {String(index + 1).padStart(2, '0')}
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="station-plan__track" />
+      <TrackRow carCount={carCount} trackNumber={2} />
     </div>
   )
 }
@@ -159,6 +203,7 @@ function StationPlan({
         <span><i className="station-plan__key station-plan__key--risk">!</i>Em risco</span>
         <span><i className="station-plan__key station-plan__key--selected" />Selecionada</span>
         <span><i className="station-plan__key station-plan__key--missing" />Sem registro</span>
+        <span><i className="station-plan__safety-key" />Linha de segurança</span>
       </div>
 
       {loading ? (
@@ -202,17 +247,11 @@ function StationPlan({
               </div>
             </div>
           </div>
-          <div className="station-plan__equipment-legend" aria-label="Elementos ilustrativos da planta">
-            <span><i className="station-plan__safety-key" />Linha de segurança</span>
-            {[
-              ['stairs', 'Escada'], ['lift', 'Elevador'], ['bench', 'Banco'], ['planter', 'Jardineira'], ['bin', 'Lixeira'],
-            ].map(([type, label]) => <span key={type}><PlanSymbol type={type} />{label}</span>)}
-          </div>
         </>
       )}
 
       <footer className="station-plan__foot">
-        <span>Vista esquemática, sem escala. Acessos e mobiliário ilustrativos.</span>
+        <span>Vista esquemática, sem escala.</span>
         <span className="station-plan__scroll-hint">Deslize para ver todas as portas <span aria-hidden="true">↔</span></span>
       </footer>
     </section>
