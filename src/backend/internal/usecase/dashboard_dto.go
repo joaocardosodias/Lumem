@@ -36,10 +36,10 @@ type TimelineMaintenanceOutputDTO struct {
 }
 
 type TimelineInspectionOutputDTO struct {
-	ID           string
-	Status       string
-	Notes        string
-	CompletedAt  *time.Time
+	ID          string
+	Status      string
+	Notes       string
+	CompletedAt *time.Time
 }
 
 type DoorTimelineOutputDTO struct {
