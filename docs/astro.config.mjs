@@ -125,21 +125,25 @@ export default defineConfig({
 							label: 'Sprint 3',
 							collapsed: true,
 							items: [
-								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
-								{ label: 'Arquitetura UML', slug: 'sprints/sprint-3/arquitetura-uml' },
-								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
-								{ label: 'Requisitos do Sistema', slug: 'sprints/sprint-3/requisitos' },
-								backendSidebar,
 								{
 									label: 'Modelos Preditivos',
 									collapsed: true,
-									items: [{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } }],
+									items: [
+										{ label: 'Pipeline Sequencial dos Modelos Preditivos', slug: 'sprints/sprint-3/pipeline-sequencial-modelos' },
+										{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } },
+									],
 								},
+								{ label: 'Arquitetura UML', slug: 'sprints/sprint-3/arquitetura-uml' },
+								{ label: 'Requisitos do Sistema', slug: 'sprints/sprint-3/requisitos' },
+								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
+								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
+								backendSidebar,
 								{
 									label: 'API de Predição',
 									collapsed: true,
 									items: [{ autogenerate: { directory: 'sprints/Sprint 3/api' } }],
 								},
+								{ label: 'Análise Financeira', slug: 'sprints/sprint-3/analise_financeira_projeto_poc_implementacao' },
 							],
 						},
 						{
