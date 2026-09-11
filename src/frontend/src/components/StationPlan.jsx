@@ -65,23 +65,51 @@ function Platform({ platform, doors, carCount, reverse, matchesDoor, selectedDoo
   )
 }
 
-function TrainCar({ index, carCount }) {
-  const isLead = index === 0
-  const isTrail = index === carCount - 1
+function TrainCab({ side, lightType }) {
+  const isRight = side === 'right'
+  return (
+    <div
+      className={`station-plan__cab ${isRight ? 'station-plan__cab--right' : 'station-plan__cab--left'}`}
+      aria-hidden="true"
+    >
+      <span className="station-plan__cab-mask" />
+      <span className="station-plan__cab-stripe" />
+      <div className="station-plan__cab-windows">
+        <span className="station-plan__cab-pane station-plan__cab-pane--top" />
+        <span className="station-plan__cab-pane station-plan__cab-pane--bottom" />
+      </div>
+      <span
+        className={`station-plan__cab-light station-plan__cab-light--top station-plan__cab-light--${lightType}`}
+      />
+      <span
+        className={`station-plan__cab-light station-plan__cab-light--bottom station-plan__cab-light--${lightType}`}
+      />
+    </div>
+  )
+}
+
+function TrainCar({ index, carCount, reverse = false }) {
   const hasGangway = index < carCount - 1
+  const hasCabLeft = index === 0
+  const hasCabRight = index === carCount - 1
+
+  const leftLightType = reverse ? 'taillight' : 'headlight'
+  const rightLightType = reverse ? 'headlight' : 'taillight'
+
+  const carClass = [
+    'station-plan__train-car',
+    hasCabLeft && 'station-plan__train-car--cab-left',
+    hasCabRight && 'station-plan__train-car--cab-right',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div
-      className={`station-plan__train-car${isLead ? ' station-plan__train-car--lead' : ''}${isTrail ? ' station-plan__train-car--trail' : ''}`}
+      className={carClass}
       title={`Carro ${String(index + 1).padStart(2, '0')}`}
     >
-      {isLead && (
-        <div className="station-plan__cab station-plan__cab--lead" aria-hidden="true">
-          <span className="station-plan__cab-windshield" />
-          <span className="station-plan__cab-light station-plan__cab-light--top" />
-          <span className="station-plan__cab-light station-plan__cab-light--bottom" />
-        </div>
-      )}
+      {hasCabLeft && <TrainCab side="left" lightType={leftLightType} />}
 
       <div className="station-plan__roof" aria-hidden="true">
         <div className="station-plan__hvac">
@@ -95,22 +123,16 @@ function TrainCar({ index, carCount }) {
         </div>
       </div>
 
-      {isTrail && (
-        <div className="station-plan__cab station-plan__cab--trail" aria-hidden="true">
-          <span className="station-plan__cab-windshield" />
-          <span className="station-plan__cab-light station-plan__cab-light--top" />
-          <span className="station-plan__cab-light station-plan__cab-light--bottom" />
-        </div>
-      )}
+      {hasCabRight && <TrainCab side="right" lightType={rightLightType} />}
 
       {hasGangway && <div className="station-plan__gangway" aria-hidden="true" />}
     </div>
   )
 }
 
-function TrackRow({ carCount, trackNumber }) {
+function TrackRow({ carCount, trackNumber, reverse = false }) {
   return (
-    <div className="station-plan__track-row">
+    <div className={`station-plan__track-row${reverse ? ' station-plan__track-row--reverse' : ''}`}>
       <div className="station-plan__track-bed" aria-hidden="true">
         <div className="station-plan__sleepers" />
         <div className="station-plan__rail station-plan__rail--top" />
@@ -122,6 +144,7 @@ function TrackRow({ carCount, trackNumber }) {
             key={carIndex}
             index={carIndex}
             carCount={carCount}
+            reverse={reverse}
           />
         ))}
       </div>
@@ -142,7 +165,7 @@ function TrackBed({ carCount }) {
           ))}
         </div>
       </div>
-      <TrackRow carCount={carCount} trackNumber={2} />
+      <TrackRow carCount={carCount} trackNumber={2} reverse />
     </div>
   )
 }

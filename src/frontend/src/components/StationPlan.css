@@ -396,94 +396,190 @@
   height: 34px;
   display: flex;
   align-items: center;
-  border: 1.5px solid #64748b;
+  border: 1.5px solid #4a5c6e;
   border-radius: 4px;
   background: linear-gradient(
     180deg,
-    #94a3b8 0%,
-    #cbd5e1 15%,
-    #f1f5f9 45%,
+    #f5b300 0%,
+    #f5b300 3px,
+    #7e91a1 3px,
+    #cbd6e0 14%,
+    #f1f5f9 46%,
     #ffffff 50%,
-    #f1f5f9 55%,
-    #cbd5e1 85%,
-    #94a3b8 100%
+    #f1f5f9 54%,
+    #cbd6e0 86%,
+    #7e91a1 calc(100% - 3px),
+    #f5b300 calc(100% - 3px),
+    #f5b300 100%
   );
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.16);
   box-sizing: border-box;
+  overflow: visible;
 }
 
-.station-plan__train-car--lead {
+.station-plan__train-car--lead,
+.station-plan__train-car--cab-left {
   border-radius: 16px 4px 4px 16px;
-  border-left-color: #475569;
+  border-left-color: #111822;
 }
 
-.station-plan__train-car--trail {
+.station-plan__train-car--trail,
+.station-plan__train-car--cab-right {
   border-radius: 4px 16px 16px 4px;
-  border-right-color: #475569;
+  border-right-color: #111822;
 }
 
 .station-plan__cab {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  width: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 0;
+  bottom: 0;
+  width: 20px;
   z-index: 2;
 }
 
-.station-plan__cab--lead {
-  left: 2px;
+.station-plan__cab--lead,
+.station-plan__cab--left {
+  left: 0;
 }
 
-.station-plan__cab--trail {
-  right: 2px;
+.station-plan__cab--trail,
+.station-plan__cab--right {
+  right: 0;
 }
 
-.station-plan__cab--lead .station-plan__cab-windshield {
-  width: 10px;
-  height: 22px;
-  border-radius: 9px 2px 2px 9px;
-  background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
-  border: 1px solid #475569;
-  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3);
+.station-plan__cab-mask {
+  position: absolute;
+  inset: 0;
+  background: #111822;
 }
 
-.station-plan__cab--trail .station-plan__cab-windshield {
-  width: 10px;
-  height: 22px;
-  border-radius: 2px 9px 9px 2px;
-  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid #475569;
-  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3);
+.station-plan__cab--lead .station-plan__cab-mask,
+.station-plan__cab--left .station-plan__cab-mask {
+  border-radius: 14px 0 0 14px;
+  border-right: 1.5px solid #283548;
+}
+
+.station-plan__cab--trail .station-plan__cab-mask,
+.station-plan__cab--right .station-plan__cab-mask {
+  border-radius: 0 14px 14px 0;
+  border-left: 1.5px solid #283548;
+}
+
+.station-plan__cab-stripe {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 9px;
+  background: #f5b300;
+  z-index: 2;
+  box-shadow: 0 0 2px rgba(245, 179, 0, 0.5);
+}
+
+.station-plan__cab--lead .station-plan__cab-stripe,
+.station-plan__cab--left .station-plan__cab-stripe {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.station-plan__cab--trail .station-plan__cab-stripe,
+.station-plan__cab--right .station-plan__cab-stripe {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.station-plan__cab-windows {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.station-plan__cab--lead .station-plan__cab-windows,
+.station-plan__cab--left .station-plan__cab-windows {
+  padding: 3px 2px 3px 3px;
+}
+
+.station-plan__cab--trail .station-plan__cab-windows,
+.station-plan__cab--right .station-plan__cab-windows {
+  padding: 3px 3px 3px 2px;
+}
+
+.station-plan__cab-pane {
+  width: 9px;
+  height: 10px;
+  background: linear-gradient(135deg, #0b121e 0%, #1e2b3e 100%);
+  border: 1px solid #243447;
+}
+
+.station-plan__cab--lead .station-plan__cab-pane--top,
+.station-plan__cab--left .station-plan__cab-pane--top {
+  border-radius: 6px 2px 1px 1px;
+}
+
+.station-plan__cab--lead .station-plan__cab-pane--bottom,
+.station-plan__cab--left .station-plan__cab-pane--bottom {
+  border-radius: 1px 1px 2px 6px;
+}
+
+.station-plan__cab--trail .station-plan__cab-pane--top,
+.station-plan__cab--right .station-plan__cab-pane--top {
+  border-radius: 2px 6px 1px 1px;
+}
+
+.station-plan__cab--trail .station-plan__cab-pane--bottom,
+.station-plan__cab--right .station-plan__cab-pane--bottom {
+  border-radius: 1px 1px 6px 2px;
 }
 
 .station-plan__cab-light {
   position: absolute;
-  width: 2.5px;
-  height: 2.5px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
+  z-index: 3;
 }
 
-.station-plan__cab--lead .station-plan__cab-light {
-  left: 1px;
-  background: #fef08a;
-  box-shadow: 0 0 2px #eab308;
+.station-plan__cab--lead .station-plan__cab-light,
+.station-plan__cab--left .station-plan__cab-light {
+  left: 2px;
 }
 
-.station-plan__cab--trail .station-plan__cab-light {
-  right: 1px;
-  background: #f87171;
-  box-shadow: 0 0 2px #ef4444;
+.station-plan__cab--trail .station-plan__cab-light,
+.station-plan__cab--right .station-plan__cab-light {
+  right: 2px;
+}
+
+/* Faróis (luz branca e facho luminoso) */
+.station-plan__cab-light--headlight,
+.station-plan__cab--lead .station-plan__cab-light:not(.station-plan__cab-light--taillight) {
+  background: #ffffff;
+  box-shadow: 0 0 5px 1.5px rgba(254, 240, 138, 0.95), 0 0 2px #ffffff;
+}
+
+.station-plan__cab--left .station-plan__cab-light--headlight {
+  box-shadow: 0 0 5px 1.5px rgba(254, 240, 138, 0.95), -5px 0 8px 1.5px rgba(254, 240, 138, 0.55), 0 0 2px #ffffff;
+}
+
+.station-plan__cab--right .station-plan__cab-light--headlight {
+  box-shadow: 0 0 5px 1.5px rgba(254, 240, 138, 0.95), 5px 0 8px 1.5px rgba(254, 240, 138, 0.55), 0 0 2px #ffffff;
+}
+
+/* Lanternas traseiras (luz vermelha) */
+.station-plan__cab-light--taillight,
+.station-plan__cab--trail .station-plan__cab-light:not(.station-plan__cab-light--headlight) {
+  background: #ef4444;
+  box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.8), 0 0 1px #ef4444;
 }
 
 .station-plan__cab-light--top {
-  top: 4px;
+  top: 3.5px;
 }
 
 .station-plan__cab-light--bottom {
-  bottom: 4px;
+  bottom: 3.5px;
 }
 
 .station-plan__roof {
@@ -496,12 +592,14 @@
   padding: 0 8px;
 }
 
-.station-plan__train-car--lead .station-plan__roof {
-  padding-left: 18px;
+.station-plan__train-car--lead .station-plan__roof,
+.station-plan__train-car--cab-left .station-plan__roof {
+  padding-left: 22px;
 }
 
-.station-plan__train-car--trail .station-plan__roof {
-  padding-right: 18px;
+.station-plan__train-car--trail .station-plan__roof,
+.station-plan__train-car--cab-right .station-plan__roof {
+  padding-right: 22px;
 }
 
 .station-plan__hvac {
@@ -540,19 +638,40 @@
 
 .station-plan__gangway {
   position: absolute;
-  right: -10px;
+  right: -11px;
   top: 50%;
   transform: translateY(-50%);
-  width: 10px;
-  height: 22px;
-  border-block: 1px solid #0f172a;
+  width: 12px;
+  height: 25px;
+  border-top: 2px solid #0b0f17;
+  border-bottom: 2px solid #0b0f17;
+  border-left: 1px solid #334155;
+  border-right: 1px solid #334155;
   background: repeating-linear-gradient(
     90deg,
-    #1e293b 0 2px,
-    #475569 2px 3px
+    #0f172a 0px,
+    #0f172a 1px,
+    #64748b 1px,
+    #64748b 2px,
+    #1e293b 2px,
+    #1e293b 3px
   );
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.station-plan__gangway::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background: #94a3b8;
+  border-radius: 1px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
 .station-plan__center-divider {
