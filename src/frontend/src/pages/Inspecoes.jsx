@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import CadastrarButton from '../components/CadastrarButton'
-import Card from '../components/Card'
+import { NavIcon } from '../components/BarraNav'
+import { CountValue } from '../components/Card'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
+import iconMotiva from '../assets/icon_motiva.svg'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, resolveStation, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
@@ -17,9 +18,6 @@ const emptyForm = {
   station_code: 'BUT',
   platform: 'P1',
   door_number: '',
-  priority: 'normal',
-  date: '',
-  time: '',
   notes: '',
 }
 
@@ -29,34 +27,30 @@ const STATUS_LABEL = {
   completed: 'Concluída',
 }
 
-const PRIORITY_LABEL = {
-  low: 'Baixa',
-  normal: 'Normal',
-  high: 'Alta',
-  critical: 'Crítica',
-}
-
 const emptyFilters = {
   station: '',
   platform: '',
-  priority: '',
   origin: '',
   period: DEFAULT_PERIOD,
 }
 
-function toTimestamp(date, time) {
-  if (!date) return ''
-  const clock = time ? (time.length === 5 ? `${time}:00` : time) : '00:00:00'
-  return `${date} ${clock}`
-}
-
 function isAiInspection(item) {
+  if (item.prediction_id) return true
   const notes = String(item.notes || '').toLowerCase()
   return notes.includes('automaticamente pela ia') || notes.includes('rodada #')
 }
 
 function inspectionStation(item) {
   return resolveStation(item) || String(item.station_code || '').toUpperCase()
+}
+
+function countBy(items, getKey) {
+  return items.reduce((acc, item) => {
+    const key = typeof getKey === 'function' ? getKey(item) : item[getKey]
+    if (!key) return acc
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
 }
 
 function Inspecoes({ onNavigate, params }) {
@@ -100,13 +94,15 @@ function Inspecoes({ onNavigate, params }) {
     let cancelled = false
 
     async function load() {
-      setLoading(true)
+      if (!getCachedInspections()?.length) {
+        setLoading(true)
+      }
       setError('')
       try {
         const batch = await loadInspections({ force: Boolean(reloadAt) })
         if (!cancelled) setItems(batch)
       } catch (err) {
-        if (!cancelled) setError(errorMessage(err))
+        if (!cancelled && !getCachedInspections()?.length) setError(errorMessage(err))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -127,10 +123,9 @@ function Inspecoes({ onNavigate, params }) {
       items.filter((item) => {
         if (filters.station && mapStation(inspectionStation(item)) !== mapStation(filters.station)) return false
         if (filters.platform && item.platform !== filters.platform) return false
-        if (filters.priority && item.priority !== filters.priority) return false
         if (filters.origin === 'ai' && !isAiInspection(item)) return false
         if (filters.origin === 'manual' && isAiInspection(item)) return false
-        if (!inPeriod(item.scheduled_for || item.created_at, filters.period)) return false
+        if (!inPeriod(item.created_at, filters.period)) return false
         if (search.trim()) {
           const q = search.trim().toLowerCase()
           const match =
@@ -150,7 +145,7 @@ function Inspecoes({ onNavigate, params }) {
     [scoped, filter],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.platform || filters.priority || filters.origin || search) ||
+    Boolean(filters.station || filters.platform || filters.origin || search) ||
     filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
@@ -159,6 +154,35 @@ function Inspecoes({ onNavigate, params }) {
   const pending = scoped.filter((item) => item.status === 'pending').length
   const inProgress = scoped.filter((item) => item.status === 'in_progress').length
   const completed = scoped.filter((item) => item.status === 'completed').length
+  const aiGenerated = scoped.filter(isAiInspection).length
+  const completionRate = visible.length ? Math.round((completed / visible.length) * 100) : 0
+
+  const statusRows = useMemo(() => {
+    return [
+      ['pending', 'Pendentes', pending],
+      ['in_progress', 'Em andamento', inProgress],
+      ['completed', 'Concluídas', completed],
+    ]
+  }, [pending, inProgress, completed])
+
+  const maxStatus = useMemo(() => {
+    return Math.max(pending, inProgress, completed, 1)
+  }, [pending, inProgress, completed])
+
+  const byStation = useMemo(() => {
+    return countBy(visible, (item) => inspectionStation(item))
+  }, [visible])
+
+  const stationRows = useMemo(() => {
+    return Object.entries(byStation).sort((a, b) => b[1] - a[1])
+  }, [byStation])
+
+  const maxStation = useMemo(() => {
+    return Math.max(...Object.values(byStation), 1)
+  }, [byStation])
+
+  const topStations = useMemo(() => stationRows.slice(0, 6), [stationRows])
+  const otherStations = useMemo(() => stationRows.slice(6), [stationRows])
   const selectedStation = lineStations.find((item) => item.code === form.station_code)
   const platforms = selectedStation?.platforms ?? ['P1', 'P2']
   const filterPlatforms = filters.station
@@ -198,8 +222,6 @@ function Inspecoes({ onNavigate, params }) {
         station_code: form.station_code,
         platform: form.platform,
         door_number: String(form.door_number),
-        priority: form.priority,
-        scheduled_for: toTimestamp(form.date, form.time) || undefined,
         notes: form.notes.trim() || undefined,
       })
       setForm(emptyForm)
@@ -236,10 +258,8 @@ function Inspecoes({ onNavigate, params }) {
       { label: 'Nome da Estação', value: (item) => stationLabel(item.station_code) },
       { label: 'Plataforma', key: 'platform' },
       { label: 'Porta', value: (item) => String(item.door_number).padStart(2, '0') },
-      { label: 'Prioridade', value: (item) => PRIORITY_LABEL[item.priority] || item.priority },
       { label: 'Origem', value: (item) => (isAiInspection(item) ? 'IA Preditiva' : 'Manual') },
       { label: 'Status', value: (item) => STATUS_LABEL[item.status] || item.status },
-      { label: 'Agendada para', key: 'scheduled_for' },
       { label: 'Notas', key: 'notes' },
     ]
     exportToCsv('inspecoes.csv', columns, visible)
@@ -248,45 +268,155 @@ function Inspecoes({ onNavigate, params }) {
 
   return (
     <section className="inspecoes">
-      <div className="page-head">
+      <header className="page-head inspecoes__head">
         <div>
-          <p className="dashboard__kicker">Ordens e Manutenção de Campo</p>
+          <p className="inspecoes__eyebrow"><span aria-hidden="true" />Ordens e manutenção de campo</p>
           <h1>Inspeções</h1>
-          <p className="dashboard__lead">
+          <p className="inspecoes__lead">
             Acompanhamento de ordens de serviço e inspeções geradas pela IA e equipe operacional.
           </p>
         </div>
         <div className="page-head__actions">
-          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+          <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
-          </CadastrarButton>
-          <CadastrarButton onClick={() => setOpen(true)}>Abrir inspeção +</CadastrarButton>
+          </Button>
+          <Button onClick={() => setOpen(true)}>Nova inspeção</Button>
         </div>
-      </div>
+      </header>
 
       {loading ? <p className="page-status">Carregando inspeções…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
-      <div className="inspecoes__kpis">
-        <Card
-          layout="banner"
-          label="Pendentes"
-          value={pending}
-          hint={rangeHint ? `aguardando campo · ${rangeHint}` : 'aguardando campo'}
-        />
-        <Card
-          layout="banner"
-          label="Em andamento"
-          value={inProgress}
-          hint={rangeHint ? `em execução · ${rangeHint}` : 'em execução'}
-        />
-        <Card
-          layout="banner"
-          label="Concluídas"
-          value={completed}
-          hint={rangeHint ? `finalizadas · ${rangeHint}` : 'finalizadas'}
-        />
-      </div>
+      {loading ? null : (
+        <>
+          <div className="inspecoes__hero">
+            <section className="inspecoes__metrics" aria-label="Resumo das inspeções">
+              <article className="inspecoes__metric inspecoes__metric--primary">
+                <img className="inspecoes__metric-mark" src={iconMotiva} alt="" aria-hidden="true" />
+                <span className="inspecoes__metric-top">
+                  <span>Ordens filtradas</span>
+                  <NavIcon id="inspecoes" />
+                </span>
+                <strong className="inspecoes__metric-value"><CountValue value={visible.length} /></strong>
+                <span className="inspecoes__metric-description">
+                  {rangeHint || 'Todo o período disponível'}
+                </span>
+                <span className="inspecoes__metric-foot">
+                  {items.length.toLocaleString('pt-BR')} registros carregados
+                </span>
+              </article>
+
+              <article className="inspecoes__metric">
+                <span className="inspecoes__metric-top">
+                  <span>Pendentes</span>
+                  <NavIcon id="alarmes" />
+                </span>
+                <strong className="inspecoes__metric-value"><CountValue value={pending} /></strong>
+                <span className="inspecoes__metric-description">
+                  {visible.length ? `${Math.round((pending / visible.length) * 100)}% das ordens no recorte` : 'Sem ordens pendentes'}
+                </span>
+                <span className="inspecoes__metric-foot">Aguardando intervenção em campo</span>
+              </article>
+
+              <article className="inspecoes__metric">
+                <span className="inspecoes__metric-top">
+                  <span>Geradas por IA</span>
+                  <NavIcon id="predicoes" />
+                </span>
+                <strong className="inspecoes__metric-value"><CountValue value={aiGenerated} /></strong>
+                <span className="inspecoes__metric-description">
+                  {aiGenerated ? `${aiGenerated} ordens preventivas automáticas` : 'Nenhuma ordem preditiva'}
+                </span>
+                <span className="inspecoes__metric-foot">Mitigação proativa de falhas</span>
+              </article>
+
+              <article className="inspecoes__metric">
+                <span className="inspecoes__metric-top">
+                  <span>Taxa de conclusão</span>
+                  <NavIcon id="dashboard" />
+                </span>
+                <strong className="inspecoes__metric-value">
+                  {completionRate}<small>%</small>
+                </strong>
+                <span className="inspecoes__metric-description">
+                  {completed} concluídas · {inProgress} em andamento
+                </span>
+                <span className="inspecoes__metric-foot">Eficiência das equipes técnicas</span>
+              </article>
+            </section>
+
+            <div className="inspecoes__charts">
+              <article className="inspecoes__chart">
+                <header className="inspecoes__panel-head">
+                  <div>
+                    <p>Distribuição de fluxo</p>
+                    <h2>Ordens por status</h2>
+                  </div>
+                  <span aria-hidden="true"><NavIcon id="inspecoes" /></span>
+                </header>
+                <div className="inspecoes__chart-body">
+                  {statusRows.some(([, , count]) => count > 0) ? (
+                    statusRows.map(([key, label, count]) => (
+                      <div key={key} className="inspecoes__bar">
+                        <strong>{label}</strong>
+                        <span className="inspecoes__bar-track">
+                          <i
+                            className={`bar--${key}`}
+                            style={{ width: `${(count / maxStatus) * 100}%` }}
+                          />
+                        </span>
+                        <em>{count}</em>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="inspecoes__empty">Nenhuma ordem neste recorte.</p>
+                  )}
+                </div>
+              </article>
+
+              <article className="inspecoes__chart">
+                <header className="inspecoes__panel-head">
+                  <div>
+                    <p>Distribuição territorial</p>
+                    <h2>Ordens por estação</h2>
+                  </div>
+                  <span aria-hidden="true"><NavIcon id="portas" /></span>
+                </header>
+                <div className="inspecoes__chart-body">
+                  {stationRows.length ? (
+                    <div className="inspecoes__bars">
+                      <div>
+                        {topStations.map(([label, value]) => (
+                          <div key={label} className="inspecoes__bar">
+                            <strong>{label}</strong>
+                            <span className="inspecoes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                      {otherStations.length ? (
+                        <div>
+                          {otherStations.map(([label, value]) => (
+                            <div key={label} className="inspecoes__bar">
+                              <strong>{label}</strong>
+                              <span className="inspecoes__bar-track">
+                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                              </span>
+                              <em>{value}</em>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="inspecoes__empty">Nenhuma estação com ordens neste recorte.</p>
+                  )}
+                </div>
+              </article>
+            </div>
+          </div>
 
       <Filtros
         period={filters.period}
@@ -325,16 +455,6 @@ function Inspecoes({ onNavigate, params }) {
             ))}
           </select>
         </FiltroCampo>
-        <FiltroCampo label="Prioridade">
-          <select value={filters.priority} onChange={updateFilter('priority')}>
-            <option value="">Todas</option>
-            {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
         <FiltroCampo label="Origem">
           <select value={filters.origin} onChange={updateFilter('origin')}>
             <option value="">Todas</option>
@@ -344,13 +464,24 @@ function Inspecoes({ onNavigate, params }) {
         </FiltroCampo>
       </Filtros>
 
-      <div className="inspecoes-tabs" role="tablist" aria-label="Filtro de status">
-        {[
-          ['', 'Todas'],
-          ['pending', 'Pendentes'],
-          ['in_progress', 'Em andamento'],
-          ['completed', 'Concluídas'],
-        ].map(([value, label]) => (
+          <section className="inspecoes__list" aria-labelledby="inspection-records-title">
+            <header className="inspecoes__panel-head">
+              <div>
+                <p>Ordens de campo</p>
+                <h2 id="inspection-records-title">Registros de inspeção</h2>
+              </div>
+              <span className="inspecoes__record-count">
+                {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </header>
+
+            <div className="inspecoes-tabs" role="tablist" aria-label="Filtro de status">
+              {[
+                ['', 'Todas', scoped.length],
+                ['pending', 'Pendentes', pending],
+                ['in_progress', 'Em andamento', inProgress],
+                ['completed', 'Concluídas', completed],
+              ].map(([value, label, count]) => (
           <button
             key={value || 'all'}
             type="button"
@@ -359,12 +490,13 @@ function Inspecoes({ onNavigate, params }) {
             className={filter === value ? 'is-active' : ''}
             onClick={() => setFilter(value)}
           >
-            {label}
+            <span>{label}</span>
+            <small>{count}</small>
           </button>
         ))}
-      </div>
+            </div>
 
-      <div className="inspecoes__list">
+            <div className="inspecoes__records">
         {visible.length ? (
           paged.map((item) => (
             <article key={item.id} className="card-inspecao">
@@ -380,23 +512,7 @@ function Inspecoes({ onNavigate, params }) {
               <div>
                 <span>Plat / Porta</span>
                 <strong>{item.platform} · P{String(item.door_number).padStart(2, '0')}</strong>
-              </div>
-              <div>
-                <span>Prioridade</span>
-                <strong className={item.priority === 'critical' ? 'priority--critical' : undefined}>
-                  {PRIORITY_LABEL[item.priority] || item.priority}
-                </strong>
-                {isAiInspection(item) ? (
-                  <span className="badge-ia-inspecao">Gerada por IA</span>
-                ) : null}
-              </div>
-              <div>
-                <span>Agendada para</span>
-                <strong>{item.scheduled_for || 'Imediata'}</strong>
-              </div>
-              <div>
-                <span>Notas</span>
-                <strong>{item.notes || '—'}</strong>
+                {item.notes && !isAiInspection(item) ? <em>{item.notes}</em> : null}
               </div>
               <label className="card-inspecao__status">
                 <span>Status</span>
@@ -421,7 +537,7 @@ function Inspecoes({ onNavigate, params }) {
                     })
                   }
                 >
-                  Ver Porta
+                  Ver porta
                 </button>
               </div>
             </article>
@@ -431,13 +547,16 @@ function Inspecoes({ onNavigate, params }) {
             {items.length ? 'Nenhuma inspeção com esses filtros.' : 'Nenhuma inspeção retornada pela API.'}
           </p>
         )}
-        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-      </div>
+            </div>
+            <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+          </section>
+        </>
+      )}
 
       {open ? (
         <div className="inspecoes-modal" onClick={() => setOpen(false)}>
           <form onClick={(event) => event.stopPropagation()} onSubmit={handleSubmit}>
-            <h2>Abrir inspeção</h2>
+            <h2>Nova ordem de inspeção</h2>
             {formError ? <p className="page-status is-error">{formError}</p> : null}
             <label className="cadastro-select">
               <span>Estação</span>
@@ -469,34 +588,8 @@ function Inspecoes({ onNavigate, params }) {
               required
               onChange={updateField('door_number')}
             />
-            <label className="cadastro-select">
-              <span>Prioridade</span>
-              <select value={form.priority} onChange={updateField('priority')}>
-                <option value="low">low — Baixa</option>
-                <option value="normal">normal — Normal</option>
-                <option value="high">high — Alta</option>
-                <option value="critical">critical — Crítica</option>
-              </select>
-            </label>
-            <div className="ui-input-row">
-              <Input
-                id="insp-date"
-                label="Data"
-                type="date"
-                value={form.date}
-                onChange={updateField('date')}
-              />
-              <Input
-                id="insp-time"
-                label="Hora"
-                type="time"
-                step="60"
-                value={form.time}
-                onChange={updateField('time')}
-              />
-            </div>
             <Input id="insp-notes" label="Notas" value={form.notes} onChange={updateField('notes')} />
-            <Button type="submit" variant="light">
+            <Button type="submit">
               Abrir ordem
             </Button>
           </form>

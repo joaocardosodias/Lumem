@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import CadastrarButton from '../components/CadastrarButton'
-import Card from '../components/Card'
+import { NavIcon } from '../components/BarraNav'
+import { CountValue } from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
+import iconMotiva from '../assets/icon_motiva.svg'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
@@ -87,13 +88,15 @@ function Manutencoes({ params }) {
     let cancelled = false
 
     async function load() {
-      setLoading(true)
+      if (!getCachedMaintenance()?.length) {
+        setLoading(true)
+      }
       setError('')
       try {
         const batch = await loadMaintenance({ force: Boolean(reloadAt) })
         if (!cancelled) setItems(batch)
       } catch (err) {
-        if (!cancelled) setError(errorMessage(err))
+        if (!cancelled && !getCachedMaintenance()?.length) setError(errorMessage(err))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -158,12 +161,22 @@ function Manutencoes({ params }) {
   }, [items])
   const byType = useMemo(() => countBy(visible, 'order_type'), [visible])
   const byStation = useMemo(() => countBy(visible, 'station_code'), [visible])
+  const typeRows = Object.entries(byType).sort((a, b) => b[1] - a[1])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
   const stationRows = Object.entries(byStation).sort((a, b) => b[1] - a[1])
   const topStations = stationRows.slice(0, 6)
   const otherStations = stationRows.slice(6)
-  const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
+  const topType = typeRows[0]
+  const durations = visible
+    .map((item) => Number(item.duration_hours))
+    .filter((value) => Number.isFinite(value) && value >= 0)
+  const averageDuration = durations.length
+    ? durations.reduce((total, value) => total + value, 0) / durations.length
+    : null
+  const averageDurationLabel = averageDuration == null
+    ? '—'
+    : averageDuration.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 
   function updateField(field) {
     return (event) => {
@@ -284,21 +297,21 @@ function Manutencoes({ params }) {
 
   return (
     <section className="manutencoes">
-      <div className="page-head">
+      <header className="page-head manutencoes__head">
         <div>
-          <p className="dashboard__kicker">Histórico e Registros SAP</p>
+          <p className="manutencoes__eyebrow"><span aria-hidden="true" />Histórico e registros SAP</p>
           <h1>Manutenções</h1>
-          <p className="dashboard__lead">
+          <p className="manutencoes__lead">
             Histórico consolidado de ordens de manutenção preventiva e corretiva da Linha 4.
           </p>
         </div>
         <div className="page-head__actions">
-          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+          <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
-          </CadastrarButton>
-          <CadastrarButton onClick={openCadastro}>Cadastrar Manutenções +</CadastrarButton>
+          </Button>
+          <Button onClick={openCadastro}>Nova manutenção</Button>
         </div>
-      </div>
+      </header>
 
       {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
@@ -306,50 +319,121 @@ function Manutencoes({ params }) {
       {loading ? null : (
         <>
           <div className="manutencoes__hero">
-            <Card
-              layout="banner"
-              label="Ordens de manutenção"
-              value={visible.length}
-              hint={
-                topType
-                  ? `${topType[1]} do tipo ${topType[0]}${rangeHint ? ` · ${rangeHint}` : ''}`
-                  : 'Nenhuma ordem na linha'
-              }
-            />
+            <section className="manutencoes__metrics" aria-label="Resumo das manutenções">
+              <article className="manutencoes__metric manutencoes__metric--primary">
+                <img className="manutencoes__metric-mark" src={iconMotiva} alt="" aria-hidden="true" />
+                <span className="manutencoes__metric-top">
+                  <span>Ordens filtradas</span>
+                  <NavIcon id="manutencoes" />
+                </span>
+                <strong className="manutencoes__metric-value"><CountValue value={visible.length} /></strong>
+                <span className="manutencoes__metric-description">
+                  {rangeHint || 'Todo o período disponível'}
+                </span>
+                <span className="manutencoes__metric-foot">
+                  {items.length.toLocaleString('pt-BR')} registros carregados
+                </span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Tipo predominante</span>
+                  <NavIcon id="alarmes" />
+                </span>
+                <strong className="manutencoes__metric-value manutencoes__metric-value--code">
+                  {topType?.[0] || '—'}
+                </strong>
+                <span className="manutencoes__metric-description">
+                  {topType ? `${topType[1].toLocaleString('pt-BR')} ordens neste recorte` : 'Sem ordens no período'}
+                </span>
+                <span className="manutencoes__metric-foot">Distribuição por categoria</span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Estações envolvidas</span>
+                  <NavIcon id="portas" />
+                </span>
+                <strong className="manutencoes__metric-value"><CountValue value={stationRows.length} /></strong>
+                <span className="manutencoes__metric-description">Estações com registros no recorte</span>
+                <span className="manutencoes__metric-foot">Cobertura da Linha 4</span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Duração média</span>
+                  <NavIcon id="dashboard" />
+                </span>
+                <strong className="manutencoes__metric-value">
+                  {averageDurationLabel}<small>h</small>
+                </strong>
+                <span className="manutencoes__metric-description">
+                  {durations.length ? `${durations.length.toLocaleString('pt-BR')} ordens com duração registrada` : 'Duração ainda não informada'}
+                </span>
+                <span className="manutencoes__metric-foot">Tempo entre início e conclusão</span>
+              </article>
+            </section>
+
             <div className="manutencoes__charts">
               <article className="manutencoes__chart">
-                <h2>Ordens por tipo</h2>
-                {Object.entries(byType).map(([label, value]) => (
-                  <div key={label} className="manutencoes__bar">
-                    <strong>{label}</strong>
-                    <i style={{ width: `${(value / maxType) * 100}%` }} />
-                    <em>{value}</em>
+                <header className="manutencoes__panel-head">
+                  <div>
+                    <p>Distribuição por categoria</p>
+                    <h2>Ordens por tipo</h2>
                   </div>
-                ))}
+                  <span aria-hidden="true"><NavIcon id="manutencoes" /></span>
+                </header>
+                <div className="manutencoes__chart-body">
+                  {typeRows.length ? typeRows.map(([label, value]) => (
+                    <div key={label} className="manutencoes__bar">
+                      <strong>{label}</strong>
+                      <span className="manutencoes__bar-track">
+                        <i style={{ width: `${(value / maxType) * 100}%` }} />
+                      </span>
+                      <em>{value}</em>
+                    </div>
+                  )) : <p className="manutencoes__empty">Nenhuma ordem neste recorte.</p>}
+                </div>
               </article>
               <article className="manutencoes__chart">
-                <h2>Ordens por estação</h2>
-                <div className="manutencoes__bars">
+                <header className="manutencoes__panel-head">
                   <div>
-                    {topStations.map(([label, value]) => (
-                      <div key={label} className="manutencoes__bar">
-                        <strong>{label}</strong>
-                        <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                        <em>{value}</em>
-                      </div>
-                    ))}
+                    <p>Distribuição territorial</p>
+                    <h2>Ordens por estação</h2>
                   </div>
-                  {otherStations.length ? (
-                    <div>
-                      {otherStations.map(([label, value]) => (
-                        <div key={label} className="manutencoes__bar">
-                          <strong>{label}</strong>
-                          <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                          <em>{value}</em>
+                  <span aria-hidden="true"><NavIcon id="portas" /></span>
+                </header>
+                <div className="manutencoes__chart-body">
+                  {stationRows.length ? (
+                    <div className="manutencoes__bars">
+                      <div>
+                        {topStations.map(([label, value]) => (
+                          <div key={label} className="manutencoes__bar">
+                            <strong>{label}</strong>
+                            <span className="manutencoes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                      {otherStations.length ? (
+                        <div>
+                          {otherStations.map(([label, value]) => (
+                            <div key={label} className="manutencoes__bar">
+                              <strong>{label}</strong>
+                              <span className="manutencoes__bar-track">
+                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                              </span>
+                              <em>{value}</em>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : null}
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="manutencoes__empty">Nenhuma estação com ordens neste recorte.</p>
+                  )}
                 </div>
               </article>
             </div>
@@ -429,30 +513,41 @@ function Manutencoes({ params }) {
             </FiltroCampo>
           </Filtros>
 
-          <div className="manutencoes__list">
-            {paged.length ? (
-              paged.map((item) => (
-                <CardManutencao
-                  key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
-                  orderType={item.order_type}
-                  sapOrder={item.sap_order_number}
-                  station={item.station_code}
-                  location={item.installation_location}
-                  startedAt={item.start_timestamp}
-                  endedAt={item.end_timestamp}
-                  durationHours={item.duration_hours}
-                  symptom={item.symptom}
-                  description={item.description}
-                  source={item.source}
-                />
-              ))
-            ) : (
-              <p className="page-empty">
-                {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
-              </p>
-            )}
+          <section className="manutencoes__list" aria-labelledby="maintenance-records-title">
+            <header className="manutencoes__panel-head manutencoes__list-head">
+              <div>
+                <p>Detalhamento operacional</p>
+                <h2 id="maintenance-records-title">Registros de manutenção</h2>
+              </div>
+              <span className="manutencoes__record-count">
+                {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </header>
+            <div className="manutencoes__records">
+              {paged.length ? (
+                paged.map((item) => (
+                  <CardManutencao
+                    key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
+                    orderType={item.order_type}
+                    sapOrder={item.sap_order_number}
+                    station={item.station_code}
+                    location={item.installation_location}
+                    startedAt={item.start_timestamp}
+                    endedAt={item.end_timestamp}
+                    durationHours={item.duration_hours}
+                    symptom={item.symptom}
+                    description={item.description}
+                    source={item.source}
+                  />
+                ))
+              ) : (
+                <p className="page-empty">
+                  {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
+                </p>
+              )}
+            </div>
             <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-          </div>
+          </section>
         </>
       )}
 

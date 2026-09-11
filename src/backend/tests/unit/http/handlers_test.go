@@ -525,12 +525,10 @@ func setupDashboardTestRouter() (*gin.Engine, *mockDashboardRepoForHTTP, *mockPr
 			},
 			Inspections: []*domain.Inspection{
 				{
-					ID:           "ins-1",
-					Status:       "completed",
-					Priority:     "high",
-					Notes:        "ok",
-					ScheduledFor: "2026-09-05 10:00:00",
-					CompletedAt:  &now,
+					ID:          "ins-1",
+					Status:      "completed",
+					Notes:       "ok",
+					CompletedAt: &now,
 				},
 			},
 		},
@@ -730,16 +728,14 @@ func setupInspectionTestRouter() (*gin.Engine, *mockInspectionRepoForHTTP, *doma
 
 	now := time.Now()
 	ins := &domain.Inspection{
-		ID:           "ins-1",
-		StationCode:  "HIG",
-		Platform:     "P1",
-		DoorNumber:   1,
-		ScheduledFor: "2026-09-06 10:00:00",
-		Priority:     "high",
-		Status:       "pending",
-		CompletedAt:  &now,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:          "ins-1",
+		StationCode: "HIG",
+		Platform:    "P1",
+		DoorNumber:  1,
+		Status:      "pending",
+		CompletedAt: &now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	repo := &mockInspectionRepoForHTTP{
@@ -785,13 +781,10 @@ func TestInspectionHandler_Create(t *testing.T) {
 	})
 
 	t.Run("create success", func(t *testing.T) {
-		now := time.Now()
 		body, _ := json.Marshal(map[string]any{
-			"station_code":  "HIG",
-			"platform":      "P1",
-			"door_number":   2,
-			"scheduled_for": now.Add(48 * time.Hour).Format(time.RFC3339),
-			"priority":      "high",
+			"station_code": "HIG",
+			"platform":     "P1",
+			"door_number":  2,
 		})
 		req := httptest.NewRequest(http.MethodPost, "/inspections", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")

@@ -44,12 +44,10 @@ type TimelineMaintenanceResponse struct {
 }
 
 type TimelineInspectionResponse struct {
-	ID           string  `json:"id"`
-	Status       string  `json:"status"`
-	Priority     string  `json:"priority"`
-	Notes        string  `json:"notes,omitempty"`
-	ScheduledFor string  `json:"scheduled_for,omitempty"`
-	CompletedAt  *string `json:"completed_at,omitempty"`
+	ID          string  `json:"id"`
+	Status      string  `json:"status"`
+	Notes       string  `json:"notes,omitempty"`
+	CompletedAt *string `json:"completed_at,omitempty"`
 }
 
 type DoorTimelineResponse struct {
@@ -159,12 +157,10 @@ func toDoorTimelineResponse(t *usecase.DoorTimelineOutputDTO) DoorTimelineRespon
 			compStr = &s
 		}
 		inspections = append(inspections, TimelineInspectionResponse{
-			ID:           i.ID,
-			Status:       i.Status,
-			Priority:     i.Priority,
-			Notes:        i.Notes,
-			ScheduledFor: i.ScheduledFor,
-			CompletedAt:  compStr,
+			ID:          i.ID,
+			Status:      i.Status,
+			Notes:       i.Notes,
+			CompletedAt: compStr,
 		})
 	}
 

@@ -685,8 +685,6 @@
           "station_code": { "type": "string", "example": "FAL" },
           "platform": { "type": "string", "example": "P1" },
           "door_number": { "type": "string", "example": 4 },
-          "priority": { "type": "string", "enum": ["low", "normal", "high", "critical"], "default": "normal" },
-          "scheduled_for": { "type": "string", "example": "2026-09-04 09:00:00" },
           "notes": { "type": "string", "example": "Verificacao solicitada apos alerta preditivo" }
         }
       },
@@ -750,8 +748,6 @@
           "station_code": { "type": "string" },
           "platform": { "type": "string" },
           "door_number": { "type": "integer" },
-          "scheduled_for": { "type": "string" },
-          "priority": { "type": "string" },
           "status": { "type": "string" },
           "notes": { "type": "string" },
           "completed_at": { "type": "string" },

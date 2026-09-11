@@ -166,7 +166,7 @@ func TestDashboardUseCase_GetDoorTimeline(t *testing.T) {
 				{ID: "mnt-1", OrderType: "CORRETIVA", SAPOrderNumber: "ORD-1", StartTimestamp: "2026-09-05 10:00:00", DurationHours: 1.0, Description: "Fix", Source: "manual"},
 			},
 			Inspections: []*domain.Inspection{
-				{ID: "ins-1", Status: "completed", Priority: "high", ScheduledFor: "2026-09-05 10:00:00", CompletedAt: &now},
+				{ID: "ins-1", Status: "completed", CompletedAt: &now},
 			},
 		},
 	}

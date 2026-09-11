@@ -1,72 +1,106 @@
 .filtros {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
   margin: 0 0 16px;
-  padding: 14px 22px 12px;
-  border-radius: 24px;
-  background: var(--brand-soft);
-  box-shadow: 0 12px 28px rgba(47, 0, 180, 0.08);
+  padding: 16px 18px;
+  border: 1px solid var(--line, #e1e8f2);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px #233b6708;
 }
 
 .filtros__periodos {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line, #e1e8f2);
 }
 
-.filtros__periodos > span {
-  color: #6b4fe0;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.filtros__periodos div {
+.filtros__periodos-copy {
   display: flex;
-  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.filtros__periodos-copy > span {
+  color: var(--ink, #172e52);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filtros__periodos-copy small {
+  color: var(--muted, #52647f);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.filtros__periodos-control {
+  display: inline-flex;
+  flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
+  padding: 4px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  border-radius: 9px;
+  background: var(--interactive, #f0f3ff);
 }
 
 .filtros__periodos button {
-  flex: 1;
-  min-height: 34px;
-  padding: 0 8px;
-  border: 0;
-  border-bottom: 1px solid transparent;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: transparent;
-  color: #6b4fe0;
-  font-weight: 500;
+  color: var(--muted, #52647f);
+  font-size: 11px;
+  font-weight: 700;
   white-space: nowrap;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.filtros__periodos button:hover {
+  border-color: var(--interactive-border, #d7dffd);
+  background: #ffffff;
+  color: var(--brand, #3f00ff);
 }
 
 .filtros__periodos button.is-active {
-  color: var(--brand);
-  font-weight: 700;
-  border-bottom-color: var(--brand);
+  border-color: var(--brand, #3f00ff);
+  background: var(--brand, #3f00ff);
+  color: #ffffff;
+  box-shadow: 0 3px 8px #3f00ff26;
+}
+
+.filtros__periodos button:active {
+  transform: translateY(1px);
 }
 
 .filtros__campos {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(190px, 1.4fr) repeat(2, minmax(150px, 0.8fr)) auto;
   align-items: end;
-  gap: 10px 12px;
-  overflow-x: auto;
+  gap: 12px;
+  min-width: 0;
 }
 
 .filtros__campo {
   display: flex;
-  flex: 1 1 0;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  color: #6b4fe0;
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--muted, #52647f);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .filtros__campo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -74,28 +108,38 @@
 .filtros__campo select {
   width: 100%;
   min-width: 0;
-  min-height: 34px;
-  padding: 6px 0 8px;
-  border: 0;
-  border-bottom: 1px solid rgba(26, 20, 96, 0.28);
-  border-radius: 0;
-  background: transparent;
-  color: var(--brand);
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  border-radius: 7px;
   outline: none;
+  background: #fbfcff;
+  color: var(--ink, #172e52);
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.filtros__campo input::placeholder {
+  color: #8997ac;
+  font-weight: 500;
+}
+
+.filtros__campo input:focus,
+.filtros__campo select:focus {
+  border-color: var(--brand, #3f00ff);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px #3f00ff12;
 }
 
 .filtros__campo select {
   appearance: none;
   cursor: pointer;
-  padding-right: 18px;
+  padding-right: 32px;
+  background-color: #fbfcff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%233F00FF' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 2px center;
-}
-
-.filtros__campo input:focus,
-.filtros__campo select:focus {
-  border-bottom-color: var(--brand);
+  background-position: right 12px center;
 }
 
 .filtros__campo input[type='date'],
@@ -104,20 +148,90 @@
 }
 
 .filtros__campo select option {
-  color: var(--brand);
+  color: var(--ink, #172e52);
 }
 
 .filtros__clear {
-  flex: 0 0 auto;
-  min-height: 34px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--brand);
-  font-weight: 700;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  border-radius: 7px;
+  background: var(--interactive, #f0f3ff);
+  color: var(--brand, #3f00ff);
+  font-size: 11px;
+  font-weight: 800;
   white-space: nowrap;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
 .filtros__clear:hover {
-  text-decoration: underline;
+  border-color: #a5b4fa;
+  background: var(--interactive-hover, #e5eaff);
+}
+
+.filtros__clear:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 900px) {
+  .filtros__periodos {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filtros__periodos-control {
+    width: 100%;
+  }
+
+  .filtros__periodos button {
+    flex: 1 1 auto;
+  }
+
+  .filtros__campos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtros__campo:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .filtros__clear {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .filtros {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .filtros__periodos-control {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .filtros__periodos button {
+    width: 100%;
+    padding-inline: 6px;
+  }
+
+  .filtros__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filtros__campo:first-child {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filtros__periodos button,
+  .filtros__campo input,
+  .filtros__campo select,
+  .filtros__clear {
+    transition: none;
+  }
 }

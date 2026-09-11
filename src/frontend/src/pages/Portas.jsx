@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Button from '../components/Button'
 import Card from '../components/Card'
-import CadastrarButton from '../components/CadastrarButton'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, stationLabel } from '../data/stations'
 import { api, asList, errorMessage, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
+import { getCachedDashboard, setCachedDashboard, invalidateDashboard } from '../lib/dashboardCache'
+import {
+  getCachedDoorDossier,
+  getCachedStationDoors,
+  getLastOpenedStation,
+  invalidateDoorsCache,
+  setCachedDoorDossier,
+  setCachedStationDoors,
+  setLastOpenedStation,
+} from '../lib/doorsCache'
 import { invalidateInspections } from '../lib/inspectionCache'
 import './Portas.css'
 
@@ -23,20 +33,21 @@ const emptySummary = {
 
 function Portas({ onNavigate, params = {} }) {
   const toast = useToast()
+  const initialStation = params.station || getLastOpenedStation() || null
+  const initialDoors = initialStation ? getCachedStationDoors(initialStation) : null
   const [selectedCode, setSelectedCode] = useState(null)
   const [tooltipOpen, setTooltipOpen] = useState(false)
-  const [openedCode, setOpenedCode] = useState(params.station || null)
-  const [doors, setDoors] = useState([])
-  const [summary, setSummary] = useState(emptySummary)
-  const [lastPrediction, setLastPrediction] = useState(null)
-  const [activePlatform, setActivePlatform] = useState('P1')
+  const [openedCode, setOpenedCode] = useState(initialStation)
+  const [doors, setDoors] = useState(() => initialDoors || [])
+  const [summary, setSummary] = useState(() => getCachedDashboard()?.summary || emptySummary)
+  const [lastPrediction, setLastPrediction] = useState(() => initialDoors?.[0]?.last_evaluated_at || null)
+  const [activePlatform, setActivePlatform] = useState(() => initialDoors?.[0]?.platform || 'P1')
   const [openedDoor, setOpenedDoor] = useState(null)
   const [doorMaintenances, setDoorMaintenances] = useState([])
   const [doorAlarms, setDoorAlarms] = useState([])
   const [doorSearch, setDoorSearch] = useState('')
   const [doorFilter, setDoorFilter] = useState('all')
   const [inspNotes, setInspNotes] = useState('')
-  const [inspWhen, setInspWhen] = useState({ date: '', time: '' })
   const [inspError, setInspError] = useState('')
   const [error, setError] = useState('')
   const [loadingDoors, setLoadingDoors] = useState(false)
@@ -94,9 +105,11 @@ function Portas({ onNavigate, params = {} }) {
       try {
         const data = await api.dashboard()
         if (cancelled) return
-        setSummary(mergeDashboard(data, null))
+        const merged = mergeDashboard(data, null)
+        setSummary(merged)
+        setCachedDashboard(merged)
       } catch (err) {
-        if (!cancelled) setError(errorMessage(err))
+        if (!cancelled && !getCachedDashboard()?.summary) setError(errorMessage(err))
       }
     }
 
@@ -107,12 +120,19 @@ function Portas({ onNavigate, params = {} }) {
   }, [])
 
   useEffect(() => {
+    if (initialStation && !doors.length) {
+      loadStationDoors(initialStation)
+    }
+  }, [])
+
+  useEffect(() => {
     const targetStation = params.station ? mapStation(params.station) : null
     if (targetStation && targetStation !== openedCode) {
       handleOpenStation(targetStation, false)
-    } else if (!targetStation && openedCode) {
+    } else if (!targetStation && openedCode && params.station !== undefined) {
       setOpenedCode(null)
       setOpenedDoor(null)
+      setLastOpenedStation(null)
     }
   }, [params.station])
 
@@ -181,16 +201,26 @@ function Portas({ onNavigate, params = {} }) {
 
   async function loadStationDoors(code) {
     const station = lineStations.find((item) => item.code === code)
-    setLoadingDoors(true)
+    const cached = getCachedStationDoors(code)
+    if (cached && cached.length) {
+      setDoors(cached)
+      setActivePlatform(cached[0]?.platform ?? station?.platforms?.[0] ?? 'P1')
+      setLastPrediction(cached[0]?.last_evaluated_at || null)
+    } else {
+      setLoadingDoors(true)
+    }
     setError('')
     try {
       const next = normalizeDoors(await api.stationDoors(code), code, station?.name)
       setDoors(next)
+      setCachedStationDoors(code, next)
       setActivePlatform(next[0]?.platform ?? station?.platforms?.[0] ?? 'P1')
       setLastPrediction(next[0]?.last_evaluated_at || null)
     } catch (err) {
-      setDoors([])
-      setError(errorMessage(err))
+      if (!cached) {
+        setDoors([])
+        setError(errorMessage(err))
+      }
     } finally {
       setLoadingDoors(false)
     }
@@ -200,6 +230,7 @@ function Portas({ onNavigate, params = {} }) {
     if (updateUrl) {
       onNavigate?.('portas', { station: code })
     }
+    setLastOpenedStation(code)
     setOpenedCode(code)
     setOpenedDoor(null)
     setSelectedCode(null)
@@ -216,6 +247,8 @@ function Portas({ onNavigate, params = {} }) {
         mode: 'predict',
         task: () => api.triggerPredictions('7'),
       })
+      invalidateDoorsCache()
+      invalidateDashboard()
       toast.success('Diagnóstico preditivo executado com sucesso!')
       await loadStationDoors(openedCode)
     } catch (err) {
@@ -228,30 +261,46 @@ function Portas({ onNavigate, params = {} }) {
     if (updateUrl && openedCode) {
       onNavigate?.('portas', { station: openedCode, door: door.door_number })
     }
-    setOpenedDoor(door)
-    setDoorMaintenances([])
-    setDoorAlarms([])
+    const cachedDossier = getCachedDoorDossier(door.door_id)
+    if (cachedDossier) {
+      setOpenedDoor(cachedDossier.door)
+      setDoorMaintenances(cachedDossier.maintenances)
+      setDoorAlarms(cachedDossier.alarms)
+    } else {
+      setOpenedDoor(door)
+      setDoorMaintenances([])
+      setDoorAlarms([])
+    }
     setInspNotes('')
-    setInspWhen({ date: '', time: '' })
     setInspError('')
+
+    let extraMaintenances = cachedDossier?.maintenances || []
+    let extraAlarms = cachedDossier?.alarms || []
+    let updatedDoor = cachedDossier?.door || door
 
     try {
       const dossier = await api.doorTimeline(door.door_id)
-      setOpenedDoor({ ...door, ...dossier, station_code: door.station_code })
+      updatedDoor = { ...door, ...dossier, station_code: door.station_code }
+      setOpenedDoor(updatedDoor)
       const extra = asList(dossier?.maintenances || dossier?.maintenance)
       if (extra.length) {
+        extraMaintenances = extra
         setDoorMaintenances(extra)
       } else {
         const items = asList(await api.maintenance(100, 0))
-        setDoorMaintenances(relatedMaintenances(items, door))
+        extraMaintenances = relatedMaintenances(items, door)
+        setDoorMaintenances(extraMaintenances)
       }
     } catch (err) {
-      setError(errorMessage(err))
-      try {
-        const items = asList(await api.maintenance(100, 0))
-        setDoorMaintenances(relatedMaintenances(items, door))
-      } catch {
-        setDoorMaintenances([])
+      if (!cachedDossier) {
+        setError(errorMessage(err))
+        try {
+          const items = asList(await api.maintenance(100, 0))
+          extraMaintenances = relatedMaintenances(items, door)
+          setDoorMaintenances(extraMaintenances)
+        } catch {
+          setDoorMaintenances([])
+        }
       }
     }
 
@@ -262,10 +311,17 @@ function Portas({ onNavigate, params = {} }) {
         limit: 10,
       })
       const alarms = asList(rawAlarms?.data || rawAlarms?.alarms || rawAlarms)
+      extraAlarms = alarms
       setDoorAlarms(alarms)
     } catch {
-      setDoorAlarms([])
+      if (!cachedDossier) setDoorAlarms([])
     }
+
+    setCachedDoorDossier(door.door_id, {
+      door: updatedDoor,
+      maintenances: extraMaintenances,
+      alarms: extraAlarms,
+    })
   }
 
   async function handleCreateInspection(event) {
@@ -277,11 +333,6 @@ function Portas({ onNavigate, params = {} }) {
         station_code: openedDoor.station_code,
         platform: openedDoor.platform,
         door_number: String(openedDoor.door_number),
-        priority: openedDoor.will_fail ? 'high' : 'normal',
-        scheduled_for:
-          inspWhen.date && inspWhen.time
-            ? `${inspWhen.date} ${inspWhen.time.length === 5 ? `${inspWhen.time}:00` : inspWhen.time}`
-            : undefined,
         notes: inspNotes.trim() || undefined,
       })
       invalidateInspections()
@@ -303,6 +354,7 @@ function Portas({ onNavigate, params = {} }) {
   function handleBackFromStation() {
     setOpenedCode(null)
     setOpenedDoor(null)
+    setLastOpenedStation(null)
     onNavigate?.('portas', {})
   }
 
@@ -369,29 +421,15 @@ function Portas({ onNavigate, params = {} }) {
             </div>
             <div>
               <span>Diagnóstico IA</span>
-              <strong style={{ color: timeline.will_fail ? '#dc2626' : '#16a34a' }}>
+              <strong className={timeline.will_fail ? 'portas__status-risk' : 'portas__status-ok'}>
                 {timeline.will_fail ? 'Risco de Falha' : 'Operação Estável'}
               </strong>
             </div>
           </div>
           {timeline.will_fail ? (
-            <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-              <button
-                type="button"
-                className="portas-link-insp"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  background: '#7c3aed',
-                  color: '#fff',
-                  border: 'none',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
+            <div className="portas__dossier-actions">
+              <Button
+                variant="secondary"
                 onClick={() =>
                   onNavigate?.('inspecoes', {
                     station: timeline.station_code,
@@ -400,7 +438,7 @@ function Portas({ onNavigate, params = {} }) {
                 }
               >
                 Ver Ordens de Inspeção Desta Porta
-              </button>
+              </Button>
             </div>
           ) : null}
         </article>
@@ -440,27 +478,12 @@ function Portas({ onNavigate, params = {} }) {
           {inspError ? <p className="page-status is-error">{inspError}</p> : null}
           <form className="portas__insp" onSubmit={handleCreateInspection}>
             <Input
-              id="door-insp-date"
-              label="Data"
-              type="date"
-              value={inspWhen.date}
-              onChange={(event) => setInspWhen((current) => ({ ...current, date: event.target.value }))}
-            />
-            <Input
-              id="door-insp-time"
-              label="Hora"
-              type="time"
-              step="60"
-              value={inspWhen.time}
-              onChange={(event) => setInspWhen((current) => ({ ...current, time: event.target.value }))}
-            />
-            <Input
               id="door-insp-notes"
               label="Notas"
               value={inspNotes}
               onChange={(event) => setInspNotes(event.target.value)}
             />
-            <CadastrarButton type="submit">Abrir ordem</CadastrarButton>
+            <Button type="submit">Abrir ordem</Button>
           </form>
         </article>
       </section>
@@ -534,32 +557,20 @@ function Portas({ onNavigate, params = {} }) {
         </article>
 
         <article className="portas__panel">
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap' }}>
+          <div className="portas__doors-header">
             <h2>Portas de Estação · {activePlatform}</h2>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="portas__doors-filters">
               <input
-                type="text"
+                type="search"
+                className="portas__doors-search"
                 placeholder="Buscar porta ou TAG…"
                 value={doorSearch}
                 onChange={(e) => setDoorSearch(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid rgba(63,0,255,0.2)',
-                  fontSize: '0.86rem',
-                  outline: 'none',
-                }}
               />
               <select
+                className="portas__doors-select"
                 value={doorFilter}
                 onChange={(e) => setDoorFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid rgba(63,0,255,0.2)',
-                  fontSize: '0.86rem',
-                  background: '#ffffff',
-                }}
               >
                 <option value="all">Todas as portas</option>
                 <option value="risk">Em risco</option>
@@ -600,10 +611,10 @@ function Portas({ onNavigate, params = {} }) {
 
         <div className="portas__actions">
           <div>
-            <CadastrarButton onClick={handlePredict}>Executar Diagnóstico IA</CadastrarButton>
+            <Button onClick={handlePredict}>Executar Diagnóstico IA</Button>
           </div>
           <div>
-            <CadastrarButton onClick={() => loadStationDoors(openedCode)}>Atualizar Dados</CadastrarButton>
+            <Button onClick={() => loadStationDoors(openedCode)}>Atualizar Dados</Button>
           </div>
         </div>
         {lastPrediction ? <p className="portas__eval">Última avaliação: {lastPrediction}</p> : null}

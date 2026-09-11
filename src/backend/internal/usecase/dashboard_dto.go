@@ -38,9 +38,7 @@ type TimelineMaintenanceOutputDTO struct {
 type TimelineInspectionOutputDTO struct {
 	ID           string
 	Status       string
-	Priority     string
 	Notes        string
-	ScheduledFor string
 	CompletedAt  *time.Time
 }
 

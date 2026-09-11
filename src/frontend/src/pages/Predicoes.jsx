@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import CadastrarButton from '../components/CadastrarButton'
+import Button from '../components/Button'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import { usePredictionLoad } from '../components/PredictionLoad'
@@ -231,9 +231,9 @@ function Predicoes({ onNavigate, params }) {
               <option value={30}>30 dias</option>
             </select>
           </label>
-          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+          <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
-          </CadastrarButton>
+          </Button>
           <button
             type="button"
             className="predicoes-trigger-btn"
@@ -251,12 +251,12 @@ function Predicoes({ onNavigate, params }) {
 
       {runData ? (
         <div className="predicoes-kpis">
-          <div className="predicoes-kpi-card">
+          <div className="predicoes-kpi-card is-run">
             <span>Rodada Atual</span>
             <strong title={runData.id}>{runData.id.slice(0, 8) || '—'}</strong>
             <small>{runData.created_at || 'Data não informada'}</small>
           </div>
-          <div className="predicoes-kpi-card">
+          <div className="predicoes-kpi-card is-total">
             <span>Portas Avaliadas</span>
             <strong>{runData.total_doors_evaluated || items.length}</strong>
             <small>portas ativas analisadas</small>
@@ -273,7 +273,7 @@ function Predicoes({ onNavigate, params }) {
             </strong>
             <small>operação regular</small>
           </div>
-          <div className="predicoes-kpi-card">
+          <div className="predicoes-kpi-card is-horizon">
             <span>Horizonte Preditivo</span>
             <strong>{runData.horizon_days || 7} dias</strong>
             <small>janela de antecipação</small>
@@ -286,7 +286,7 @@ function Predicoes({ onNavigate, params }) {
           <div className="predicoes-ai-banner__text">
             <strong>Inspeções automáticas abertas pelo sistema</strong>
             <span>
-              Foram abertas ordens de inspeção de prioridade crítica para todas as portas identificadas
+              Foram abertas ordens de inspeção preventivas para todas as portas identificadas
               com risco de quebra na Linha 4 Amarela.
             </span>
           </div>
@@ -302,7 +302,7 @@ function Predicoes({ onNavigate, params }) {
       ) : null}
 
       <Filtros
-        period=""
+        showPeriod={false}
         dirty={filtersDirty}
         onClear={() => {
           setFilters(emptyFilters)
@@ -435,7 +435,7 @@ function Predicoes({ onNavigate, params }) {
                     })
                   }
                 >
-                  Dossiê da Porta
+                  Ver Porta
                 </button>
               </div>
             </article>

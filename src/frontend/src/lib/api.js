@@ -351,7 +351,7 @@ function maintenanceKey(item) {
 
 function inspectionKey(item) {
   if (item?.id != null && item.id !== '') return `id:${item.id}`
-  return `row:${item.station_code}|${item.platform}|${item.door_number}|${item.scheduled_for}|${item.status}|${item.notes}`
+  return `row:${item.station_code}|${item.platform}|${item.door_number}|${item.status}|${item.notes}`
 }
 
 function mergeInspectionLists(...lists) {

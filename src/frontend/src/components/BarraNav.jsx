@@ -4,7 +4,7 @@ import logo from '../assets/logo.svg'
 import './BarraNav.css'
 
 const items = [
-  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'dashboard', label: 'Visão geral' },
   { id: 'predicoes', label: 'Predições' },
   { id: 'portas', label: 'Portas' },
   { id: 'alarmes', label: 'Alarmes' },
@@ -21,13 +21,17 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
 
   return (
     <aside className={`barra-nav${collapsed ? ' is-collapsed' : ''}`}>
-      <img
-        className="barra-nav__logo"
-        src={collapsed ? iconMotiva : logo}
-        alt="motiva"
-      />
+      <div className="barra-nav__brand">
+        <img
+          className="barra-nav__logo"
+          src={collapsed ? iconMotiva : logo}
+          alt="motiva"
+        />
+        <span className="barra-nav__brand-caption">Manutenção preditiva</span>
+      </div>
 
-      <nav>
+      <p className="barra-nav__section-label">Operação</p>
+      <nav aria-label="Navegação principal">
         <div className="barra-nav__indicator" style={{ '--i': String(activeIndex) }} aria-hidden="true" />
         <ul>
           {items.map((item) => (
@@ -37,6 +41,8 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
                 className={current === item.id ? 'is-active' : undefined}
                 onClick={() => onNavigate(item.id)}
                 title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+                aria-current={current === item.id ? 'page' : undefined}
               >
                 <NavIcon id={item.id} />
                 <span className="barra-nav__label">{item.label}</span>
@@ -52,7 +58,7 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
           {!collapsed ? (
             <div className="barra-nav__user-info">
               <strong>{user.name}</strong>
-              <small>{user.role || 'Operador Linha 4'}</small>
+              <small>{user.role === 'operator' ? 'Operador' : user.role || 'Operador Linha 4'}</small>
             </div>
           ) : null}
         </div>
@@ -64,6 +70,8 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
           className="barra-nav__toggle"
           onClick={() => setCollapsed((value) => !value)}
           aria-label={collapsed ? 'Expandir menu' : 'Minimizar menu'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expandir menu' : 'Minimizar menu'}
         >
           <ToggleIcon collapsed={collapsed} />
         </button>
@@ -72,6 +80,7 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
           className="barra-nav__sair"
           onClick={onLogout}
           title={collapsed ? 'Sair' : undefined}
+          aria-label="Sair"
         >
           <NavIcon id="sair" />
           <span className="barra-nav__label">Sair</span>
@@ -93,7 +102,7 @@ function ToggleIcon({ collapsed }) {
   )
 }
 
-function NavIcon({ id }) {
+export function NavIcon({ id }) {
   if (id === 'dashboard') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

@@ -716,8 +716,8 @@ func testListInspectionsStep(t *testing.T, router http.Handler) string {
 	}
 	_ = json.Unmarshal(inspListW.Body.Bytes(), &inspListResp)
 
-	if inspListResp.Total != 1 || inspListResp.Data[0].Priority != "critical" {
-		t.Fatalf("etapa 7 falhou: inspecao critica automatica nao gerada: %+v", inspListResp)
+	if inspListResp.Total != 1 || inspListResp.Data[0].Status != "pending" {
+		t.Fatalf("etapa 7 falhou: inspecao pendente automatica nao gerada: %+v", inspListResp)
 	}
 
 	if inspListResp.Data[0].PredictionID == nil || *inspListResp.Data[0].PredictionID == "" {

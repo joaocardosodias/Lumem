@@ -14,8 +14,6 @@ type CreateInspectionRequest struct {
 	StationCode  string  `json:"station_code"`
 	Platform     string  `json:"platform"`
 	DoorNumber   int     `json:"door_number"`
-	ScheduledFor string  `json:"scheduled_for"`
-	Priority     string  `json:"priority"`
 	Notes        string  `json:"notes"`
 	PredictionID *string `json:"prediction_id"`
 }
@@ -31,8 +29,6 @@ type InspectionResponse struct {
 	StationCode  string    `json:"station_code"`
 	Platform     string    `json:"platform"`
 	DoorNumber   int       `json:"door_number"`
-	ScheduledFor string    `json:"scheduled_for,omitempty"`
-	Priority     string    `json:"priority"`
 	Status       string    `json:"status"`
 	Notes        string    `json:"notes,omitempty"`
 	CompletedAt  *string   `json:"completed_at,omitempty"`
@@ -61,8 +57,6 @@ func toInspectionResponse(dto *usecase.InspectionOutputDTO) InspectionResponse {
 		StationCode:  dto.StationCode,
 		Platform:     dto.Platform,
 		DoorNumber:   dto.DoorNumber,
-		ScheduledFor: dto.ScheduledFor,
-		Priority:     dto.Priority,
 		Status:       dto.Status,
 		Notes:        dto.Notes,
 		CompletedAt:  compStr,
@@ -82,8 +76,6 @@ func (h *InspectionHandler) Create(c *gin.Context) {
 		StationCode:  req.StationCode,
 		Platform:     req.Platform,
 		DoorNumber:   req.DoorNumber,
-		ScheduledFor: req.ScheduledFor,
-		Priority:     req.Priority,
 		Notes:        req.Notes,
 		PredictionID: req.PredictionID,
 	})

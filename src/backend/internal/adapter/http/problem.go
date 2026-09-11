@@ -67,7 +67,6 @@ func RespondDomainError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrStationCodeRequired),
 		errors.Is(err, domain.ErrInvalidPlatform),
 		errors.Is(err, domain.ErrInvalidDoorNumber),
-		errors.Is(err, domain.ErrInvalidPriority),
 		errors.Is(err, domain.ErrInvalidInspectionStatus),
 		errors.Is(err, domain.ErrInspectionIDRequired),
 		errors.Is(err, domain.ErrOrderTypeRequired),

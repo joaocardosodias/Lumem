@@ -48,7 +48,6 @@ func assignItemRunIDs(items []domain.PredictionItem, runID string) {
 }
 
 func createAutomaticInspection(ctx context.Context, store port.UnitOfWorkStore, p domain.PredictionItem, runID string) error {
-	notes := "Ordem gerada automaticamente pela IA (Rodada #" + runID + ")"
 	predID := p.ID
 	ins, err := domain.NewInspection(domain.CreateInspectionParams{
 		ID:           uuid.New().String(),
@@ -56,9 +55,7 @@ func createAutomaticInspection(ctx context.Context, store port.UnitOfWorkStore, 
 		StationCode:  p.StationCode,
 		Platform:     p.Platform,
 		DoorNumber:   p.DoorNumber,
-		ScheduledFor: "",
-		Priority:     "critical",
-		Notes:        notes,
+		Notes:        "",
 	})
 	if err != nil {
 		return err

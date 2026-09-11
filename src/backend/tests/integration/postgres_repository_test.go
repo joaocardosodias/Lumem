@@ -362,9 +362,7 @@ func testInspectionRepo(t *testing.T, ctx context.Context, db *sql.DB, predID st
 		Platform:     "P1",
 		DoorNumber:   1,
 		Status:       "pending",
-		Priority:     "high",
 		Notes:        "Inspecao gerada automaticamente pelo teste",
-		ScheduledFor: "2026-09-10",
 		CreatedAt:    time.Now().UTC(),
 		UpdatedAt:    time.Now().UTC(),
 	}
@@ -403,7 +401,6 @@ func testInspectionRepoEdgeCases(t *testing.T, ctx context.Context, db *sql.DB, 
 		StationCode: "PIN",
 		Platform:    "P1",
 		DoorNumber:  1,
-		Priority:    "high",
 		Status:      "pending",
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
@@ -613,8 +610,8 @@ func testRepositoryErrorPaths(t *testing.T, ctx context.Context, db *sql.DB) {
 
 		CREATE TEMP VIEW inspections AS
 		SELECT 'inspection-error'::TEXT AS id, NULL::TEXT AS prediction_id, 'ERR'::TEXT AS station_code,
-		       'P1'::TEXT AS platform, NULL::INTEGER AS door_number, NULL::TEXT AS scheduled_for,
-		       'high'::TEXT AS priority, 'pending'::TEXT AS status, NULL::TEXT AS notes,
+		       'P1'::TEXT AS platform, NULL::INTEGER AS door_number,
+		       'pending'::TEXT AS status, NULL::TEXT AS notes,
 		       NULL::TIMESTAMPTZ AS completed_at, NOW() AS created_at, NOW() AS updated_at
 	`)
 	if err != nil {

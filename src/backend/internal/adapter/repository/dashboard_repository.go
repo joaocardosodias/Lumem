@@ -147,7 +147,7 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 
 	var inspections []*domain.Inspection
 	insRows, err := r.db.QueryContext(ctx, `
-		SELECT id, priority, status, COALESCE(notes, ''), COALESCE(scheduled_for, ''), completed_at
+		SELECT id, status, COALESCE(notes, ''), completed_at
 		FROM inspections
 		WHERE station_code = $1 AND platform = $2 AND door_number = $3
 		ORDER BY created_at DESC
@@ -157,11 +157,10 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 		defer insRows.Close()
 		for insRows.Next() {
 			var i domain.Inspection
-			var schedStr, notesStr string
+			var notesStr string
 			var compAt *time.Time
-			if err := insRows.Scan(&i.ID, &i.Priority, &i.Status, &notesStr, &schedStr, &compAt); err == nil {
+			if err := insRows.Scan(&i.ID, &i.Status, &notesStr, &compAt); err == nil {
 				i.Notes = notesStr
-				i.ScheduledFor = schedStr
 				i.CompletedAt = compAt
 				inspections = append(inspections, &i)
 			}

@@ -1,23 +1,7 @@
 @font-face {
-  font-family: 'Circular Std';
-  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Circular Std';
-  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Circular Std';
-  src: url('./fonts/circular-std-medium-500.ttf') format('truetype');
-  font-weight: 700;
+  font-family: 'Manrope';
+  src: url('./fonts/manrope-variable.woff2') format('woff2');
+  font-weight: 200 800;
   font-style: normal;
   font-display: swap;
 }
@@ -30,7 +14,7 @@
   --text: #3f00ff;
   --nav-width: 248px;
   --nav-collapsed: 74px;
-  --font: 'Circular Std', sans-serif;
+  --font: 'Manrope', 'Segoe UI', sans-serif;
   --grad-brand: linear-gradient(145deg, #6a28ff 0%, #3f00ff 100%);
 }
 
@@ -92,6 +76,13 @@ button {
   cursor: pointer;
 }
 
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font);
+}
+
 h1 {
   margin: 0;
 }
@@ -105,26 +96,30 @@ h1 {
 }
 
 .page-head h1 {
-  color: var(--brand);
-  font-size: clamp(32px, 4vw, 44px);
-  font-weight: 700;
+  color: var(--ink, #172e52);
+  font-size: clamp(28px, 2.6vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1.2px;
+  line-height: 1.15;
 }
 
 .dashboard__kicker {
-  margin: 0 0 6px;
-  color: #6b4fe0;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--muted, #52647f);
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .dashboard__lead {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   max-width: 48rem;
-  color: #6b4fe0;
-  font-size: 15px;
-  line-height: 1.45;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 
 .page-head__actions {

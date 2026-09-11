@@ -54,12 +54,10 @@ func (uc *GetDoorTimelineUseCase) Execute(ctx context.Context, doorID int) (*Doo
 	inspections := make([]TimelineInspectionOutputDTO, 0, len(t.Inspections))
 	for _, i := range t.Inspections {
 		inspections = append(inspections, TimelineInspectionOutputDTO{
-			ID:           i.ID,
-			Status:       i.Status,
-			Priority:     i.Priority,
-			Notes:        i.Notes,
-			ScheduledFor: i.ScheduledFor,
-			CompletedAt:  i.CompletedAt,
+			ID:          i.ID,
+			Status:      i.Status,
+			Notes:       i.Notes,
+			CompletedAt: i.CompletedAt,
 		})
 	}
 

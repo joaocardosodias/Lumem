@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import CadastrarButton from '../components/CadastrarButton'
+import { NavIcon } from '../components/BarraNav'
+import { CountValue } from '../components/Card'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
+import iconMotiva from '../assets/icon_motiva.svg'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, stationLabel } from '../data/stations'
 import { api, asList, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
-import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
 import { pollUpload } from '../lib/runUpload'
+import { getCachedAlarms, invalidateAlarms, setCachedAlarms } from '../lib/alarmCache'
 import './Alarmes.css'
 
 function mapAlarm(item) {
@@ -25,21 +28,32 @@ function mapAlarm(item) {
     alarm_type: item.alarm_type || 'Alarme de Telemetria',
     duration_seconds: item.duration_seconds || 0,
     normalization_timestamp: item.normalization_timestamp || '',
-    source: item.source || 'telemetry',
+    source: item.source || 'telemetria',
   }
+}
+
+function countBy(items, key) {
+  return items.reduce((acc, item) => {
+    const value = item[key]
+    if (!value) return acc
+    acc[value] = (acc[value] || 0) + 1
+    return acc
+  }, {})
 }
 
 const emptyFilters = {
   station: '',
   platform: '',
+  alarmType: '',
   period: DEFAULT_PERIOD,
   search: '',
 }
 
 function Alarmes({ onNavigate, params }) {
   const toast = useToast()
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedAlarms = getCachedAlarms()
+  const [items, setItems] = useState(() => cachedAlarms || [])
+  const [loading, setLoading] = useState(() => !cachedAlarms?.length)
   const [error, setError] = useState('')
   const [openModal, setOpenModal] = useState(false)
   const [file, setFile] = useState(null)
@@ -52,22 +66,28 @@ function Alarmes({ onNavigate, params }) {
   }))
   const [page, setPage] = useState(1)
 
-  async function load() {
-    setLoading(true)
+  async function load(isBackground = false) {
+    if (!isBackground && !getCachedAlarms()?.length) {
+      setLoading(true)
+    }
     setError('')
     try {
       const response = await api.alarms({ limit: 500 })
       const list = asList(response?.data || response?.alarms || response)
-      setItems(list.map(mapAlarm))
+      const mapped = list.map(mapAlarm)
+      setItems(mapped)
+      setCachedAlarms(mapped)
     } catch (err) {
-      setError(errorMessage(err))
+      if (!getCachedAlarms()?.length) {
+        setError(errorMessage(err))
+      }
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    load()
+    load(Boolean(cachedAlarms?.length))
   }, [])
 
   async function handleImportSpreadsheet(event) {
@@ -89,6 +109,7 @@ function Alarmes({ onNavigate, params }) {
       setFile(null)
       setUpload(null)
       setOpenModal(false)
+      invalidateAlarms()
       toast.success('Planilha de alarmes processada com sucesso!')
       await load()
     } catch (err) {
@@ -107,12 +128,17 @@ function Alarmes({ onNavigate, params }) {
     return [...new Set(items.map((i) => i.platform).filter(Boolean))]
   }, [items, filters.station])
 
+  const alarmTypes = useMemo(() => {
+    return [...new Set(items.map((i) => i.alarm_type).filter(Boolean))].sort()
+  }, [items])
+
   const visible = useMemo(() => {
     return items.filter((item) => {
       if (filters.station && mapStation(item.station_code) !== mapStation(filters.station)) {
         return false
       }
       if (filters.platform && item.platform !== filters.platform) return false
+      if (filters.alarmType && item.alarm_type !== filters.alarmType) return false
       if (!inPeriod(item.event_timestamp, filters.period)) return false
       if (filters.search.trim()) {
         const q = filters.search.trim().toLowerCase()
@@ -129,15 +155,58 @@ function Alarmes({ onNavigate, params }) {
   }, [items, filters])
 
   const filtersDirty =
-    Boolean(filters.station || filters.platform || filters.search) ||
+    Boolean(filters.station || filters.platform || filters.alarmType || filters.search) ||
     filters.period !== DEFAULT_PERIOD
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeHint = periodHint(filters.period)
 
-  const activeAlarms = items.filter((i) => !i.normalization_timestamp).length
-  const normalizedAlarms = items.length - activeAlarms
+  const typeCounts = useMemo(() => countBy(visible, 'alarm_type'), [visible])
+  const typeRows = useMemo(
+    () => Object.entries(typeCounts).sort((a, b) => b[1] - a[1]),
+    [typeCounts],
+  )
+  const topAlarmType = typeRows[0]
+  const maxType = useMemo(
+    () => Math.max(...typeRows.map(([, count]) => count), 1),
+    [typeRows],
+  )
+
+  const stationCounts = useMemo(() => countBy(visible, 'station_name'), [visible])
+  const stationRows = useMemo(
+    () => Object.entries(stationCounts).sort((a, b) => b[1] - a[1]),
+    [stationCounts],
+  )
+  const maxStation = useMemo(
+    () => Math.max(...stationRows.map(([, count]) => count), 1),
+    [stationRows],
+  )
+  const topStations = stationRows.slice(0, 5)
+  const otherStations = stationRows.slice(5)
+
+  const durations = useMemo(
+    () =>
+      visible
+        .map((item) => Number(item.duration_seconds))
+        .filter((val) => Number.isFinite(val) && val > 0),
+    [visible],
+  )
+  const averageDuration = useMemo(() => {
+    if (!durations.length) return null
+    const sum = durations.reduce((acc, val) => acc + val, 0)
+    return Math.round(sum / durations.length)
+  }, [durations])
+
+  const normalizedInVisible = useMemo(
+    () => visible.filter((i) => Boolean(i.normalization_timestamp)).length,
+    [visible],
+  )
+  const normalizationRate = useMemo(
+    () => (visible.length ? Math.round((normalizedInVisible / visible.length) * 100) : 0),
+    [visible.length, normalizedInVisible],
+  )
 
   function handleExportCsv() {
     if (!visible.length) {
@@ -174,19 +243,19 @@ function Alarmes({ onNavigate, params }) {
 
   return (
     <section className="alarmes">
-      <div className="page-head alarmes-head">
+      <header className="page-head alarmes__head">
         <div>
-          <p className="dashboard__kicker">Telemetria de Campo</p>
+          <p className="alarmes__eyebrow"><span aria-hidden="true" />Telemetria e eventos de campo</p>
           <h1>Alarmes</h1>
-          <p className="dashboard__lead">
+          <p className="alarmes__lead">
             Monitoramento e telemetria de alarmes em tempo real das portas da Linha 4 Amarela.
           </p>
         </div>
-        <div className="alarmes-actions">
-          <CadastrarButton variant="secondary" onClick={handleExportCsv}>
+        <div className="page-head__actions">
+          <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
-          </CadastrarButton>
-          <CadastrarButton
+          </Button>
+          <Button
             onClick={() => {
               setImportError('')
               setFile(null)
@@ -195,150 +264,293 @@ function Alarmes({ onNavigate, params }) {
             }}
           >
             Cadastrar Alarmes +
-          </CadastrarButton>
+          </Button>
         </div>
-      </div>
+      </header>
 
       {loading ? <p className="page-status">Carregando alarmes do banco…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
-      <div className="alarmes-kpis">
-        <div className="alarmes-kpi-card">
-          <span>Total de Alarmes</span>
-          <strong>{items.length}</strong>
-          <small>registrados no banco de dados</small>
-        </div>
-        <div className="alarmes-kpi-card">
-          <span>Alarmes em Aberto</span>
-          <strong>{activeAlarms}</strong>
-          <small>sem normalização registrada</small>
-        </div>
-        <div className="alarmes-kpi-card">
-          <span>Normalizados</span>
-          <strong>{normalizedAlarms}</strong>
-          <small>eventos restabelecidos</small>
-        </div>
-        <div className="alarmes-kpi-card">
-          <span>Filtro Ativo</span>
-          <strong>{visible.length}</strong>
-          <small>alarmes visíveis na listagem</small>
-        </div>
-      </div>
+      {loading ? null : (
+        <>
+          <div className="alarmes__hero">
+            <section className="alarmes__metrics" aria-label="Resumo dos alarmes">
+              <article className="alarmes__metric alarmes__metric--primary">
+                <img className="alarmes__metric-mark" src={iconMotiva} alt="" aria-hidden="true" />
+                <span className="alarmes__metric-top">
+                  <span>Eventos filtrados</span>
+                  <NavIcon id="alarmes" />
+                </span>
+                <strong className="alarmes__metric-value"><CountValue value={visible.length} /></strong>
+                <span className="alarmes__metric-description">
+                  {rangeHint || 'Todo o período disponível'}
+                </span>
+                <span className="alarmes__metric-foot">
+                  {items.length.toLocaleString('pt-BR')} registros carregados
+                </span>
+              </article>
 
-      <Filtros
-        period={filters.period}
-        onPeriod={(period) => {
-          setFilters((curr) => ({ ...curr, period }))
-          setPage(1)
-        }}
-        dirty={filtersDirty}
-        onClear={() => {
-          setFilters(emptyFilters)
-          setPage(1)
-        }}
-      >
-        <FiltroCampo label="Busca">
-          <input
-            type="search"
-            value={filters.search}
-            onChange={updateFilter('search')}
-            placeholder="Buscar por TAG, tipo de alarme, estação..."
-          />
-        </FiltroCampo>
-        <FiltroCampo label="Estação">
-          <select value={filters.station} onChange={updateFilter('station')}>
-            <option value="">Todas as estações</option>
-            {lineStations.map((station) => (
-              <option key={station.code} value={station.code}>
-                {station.code} — {station.name}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Plataforma">
-          <select value={filters.platform} onChange={updateFilter('platform')}>
-            <option value="">Todas</option>
-            {platforms.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-      </Filtros>
+              <article className="alarmes__metric">
+                <span className="alarmes__metric-top">
+                  <span>Tipo predominante</span>
+                  <NavIcon id="alarmes" />
+                </span>
+                <strong className="alarmes__metric-value alarmes__metric-value--code" title={topAlarmType?.[0]}>
+                  {topAlarmType?.[0] || '—'}
+                </strong>
+                <span className="alarmes__metric-description">
+                  {topAlarmType ? `${topAlarmType[1].toLocaleString('pt-BR')} eventos neste recorte` : 'Sem eventos no período'}
+                </span>
+                <span className="alarmes__metric-foot">Falha mais recorrente</span>
+              </article>
 
-      <div className="alarmes-list">
-        {visible.length ? (
-          paged.map((item) => (
-            <article key={item.id || `${item.station_code}-${item.event_timestamp}-${item.door_number}`} className="card-alarme">
+              <article className="alarmes__metric">
+                <span className="alarmes__metric-top">
+                  <span>Estações com alarmes</span>
+                  <NavIcon id="portas" />
+                </span>
+                <strong className="alarmes__metric-value"><CountValue value={stationRows.length} /></strong>
+                <span className="alarmes__metric-description">Estações com registros no recorte</span>
+                <span className="alarmes__metric-foot">Cobertura da Linha 4</span>
+              </article>
+
+              <article className="alarmes__metric">
+                <span className="alarmes__metric-top">
+                  <span>Taxa de normalização</span>
+                  <NavIcon id="dashboard" />
+                </span>
+                <strong className="alarmes__metric-value">
+                  {normalizationRate}<small>%</small>
+                </strong>
+                <span className="alarmes__metric-description">
+                  {normalizedInVisible} normalizados · {visible.length - normalizedInVisible} em aberto
+                </span>
+                <span className="alarmes__metric-foot">
+                  {averageDuration ? `Duração média: ${averageDuration}s` : 'Tempo de restabelecimento'}
+                </span>
+              </article>
+            </section>
+
+            <div className="alarmes__charts">
+              <article className="alarmes__chart">
+                <header className="alarmes__panel-head">
+                  <div>
+                    <p>Distribuição por categoria</p>
+                    <h2>Alarmes por tipo</h2>
+                  </div>
+                  <span aria-hidden="true"><NavIcon id="alarmes" /></span>
+                </header>
+                <div className="alarmes__chart-body">
+                  {typeRows.length ? (
+                    typeRows.map(([label, value]) => (
+                      <div key={label} className="alarmes__bar">
+                        <strong title={label}>{label}</strong>
+                        <span className="alarmes__bar-track">
+                          <i style={{ width: `${(value / maxType) * 100}%` }} />
+                        </span>
+                        <em>{value}</em>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="alarmes__empty">Nenhum alarme neste recorte.</p>
+                  )}
+                </div>
+              </article>
+
+              <article className="alarmes__chart">
+                <header className="alarmes__panel-head">
+                  <div>
+                    <p>Distribuição territorial</p>
+                    <h2>Alarmes por estação</h2>
+                  </div>
+                  <span aria-hidden="true"><NavIcon id="portas" /></span>
+                </header>
+                <div className="alarmes__chart-body">
+                  {stationRows.length ? (
+                    <div className="alarmes__bars">
+                      <div>
+                        {topStations.map(([label, value]) => (
+                          <div key={label} className="alarmes__bar">
+                            <strong title={label}>{label}</strong>
+                            <span className="alarmes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                      {otherStations.length ? (
+                        <div>
+                          {otherStations.map(([label, value]) => (
+                            <div key={label} className="alarmes__bar">
+                              <strong title={label}>{label}</strong>
+                              <span className="alarmes__bar-track">
+                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                              </span>
+                              <em>{value}</em>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="alarmes__empty">Nenhuma estação com alarmes neste recorte.</p>
+                  )}
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <Filtros
+            period={filters.period}
+            onPeriod={(period) => {
+              setPage(1)
+              setFilters((curr) => ({ ...curr, period }))
+            }}
+            dirty={filtersDirty}
+            onClear={() => {
+              setPage(1)
+              setFilters(emptyFilters)
+            }}
+          >
+            <FiltroCampo label="Busca">
+              <input
+                type="search"
+                value={filters.search}
+                onChange={updateFilter('search')}
+                placeholder="Buscar por TAG, tipo de alarme, estação..."
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Estação">
+              <select value={filters.station} onChange={updateFilter('station')}>
+                <option value="">Todas as estações</option>
+                {lineStations.map((station) => (
+                  <option key={station.code} value={station.code}>
+                    {station.code} — {station.name}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Plataforma">
+              <select value={filters.platform} onChange={updateFilter('platform')}>
+                <option value="">Todas</option>
+                {platforms.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Tipo de Alarme">
+              <select value={filters.alarmType} onChange={updateFilter('alarmType')}>
+                <option value="">Todos</option>
+                {alarmTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+          </Filtros>
+
+          <section className="alarmes__list" aria-labelledby="alarm-records-title">
+            <header className="alarmes__panel-head alarmes__list-head">
               <div>
-                <span>TAG SAP</span>
-                <strong>{item.tag}</strong>
+                <p>Detalhamento operacional</p>
+                <h2 id="alarm-records-title">Registros de telemetria</h2>
               </div>
-              <div>
-                <span>Horário</span>
-                <strong>{item.event_timestamp}</strong>
-              </div>
-              <div>
-                <span>Estação</span>
-                <strong>{item.station_code}</strong>
-                <em>{item.station_name}</em>
-              </div>
-              <div>
-                <span>Plat / Porta</span>
-                <strong>{item.platform} · P{String(item.door_number || '01').padStart(2, '0')}</strong>
-              </div>
-              <div>
-                <span>Tipo de Alarme</span>
-                <strong>{item.alarm_type}</strong>
-              </div>
-              <div>
-                <span>Duração</span>
-                <strong>{item.duration_seconds}s</strong>
-              </div>
-              <div>
-                <span>Normalização</span>
-                <strong>{item.normalization_timestamp || 'Em aberto'}</strong>
-              </div>
-              <div className="card-alarme-actions">
-                <button
-                  type="button"
-                  className="btn-alarme-action"
-                  onClick={() =>
-                    onNavigate?.('portas', {
-                      station: item.station_code,
-                      platform: item.platform,
-                      door: item.door_number,
-                    })
-                  }
-                >
-                  Ver Porta
-                </button>
-              </div>
-            </article>
-          ))
-        ) : (
-          <p className="page-empty">
-            {items.length
-              ? 'Nenhum alarme encontrado com os filtros selecionados.'
-              : 'Nenhum alarme registrado no banco de dados.'}
-          </p>
-        )}
-        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-      </div>
+              <span className="alarmes__record-count">
+                {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </header>
+
+            <div className="alarmes__records">
+              {paged.length ? (
+                paged.map((item) => (
+                  <article
+                    key={item.id || `${item.station_code}-${item.event_timestamp}-${item.door_number}`}
+                    className="card-alarme"
+                  >
+                    <div>
+                      <span>TAG SAP</span>
+                      <strong title={item.tag}>{item.tag}</strong>
+                    </div>
+                    <div>
+                      <span>Horário</span>
+                      <strong>{item.event_timestamp}</strong>
+                    </div>
+                    <div>
+                      <span>Estação</span>
+                      <strong>{item.station_code}</strong>
+                      <em>{item.station_name}</em>
+                    </div>
+                    <div>
+                      <span>Plat / Porta</span>
+                      <strong>{item.platform} · P{String(item.door_number || '01').padStart(2, '0')}</strong>
+                    </div>
+                    <div>
+                      <span>Tipo de Alarme</span>
+                      <strong title={item.alarm_type}>{item.alarm_type}</strong>
+                    </div>
+                    <div>
+                      <span>Duração</span>
+                      <strong>{item.duration_seconds}s</strong>
+                    </div>
+                    <div>
+                      <span>Normalização</span>
+                      <strong className={item.normalization_timestamp ? 'card-alarme__normalized' : 'card-alarme__open'}>
+                        {item.normalization_timestamp || 'Em aberto'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Origem</span>
+                      <strong>{item.source}</strong>
+                    </div>
+                    <div className="card-alarme-actions">
+                      <Button
+                        variant="secondary"
+                        className="btn-alarme-action"
+                        onClick={() =>
+                          onNavigate?.('portas', {
+                            station: item.station_code,
+                            platform: item.platform,
+                            door: item.door_number,
+                          })
+                        }
+                      >
+                        Ver Porta
+                      </Button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="page-empty">
+                  {items.length
+                    ? 'Nenhum alarme encontrado com os filtros selecionados.'
+                    : 'Nenhum alarme registrado no banco de dados.'}
+                </p>
+              )}
+            </div>
+
+            <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+          </section>
+        </>
+      )}
 
       {openModal ? (
         <div className="alarmes-modal" onClick={() => setOpenModal(false)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={handleImportSpreadsheet}>
-            <h2>Cadastrar Alarmes por Planilha</h2>
-            <p className="alarmes-modal-desc">
-              Envie um arquivo de planilha no formato CSV ou XLSX contendo os eventos de alarme de telemetria.
-            </p>
+            <div className="alarmes-modal-head">
+              <h2>Cadastrar Alarmes</h2>
+              <p className="alarmes-modal-desc">
+                Envie um arquivo de planilha no formato CSV ou XLSX contendo os eventos de telemetria da Linha 4.
+              </p>
+            </div>
             {importError ? <p className="page-status is-error">{importError}</p> : null}
             <PlanilhaImport file={file} onFile={setFile} />
             <UploadStatus upload={upload} />
             <div className="alarmes-modal-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpenModal(false)}>
+              <Button type="button" variant="secondary" onClick={() => setOpenModal(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={!file || importing}>

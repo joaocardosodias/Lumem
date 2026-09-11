@@ -79,14 +79,6 @@
   opacity: 0.85;
 }
 
-.kpi-card__value i {
-  display: block;
-  width: 2px;
-  height: 46px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
 .kpi-card--banner {
   align-items: center;
   justify-content: space-between;
@@ -125,8 +117,4 @@
 
 .kpi-card--banner .kpi-card__value strong {
   font-size: 36px;
-}
-
-.kpi-card--banner .kpi-card__value i {
-  height: 32px;
 }
