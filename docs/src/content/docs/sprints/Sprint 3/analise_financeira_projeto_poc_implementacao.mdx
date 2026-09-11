@@ -1,0 +1,1783 @@
+---
+title: "Análise Financeira do Projeto"
+description: "Projeção de custos e de retorno econômico da Prova de Conceito e da solução implementada, ambas em horizonte de 12 meses, com premissas, fontes e critérios explicitados."
+---
+
+# Análise Financeira do Projeto
+
+## Sumário executivo
+
+Esta análise projeta os custos do projeto de manutenção preditiva das Portas de Plataforma
+(PSD), desenvolvido em parceria com a Motiva, em dois cenários independentes, ambos com
+horizonte de 12 meses.
+
+| Indicador | POC — 12 meses | Projeto implementado — 12 meses |
+|---|---:|---:|
+| Custo incremental para a Motiva | R$ 0 | R$ 30.515,10 |
+| Custo de mercado equivalente | R$ 37.331,10 | R$ 30.515,10 |
+| Custo recorrente a partir do ano 2 | não aplicável | R$ 12.515,10 |
+| Receita direta projetada | R$ 0 | R$ 0 |
+| Portas de plataforma monitoradas | 528 | 528 |
+| Ocorrências corretivas por ano | 1.680 | 1.680 |
+
+Quatro conclusões orientam a leitura do documento:
+
+1. **A POC pode ser mantida por 12 meses sem desembolso incremental.** Isso não significa
+   ausência de consumo de recursos: a preço de mercado, a Prova de Conceito mobiliza
+   aproximadamente R$ 37.331, integralmente absorvidos por trabalho acadêmico,
+   infraestrutura já disponível e camadas gratuitas de serviços.
+
+2. **A implementação em ambiente operacional custa R$ 30.515,10 no primeiro ano**, dos
+   quais 59% correspondem a investimento inicial não recorrente. A partir do segundo ano, o
+   custo de sustentação cai para R$ 12.515,10 anuais.
+
+3. **O projeto não gera receita direta**, e a economia não foi convertida em um valor único
+   porque dois parâmetros monetários ainda não estão disponíveis (seção 5.5). Em vez de
+   arbitrá-los, a análise resolve o modelo em função deles e calcula o limiar de viabilidade:
+   com 1.680 ocorrências corretivas por ano e recall de 60%, **o projeto se paga integralmente
+   no primeiro ano se evitar uma ocorrência valer mais de R$ 30,27**. Esse limiar é robusto —
+   mesmo que apenas uma em cada quatro previsões corretas evite de fato a falha, ele sobe
+   somente para R$ 121.
+
+4. **A precisão de 30% é a premissa crítica do projeto.** O modelo emitirá cerca de 2.352
+   alertas improdutivos por ano — aproximadamente 9 por dia útil — que geram verificações
+   inexistentes na rotina atual. O projeto deixa de gerar economia líquida se atender um
+   alerta falso custar mais de 43% do valor de evitar uma falha (seção 5.10).
+
+---
+
+# 1. Introdução
+
+Esta documentação apresenta a análise financeira do projeto de manutenção preditiva
+desenvolvido em parceria com a Motiva.
+
+A análise considera dois cenários distintos, ambos projetados para um período mínimo de
+**12 meses**:
+
+1. **Prova de Conceito (POC)** — o protótipo desenvolvido pelos alunos do Inteli e mantido
+   em funcionamento durante 12 meses.
+2. **Projeto implementado** — a evolução da POC para uma solução incorporada ao ambiente
+   operacional da Motiva e mantida em funcionamento durante 12 meses.
+
+O objetivo é estimar, de forma justificada, os custos diretamente relacionados ao projeto e
+os benefícios financeiros que a solução poderá gerar para a Motiva.
+
+Trata-se de uma estimativa. Todos os valores estão acompanhados das premissas utilizadas
+para sua construção e das fontes consultadas, registradas na seção 8.9.
+
+---
+
+# 2. Critérios gerais da análise
+
+A análise financeira seguiu os seguintes critérios:
+
+- horizonte de **12 meses** para a POC e de **12 meses** para o projeto implementado;
+- separação entre custos da POC e custos da solução implementada;
+- utilização de preços públicos de fornecedores ou de pesquisas salariais de mercado,
+  sempre com registro da fonte e da data de consulta;
+- explicitação de todas as premissas utilizadas;
+- priorização de **custos incrementais**, isto é, gastos adicionais gerados especificamente
+  pelo projeto;
+- atividades que já fazem parte da operação normal da Motiva e não exigem contratação
+  adicional, horas extras ou aumento de capacidade foram registradas como **R$ 0 de custo
+  incremental**;
+- apresentação, para a POC, de uma segunda leitura em **custo de mercado equivalente**,
+  evidenciando o valor econômico dos recursos consumidos mesmo quando não há desembolso;
+- classificação dos valores em **investimentos iniciais, custos fixos recorrentes, custos
+  variáveis e custos operacionais incrementais**;
+- explicitação da ausência de receita direta, com o retorno econômico tratado como economia
+  potencial e redução de custos;
+- utilização de estimativas justificadas quando não havia valor exato disponível;
+- não incorporação artificial à projeção de benefícios que não puderam ser monetizados de
+  forma confiável;
+- consideração de diferentes cenários de contingência.
+
+As planilhas desta análise:
+
+- [`/sprints/sprint-3/1_Custo_POC.xlsx`](/sprints/sprint-3/1_Custo_POC.xlsx)
+- [`/sprints/sprint-3/2_Custo_Implementacao.xlsx`](/sprints/sprint-3/2_Custo_Implementacao.xlsx)
+- [`/sprints/sprint-3/3_Retorno_Economico.xlsx`](/sprints/sprint-3/3_Retorno_Economico.xlsx)
+
+Para os custos do projeto implementado foram considerados três cenários de margem:
+
+| Cenário | Critério |
+|---|---|
+| Base | custo estimado sem margem adicional |
+| Conservador | custo base acrescido de 5% |
+| Pior caso | custo base acrescido de 10% |
+
+Um quarto cenário, referente ao regime de contratação da mão de obra, está tratado na
+seção 4.13.2.
+
+---
+
+# 3. Cenário 1 — Prova de Conceito por 12 meses
+
+## 3.1. Definição da POC
+
+A Prova de Conceito corresponde à solução desenvolvida pelos alunos do Inteli para
+demonstrar a viabilidade técnica da previsão de falhas nas Portas de Plataforma (PSD).
+
+O desenvolvimento da POC é realizado pelos próprios alunos. Por esse motivo, **não foi
+atribuído custo incremental de mão de obra ao desenvolvimento realizado pelo grupo** — seu
+valor de mercado equivalente está calculado na seção 3.9.
+
+Também não foram considerados custos de aquisição de hardware específico para o protótipo,
+uma vez que o projeto utiliza a infraestrutura já disponível para os integrantes.
+
+A arquitetura da POC contempla:
+
+- modelo de Machine Learning já treinado;
+- empacotamento do modelo e de suas dependências em um container Docker;
+- ambiente Red Hat para realizar o deploy e executar o container;
+- banco de dados em Azure SQL Database;
+- utilização de dados operacionais da Motiva;
+- armazenamento das previsões geradas;
+- validação dos resultados ao longo do período.
+
+O frontend não é publicado no deploy da POC. Portanto, nesta etapa não há custo associado à
+hospedagem de interface web.
+
+```text
+Dados operacionais da Motiva
+      ↓
+   Azure SQL Database
+      ↓
+ Red Hat / OpenShift
+      ↓
+   Container Docker
+      ↓
+Modelo de Machine Learning
+      ↓
+      Predições
+      ↓
+   Azure SQL Database
+```
+
+---
+
+## 3.2. Itens sem custo incremental de desenvolvimento
+
+Não foram considerados como custo incremental:
+
+- remuneração dos alunos;
+- desenvolvimento inicial dos modelos;
+- engenharia de features realizada pelos alunos;
+- documentação produzida pelo grupo;
+- reuniões internas do grupo;
+- gestão acadêmica do projeto;
+- energia elétrica e conexão à internet dos alunos;
+- aquisição de computadores;
+- contratação de desenvolvedores externos para construir a POC.
+
+Esses itens não representam desembolso incremental no arranjo atual. O valor de mercado do
+esforço de desenvolvimento está quantificado na seção 3.9.
+
+---
+
+## 3.3. Categorias de custo analisadas na POC
+
+Foram identificadas e analisadas as seguintes categorias com potencial de gerar custo
+durante os 12 meses:
+
+1. atualização e disponibilização de novos dados operacionais;
+2. ambiente Red Hat utilizado para o deploy do modelo;
+3. recursos computacionais necessários para executar o container;
+4. banco de dados Azure SQL Database;
+5. armazenamento de arquivos, modelos e previsões;
+6. armazenamento e execução do container Docker;
+7. logs e monitoramento da aplicação;
+8. transferência de dados;
+9. validação das previsões junto à Motiva;
+10. serviços pagos que ultrapassem os planos gratuitos disponíveis durante a POC.
+
+O frontend não é publicado durante a POC e, portanto, não constitui categoria de custo neste
+cenário.
+
+As principais bibliotecas de desenvolvimento e Machine Learning utilizadas no projeto são
+open source, com custo de licenciamento igual a zero: Python, Pandas, NumPy, Scikit-learn,
+CatBoost, XGBoost, LightGBM, Matplotlib e Docker.
+
+O Docker é utilizado para empacotar o modelo, o código de inferência e suas dependências em
+um ambiente padronizado, permitindo que a aplicação execute de maneira consistente em
+diferentes computadores e no ambiente de deploy. Seu uso não implica custo de licença nesta
+POC, embora os recursos utilizados para armazenar e executar o container sejam analisados
+separadamente.
+
+---
+
+## 3.4. Ambiente Red Hat / OpenShift
+
+A arquitetura de deploy da POC foi definida para manter o menor custo possível sem perder a
+padronização do ambiente de execução. O modelo é empacotado com **Docker** e executado em
+ambiente **Red Hat/OpenShift**, com dois objetivos:
+
+1. garantir que o modelo execute com as mesmas dependências e configurações em diferentes
+   computadores;
+2. manter o ambiente de execução organizado e reproduzível durante a POC.
+
+O container inclui:
+
+```text
+Código de inferência + Modelo treinado + Python
++ Bibliotecas de Machine Learning + Dependências da aplicação
+```
+
+### 3.4.1. Estratégia adotada
+
+A estratégia foi dividida em duas etapas:
+
+**Primeiro mês.** Utilização do **Red Hat Developer Sandbox**, ambiente disponibilizado
+gratuitamente pela Red Hat para desenvolvimento e testes, como ambiente inicial para testar
+o container e validar o deploy.
+
+**Meses 2 a 12.** Utilização do **Red Hat OpenShift Local** em um computador já disponível
+para o projeto. Como não está prevista a compra de máquina exclusiva para a POC, adotou-se a
+premissa de aquisição adicional de hardware igual a R$ 0.
+
+### 3.4.2. Custo anual do ambiente Red Hat
+
+| Período | Ambiente | Custo incremental |
+|---|---|---:|
+| Mês 1 | Red Hat Developer Sandbox | R$ 0 |
+| Meses 2 a 12 | Red Hat OpenShift Local em hardware existente | R$ 0 |
+| 12 meses | Docker — containerização | R$ 0 |
+| **Total incremental em 12 meses** | | **R$ 0** |
+
+O valor representa custo incremental direto. A tecnologia e o hardware têm valor econômico,
+quantificado na seção 3.9; o que a tabela registra é a ausência de contratação ou aquisição
+adicional especificamente para esta POC.
+
+### 3.4.3. Capacidade do computador
+
+Mesmo sem custo incremental, o ambiente local consome recursos computacionais. Antes do
+deploy definitivo deve ser verificado se o computador utilizado comporta simultaneamente
+sistema operacional, OpenShift Local, container Docker, modelo de Machine Learning, conexão
+com o banco de dados e processos auxiliares.
+
+Ambientes locais de OpenShift exigem quantidade relevante de memória RAM, CPU e
+armazenamento. Esses recursos não foram precificados separadamente por serem atendidos por
+equipamentos já disponíveis, mas a capacidade da máquina constitui gatilho de revisão
+orçamentária (seção 3.11).
+
+### 3.4.4. Logs e monitoramento
+
+Como a arquitetura não utiliza AWS, não há uso de CloudWatch. Os logs são registrados no
+próprio ambiente de execução do container, acompanhando início e fim de execução, erros,
+tempo de processamento, quantidade de registros processados, falhas de conexão e
+reinicializações.
+
+Como a POC tem baixo volume de processamento, espera-se volume pequeno de logs.
+
+```text
+Custo incremental estimado de logs = R$ 0
+```
+
+A premissa deve ser revista caso seja adotado serviço externo de observabilidade ou
+armazenamento dedicado.
+
+### 3.4.5. Itens fora do escopo da POC
+
+Com a arquitetura definida, não são utilizados: AWS Lambda, AWS API Gateway, Amazon ECR, AWS
+CloudWatch, Vercel, frontend publicado, OpenShift Dedicated e cluster empresarial dedicado.
+
+O OpenShift Dedicated não foi considerado porque sua estrutura e custo são desproporcionais
+ao porte de uma POC acadêmica.
+
+### 3.4.6. Premissa financeira adotada
+
+> Nos primeiros 30 dias é utilizado o Red Hat Developer Sandbox, sem custo direto. Nos 11
+> meses restantes é utilizado o Red Hat OpenShift Local, executado em hardware já disponível
+> para o projeto. Não foi considerado custo incremental de contratação de infraestrutura Red
+> Hat durante os 12 meses da POC.
+
+---
+
+## 3.5. Banco de dados da POC — Azure SQL Database
+
+A POC utiliza **Azure SQL Database** como banco de dados. A escolha decorre da estrutura
+relacional dos dados envolvidos: estações, plataformas, portas, alarmes, ordens de
+manutenção, datas, previsões e probabilidades geradas pelo modelo.
+
+O banco armazena tanto os dados necessários à execução da POC quanto as previsões produzidas
+pelo modelo.
+
+### 3.5.1. Camada gratuita
+
+A POC utiliza a camada gratuita do Azure SQL Database. Segundo a documentação oficial da
+Microsoft, a oferta gratuita disponibiliza por banco de dados e por mês:
+
+- até **100.000 vCore-segundos de compute serverless**;
+- até **32 GB de armazenamento de dados**;
+- até **32 GB de armazenamento de backup**;
+- disponível para até 10 bancos por assinatura.
+
+```text
+Custo incremental anual do Azure SQL Database = R$ 0
+```
+
+### 3.5.2. Justificativa de capacidade
+
+As fontes utilizadas pela solução são o histórico de alarmes, as ordens ZM01, ZM02 e ZM03,
+os dados processados para inferência e o histórico de previsões.
+
+O volume atual do projeto é reduzido em relação ao limite de 32 GB. Mesmo com a entrada de
+novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do
+limite da camada gratuita. Por esse motivo não foi considerada a contratação de plano pago.
+
+### 3.5.3. Controle de uso
+
+Durante a POC devem ser monitorados uso de processamento, armazenamento ocupado, crescimento
+mensal da base, volume de consultas e volume de backup. Caso algum indicador se aproxime dos
+limites gratuitos, a premissa financeira deve ser revisada.
+
+Deve também ser priorizada a configuração de auto-pause ao atingir o limite gratuito, que
+reduz o risco de cobranças inesperadas.
+
+---
+
+## 3.6. Dados históricos e atualização dos dados operacionais
+
+Os dados utilizados para o treinamento inicial dos modelos já foram disponibilizados pela
+Motiva. Não há necessidade de obter novas bases para finalizar o treinamento atual.
+
+```text
+Custo adicional de aquisição dos dados históricos = R$ 0
+```
+
+Novos dados passam a ser necessários caso a POC permaneça em funcionamento e gere previsões
+atualizadas ao longo dos 12 meses. Esses dados cumprem três funções: alimentar o modelo com
+informações recentes, permitir verificar posteriormente se as previsões estavam corretas e
+formar histórico para futuros ciclos de retreinamento. As três funções utilizam o mesmo fluxo
+de atualização e não constituem três custos separados.
+
+### 3.6.1. Critério de custo incremental
+
+Inicialmente foi avaliada a possibilidade de calcular o custo de atualização dos dados a
+partir do tempo gasto por um profissional da Motiva para registrar, extrair e disponibilizar
+informações de histórico de alarmes, ZM01, ZM02 e ZM03.
+
+Após revisão do processo operacional, essa abordagem foi alterada. A Motiva já possui
+profissionais contratados para executar atividades de registro, atualização e acompanhamento
+dessas informações como parte de suas funções regulares. No cenário-base, essas atividades
+não representam novo desembolso causado pelo projeto.
+
+```text
+Custo incremental de atualização e disponibilização dos dados = R$ 0
+```
+
+O fato de profissionais dedicarem tempo ao preenchimento das informações não implica que esse
+tempo deva ser imputado como novo custo da POC. Esse custo só seria adicional caso o projeto
+exigisse contratação de novo profissional, pagamento de horas extras, aumento formal da carga
+de trabalho, equipe exclusiva, contratação de serviço externo ou aquisição de ferramenta
+específica. Nenhuma dessas condições foi considerada necessária.
+
+Não se realiza, portanto, duplicação contábil do custo de funcionários que já fazem parte da
+operação regular da empresa.
+
+### 3.6.2. Exigência de qualidade dos dados
+
+Embora não exista custo incremental, a POC aumenta a importância da qualidade e precisão do
+preenchimento dos dados. O modelo depende diretamente da consistência das informações
+utilizadas para formar suas features.
+
+Erros como porta, estação ou plataforma incorretas, data ou horário incorretos, ordem de
+manutenção classificada incorretamente, registro ausente ou duplicidade podem alterar as
+features e reduzir a qualidade das previsões.
+
+A mudança operacional esperada não é a criação de nova atividade, mas maior necessidade de
+preenchimento correto, padronização dos registros, redução de erros e consistência entre
+sistemas. Essa exigência é tratada como **premissa operacional da POC**, não como custo
+adicional.
+
+### 3.6.3. Situações que exigiriam revisão
+
+| Situação futura | Impacto financeiro |
+|---|---|
+| Processo continua sendo executado pelos mesmos profissionais | R$ 0 incremental |
+| Necessidade de horas extras | novo custo a calcular |
+| Contratação de novo profissional | novo custo a calcular |
+| Automação paga de extração ou integração | novo custo a calcular |
+| Ferramenta adicional de qualidade de dados | novo custo a calcular |
+
+---
+
+## 3.7. Validação operacional das previsões
+
+A mesma lógica foi aplicada à validação dos alertas produzidos pelo modelo. A Motiva já
+possui profissionais responsáveis por acompanhar as condições das portas, registrar
+ocorrências e analisar eventos operacionais.
+
+Verificar se um alerta do modelo correspondeu a uma falha real é uma extensão das informações
+já analisadas pela operação, não uma nova função dedicada.
+
+```text
+Custo incremental de validação operacional = R$ 0
+```
+
+Não foi considerada a contratação de pessoa exclusiva para verificar as previsões. A validação
+utiliza os próprios registros posteriores de falha:
+
+```text
+previsão realizada → evento observado posteriormente
+→ acerto / falso alerta / falha não detectada
+```
+
+A premissa deve ser revista apenas se a validação exigir equipe adicional, horas extras,
+inspeções fora da rotina, processo formal de auditoria ou contratação de ferramenta
+específica.
+
+---
+
+## 3.8. Dados utilizados pelos modelos
+
+Os dois modelos considerados mais relevantes no projeto utilizam principalmente informações
+provenientes de quatro fontes:
+
+- histórico de alarmes;
+- ZM01 — corretiva emergencial;
+- ZM02 — corretiva programada;
+- ZM03 — manutenção preventiva.
+
+Embora os modelos criem diversas features, a maior parte delas é derivada automaticamente
+dessas bases. A Motiva não precisa fornecer diretamente variáveis como:
+
+```text
+dias_desde_ultima_corretiva
+qtd_corretivas_emergenciais_30d
+duracao_maxima_alarme_7d
+intervalo_medio_zm01
+```
+
+Essas informações são calculadas pelo pipeline a partir dos dados brutos. Para a análise
+financeira, a quantidade de features não constitui custo separado, e a disponibilização das
+fontes originais não constitui custo incremental no cenário-base.
+
+---
+
+## 3.9. Custo de mercado equivalente da POC
+
+### 3.9.1. Dupla leitura
+
+A POC foi deliberadamente projetada para operar sem desembolso. Isso não significa que ela
+não consuma recursos econômicos: significa que os recursos consumidos são absorvidos por
+trabalho acadêmico, infraestrutura já existente e camadas gratuitas de serviços.
+
+Para tornar a distinção explícita, a análise apresenta dois valores para cada categoria:
+
+- **custo de mercado equivalente:** quanto a mesma POC custaria se todos os recursos
+  precisassem ser contratados a preço de mercado;
+- **custo incremental:** quanto ela efetivamente representa de novo desembolso para a Motiva
+  no arranjo atual.
+
+### 3.9.2. Desenvolvimento
+
+Para estimar o valor de mercado do desenvolvimento realizado pelo grupo, foi adotada a
+seguinte parametrização:
+
+```text
+Integrantes do grupo  = 7 alunos
+Duração do módulo     = 10 semanas
+Dias úteis por semana = 5
+Dedicação média       = 2 h por aluno por dia útil
+Total de horas        = 7 × 10 × 5 × 2 = 700 horas
+```
+
+Os parâmetros correspondem à composição real do grupo e à carga horária efetivamente praticada
+ao longo do módulo.
+
+Para valorar a hora foi utilizada a faixa de Desenvolvedor Full-Stack Júnior do Guia Salarial
+2026 da Robert Half (R$ 6.050 a R$ 8.750 por mês), adotando-se o ponto médio aproximado de
+R$ 7.400:
+
+```text
+R$ 7.400 ÷ 176 horas mensais ≈ R$ 42 por hora
+700 horas × R$ 42 = R$ 29.400
+```
+
+O nível júnior foi escolhido por representar mais fielmente o estágio dos integrantes do que
+os níveis pleno ou sênior, evitando superestimar o valor do trabalho acadêmico.
+
+### 3.9.3. Infraestrutura
+
+Os ambientes utilizados na POC possuem equivalentes pagos, cujos preços públicos são os
+mesmos adotados no cenário implementado:
+
+| Item | Arranjo na POC | Equivalente pago em 12 meses |
+|---|---|---:|
+| Ambiente Red Hat/OpenShift | Developer Sandbox + OpenShift Local em hardware existente | R$ 6.431,10 |
+| Banco de dados | Azure SQL Database em camada gratuita | R$ 1.500,00 |
+| Hardware de execução | Equipamento já disponível | não precificado |
+| Docker e bibliotecas | Open source | R$ 0 |
+
+---
+
+## 3.10. Resultado financeiro consolidado da POC
+
+| Categoria | Custo de mercado equivalente | Custo incremental |
+|---|---:|---:|
+| Investimento inicial — desenvolvimento (700 h) | R$ 29.400,00 | R$ 0 |
+| Custos fixos recorrentes — ambiente Red Hat/OpenShift | R$ 6.431,10 | R$ 0 |
+| Custos variáveis — Azure SQL Database | R$ 1.500,00 | R$ 0 |
+| Custos operacionais incrementais — dados, validação, logs | não precificado | R$ 0 |
+| Licenciamento — Docker e bibliotecas open source | R$ 0 | R$ 0 |
+| **Total da POC em 12 meses** | **R$ 37.331,10** | **R$ 0** |
+
+A leitura correta da tabela é:
+
+> A Prova de Conceito mobiliza aproximadamente **R$ 37.331** em recursos a preço de mercado
+> durante 12 meses, integralmente absorvidos por trabalho acadêmico, infraestrutura já
+> disponível e camadas gratuitas de serviços. O desembolso incremental projetado para a
+> Motiva é de **R$ 0**.
+
+O custo incremental igual a zero decorre de quatro condições simultâneas, todas verificáveis:
+
+1. o desenvolvimento é realizado pelo grupo do Inteli, sem remuneração associada ao projeto;
+2. o ambiente de execução utiliza o Developer Sandbox nos primeiros 30 dias e o OpenShift
+   Local em hardware já disponível nos 11 meses seguintes;
+3. o banco de dados permanece dentro da camada gratuita do Azure SQL Database, cujos limites
+   são compatíveis com o volume estimado do projeto;
+4. as atividades de atualização de dados e validação operacional já integram a rotina de
+   profissionais contratados pela Motiva.
+
+---
+
+## 3.11. Contingência da POC por gatilhos
+
+Como o custo-base incremental é zero, aplicar margens percentuais de 5% ou 10% resultaria
+igualmente em zero. A contingência da POC é portanto tratada por **gatilhos de revisão**, com
+impacto financeiro estimado a partir dos preços públicos levantados:
+
+| Gatilho | Impacto estimado em 12 meses |
+|---|---:|
+| Hardware disponível não suporta o OpenShift Local | migração para ambiente gerenciado: até R$ 6.431,10 |
+| Volume ultrapassa a camada gratuita do Azure SQL | até R$ 1.500,00 |
+| Necessidade de publicar o frontend durante a POC | R$ 1.224,00 |
+| Necessidade de serviço externo de observabilidade | a cotar |
+| Contratação de profissional adicional ou horas extras | a cotar |
+| Compra de hardware | a cotar |
+
+No pior caso quantificado, em que os três primeiros gatilhos se materializam, o custo
+incremental da POC chegaria a aproximadamente **R$ 9.155,10** em 12 meses.
+
+---
+
+# 4. Cenário 2 — Projeto implementado por 12 meses
+
+## 4.1. Definição do cenário implementado
+
+O segundo cenário representa a evolução da POC para uma solução implantada e utilizada pela
+Motiva durante 12 meses. Nesse estágio a solução deixa de ser um protótipo acadêmico e passa
+a exigir estrutura mínima de produção, com maior estabilidade, disponibilidade e capacidade
+de manutenção.
+
+```text
+Dados operacionais da Motiva
+          ↓
+   Azure SQL Database
+          ↓
+  Red Hat / OpenShift
+          ↓
+   Container Docker
+          ↓
+Modelo de Machine Learning
+          ↓
+      Predições
+          ↓
+  Frontend publicado
+```
+
+## 4.2. Critério utilizado para estimar os custos
+
+A estimativa foi construída considerando o **menor cenário de produção tecnicamente viável**,
+evitando superdimensionamento da infraestrutura, e considerando apenas custos incrementais
+relacionados à implementação.
+
+Atividades que já fazem parte da operação da Motiva — atualização dos dados, registro de
+eventos, acompanhamento das portas e validação operacional dos alertas — não foram imputadas
+como custo, por já serem executadas por profissionais contratados pela empresa.
+
+Os custos adicionais considerados são:
+
+1. aprimoramento técnico da solução;
+2. publicação do frontend;
+3. banco de dados em ambiente de produção;
+4. ambiente Red Hat/OpenShift;
+5. sustentação da aplicação ao longo dos 12 meses;
+6. contingência financeira.
+
+---
+
+## 4.3. Aprimoramento da aplicação
+
+Para transformar a POC em uma aplicação adequada ao uso operacional, foi considerada a
+contratação temporária de **dois desenvolvedores Full-Stack Pleno por aproximadamente três
+semanas**, com as seguintes atribuições:
+
+- revisar e organizar o código desenvolvido na POC;
+- preparar a aplicação para produção e ajustar o backend;
+- integrar a aplicação ao Azure SQL Database;
+- preparar o container definitivo e configurar o deploy;
+- finalizar e publicar o frontend;
+- implementar tratamento de erros;
+- realizar testes técnicos e ajustes finais de estabilidade.
+
+### 4.3.1. Referência salarial
+
+O Guia Salarial 2026 da Robert Half indica, para Desenvolvedor(a) Full-Stack Pleno no Brasil,
+a faixa de **R$ 9.550 a R$ 15.900 por mês**. Foi adotado o valor de **R$ 12.000 por mês**,
+próximo ao ponto médio da faixa.
+
+### 4.3.2. Regime de contratação
+
+Trata-se de engajamento pontual de três semanas, sem vínculo continuado. Por esse motivo, o
+cenário-base considera **contratação PJ ou por contrato de projeto**, em que o valor pago
+corresponde ao honorário acordado, sem encargos trabalhistas patronais.
+
+```text
+R$ 12.000 × 0,75 mês × 2 desenvolvedores = R$ 18.000
+```
+
+O fator 0,75 corresponde a três semanas arredondadas para cima a partir de 3 ÷ 4,33 ≈ 0,69,
+adotando-se margem para absorver ajustes finais de escopo.
+
+### 4.3.3. Cenário alternativo em regime CLT
+
+Caso a Motiva opte por contratação CLT, o custo total para a empresa não corresponde ao
+salário bruto. Somados INSS patronal (20%), FGTS (8%), RAT, contribuições a terceiros e as
+provisões de 13º e férias com o terço constitucional, o custo total de um empregado CLT em
+empresa de Lucro Presumido ou Lucro Real situa-se entre **1,7× e 1,8× o salário bruto**.
+
+Adotando o fator 1,8:
+
+```text
+R$ 12.000 × 1,8 = R$ 21.600 de custo mensal por desenvolvedor
+R$ 21.600 × 0,75 × 2 = R$ 32.400
+```
+
+| Regime | Custo do aprimoramento |
+|---|---:|
+| PJ ou contrato de projeto (cenário-base) | R$ 18.000,00 |
+| CLT, fator de encargos 1,8× | R$ 32.400,00 |
+
+Em ambos os regimes o valor é tratado como **investimento inicial**, não como despesa
+recorrente ao longo dos 12 meses. O cenário CLT está consolidado na seção 4.13.
+
+---
+
+## 4.4. Frontend em produção
+
+Na POC o frontend não é publicado. No cenário implementado é necessário disponibilizar uma
+interface para que a solução possa ser utilizada.
+
+Foi considerado o plano **Vercel Pro**, cujo preço público é de US$ 20 por membro por mês.
+
+```text
+US$ 20 × 12 meses = US$ 240 por ano
+US$ 240 × R$ 5,10 = R$ 1.224,00
+```
+
+A premissa considera **um único assento**. A adição de membros eleva o custo
+proporcionalmente, o que constitui gatilho de revisão.
+
+```text
+Custo estimado do frontend em 12 meses = R$ 1.224,00
+```
+
+---
+
+## 4.5. Azure SQL Database em produção
+
+Na POC é utilizada a camada gratuita. Para o cenário implementado adotou-se postura mais
+conservadora: embora seja possível que o volume permaneça dentro da camada gratuita, não é
+adequado assumir que uma aplicação operacional dependerá integralmente do Free Tier.
+
+Foi constituída uma **reserva orçamentária anual**, dimensionada a partir do preço público da
+camada General Purpose serverless, de **US$ 0,5218 por vCore-hora**:
+
+```text
+Reserva mensal adotada = US$ 24,51
+Equivale a aproximadamente 47 vCore-horas de compute por mês
+                           além do limite gratuito
+Reserva anual          = US$ 294,12
+US$ 294,12 × R$ 5,10   = R$ 1.500,00
+```
+
+A reserva cobre consumo adicional de processamento, crescimento de armazenamento acima dos
+32 GB gratuitos, aumento no volume de consultas e armazenamento de backup. Caso a aplicação
+permaneça dentro dos limites gratuitos, o custo realizado será inferior à reserva.
+
+```text
+Reserva anual para Azure SQL Database = R$ 1.500,00
+```
+
+Esse valor não representa preço fixo contratado da Microsoft, e sim estimativa orçamentária.
+Por depender de consumo, foi classificado como **custo variável**.
+
+---
+
+## 4.6. Red Hat / OpenShift em produção
+
+No cenário implementado não foi considerada a continuidade do ambiente local. Uma aplicação
+operacional exige infraestrutura adequada à execução contínua do container.
+
+Como referência de preço público foi adotado o **Red Hat OpenShift Service on AWS (ROSA)**,
+por publicar tabela aberta que permite dimensionamento mínimo verificável. A configuração
+considerada é a menor viável: um cluster com um worker node de 4 vCPU, com compromisso
+reservado de 1 ano.
+
+| Componente | Preço unitário | Custo anual |
+|---|---|---:|
+| Taxa de cluster | US$ 0,03 por hora | US$ 263,00 |
+| Worker node 4 vCPU, reserva de 1 ano | US$ 0,114 por 4vCPU/hora | US$ 998,00 |
+| **Subtotal do serviço** | | **US$ 1.261,00** |
+
+```text
+US$ 1.261 × R$ 5,10 = R$ 6.431,10
+```
+
+```text
+Custo estimado Red Hat/OpenShift em 12 meses = R$ 6.431,10
+```
+
+### 4.6.1. Observações sobre a estimativa
+
+- A tabela do ROSA **não inclui a infraestrutura subjacente** (instâncias de computação,
+  tráfego de rede, armazenamento). Como a solução já utiliza Azure SQL Database, a
+  alternativa coerente em produção seria o Azure Red Hat OpenShift; o ROSA foi adotado como
+  referência por publicar preços abertos que permitem verificação, e a ordem de grandeza é
+  equivalente.
+- O valor corresponde ao **dimensionamento mínimo**. Necessidades de redundância, alta
+  disponibilidade ou mais vCPU elevam o custo proporcionalmente.
+- O preço reservado de 1 ano (US$ 0,114 por 4vCPU/hora) representa desconto relevante frente
+  ao consumo sob demanda (US$ 0,171 por 4vCPU/hora), o que justifica a escolha do compromisso
+  anual, coerente com o horizonte de 12 meses da análise.
+
+---
+
+## 4.7. Sustentação da aplicação
+
+Uma aplicação em produção com modelo de Machine Learning em operação contínua exige esforço
+técnico ao longo dos 12 meses, ainda que reduzido. Não seria realista projetar zero horas de
+manutenção após a implantação.
+
+Foram consideradas as seguintes atividades de sustentação:
+
+- correção de falhas de execução do container;
+- ajustes decorrentes de mudanças no formato ou na disponibilidade dos dados de origem;
+- atualização de dependências e correções de segurança;
+- acompanhamento da degradação de desempenho do modelo ao longo do tempo;
+- pequenos ajustes de interface e de tratamento de erros.
+
+Premissa adotada:
+
+```text
+Esforço estimado    = 4 horas por mês
+Período             = 12 meses
+Total               = 48 horas
+Valor da hora (PJ)  = R$ 70
+48 × R$ 70          = R$ 3.360
+```
+
+O valor da hora foi derivado da mesma referência de Desenvolvedor Full-Stack Pleno
+(R$ 12.000 ÷ 176 horas ≈ R$ 68), arredondada para R$ 70 em razão do caráter pontual do
+atendimento.
+
+```text
+Custo estimado de sustentação em 12 meses = R$ 3.360,00
+```
+
+Não foi considerado retreinamento completo do modelo no primeiro ano. Caso a degradação de
+desempenho exija retreinamento, o esforço adicional constitui gatilho de revisão.
+
+---
+
+## 4.8. Docker e bibliotecas de Machine Learning
+
+O Docker permanece sendo utilizado para containerização da solução e as principais
+bibliotecas permanecem open source.
+
+| Item | Custo estimado |
+|---|---:|
+| Docker | R$ 0 |
+| Python | R$ 0 |
+| Scikit-learn | R$ 0 |
+| CatBoost | R$ 0 |
+| XGBoost | R$ 0 |
+| LightGBM | R$ 0 |
+| Pandas | R$ 0 |
+
+Esses componentes não geram custo incremental de licenciamento no cenário considerado.
+
+---
+
+## 4.9. Dados e validação operacional
+
+Foi mantida a mesma lógica utilizada na POC. A Motiva já possui profissionais responsáveis por
+registrar informações das portas, atualizar dados de alarmes e manutenção, acompanhar eventos
+operacionais e verificar condições das portas.
+
+```text
+Custo incremental de atualização dos dados      = R$ 0
+Custo incremental de validação operacional      = R$ 0
+```
+
+Esses valores devem ser revistos apenas se a solução passar a exigir contratação adicional,
+horas extras, equipe dedicada, novas inspeções ou ferramentas pagas.
+
+---
+
+## 4.10. Itens avaliados e considerados sem custo incremental
+
+Os itens abaixo foram avaliados e não geraram custo no cenário-base. O registro é feito para
+que a ausência seja compreendida como decisão fundamentada, e não como omissão.
+
+| Item | Tratamento | Justificativa |
+|---|---|---|
+| Integração com as fontes de dados | R$ 0 | A solução consome os dados já extraídos e disponibilizados pela operação, sem integração automatizada com sistemas de origem no escopo atual |
+| Adequação à LGPD | R$ 0 | Os dados tratados são operacionais de equipamentos (portas, alarmes, ordens de manutenção), sem dados pessoais |
+| Segurança e controle de acesso | R$ 0 | Atendido pelos controles nativos do Azure e do OpenShift, sem contratação de ferramenta adicional |
+| Treinamento de usuários | R$ 0 | Interface destinada a equipe já familiarizada com os indicadores operacionais |
+| Licenciamento de software | R$ 0 | Stack integralmente open source |
+
+Cada um desses itens constitui gatilho de revisão caso o escopo mude — em especial a
+integração automatizada com sistemas de origem, que exigiria esforço adicional de
+desenvolvimento.
+
+---
+
+## 4.11. Consolidação dos custos da implementação
+
+### Investimento inicial
+
+| Item | Valor |
+|---|---:|
+| Aprimoramento e implantação — 2 desenvolvedores pleno, 3 semanas, regime PJ | R$ 18.000,00 |
+| **Total de investimento inicial** | **R$ 18.000,00** |
+
+### Custos fixos recorrentes
+
+| Item | Valor anual estimado |
+|---|---:|
+| Vercel Pro — 1 assento | R$ 1.224,00 |
+| Red Hat OpenShift — cluster mínimo com reserva de 1 ano | R$ 6.431,10 |
+| **Total de custos fixos recorrentes** | **R$ 7.655,10** |
+
+### Custos variáveis
+
+| Item | Valor anual estimado |
+|---|---:|
+| Reserva orçamentária para Azure SQL Database | R$ 1.500,00 |
+| **Total de custos variáveis estimados** | **R$ 1.500,00** |
+
+### Custos operacionais incrementais
+
+| Item | Valor anual estimado |
+|---|---:|
+| Sustentação da aplicação — 48 h | R$ 3.360,00 |
+| Atualização e disponibilização dos dados | R$ 0 incremental |
+| Validação operacional das previsões | R$ 0 incremental |
+| Docker e bibliotecas open source | R$ 0 |
+| **Total de custos operacionais incrementais** | **R$ 3.360,00** |
+
+### Total do projeto implementado
+
+```text
+Investimento inicial              = R$ 18.000,00
+Custos fixos recorrentes          = R$  7.655,10
+Custos variáveis estimados        = R$  1.500,00
+Custos operacionais incrementais  = R$  3.360,00
+
+Total base em 12 meses            = R$ 30.515,10
+```
+
+| Categoria | Custo em 12 meses | Participação |
+|---|---:|---:|
+| Investimento inicial | R$ 18.000,00 | 59,0% |
+| Custos fixos recorrentes | R$ 7.655,10 | 25,1% |
+| Custos variáveis estimados | R$ 1.500,00 | 4,9% |
+| Custos operacionais incrementais | R$ 3.360,00 | 11,0% |
+| **TOTAL BASE** | **R$ 30.515,10** | **100%** |
+
+### Reclassificação em CAPEX e OPEX
+
+Para a análise de retorno da seção 5, a mesma estrutura é reorganizada segundo a classificação
+de orçamento de investimento:
+
+| Classificação | Composição | Valor |
+|---|---|---:|
+| **CAPEX** — investimento inicial | Aprimoramento e implantação | R$ 18.000,00 |
+| **OPEX fixo anual** | Vercel Pro (R$ 1.224,00) + Red Hat/OpenShift (R$ 6.431,10) + sustentação (R$ 3.360,00) | R$ 11.015,10 |
+| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX total anual** | | R$ 12.515,10 |
+| **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
+
+A sustentação foi classificada como OPEX fixo por não variar com o número de portas
+monitoradas. O Azure SQL Database é o único item cujo consumo escala com o volume de dados e,
+portanto, com a quantidade de portas.
+
+```text
+Custo variável por porta ao ano = R$ 1.500,00 ÷ 528 portas = R$ 2,84
+```
+
+---
+
+## 4.12. Cronograma de desembolso
+
+### 4.12.1. Distribuição mensal
+
+| Mês | Investimento inicial | Vercel | Red Hat | Azure SQL | Sustentação | Total do mês | Acumulado |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | R$ 18.000,00 | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 19.042,93 | R$ 19.042,93 |
+| 2 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 20.085,86 |
+| 3 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 21.128,79 |
+| 4 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 22.171,72 |
+| 5 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 23.214,65 |
+| 6 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 24.257,58 |
+| 7 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 25.300,51 |
+| 8 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 26.343,44 |
+| 9 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 27.386,37 |
+| 10 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 28.429,30 |
+| 11 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 29.472,23 |
+| 12 | — | R$ 102,00 | R$ 535,87 | R$ 125,00 | R$ 280,00 | R$ 1.042,87 | R$ 30.515,10 |
+| **Total** | **R$ 18.000,00** | **R$ 1.224,00** | **R$ 6.431,10** | **R$ 1.500,00** | **R$ 3.360,00** | **R$ 30.515,10** | |
+
+A diferença de R$ 0,06 no mês 12 corresponde ao arredondamento da mensalização do ambiente
+Red Hat.
+
+### 4.12.2. Critérios de distribuição
+
+- **Investimento inicial:** concentrado no mês 1, correspondente às três semanas de
+  desenvolvimento que antecedem a entrada em operação.
+- **Vercel e Red Hat:** diluídos linearmente, por serem assinaturas recorrentes. Na hipótese
+  de pagamento antecipado do compromisso anual do OpenShift, os R$ 6.431,10 migram
+  integralmente para o mês 1, elevando-o a R$ 24.938.
+- **Azure SQL:** diluído linearmente por representar reserva orçamentária, e não contrato. O
+  desembolso real ocorrerá apenas se e quando os limites gratuitos forem ultrapassados,
+  podendo concentrar-se nos meses finais conforme o crescimento da base.
+- **Sustentação:** diluída linearmente, refletindo a premissa de 4 horas mensais.
+
+### 4.12.3. Concentração do desembolso
+
+```text
+Mês 1        = R$ 19.042,93  (62,4% do total)
+Meses 2 a 12 = R$ 11.472,17  (37,6% do total)
+```
+
+Aproximadamente 62% do custo total ocorre no primeiro mês. A partir do mês 2, o custo de
+manutenção estabiliza-se em cerca de **R$ 1.043 por mês**.
+
+Essa concentração tem implicação relevante: o custo marginal de manter a solução em operação
+após o primeiro ano é substancialmente inferior, já que o investimento inicial não se repete.
+
+```text
+Custo estimado do ano 2 = R$ 12.515,10
+```
+
+### 4.12.4. Cronograma da POC
+
+Não se aplica cronograma de desembolso à POC, cujo custo incremental projetado é de R$ 0 em
+todos os meses. Os gatilhos de revisão listados na seção 3.11 permanecem como eventos
+potenciais, sem mês definido.
+
+---
+
+## 4.13. Cenários de contingência
+
+### 4.13.1. Margens percentuais
+
+| Cenário | Cálculo | Custo estimado em 12 meses |
+|---|---|---:|
+| Base | — | R$ 30.515,10 |
+| Conservador | base × 1,05 | R$ 32.040,85 |
+| Pior caso | base × 1,10 | R$ 33.566,61 |
+
+As margens de 5% e 10% representam incertezas relacionadas a variação cambial, reajuste de
+preços de infraestrutura e pequenos ajustes de esforço durante a implantação.
+
+### 4.13.2. Cenário adicional — contratação em regime CLT
+
+O regime de contratação é a variável isolada de maior impacto sobre a projeção:
+
+| Categoria | Cenário PJ (base) | Cenário CLT |
+|---|---:|---:|
+| Investimento inicial | R$ 18.000,00 | R$ 32.400,00 |
+| Custos fixos recorrentes | R$ 7.655,10 | R$ 7.655,10 |
+| Custos variáveis | R$ 1.500,00 | R$ 1.500,00 |
+| Custos operacionais incrementais | R$ 3.360,00 | R$ 3.360,00 |
+| **Total em 12 meses** | **R$ 30.515,10** | **R$ 44.915,10** |
+
+A diferença de R$ 14.400 corresponde exclusivamente aos encargos patronais e provisões
+trabalhistas incidentes sobre a mesma remuneração bruta.
+
+### 4.13.3. Sensibilidade cambial
+
+Três itens da projeção estão originalmente denominados em dólar — Vercel Pro, Red Hat/OpenShift
+e a reserva do Azure SQL Database — somando R$ 9.155,10, ou 30% do custo-base:
+
+| Cotação | Parcela em dólar | Total em 12 meses | Variação |
+|---|---:|---:|---:|
+| R$ 4,60 | R$ 8.257,54 | R$ 29.617,54 | −2,9% |
+| R$ 5,10 (base) | R$ 9.155,10 | R$ 30.515,10 | — |
+| R$ 5,60 | R$ 10.052,66 | R$ 31.412,66 | +2,9% |
+| R$ 6,10 | R$ 10.950,22 | R$ 32.310,22 | +5,9% |
+
+A exposição cambial é moderada: uma valorização do dólar de 20% eleva o custo total em
+aproximadamente 5,9%, permanecendo dentro da margem de pior caso já adotada.
+
+### 4.13.4. Resumo dos cenários
+
+| Cenário | Custo estimado em 12 meses |
+|---|---:|
+| Base — PJ, dólar a R$ 5,10 | R$ 30.515,10 |
+| Conservador — base +5% | R$ 32.040,85 |
+| Pior caso — base +10% | R$ 33.566,61 |
+| Contratação CLT | R$ 44.915,10 |
+
+---
+
+## 4.14. Premissas que podem alterar a estimativa
+
+Os valores devem ser revisados caso ocorram mudanças como:
+
+- necessidade de mais de dois desenvolvedores;
+- período de implementação superior a três semanas;
+- contratação em regime CLT em vez de PJ;
+- necessidade de suporte recorrente acima das 4 horas mensais previstas;
+- necessidade de retreinamento completo do modelo durante os 12 meses;
+- necessidade de ambiente Red Hat/OpenShift maior ou com redundância;
+- consumo do banco Azure acima da reserva prevista;
+- adição de membros ao plano Vercel;
+- necessidade de integração automatizada com os sistemas de origem;
+- maior necessidade de segurança ou observabilidade;
+- aumento significativo do volume de dados;
+- variação relevante na cotação do dólar.
+
+---
+
+# 5. Projeção de retorno econômico
+
+> **Status desta seção.** O modelo de retorno está construído e fechado: a estrutura de
+> cálculo, as premissas operacionais e os limiares de viabilidade estão resolvidos com os
+> dados disponíveis. **Três parâmetros monetários dependem de informações ainda não
+> fornecidas pela Motiva** e estão listados na seção 5.5, com a justificativa de cada
+> ausência e os campos a preencher na seção 5.5.5. Enquanto esses parâmetros não existirem,
+> a análise não apresenta valor projetado de economia — apresenta o modelo resolvido em
+> função deles e a condição mínima de viabilidade, que não depende dos dados pendentes.
+
+## 5.1. Natureza do retorno financeiro
+
+A solução não tem como objetivo gerar **receita direta** para a Motiva. Trata-se de ferramenta
+interna de manutenção preditiva, cujo retorno financeiro se manifesta como **redução de custos
+e de riscos operacionais**.
+
+```text
+Receita direta projetada — POC                  = R$ 0
+Receita direta projetada — projeto implementado = R$ 0
+```
+
+A ausência de receita não é lacuna da análise: é característica estrutural do projeto. Por
+esse motivo, a avaliação de viabilidade não utiliza indicadores de faturamento, e sim os
+indicadores de orçamento de investimento — margem de contribuição, ponto de equilíbrio, ROI e
+payback — aplicados sobre a **economia de custos** gerada pela solução.
+
+Os benefícios econômicos potenciais identificados são:
+
+- redução de custos de manutenção corretiva emergencial;
+- redução da exposição a multas e penalidades decorrentes de falhas operacionais;
+- redução do tempo de indisponibilidade das portas;
+- melhor priorização das atividades de manutenção;
+- redução de trocas de peças em regime emergencial.
+
+## 5.2. Metodologia adotada
+
+A análise de retorno segue a estrutura de orçamento de investimento:
+
+| Elemento | Definição adotada |
+|---|---|
+| **CAPEX** | Investimento inicial não recorrente para colocar a solução em operação |
+| **OPEX fixo** | Custos anuais que independem do número de portas monitoradas |
+| **OPEX variável** | Custos anuais que variam com o número de portas monitoradas |
+| **Unidade de análise** | A porta de plataforma monitorada |
+| **"Receita" equivalente** | A economia de custos gerada por porta ao ano |
+
+A adoção da porta como unidade permite calcular margem de contribuição unitária e ponto de
+equilíbrio em unidades físicas, tornando comparável um projeto que não gera faturamento.
+
+Essa estrutura segue a metodologia de orçamento de investimento trabalhada em aula para este
+mesmo caso, aplicando os quatro indicadores de avaliação de viabilidade — margem de
+contribuição, ponto de equilíbrio, ROI e payback — sobre economia de custos em lugar de
+receita.
+
+## 5.3. Premissas operacionais
+
+| Premissa | Valor | Origem |
+|---|---:|---|
+| Portas de plataforma monitoradas | 528 portas | Informado pela Motiva |
+| Ocorrências corretivas por mês | 140 falhas/mês | Informado pela Motiva |
+| Ocorrências corretivas por ano | 1.680 falhas/ano | 140 × 12 |
+| Falhas corretivas por porta ao ano | 3,18 falhas/porta/ano | 1.680 ÷ 528 |
+| Recall esperado do modelo | 60% | Desempenho máximo estimado pelo grupo |
+| Precisão esperada do modelo | 30% | Desempenho máximo estimado pelo grupo |
+
+O recall e a precisão **não são métricas medidas em conjunto de teste final**: representam a
+expectativa de teto de desempenho do modelo, estabelecida pelo grupo a partir da qualidade das
+bases disponíveis.
+
+Essa expectativa decorre de limitações conhecidas dos dados de origem — inconsistências de
+preenchimento, granularidade dos registros de alarme e das ordens de manutenção, e ausência de
+rotulagem direta de causa raiz. São essas limitações que definem o teto de desempenho
+alcançável, e não a escolha do algoritmo.
+
+A análise financeira adota deliberadamente esse teto como premissa **conservadora do lado do
+benefício e agressiva do lado do custo operacional**: o recall de 60% limita a economia
+projetada, enquanto a precisão de 30% maximiza o volume de alertas improdutivos considerado na
+seção 5.10. Métricas melhores que as previstas deslocam o resultado favoravelmente nos dois
+sentidos.
+
+Ambos os valores devem ser substituídos pelas métricas efetivamente medidas ao final do
+treinamento, e constam entre os campos a preencher da seção 5.5.5.
+
+## 5.4. Estrutura de desempenho do modelo
+
+O recall e a precisão determinam simultaneamente o benefício e o custo operacional do sistema.
+A decomposição é a seguinte:
+
+```text
+Falhas corretivas por ano ......................... 1.680
+Falhas antecipadas pelo modelo (recall 60%) ....... 1.008
+Total de alertas emitidos (1.008 ÷ 0,30) .......... 3.360
+Alertas que não correspondem a falha real ......... 2.352
+```
+
+| Indicador | Valor |
+|---|---:|
+| Verdadeiros positivos por ano | 1.008 |
+| Falsos positivos por ano | 2.352 |
+| Falsos positivos por mês | 196 |
+| Falsos positivos por dia útil | aproximadamente 9 |
+| Razão entre falsos e verdadeiros positivos | 2,33 : 1 |
+| Falhas não antecipadas (falsos negativos) | 672 |
+
+Com precisão de 30%, o sistema emite **2,33 alertas improdutivos para cada falha corretamente
+antecipada**. Essa razão é estrutural: decorre diretamente da métrica de precisão e não pode
+ser reduzida sem melhorar o modelo.
+
+A consequência é registrada na seção 5.10 e constitui a principal premissa crítica desta
+análise.
+
+## 5.5. Parâmetros monetários não disponíveis
+
+O modelo de retorno depende de três parâmetros monetários que **não estão disponíveis no
+momento desta análise**. Esta seção registra quais são, por que não foram estimados e o que
+seria necessário para obtê-los.
+
+O registro é feito de forma explícita porque a decisão de não estimá-los é metodológica: cada
+um deles poderia ser preenchido com um valor plausível, e o resultado seria uma projeção
+aparentemente precisa e efetivamente arbitrária.
+
+### 5.5.1. Custo médio de manutenção corretiva por falha
+
+**Situação:** não fornecido pela Motiva.
+
+**Por que não foi estimado a partir do preço das peças.** A hipótese inicial era utilizar os
+custos históricos das peças utilizadas em manutenções corretivas para estimar quanto o modelo
+economizaria ao antecipar uma falha. Essa relação, porém, não é determinística.
+
+Quando o modelo indica que determinado componente tem maior probabilidade de falhar, podem
+ocorrer quatro situações distintas:
+
+1. a peça realmente falharia, e a intervenção antecipada evita a ocorrência corretiva;
+2. a peça continuaria operando normalmente durante todo o período analisado;
+3. o alerta é um falso positivo, e não havia degradação alguma;
+4. mesmo com previsão correta, a manutenção antecipada continua exigindo a substituição do
+   componente — a peça é trocada de qualquer forma, apenas em regime programado em vez de
+   emergencial.
+
+O quarto caso é o mais relevante e o mais frequentemente ignorado. **Não é possível prever, a
+partir de um alerta, se haverá ou não substituição de peça.** Se a peça é trocada nos dois
+regimes, o custo do componente não é economizado — o que muda é o regime da intervenção, e a
+economia se restringe ao diferencial entre uma corretiva emergencial e uma preventiva
+programada, não ao valor integral da peça.
+
+Além disso, o conjunto de peças envolvido nas PSD é amplo e heterogêneo, com preços que variam
+por componente. Uma média simples entre peças de valores muito distintos não representaria o
+custo de uma ocorrência típica.
+
+Utilizar diretamente o preço médio das peças, portanto, **superestimaria artificialmente o
+retorno do projeto**.
+
+**O que seria necessário:** o custo médio de uma ordem ZM01 fechada, incluindo peça, mão de
+obra e tempo de intervenção, comparado ao custo médio de uma ZM02 ou ZM03 equivalente. O
+diferencial entre os dois é a economia unitária real.
+
+### 5.5.2. Custo médio de indisponibilidade por falha
+
+**Situação:** não fornecido pela Motiva.
+
+Durante a construção desta análise foram consultados balanços patrimoniais, demonstrações
+financeiras e demais documentos disponíveis na plataforma de **Relacionamento com o Investidor
+da Motiva**, buscando isolar:
+
+- o valor anual pago em multas relacionadas a falhas operacionais;
+- o valor médio de uma penalidade;
+- a parcela dessas penalidades atribuível especificamente a falhas de Portas de Plataforma.
+
+Nenhuma dessas grandezas aparece isolada. Os valores relacionados a multas surgem agregados a
+provisões, despesas indedutíveis, contingências e processos administrativos, sem abertura por
+causa operacional. Não é possível determinar, a partir dos documentos públicos, qual parcela
+dessas penalidades decorre de falhas de PSD nem qual parcela seria evitável pela solução.
+
+Não seria metodologicamente seguro calcular uma média a partir desses agregados e utilizá-la
+como economia projetada.
+
+**O que seria necessário:** o registro interno de penalidades aplicadas por indisponibilidade,
+com a causa raiz classificada, ou o custo operacional por minuto de indisponibilidade de uma
+porta.
+
+### 5.5.3. Custo de atender um alerta falso
+
+**Situação:** não disponível, e possivelmente próximo de zero em desembolso direto.
+
+Um alerta falso não gera multa nem penalidade: ele gera uma verificação preventiva de uma
+porta que estava operando normalmente. O custo dessa verificação é composto por tempo de
+equipe e eventual deslocamento, sem substituição de componente.
+
+Como a equipe de manutenção já é contratada pela Motiva e a verificação não implica compra de
+peça, **o desembolso incremental direto de um alerta falso é considerado nulo no cenário-base**.
+
+Essa premissa, entretanto, só se sustenta enquanto o volume de verificações couber na
+capacidade instalada da equipe. Com 2.352 alertas falsos ao ano — cerca de 9 por dia útil —
+essa é a premissa mais frágil de toda a análise, e está tratada como premissa crítica na seção
+5.10.
+
+**O que seria necessário:** o tempo médio de uma verificação preventiva de PSD e a folga atual
+de capacidade da equipe de manutenção.
+
+### 5.5.4. Consolidação dos parâmetros
+
+| Parâmetro | Símbolo | Situação | Tratamento adotado |
+|---|---|---|---|
+| Portas monitoradas | P | Disponível — 528 | Valor fixo no modelo |
+| Falhas corretivas por ano | F | Disponível — 1.680 | Valor fixo no modelo |
+| Recall do modelo | R | Estimado — 60% | Premissa do grupo |
+| Precisão do modelo | Pr | Estimado — 30% | Premissa do grupo |
+| Taxa de troca efetiva | A | Não disponível | Variável de sensibilidade |
+| Economia por falha evitada | E | Não disponível | Variável do modelo |
+| Custo de um alerta falso | Cf | Não disponível | R$ 0 no cenário-base, com sensibilidade |
+
+Dois parâmetros permanecem abertos. Em vez de arbitrá-los, a análise apresenta o modelo
+resolvido **em função deles** e calcula o limiar a partir do qual o projeto é viável.
+
+### 5.5.5. Campos a preencher
+
+Os campos abaixo completam a projeção de retorno. Cada um está vinculado à fórmula que o
+utiliza, de modo que o preenchimento não exige refazer a análise: basta substituir o valor e
+recalcular os indicadores da seção 5.6.2.
+
+| # | Campo | Unidade | Valor | Origem do dado | Alimenta |
+|---|---|---|---|---|---|
+| 1 | Custo médio de uma ordem ZM01 fechada | R$/ocorrência | | Motiva — sistema de manutenção | Composição de E |
+| 2 | Custo médio de uma ZM02/ZM03 equivalente | R$/ocorrência | | Motiva — sistema de manutenção | Composição de E |
+| 3 | Custo médio de indisponibilidade por falha | R$/ocorrência | | Motiva — registro de penalidades | Composição de E |
+| 4 | Tempo médio de verificação preventiva de PSD | horas | | Motiva — equipe de manutenção | Cf |
+| 5 | Folga de capacidade da equipe de manutenção | verificações/dia | | Motiva — equipe de manutenção | Validação da premissa Cf = R$ 0 |
+| 6 | Taxa de troca efetiva medida | % | | Validação operacional da POC | A |
+| 7 | Recall medido em conjunto de teste | % | | Treinamento do modelo | Substitui a premissa de 60% |
+| 8 | Precisão medida em conjunto de teste | % | | Treinamento do modelo | Substitui a premissa de 30% |
+
+Uma vez preenchidos os campos 1 a 3, o parâmetro E é obtido por:
+
+```text
+E = (Custo médio ZM01 − Custo médio ZM02/ZM03) + Custo médio de indisponibilidade
+```
+
+A subtração é o ponto central: conforme a seção 5.5.1, a economia não é o valor integral da
+ocorrência corretiva, e sim o **diferencial entre atendê-la em regime emergencial e em regime
+programado**. Aplicar o custo integral da ZM01 superestimaria o retorno.
+
+Com o campo 4 preenchido, Cf é obtido multiplicando o tempo médio de verificação pelo custo-hora
+da equipe — e permanece igual a R$ 0 como custo incremental enquanto o campo 5 indicar folga
+suficiente para absorver as 9 verificações adicionais por dia útil.
+
+## 5.6. Modelo de cálculo
+
+### 5.6.1. Estrutura de custos em CAPEX e OPEX
+
+| Elemento | Composição | Valor |
+|---|---|---:|
+| **CAPEX** | Aprimoramento e implantação (seção 4.3) | R$ 18.000,00 |
+| **OPEX fixo anual** | Vercel Pro + Red Hat/OpenShift + sustentação | R$ 11.015,10 |
+| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX total anual** | | R$ 12.515,10 |
+| **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
+
+```text
+Custo variável por porta ao ano = R$ 1.500,00 ÷ 528 = R$ 2,84
+```
+
+### 5.6.2. Fórmulas
+
+```text
+Falhas evitadas por ano   = F × R × A = 1.680 × 0,60 × A = 1.008 × A
+Economia gerada por ano   = Falhas evitadas × E − Falsos positivos × Cf
+Economia por porta ao ano = Economia gerada por ano ÷ 528
+
+Margem de contribuição unitária (MC) = Economia por porta − Custo variável por porta
+Índice de margem de contribuição     = MC ÷ Economia por porta
+
+Ponto de equilíbrio em unidades = OPEX fixo ÷ MC unitária
+Ponto de equilíbrio em valor    = OPEX fixo ÷ Índice de MC
+
+Resultado operacional anual = Economia gerada por ano − OPEX total anual
+ROI do ano 1                = (Resultado operacional − CAPEX) ÷ CAPEX
+Payback                     = CAPEX ÷ Resultado operacional anual
+ROI acumulado em 3 anos     = (3 × Resultado operacional − CAPEX) ÷ CAPEX
+```
+
+### 5.6.3. Simplificação do cenário-base
+
+No cenário-base, adota-se A = 100% e Cf = R$ 0, conforme justificado nas seções 5.5.1 e 5.5.3.
+Com isso:
+
+```text
+Falhas evitadas por ano   = 1.008
+Redução de falhas         = 60%
+Economia por porta ao ano = 1,9091 × E
+MC unitária               = 1,9091 × E − 2,84
+```
+
+O modelo fica reduzido a uma única incógnita: **E, a economia por falha evitada**.
+
+## 5.7. Simulação do modelo
+
+> **Esta seção não contém projeções.** O parâmetro E não é conhecido (seção 5.5.1). A tabela
+> abaixo é uma **simulação**: cada linha mostra o que o modelo produziria *se* E assumisse o
+> valor indicado. Nenhum dos valores de E foi estimado, arbitrado ou adotado pela análise, e
+> nenhum resultado desta tabela é transportado para a conclusão do documento. A finalidade da
+> simulação é demonstrar o comportamento do modelo e a ordem de grandeza dos indicadores.
+
+| Hipótese de E (R$/falha) | Economia anual | MC unitária | Ponto de equilíbrio | Resultado anual | ROI ano 1 | Payback |
+|---:|---:|---:|---:|---:|---:|---:|
+| R$ 100 | R$ 100.800 | R$ 188,07 | 59 portas | R$ 88.285 | 390% | 2,5 meses |
+| R$ 300 | R$ 302.400 | R$ 569,89 | 19 portas | R$ 289.885 | 1.510% | 0,8 mês |
+| R$ 500 | R$ 504.000 | R$ 951,70 | 12 portas | R$ 491.485 | 2.630% | 0,4 mês |
+| R$ 1.000 | R$ 1.008.000 | R$ 1.906,25 | 6 portas | R$ 995.485 | 5.430% | 0,2 mês |
+| R$ 2.000 | R$ 2.016.000 | R$ 3.815,34 | 3 portas | R$ 2.003.485 | 11.030% | 0,1 mês |
+
+Observações sobre a **estrutura** dos indicadores — válidas independentemente do valor que E
+venha a assumir:
+
+- O **índice de margem de contribuição supera 98%** em todas as faixas, porque o custo variável
+  do projeto — R$ 2,84 por porta ao ano — é desprezível diante de qualquer economia unitária
+  plausível. A solução é essencialmente um projeto de custo fixo.
+- O **ponto de equilíbrio em unidades é muito inferior às 528 portas** em todas as faixas. Ainda
+  com E = R$ 100, bastaria monitorar 59 portas para cobrir os custos fixos anuais. Isso indica
+  ampla folga de escala.
+- O **payback é medido em semanas, não em anos**, porque o CAPEX de R$ 18.000 é pequeno diante
+  do volume de 1.680 falhas anuais.
+
+## 5.8. Limiar de viabilidade
+
+Como E não é conhecido, o resultado mais útil da análise não é uma projeção de economia, mas o
+**limiar** a partir do qual o projeto se paga. Ele é obtido invertendo o modelo.
+
+```text
+E mínimo para cobrir o custo total do ano 1 = R$ 30.515,10 ÷ 1.008 = R$ 30,27
+E mínimo para cobrir o OPEX anual           = R$ 12.515,10 ÷ 1.008 = R$ 12,42
+```
+
+| Condição | Economia mínima por falha evitada |
+|---|---:|
+| Cobrir CAPEX e OPEX do ano 1 | **R$ 30,27** |
+| Cobrir apenas o OPEX anual (a partir do ano 2) | **R$ 12,42** |
+
+### 5.8.1. Interpretação
+
+O limiar inverte a incerteza. Em vez de exigir que se estime quanto o projeto vai economizar,
+ele estabelece o patamar mínimo e permite que a Motiva julgue, com seu próprio conhecimento
+operacional, se esse patamar é plausível.
+
+> Para que o projeto se pague integralmente no primeiro ano, basta que evitar uma ocorrência
+> corretiva emergencial em uma PSD represente economia superior a **R$ 30,27**.
+
+Esse valor é de ordem de grandeza inferior ao custo de praticamente qualquer intervenção de
+manutenção — inclusive ao custo apenas do deslocamento de uma equipe. A conclusão que a análise
+sustenta, portanto, não é "o projeto economizará X reais", e sim:
+
+> A viabilidade econômica do projeto não depende de estimar a economia com precisão. Ela se
+> sustenta em qualquer cenário no qual evitar uma corretiva emergencial valha mais de trinta
+> reais.
+
+Essa formulação é robusta justamente por não depender dos parâmetros indisponíveis.
+
+## 5.9. Sensibilidade à taxa de troca efetiva
+
+A seção 5.5.1 registra que uma previsão correta não determina se haverá substituição de peça. O
+parâmetro A representa a proporção das falhas antecipadas em que a intervenção efetivamente
+evita a ocorrência corretiva, em vez de apenas antecipá-la.
+
+| Taxa de troca efetiva (A) | Falhas evitadas/ano | Redução de falhas | E mínimo para viabilidade no ano 1 |
+|---:|---:|---:|---:|
+| 25% | 252 | 15,0% | R$ 121,09 |
+| 50% | 504 | 30,0% | R$ 60,55 |
+| 75% | 756 | 45,0% | R$ 40,36 |
+| 100% | 1.008 | 60,0% | R$ 30,27 |
+
+Mesmo no cenário mais pessimista — em que apenas uma em cada quatro previsões corretas resulta
+em falha efetivamente evitada — o limiar de viabilidade permanece em R$ 121 por ocorrência.
+
+A conclusão da seção 5.8 é, portanto, **robusta à incerteza sobre a troca de peças**. Essa é a
+razão pela qual a ausência do custo médio das peças, embora limite a precisão da projeção, não
+compromete a avaliação de viabilidade.
+
+## 5.10. Premissa crítica — custo dos falsos positivos
+
+Esta é a única variável capaz de inverter a conclusão da análise.
+
+### 5.10.1. O mecanismo
+
+Com precisão de 30%, o sistema gera 2.352 alertas improdutivos por ano. Cada um dispara uma
+verificação preventiva que **não existe na rotina atual da Motiva**. Diferentemente das 1.680
+corretivas, que já são atendidas hoje, essas verificações constituem atividade nova.
+
+A condição de economia líquida positiva é:
+
+```text
+1.008 × E > 2.352 × Cf
+```
+
+Que se reduz a:
+
+```text
+E > 2,33 × Cf
+```
+
+> O projeto gera economia líquida enquanto evitar uma falha valer mais do que **2,33 vezes** o
+> custo de atender um alerta falso.
+
+### 5.10.2. Sensibilidade
+
+Assumindo E = R$ 1.000 por falha evitada:
+
+| Custo de atender um alerta falso (Cf) | Economia líquida anual | Resultado anual | Situação |
+|---:|---:|---:|---|
+| R$ 0 | R$ 1.008.000 | R$ 995.485 | Cenário-base |
+| R$ 100 | R$ 772.800 | R$ 760.285 | Viável |
+| R$ 300 | R$ 302.400 | R$ 289.885 | Viável, margem reduzida |
+| R$ 428,57 | R$ 0 | −R$ 12.515,10 | Ponto de inversão exato |
+| R$ 500 | −R$ 168.000 | −R$ 180.515 | Inviável |
+
+### 5.10.3. Gatilho de revisão
+
+O cenário-base adota Cf = R$ 0 porque a verificação é realizada por equipe já contratada e não
+implica compra de componente. A premissa deve ser revista imediatamente caso ocorra qualquer
+uma das condições abaixo:
+
+- o volume de 9 verificações adicionais por dia útil exceder a capacidade da equipe de
+  manutenção;
+- for necessária contratação de pessoal ou pagamento de horas extras para absorver as
+  verificações;
+- as verificações passarem a exigir substituição preventiva de componentes;
+- a precisão medida do modelo ficar abaixo dos 30% previstos, elevando o número de alertas
+  improdutivos.
+
+### 5.10.4. Recomendação de mitigação
+
+O número de alertas improdutivos é função direta da precisão do modelo e do limiar de decisão
+adotado. Elevar o limiar de probabilidade a partir do qual um alerta é emitido reduz o recall e
+aumenta a precisão, diminuindo o volume de verificações.
+
+Dada a assimetria demonstrada na seção 5.9 — em que reduzir o recall pela metade ainda mantém o
+projeto amplamente viável — e o risco identificado nesta seção, a calibração do limiar de
+decisão deve **priorizar precisão sobre recall**. Um modelo que antecipe menos falhas, porém com
+menor volume de alertas improdutivos, produz resultado econômico superior neste caso.
+
+## 5.11. Premissas críticas consolidadas
+
+Em resposta à pergunta sobre quais premissas mais alteram o resultado:
+
+**Premissa crítica 1 — custo operacional dos falsos positivos.** É a única variável capaz de
+tornar o projeto inviável. Com precisão de 30%, o sistema gera 2,33 alertas improdutivos por
+falha antecipada, e o projeto deixa de gerar economia líquida se atender um alerta falso custar
+mais de 43% do valor de evitar uma falha.
+
+**Premissa crítica 2 — economia efetiva por falha evitada.** É o parâmetro de maior amplitude
+de incerteza, mas o limiar de viabilidade é tão baixo (R$ 30,27) que a incerteza não compromete
+a decisão de investir, apenas a precisão da projeção de retorno.
+
+## 5.12. Tratamento adotado na projeção financeira
+
+| Cenário | Receita direta | Economia | Tratamento |
+|---|---:|---|---|
+| POC | R$ 0 | não incorporada | modelo aplicável, parâmetros E e Cf pendentes |
+| Projeto implementado | R$ 0 | não incorporada | idem |
+
+A economia potencial **não foi incorporada ao resultado financeiro consolidado**. Os custos
+apresentados nas seções 3 e 4 representam o custo bruto do projeto, sem abatimento de
+benefícios.
+
+Isso não significa que o projeto não gere retorno econômico. Significa que a análise optou por
+apresentar o modelo resolvido e o limiar de viabilidade, em lugar de uma projeção construída
+sobre parâmetros arbitrados.
+
+### 5.12.1. Encerramento da seção
+
+Esta seção permanece **aberta para complemento**. O modelo está fechado; os parâmetros
+monetários não. Quando os campos da seção 5.5.5 forem preenchidos, os indicadores da seção 5.6.2
+produzem diretamente a projeção de economia, o resultado operacional, o ROI e o payback
+definitivos, sem necessidade de revisar a estrutura da análise.
+
+Até lá, o que a análise afirma é apenas o que os dados disponíveis sustentam:
+
+| A análise afirma | A análise não afirma |
+|---|---|
+| O custo do projeto em 12 meses | Quanto a Motiva vai economizar |
+| Quantas falhas o modelo tende a antecipar | Quanto vale evitar cada uma delas |
+| A economia mínima por falha que torna o projeto viável | Que essa economia será alcançada |
+| O volume de alertas improdutivos esperado | O custo de atendê-los |
+
+O modelo da seção 5.6 deve ser recalculado assim que a Motiva disponibilizar:
+
+- o custo médio de uma ordem ZM01 fechada, com peça e mão de obra;
+- o custo médio equivalente de uma ZM02 ou ZM03 programada, para apuração do diferencial;
+- o registro de penalidades por indisponibilidade com causa raiz classificada;
+- o tempo médio de uma verificação preventiva de PSD;
+- as métricas de recall e precisão efetivamente medidas ao final do treinamento.
+
+---
+
+# 6. Comparação financeira dos dois cenários
+
+## 6.1. Quadro comparativo
+
+| Indicador | POC — 12 meses | Projeto implementado — 12 meses |
+|---|---:|---:|
+| Investimento inicial | R$ 0 incremental | R$ 18.000,00 |
+| Custos fixos recorrentes | R$ 0 incremental | R$ 7.655,10 |
+| Custos variáveis estimados | R$ 0 incremental | R$ 1.500,00 |
+| Custos operacionais incrementais | R$ 0 incremental | R$ 3.360,00 |
+| **Custo total base** | **R$ 0** | **R$ 30.515,10** |
+| Cenário conservador +5% | R$ 0 | R$ 32.040,85 |
+| Pior caso +10% | R$ 0 | R$ 33.566,61 |
+| Cenário com contratação CLT | não aplicável | R$ 44.915,10 |
+| Custo de mercado equivalente | R$ 37.331,10 | R$ 30.515,10 |
+| Receita direta projetada | R$ 0 | R$ 0 |
+| Economia anual | modelada — seção 5.6 | modelada — seção 5.6 |
+| Economia mínima por falha evitada para viabilidade | não aplicável | R$ 30,27 |
+| Ponto de equilíbrio em unidades (E = R$ 500) | não aplicável | 12 de 528 portas |
+| Payback (E = R$ 500) | não aplicável | 0,4 mês |
+| Custo recorrente do ano 2 | não aplicável | R$ 12.515,10 |
+
+## 6.2. Leitura do comparativo
+
+A coluna de **custo de mercado equivalente** revela um ponto que a coluna de custo incremental
+oculta: a POC mobiliza mais recursos econômicos que o projeto implementado (R$ 37.331 contra
+R$ 30.515). A diferença está na natureza do esforço — a POC concentra horas de desenvolvimento
+exploratório, absorvidas pelo trabalho acadêmico, enquanto o projeto implementado parte de uma
+base pronta e concentra custos de infraestrutura e de profissionalização.
+
+A diferença de desembolso entre os dois cenários decorre de quatro fatores:
+
+1. **profissionalização da aplicação** — R$ 18.000 de investimento inicial inexistentes na POC;
+2. **publicação do frontend** — não realizada durante a POC;
+3. **infraestrutura de execução contínua** — substituição do OpenShift Local em hardware
+   existente por ambiente gerenciado;
+4. **sustentação** — esforço técnico de manutenção que na POC é absorvido pelo grupo.
+
+## 6.3. Síntese
+
+```text
+POC ...................... R$ 0 incremental em 12 meses
+                           (R$ 37.331,10 a preço de mercado)
+
+Projeto implementado ..... R$ 30.515,10 em 12 meses
+                           R$ 12.515,10 a partir do ano 2
+
+Base operacional ......... 528 portas monitoradas
+                           1.680 ocorrências corretivas por ano
+
+Limiar de viabilidade .... R$ 30,27 de economia por falha evitada
+                           (R$ 121 no cenário mais pessimista de troca efetiva)
+
+Premissa crítica ......... 2.352 alertas improdutivos por ano
+                           decorrentes da precisão de 30%
+```
+
+---
+
+# 7. Metodologia e critérios utilizados
+
+## 7.1. Horizonte de análise
+
+Foram considerados dois cenários independentes, ambos com duração de 12 meses: manutenção da
+POC durante 12 meses e implementação da solução em ambiente operacional por 12 meses. O
+horizonte comum permite comparar os dois cenários sob o mesmo período.
+
+## 7.2. Critério de custo incremental
+
+Foi considerado como custo do projeto apenas o que representa gasto adicional causado pela
+solução. Atividades que já fazem parte da rotina da Motiva e que não exigem contratação
+adicional, horas extras ou nova infraestrutura foram registradas como R$ 0 incremental. Esse
+critério evita contabilizar duas vezes despesas que existiriam mesmo sem o projeto.
+
+## 7.3. Critério de custo de mercado equivalente
+
+Para a POC, cujo custo incremental é zero, foi apresentada uma segunda leitura em custo de
+mercado equivalente. O objetivo é evidenciar que a ausência de desembolso decorre da forma de
+alocação dos recursos, não da ausência de consumo de recursos.
+
+## 7.4. Classificação dos custos
+
+Os custos foram organizados em quatro categorias:
+
+- **investimento inicial:** gasto necessário para colocar a solução em operação;
+- **custos fixos recorrentes:** gastos previstos independentemente de pequenas variações de
+  uso;
+- **custos variáveis:** gastos que podem variar conforme consumo;
+- **custos operacionais incrementais:** novos gastos relacionados à operação cotidiana da
+  solução.
+
+## 7.5. Uso de infraestrutura existente e ferramentas gratuitas
+
+Recursos já disponíveis foram registrados como R$ 0 incremental quando não exigem nova
+aquisição. O mesmo critério foi aplicado a ferramentas open source e a serviços utilizados
+dentro das condições de suas camadas gratuitas.
+
+## 7.6. Estimativas de mercado
+
+Quando não havia valor interno fornecido pela Motiva, foram utilizados preços públicos de
+fornecedores ou pesquisas salariais de mercado. No cenário implementado, isso se aplicou
+principalmente à mão de obra de desenvolvimento e aos serviços de infraestrutura.
+
+Todos os valores estão registrados com fonte e data de consulta na seção 7.9, e representam
+estimativa para fins acadêmicos, a ser atualizada no momento de uma eventual contratação real.
+
+## 7.7. Premissa cambial
+
+Para valores denominados em dólar foi utilizada a cotação comercial de **US$ 1 = R$ 5,10**,
+verificada em 09/09/2026. A cotação padroniza a projeção em reais; seu efeito sobre o total
+está quantificado na análise de sensibilidade da seção 4.13.3.
+
+## 7.8. Tratamento das incertezas
+
+Para o projeto implementado foram considerados três cenários de margem — base, conservador
+(+5%) e pior caso (+10%) — além de um cenário adicional de regime de contratação e de uma
+análise de sensibilidade cambial.
+
+Na POC, como o custo incremental base é igual a zero, a contingência é tratada por gatilhos de
+revisão com impacto financeiro quantificado, e não por acréscimo percentual.
+
+## 7.9. Fontes consultadas
+
+| Item | Valor adotado | Fonte | Data |
+|---|---:|---|---|
+| Cotação do dólar comercial | US$ 1 = R$ 5,10 | Cotação comercial de mercado | 09/09/2026 |
+| Red Hat OpenShift — taxa de cluster | US$ 263/ano | Preços públicos do Red Hat OpenShift Service on AWS (ROSA) | 10/09/2026 |
+| Red Hat OpenShift — worker node 4 vCPU | US$ 998/ano | ROSA, compromisso reservado de 1 ano (US$ 0,114 por 4vCPU/hora) | 10/09/2026 |
+| Azure SQL Database — camada gratuita | 100.000 vCore-segundos, 32 GB de dados, 32 GB de backup por mês | Documentação oficial da Microsoft | 10/09/2026 |
+| Azure SQL Database — compute serverless | US$ 0,5218 por vCore-hora | Tabela de preços do Azure SQL Database, General Purpose serverless | 10/09/2026 |
+| Vercel Pro | US$ 20 por membro/mês | Página oficial de planos da Vercel | 10/09/2026 |
+| Desenvolvedor Full-Stack Pleno | R$ 9.550 a R$ 15.900/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
+| Desenvolvedor Full-Stack Júnior | R$ 6.050 a R$ 8.750/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
+| Fator de encargos CLT (Lucro Presumido/Real) | 1,7× a 1,8× o salário bruto | INSS patronal (20%), FGTS (8%), RAT, Sistema S e provisões de 13º e férias | 10/09/2026 |
+
+### 7.9.1. Critério de aplicação das fontes
+
+- Quando a fonte apresenta uma **faixa**, adotou-se valor central e registrou-se a faixa
+  completa, permitindo que o leitor recalcule o cenário.
+- Quando o fornecedor oferece **compromisso anual com desconto**, adotou-se o preço com
+  compromisso de 1 ano, coerente com o horizonte de 12 meses.
+- Preços em dólar foram convertidos pela cotação comercial da data indicada, e a variação
+  cambial foi tratada como fonte de incerteza no cenário de contingência.
+- Valores de mão de obra foram registrados **com o regime de contratação explícito**, porque
+  salário bruto e custo total para a empresa são grandezas diferentes.
+
+### 7.9.2. Limitações das fontes
+
+- Os preços de nuvem variam por região e configuração; os valores adotados correspondem às
+  configurações mínimas descritas em cada seção.
+- O Guia Salarial informa remuneração bruta, não custo total de contratação. O tratamento
+  desse ponto está na seção 4.3.3.
+- Nenhum valor de custo foi obtido diretamente da Motiva. Todas as estimativas são referências
+  públicas de mercado e deverão ser substituídas por cotações reais no momento de uma eventual
+  contratação.
+
+## 7.10. Critério para o retorno econômico
+
+O projeto não foi tratado como gerador de receita direta, pois sua finalidade é apoiar a
+manutenção e reduzir custos e riscos operacionais. O retorno foi analisado sob a ótica de
+**economia potencial**, e essa economia não foi incorporada ao resultado consolidado.
+
+Como os documentos disponíveis no Relacionamento com o Investidor da Motiva não permitem
+isolar uma média confiável de multas, e como os custos de peças não podem ser diretamente
+associados a cada previsão do modelo, a análise apresenta o modelo resolvido em função dos
+parâmetros indisponíveis e o limiar de viabilidade, em lugar de um valor projetado de economia.
+
+Os indicadores utilizados são os de orçamento de investimento — margem de contribuição, ponto
+de equilíbrio, ROI e payback — aplicados sobre economia de custos em vez de faturamento, com a
+porta de plataforma como unidade de análise. As fórmulas estão registradas na seção 5.6.2 e os
+parâmetros indisponíveis, com a justificativa de cada ausência, na seção 5.5.
+
+---
+
+# 8. Conclusão
+
+A Prova de Conceito pode ser mantida durante 12 meses com **custo incremental projetado de
+R$ 0**, desde que permaneçam válidas as premissas de utilização de infraestrutura existente,
+serviços dentro de suas camadas gratuitas e atividades operacionais já executadas pela Motiva.
+A preço de mercado, os recursos mobilizados pela POC equivalem a aproximadamente
+**R$ 37.331,10**.
+
+Para transformar a POC em solução implementada e mantê-la por 12 meses, o custo-base estimado
+é de **R$ 30.515,10**, dos quais 59% correspondem a investimento inicial não recorrente. A
+partir do segundo ano, o custo de sustentação cai para **R$ 12.515,10** anuais.
+
+Considerando as margens e os cenários adotados, a projeção do primeiro ano varia entre:
+
+```text
+R$ 30.515,10 no cenário-base
+R$ 32.040,85 no cenário conservador
+R$ 33.566,61 no pior caso
+R$ 44.915,10 caso a contratação seja em regime CLT
+```
+
+O projeto não constitui nova fonte de receita. Seu retorno financeiro está associado à
+**economia de custos**, principalmente por meio da redução do risco de multas, diminuição de
+falhas corretivas, melhor planejamento da manutenção e possível redução de trocas ou
+intervenções desnecessárias.
+
+Essa economia não foi convertida em valor único. A consulta aos balanços e demais documentos
+disponíveis no Relacionamento com o Investidor da Motiva não permitiu identificar média
+confiável de multas relacionadas a falhas operacionais, e não foi considerado adequado calcular
+a economia a partir do preço das peças, pois uma previsão de falha não garante que a peça
+efetivamente quebraria e a manutenção antecipada pode continuar exigindo a substituição do
+componente, apenas alterando o regime da intervenção de emergencial para programado.
+
+Em lugar de uma projeção construída sobre parâmetros arbitrados, a análise resolve o modelo em
+função deles e calcula o limiar de viabilidade. Com 528 portas monitoradas, 1.680 ocorrências
+corretivas por ano e recall estimado de 60%, o projeto antecipa 1.008 falhas por ano. Disso
+decorre:
+
+```text
+Economia mínima por falha evitada para cobrir o ano 1 = R$ 30,27
+Economia mínima por falha evitada a partir do ano 2   = R$ 12,42
+```
+
+A conclusão que a análise sustenta não é que o projeto economizará determinado valor, e sim que
+**sua viabilidade econômica não depende de estimar a economia com precisão**: ela se sustenta em
+qualquer cenário no qual evitar uma ocorrência corretiva emergencial valha mais de trinta reais.
+Esse resultado é robusto à incerteza sobre a troca de peças — mesmo que apenas uma em cada
+quatro previsões corretas evite de fato a falha, o limiar sobe apenas para R$ 121 por ocorrência.
+
+A ressalva relevante não está no custo do projeto, e sim na precisão do modelo. Com precisão de
+30%, o sistema emitirá aproximadamente 2.352 alertas improdutivos por ano, cerca de 9 por dia
+útil, gerando verificações preventivas que não existem na rotina atual. O projeto deixa de gerar
+economia líquida caso atender um alerta falso custe mais de 43% do valor de evitar uma falha.
+Por essa razão, a calibração do limiar de decisão do modelo deve priorizar precisão sobre
+recall, conforme detalhado na seção 5.10.4.
+
+A projeção apresentada deve ser entendida como **estimativa financeira de 12 meses**,
+construída a partir do escopo técnico atual, das premissas documentadas e das fontes
+registradas na seção 7.9. Os valores deverão ser revisados caso o escopo, a infraestrutura, os
+preços dos serviços ou as necessidades operacionais sejam alterados.
