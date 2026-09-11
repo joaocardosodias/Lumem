@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../components/Button'
-import Card from '../components/Card'
-import Input from '../components/Input'
+import { CountValue } from '../components/Card'
+import StationPlan from '../components/StationPlan'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, stationLabel } from '../data/stations'
@@ -21,6 +21,15 @@ import './Portas.css'
 
 function padDoor(value) {
   return String(value).padStart(2, '0')
+}
+
+function matchesDoorFilter(door, filter, search) {
+  if (filter === 'risk' && !door.will_fail) return false
+  if (filter === 'ok' && door.will_fail) return false
+  const query = search.toLowerCase().trim()
+  if (!query) return true
+  const matchesNumber = String(door.door_number).includes(query) || padDoor(door.door_number).includes(query)
+  return /^\d+$/.test(query) ? matchesNumber : String(door.sap_tag || '').toLowerCase().includes(query)
 }
 
 const emptySummary = {
@@ -54,16 +63,16 @@ function Portas({ onNavigate, params = {} }) {
   const { run, busy } = usePredictionLoad()
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
+  const doorDialogRef = useRef(null)
+  const doorDetailsOpen = Boolean(openedDoor)
 
-  const timeline = openedDoor
   const openedStation = lineStations.find((item) => item.code === openedCode)
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
   const topStation = summary.critical_stations[0]
   const doorsAtRisk = doors.filter((item) => item.will_fail).length
   const platforms = useMemo(() => {
-    const fromDoors = [...new Set(doors.map((item) => item.platform))]
-    if (fromDoors.length) return fromDoors
-    return openedStation?.platforms ?? ['P1', 'P2']
+    return [...new Set([...(openedStation?.platforms ?? []), ...doors.map((item) => item.platform)])]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
   }, [doors, openedStation])
   const visibleDoors = useMemo(
     () =>
@@ -73,24 +82,19 @@ function Portas({ onNavigate, params = {} }) {
     [doors, activePlatform],
   )
   const filteredDoors = useMemo(() => {
-    return visibleDoors.filter((item) => {
-      if (doorFilter === 'risk' && !item.will_fail) return false
-      if (doorFilter === 'ok' && item.will_fail) return false
-      if (doorSearch) {
-        const query = doorSearch.toLowerCase().trim()
-        const tag = String(item.sap_tag || '').toLowerCase()
-        const num = String(item.door_number || '')
-        if (!tag.includes(query) && !num.includes(query)) return false
-      }
-      return true
-    })
+    return visibleDoors.filter((item) => matchesDoorFilter(item, doorFilter, doorSearch))
   }, [visibleDoors, doorFilter, doorSearch])
 
   const selectedIndex = lineStations.findIndex((item) => item.code === selectedCode)
-  const maxRisk = useMemo(
-    () => Math.max(...visibleDoors.map((item) => item.risk), 0.01),
-    [visibleDoors],
-  )
+
+  useEffect(() => {
+    if (!doorDetailsOpen) return
+    const trigger = document.activeElement
+    doorDialogRef.current?.querySelector('button')?.focus({ preventScroll: true })
+    return () => {
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true })
+    }
+  }, [doorDetailsOpen])
 
   useEffect(() => {
     return () => {
@@ -258,8 +262,9 @@ function Portas({ onNavigate, params = {} }) {
   }
 
   async function handleOpenDoor(door, updateUrl = true) {
+    setActivePlatform(door.platform)
     if (updateUrl && openedCode) {
-      onNavigate?.('portas', { station: openedCode, door: door.door_number })
+      onNavigate?.('portas', { station: openedCode, platform: door.platform, door: door.door_number })
     }
     const cachedDossier = getCachedDoorDossier(door.door_id)
     if (cachedDossier) {
@@ -351,6 +356,26 @@ function Portas({ onNavigate, params = {} }) {
     }
   }
 
+  function handleDoorDialogKeyDown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      handleBackFromDoor()
+      return
+    }
+    if (event.key !== 'Tab') return
+    const controls = doorDialogRef.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]')
+    if (!controls?.length) return
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
   function handleBackFromStation() {
     setOpenedCode(null)
     setOpenedDoor(null)
@@ -358,231 +383,102 @@ function Portas({ onNavigate, params = {} }) {
     onNavigate?.('portas', {})
   }
 
-  if (openedStation && timeline) {
-    return (
-      <section className="portas">
-        <div className="page-head">
-          <div className="portas__title">
-            <button type="button" className="portas__back" onClick={handleBackFromDoor} aria-label="Voltar">
-              ‹
-            </button>
-            <div>
-              <h1>{timeline.sap_tag || `Porta ${padDoor(timeline.door_number)}`}</h1>
-              <p>
-                {timeline.station_name} · {timeline.platform} · porta {padDoor(timeline.door_number)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {error ? <p className="page-status is-error">{error}</p> : null}
-
-        <div className="portas__kpis">
-          <Card
-            layout="banner"
-            label="Diagnóstico Preditivo"
-            value={timeline.will_fail ? 'Em risco de falha' : 'Estável'}
-            hint={`status ${timeline.status} · porta ${timeline.station_code}-${timeline.platform}-P${padDoor(timeline.door_number)}`}
-          />
-          <Card
-            layout="banner"
-            label="Última avaliação"
-            value={timeline.last_evaluated_at ? String(timeline.last_evaluated_at).slice(0, 10) : '—'}
-            hint={timeline.last_evaluated_at || 'Sem avaliação gravada'}
-          />
-        </div>
-
-        <article className="portas__panel">
-          <h2>Dossiê da porta</h2>
-          <div className="portas__dossier">
-            <div>
-              <span>Id</span>
-              <strong>{timeline.door_id}</strong>
-            </div>
-            <div>
-              <span>Estação</span>
-              <strong>{timeline.station_name}</strong>
-            </div>
-            <div>
-              <span>Plataforma</span>
-              <strong>{timeline.platform}</strong>
-            </div>
-            <div>
-              <span>Porta</span>
-              <strong>{padDoor(timeline.door_number)}</strong>
-            </div>
-            <div>
-              <span>TAG</span>
-              <strong>{timeline.sap_tag || '—'}</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{timeline.status}</strong>
-            </div>
-            <div>
-              <span>Diagnóstico IA</span>
-              <strong className={timeline.will_fail ? 'portas__status-risk' : 'portas__status-ok'}>
-                {timeline.will_fail ? 'Risco de Falha' : 'Operação Estável'}
-              </strong>
-            </div>
-          </div>
-          {timeline.will_fail ? (
-            <div className="portas__dossier-actions">
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  onNavigate?.('inspecoes', {
-                    station: timeline.station_code,
-                    door: timeline.door_number,
-                  })
-                }
-              >
-                Ver Ordens de Inspeção Desta Porta
-              </Button>
-            </div>
-          ) : null}
-        </article>
-
-        <article className="portas__panel">
-          <h2>Alarmes de telemetria da porta</h2>
-          {doorAlarms.length ? (
-            doorAlarms.map((item) => (
-              <div key={item.id} className="portas__related">
-                <strong>{item.alarm_type}</strong>
-                <span>{item.event_timestamp}</span>
-                <em>Duração: {item.duration_seconds}s · TAG: {item.tag}</em>
-              </div>
-            ))
-          ) : (
-            <p className="portas__empty">Nenhum alarme de telemetria registrado para esta porta.</p>
-          )}
-        </article>
-
-        <article className="portas__panel">
-          <h2>Manutenções relacionadas</h2>
-          {doorMaintenances.length ? (
-            doorMaintenances.map((item) => (
-              <div key={item.id} className="portas__related">
-                <strong>{item.order_type}</strong>
-                <span>{item.start_timestamp}</span>
-                <em>{item.description || item.symptom || item.installation_location || item.station_code}</em>
-              </div>
-            ))
-          ) : (
-            <p className="portas__empty">Nenhuma ordem de manutenção ligada a esta porta.</p>
-          )}
-        </article>
-
-        <article className="portas__panel">
-          <h2>Abrir inspeção</h2>
-          {inspError ? <p className="page-status is-error">{inspError}</p> : null}
-          <form className="portas__insp" onSubmit={handleCreateInspection}>
-            <Input
-              id="door-insp-notes"
-              label="Notas"
-              value={inspNotes}
-              onChange={(event) => setInspNotes(event.target.value)}
-            />
-            <Button type="submit">Abrir ordem</Button>
-          </form>
-        </article>
-      </section>
+  const adjacentDoors = useMemo(() => {
+    if (!openedDoor) return { prev: null, next: null }
+    const currentPlatformDoors = doors
+      .filter((d) => d.platform === openedDoor.platform)
+      .sort((a, b) => a.door_number - b.door_number)
+    const currentIndex = currentPlatformDoors.findIndex(
+      (d) => d.door_id === openedDoor.door_id || d.door_number === openedDoor.door_number,
     )
-  }
+    if (currentIndex === -1 || currentPlatformDoors.length <= 1) {
+      return { prev: null, next: null }
+    }
+    const prev = currentPlatformDoors[(currentIndex - 1 + currentPlatformDoors.length) % currentPlatformDoors.length]
+    const next = currentPlatformDoors[(currentIndex + 1) % currentPlatformDoors.length]
+    return { prev, next }
+  }, [openedDoor, doors])
+
+
 
   if (openedStation) {
     return (
-      <section className="portas">
+      <section className="portas portas--station">
         <div className="page-head">
           <div className="portas__title">
-            <button type="button" className="portas__back" onClick={handleBackFromStation} aria-label="Voltar">
+            <button type="button" className="portas__back" onClick={handleBackFromStation} aria-label="Voltar para a Linha 4">
               ‹
             </button>
             <div>
+              <p className="portas__eyebrow">Linha 4 Amarela · Estação {openedStation.code}</p>
               <h1>{openedStation.name}</h1>
-              <p>Portas</p>
             </div>
+          </div>
+          <div className="page-head__actions">
+            <Button variant="secondary" disabled={loadingDoors || busy} onClick={() => loadStationDoors(openedCode)}>
+              Atualizar dados
+            </Button>
+            <Button disabled={loadingDoors || busy} onClick={handlePredict}>
+              Executar diagnóstico
+            </Button>
           </div>
         </div>
 
-        {loadingDoors ? <p className="page-status">Carregando o mapa térmico da estação…</p> : null}
+        {loadingDoors ? <p className="page-status">Carregando telemetria e topologia das portas…</p> : null}
         {error ? <p className="page-status is-error">{error}</p> : null}
 
-        <div className="portas__kpis">
-          <Card
-            layout="banner"
-            label="Total de portas"
-            value={doors.length}
-            hint={`${visibleDoors.length} em ${activePlatform} · ${platforms.length} plataformas`}
-          />
-          <Card layout="banner" label="Portas em risco" value={doorsAtRisk} hint="próximos 7 dias" />
+        <div className="station-summary" aria-label="Resumo da estação">
+          <article>
+            <div><p>Portas monitoradas</p><span>Distribuídas em {platforms.length} plataformas</span></div>
+            <strong>{loadingDoors || (error && !doors.length) ? '—' : <CountValue value={doors.length} />}</strong>
+          </article>
+          <article>
+            <div><p>Em risco de falha</p><span>Classificação da última análise</span></div>
+            <strong>{loadingDoors || (error && !doors.length) ? '—' : <CountValue value={doorsAtRisk} />}</strong>
+          </article>
         </div>
 
-        <div className="portas-tabs" role="tablist" aria-label="Plataformas da estação">
-          {platforms.map((platform) => (
-            <button
-              key={platform}
-              type="button"
-              role="tab"
-              aria-selected={activePlatform === platform}
-              className={activePlatform === platform ? 'is-active' : ''}
-              onClick={() => setActivePlatform(platform)}
-            >
-              {platform}
-            </button>
-          ))}
-        </div>
+        <StationPlan
+          station={openedStation}
+          platforms={platforms}
+          doors={doors}
+          loading={loadingDoors}
+          error={error}
+          filter={doorFilter}
+          onFilter={setDoorFilter}
+          search={doorSearch}
+          onSearch={setDoorSearch}
+          matchesDoor={(door) => matchesDoorFilter(door, doorFilter, doorSearch)}
+          selectedDoor={openedDoor}
+          onSelectDoor={handleOpenDoor}
+        />
 
-        <article className="portas__panel">
-          <h2>Riscos por porta · {activePlatform}</h2>
-          {visibleDoors.length ? (
-            <div className="portas-risk-chart">
-              {visibleDoors.map((item) => (
-                <button
-                  key={item.door_id}
-                  type="button"
-                  className="portas-risk-chart__col"
-                  onClick={() => handleOpenDoor(item)}
-                >
-                  <span>
-                    <i style={{ height: `${(item.risk / maxRisk) * 100}%` }} />
-                  </span>
-                  <strong>{padDoor(item.door_number)}</strong>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="portas__empty">Nenhuma porta retornada para esta plataforma.</p>
-          )}
-        </article>
-
+        {/* TABELA REGISTROS DAS PORTAS (REFERÊNCIA OPERACIONAL) */}
         <article className="portas__panel">
           <div className="portas__doors-header">
-            <h2>Portas de Estação · {activePlatform}</h2>
-            <div className="portas__doors-filters">
-              <input
-                type="search"
-                className="portas__doors-search"
-                placeholder="Buscar porta ou TAG…"
-                value={doorSearch}
-                onChange={(e) => setDoorSearch(e.target.value)}
-              />
-              <select
-                className="portas__doors-select"
-                value={doorFilter}
-                onChange={(e) => setDoorFilter(e.target.value)}
-              >
-                <option value="all">Todas as portas</option>
-                <option value="risk">Em risco</option>
-                <option value="ok">Estáveis</option>
-              </select>
+            <div>
+              <h2>Registros de portas</h2>
+              <p className="portas__panel-sub">Identificação, diagnóstico e última avaliação por plataforma.</p>
+            </div>
+            <div className="portas-tabs" role="tablist" aria-label="Plataformas da estação">
+              {platforms.map((platform) => (
+                <button
+                  key={platform}
+                  type="button"
+                  role="tab"
+                  aria-selected={activePlatform === platform}
+                  className={activePlatform === platform ? 'is-active' : ''}
+                  onClick={() => setActivePlatform(platform)}
+                >
+                  {platform}
+                </button>
+              ))}
             </div>
           </div>
           <div className="portas__table">
             <div className="portas__row portas__row--head">
               <span>Porta</span>
               <span>TAG</span>
-              <span>Risco</span>
               <span>Status</span>
               <span>Avaliado em</span>
             </div>
@@ -591,12 +487,6 @@ function Portas({ onNavigate, params = {} }) {
                 <button key={item.door_id} type="button" className="portas__row" onClick={() => handleOpenDoor(item)}>
                   <strong>{padDoor(item.door_number)}</strong>
                   <strong>{item.sap_tag || '—'}</strong>
-                  <div className="portas-risk">
-                    <b>
-                      <i style={{ width: `${Math.round(item.risk * 100)}%` }} />
-                    </b>
-                    <em>{Math.round(item.risk * 100)}%</em>
-                  </div>
                   <span className={`portas-status${item.will_fail ? '' : ' is-ok'}`}>
                     {item.will_fail ? 'Em risco' : 'Estável'}
                   </span>
@@ -604,20 +494,207 @@ function Portas({ onNavigate, params = {} }) {
                 </button>
               ))
             ) : (
-              <p className="portas__empty">Nenhuma porta encontrada com esses filtros.</p>
+              <p className="portas__empty">Nenhuma porta encontrada com os filtros selecionados.</p>
             )}
           </div>
         </article>
 
-        <div className="portas__actions">
-          <div>
-            <Button onClick={handlePredict}>Executar Diagnóstico IA</Button>
+        {lastPrediction ? <p className="portas__eval">Última avaliação de modelo: {lastPrediction}</p> : null}
+
+        {/* MODAL / INSPECTOR DE DETALHES DA PORTA CLICADA */}
+        {openedDoor ? (
+          <div className="portas-modal-backdrop" onClick={handleBackFromDoor}>
+            <div
+              className="portas-modal-content"
+              ref={doorDialogRef}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={handleDoorDialogKeyDown}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dossier-door-title"
+            >
+              <header className="portas-modal-head">
+                <div>
+                  <div className="portas-modal-eyebrow">
+                    <span>DOSSIÊ DE TELEMETRIA · ATIVO FERROVIÁRIO</span>
+                    <span className="portas-modal-car-tag">VAGÃO {Math.ceil(openedDoor.door_number / 4)}</span>
+                  </div>
+                  <h2 id="dossier-door-title">
+                    Porta {padDoor(openedDoor.door_number)} · Plataforma {openedDoor.platform}
+                  </h2>
+                  <p className="portas-modal-sub">
+                    {openedDoor.sap_tag || `SP04-6-PSD-${openedDoor.station_code}-${openedDoor.platform}-PP${padDoor(openedDoor.door_number)}`} · {openedStation.name} ({openedStation.code})
+                  </p>
+                </div>
+
+                <div className="portas-modal-nav-actions">
+                  {adjacentDoors.prev ? (
+                    <button
+                      type="button"
+                      className="btn-door-nav"
+                      onClick={() => handleOpenDoor(adjacentDoors.prev)}
+                      title="Porta Anterior"
+                    >
+                      ‹ P{padDoor(adjacentDoors.prev.door_number)}
+                    </button>
+                  ) : null}
+                  {adjacentDoors.next ? (
+                    <button
+                      type="button"
+                      className="btn-door-nav"
+                      onClick={() => handleOpenDoor(adjacentDoors.next)}
+                      title="Próxima Porta"
+                    >
+                      P{padDoor(adjacentDoors.next.door_number)} ›
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="portas-modal-close"
+                    onClick={handleBackFromDoor}
+                    aria-label="Fechar detalhes"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </header>
+
+              <div className="portas-modal-body">
+                {/* KPI / STATUS BANNER */}
+                <div className={`door-status-banner ${openedDoor.will_fail ? 'is-risk' : 'is-ok'}`}>
+                  <div className="door-status-banner__info">
+                    <span className="banner-kicker">Diagnóstico Preditivo da IA</span>
+                    <h3>{openedDoor.will_fail ? 'Alerta: Risco de Falha Prevista' : 'Operação Estável e Normal'}</h3>
+                    <p>
+                      {openedDoor.will_fail
+                        ? 'Os modelos preditivos identificaram anomalia de corrente ou tempo de ciclo de manobra nesta porta. Recomendada inspeção preventiva.'
+                        : 'Telemetria dentro dos padrões nominais de vibração, corrente do atuador e tempo de ciclo de manobra.'}
+                    </p>
+                  </div>
+                  <div className="door-status-banner__metric">
+                    <span>Probabilidade de Falha</span>
+                    <strong>{Math.round(openedDoor.risk * 100)}%</strong>
+                    <small>Avaliação: {openedDoor.last_evaluated_at ? String(openedDoor.last_evaluated_at).slice(0, 10) : 'Recente'}</small>
+                  </div>
+                </div>
+
+                {/* TECHNICAL METRICS GRID */}
+                <div className="door-specs-grid">
+                  <div className="spec-item">
+                    <span>TAG SAP</span>
+                    <strong>{openedDoor.sap_tag || '—'}</strong>
+                  </div>
+                  <div className="spec-item">
+                    <span>Estação</span>
+                    <strong>{openedStation.name} ({openedDoor.station_code})</strong>
+                  </div>
+                  <div className="spec-item">
+                    <span>Plataforma</span>
+                    <strong>{openedDoor.platform}</strong>
+                  </div>
+                  <div className="spec-item">
+                    <span>Posição no Trem</span>
+                    <strong>Porta {padDoor(openedDoor.door_number)} · Carro {Math.ceil(openedDoor.door_number / 4)}</strong>
+                  </div>
+                  <div className="spec-item">
+                    <span>Status Operacional</span>
+                    <strong>{openedDoor.status ?? 'Ativa'}</strong>
+                  </div>
+                  <div className="spec-item">
+                    <span>ID do Ativo</span>
+                    <strong>#{openedDoor.door_id}</strong>
+                  </div>
+                </div>
+
+                {/* ALARMS SECTION */}
+                <div className="door-modal-section">
+                  <div className="door-modal-section__head">
+                    <h4>Alarmes de Telemetria Recentes</h4>
+                    <span className="section-counter">{doorAlarms.length}</span>
+                  </div>
+                  {doorAlarms.length ? (
+                    <div className="door-alarms-list">
+                      {doorAlarms.map((item) => (
+                        <div key={item.id} className="door-alarm-row">
+                          <div className="alarm-main">
+                            <strong>{item.alarm_type}</strong>
+                            <span>{item.event_timestamp}</span>
+                          </div>
+                          <div className="alarm-meta">
+                            <em>Duração: {item.duration_seconds}s</em>
+                            <code>TAG: {item.tag}</code>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="door-empty-state">Nenhum alarme de telemetria registrado para esta porta.</p>
+                  )}
+                </div>
+
+                {/* MAINTENANCES SECTION */}
+                <div className="door-modal-section">
+                  <div className="door-modal-section__head">
+                    <h4>Histórico de Manutenções Relacionadas</h4>
+                    <span className="section-counter">{doorMaintenances.length}</span>
+                  </div>
+                  {doorMaintenances.length ? (
+                    <div className="door-maintenances-list">
+                      {doorMaintenances.map((item) => (
+                        <div key={item.id} className="door-maintenance-row">
+                          <div className="maint-badge">{item.order_type}</div>
+                          <div className="maint-content">
+                            <strong>{item.description || item.symptom || 'Manutenção preventiva programada'}</strong>
+                            <span>Início: {item.start_timestamp}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="door-empty-state">Nenhuma ordem de manutenção ligada a esta porta.</p>
+                  )}
+                </div>
+
+                {/* OPEN INSPECTION FORM */}
+                <div className="door-modal-section door-modal-section--inspection">
+                  <div className="door-modal-section__head">
+                    <h4>Abrir Ordem de Inspeção em Campo</h4>
+                  </div>
+                  {inspError ? <p className="page-status is-error">{inspError}</p> : null}
+                  <form className="door-insp-form" onSubmit={handleCreateInspection}>
+                    <input
+                      type="text"
+                      placeholder="Descreva a observação ou justificativa técnica da inspeção..."
+                      value={inspNotes}
+                      onChange={(e) => setInspNotes(e.target.value)}
+                    />
+                    <Button type="submit">Cadastrar Ordem</Button>
+                  </form>
+                </div>
+              </div>
+
+              <footer className="portas-modal-foot">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const currentDoor = openedDoor
+                    handleBackFromDoor()
+                    onNavigate?.('inspecoes', {
+                      station: currentDoor.station_code,
+                      platform: currentDoor.platform,
+                      door: currentDoor.door_number,
+                    })
+                  }}
+                >
+                  Ver Ordens de Inspeção Desta Porta
+                </Button>
+                <Button onClick={handleBackFromDoor}>
+                  Fechar Detalhes
+                </Button>
+              </footer>
+            </div>
           </div>
-          <div>
-            <Button onClick={() => loadStationDoors(openedCode)}>Atualizar Dados</Button>
-          </div>
-        </div>
-        {lastPrediction ? <p className="portas__eval">Última avaliação: {lastPrediction}</p> : null}
+        ) : null}
       </section>
     )
   }
