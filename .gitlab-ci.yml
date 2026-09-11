@@ -335,8 +335,11 @@ publish_container_frontend:
 
 pages:
   stage: deploy
-  image: node:lts
+  image: node:22
   cache: []
+  needs: []
+  variables:
+    NODE_OPTIONS: "--max-old-space-size=4096"
   script:
     - cd docs
     - npm ci

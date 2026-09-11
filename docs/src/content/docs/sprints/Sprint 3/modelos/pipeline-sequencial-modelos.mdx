@@ -3,9 +3,14 @@ title: "Pipeline Sequencial dos Modelos Preditivos"
 description: "Contrato, execução e avaliação do pipeline sequencial entre o Modelo 7, por plataforma, e o Modelo 5, por porta."
 ---
 
-# Pipeline Sequencial dos Modelos Preditivos
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
-## 1. Objetivo
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
 
 O pipeline sequencial combina dois modelos desenvolvidos na Sprint 2 para produzir uma previsão em dois níveis. Primeiro, o **Modelo 7 — CatBoost** calcula o risco do sistema de portas da plataforma. Depois, esse score entra como uma feature do **Modelo 5 — Random Forest**, que estima o risco de cada porta e indica quais devem ser priorizadas.
 
@@ -29,7 +34,10 @@ No experimento, o Modelo 7 foi executado primeiro porque trabalha em um nível m
 
 Esta página registra a construção do pipeline. A Task 1 definiu como os modelos se conectam, a Task 2 preparou o artefato do Modelo 5, a Task 3 implementou o encaminhamento e a Task 4 gerou e avaliou a lista final de portas. A Task 5 incorporou a preparação das features e a execução do CatBoost ao notebook. A Task 6 consolidou a configuração, o reuso dos modelos salvos e o tratamento dos casos sem cobertura. A Task 7 transformou o ranking em uma lista operacional limitada de portas para inspeção. As Tasks 8 e 9 acrescentaram a execução por comando, a validação automática e o guia de uso. A Task 10 avaliou o score do Modelo 7 como uma nova feature do Modelo 5.
 
-## 2. Papel de cada modelo
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Papel de cada modelo</h2>
+</div>
 
 ### 2.1 Modelo 7 — CatBoost
 
@@ -51,7 +59,10 @@ Sua função no pipeline é:
 2. calcular o risco individual de cada porta;
 3. ordenar as portas para apoiar a priorização de inspeções.
 
-## 3. Contrato de integração
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Contrato de integração</h2>
+</div>
 
 A tabela a seguir registra o estado atual dos dois modelos. As diferenças marcadas como **ajuste obrigatório** devem ser resolvidas antes da implementação do pipeline.
 
@@ -70,7 +81,10 @@ A tabela a seguir registra o estado atual dos dois modelos. As diferenças marca
 | Limiar registrado | `0,317380` | `0,488753` no artefato do pipeline | Manter limiares separados |
 | Modelo serializado | `modelo_catboost.cbm` e `metadata_modelo.json` | `modelo_5_random_forest.joblib` e `metadata_modelo_5.json` | Compatível |
 
-## 4. Data de referência e horizonte
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Data de referência e horizonte</h2>
+</div>
 
 O pipeline será iniciado ao **final do dia `D`**, seguindo a definição do Modelo 7. Assim:
 
@@ -85,7 +99,10 @@ Os dois modelos observam o mesmo horizonte futuro de sete dias, mas o Modelo 5 d
 
 Nenhuma feature poderá utilizar eventos posteriores ao final do dia `D`. O target também nunca poderá ser fornecido como entrada dos modelos.
 
-## 5. Definição de falha em cada etapa
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Definição de falha em cada etapa</h2>
+</div>
 
 O objetivo de negócio do pipeline é antecipar uma falha de porta nos sete dias seguintes. Entretanto, os targets atuais não são idênticos:
 
@@ -96,7 +113,10 @@ Na primeira versão, cada modelo manterá a definição com a qual foi treinado.
 
 Essa diferença não impede o teste técnico do encadeamento, mas limita a interpretação da saída. Para avaliar futuramente o pipeline inteiro contra um único target de falha confirmada, será necessário alterar o target do Modelo 5, retreiná-lo e comparar o resultado com sua versão original.
 
-## 6. Padronização das chaves
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Padronização das chaves</h2>
+</div>
 
 O contrato define as seguintes chaves canônicas para o pipeline:
 
@@ -117,7 +137,10 @@ Pipeline: BUT_P1 e BUT_P1_PDM05
 
 A relação entre plataforma e portas deverá ser validada antes da inferência. Uma porta só pode ser enviada ao Modelo 5 quando sua estação e sua plataforma forem iguais às da plataforma alertada pelo Modelo 7.
 
-## 7. Cobertura dos sistemas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Cobertura dos sistemas</h2>
+</div>
 
 O Modelo 7 contém 11 estações e 22 plataformas. O painel atual do Modelo 5 contém 10 estações e 480 portas; a estação `FRE` não aparece nesse painel.
 
@@ -127,7 +150,10 @@ Até que o Modelo 5 seja reconstruído com a mesma cobertura, o pipeline deverá
 - uma plataforma de `FRE` alertada pelo Modelo 7 não pode ser descartada silenciosamente;
 - nesse caso, o resultado deve permanecer como **alerta em nível de plataforma, sem detalhamento por porta**.
 
-## 8. Features necessárias
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Features necessárias</h2>
+</div>
 
 Os modelos não compartilharão uma única matriz de features. Cada etapa deve reproduzir exatamente a preparação utilizada no treinamento do seu respectivo modelo.
 
@@ -176,7 +202,10 @@ O experimento final manteve 71 das 83 features candidatas. Elas incluem:
 
 A Task 2 congelou no novo metadata a lista, a ordem e o tipo das 71 features. O conjunto corresponde às features mantidas pelo processo de seleção SHAP da Sprint 2. Para tornar a reconstrução determinística, a ordem final segue a ordem das colunas do painel, e o modelo serializado registra essa mesma ordem em `feature_names_in_`.
 
-## 9. Limiar e regra de encaminhamento
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Limiar e regra de encaminhamento</h2>
+</div>
 
 Os limiares pertencem aos modelos e não devem ser confundidos:
 
@@ -191,7 +220,10 @@ Somente as portas de plataformas alertadas pelo Modelo 7 serão avaliadas pelo M
 
 O score do Modelo 7 não será adicionado diretamente às features do Modelo 5 nesta primeira versão, porque o Random Forest não foi treinado com essa variável. A ajuda ocorre pelo **filtro hierárquico**. Uma porta será priorizada quando pertencer a uma plataforma alertada e também atingir o limiar do Modelo 5.
 
-## 10. Saída intermediária acordada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">10. Saída intermediária acordada</h2>
+</div>
 
 A saída lógica da primeira etapa, que servirá como filtro para a segunda, deverá conter:
 
@@ -205,42 +237,10 @@ A saída lógica da primeira etapa, que servirá como filtro para a segunda, dev
 
 Na Task 3, esse contrato passou a ser materializado no arquivo `saida_intermediaria_modelo_7.csv`. A saída também inclui indicadores de cobertura e um status de encaminhamento para impedir que plataformas ou datas sem features disponíveis sejam tratadas como se tivessem passado pelo Modelo 5.
 
-## 11. Resultado da análise de compatibilidade
-
-Os modelos são **conceitualmente complementares e podem formar o pipeline proposto**. O Modelo 7 responde “em qual plataforma existe risco?” e o Modelo 5 responde “qual porta dessa plataforma deve ser priorizada?”. A granularidade diferente é justamente o mecanismo pelo qual um modelo ajuda o outro.
-
-O contrato e a preparação do Modelo 5 já concluíram:
-
-1. a definição do encadeamento Modelo 7 → Modelo 5;
-2. o congelamento das 71 features do Modelo 5, sua ordem, seus tipos e seu novo limiar;
-3. a serialização do Random Forest e a criação de seu metadata.
-
-Também foram concluídos na Task 3:
-
-1. a conversão das chaves entre os dois modelos;
-2. o mapeamento das 480 portas para as 20 plataformas cobertas pelo Modelo 5;
-3. o tratamento explícito das plataformas e datas sem cobertura;
-4. a materialização da saída intermediária do Modelo 7.
-
-Na Task 4, foram concluídas a inferência do Modelo 5 sobre as portas encaminhadas, a priorização das portas e a comparação do pipeline completo com o Random Forest isolado.
-
-Na Task 5, o pipeline passou a reconstruir as 21 features do Modelo 7 a partir da tabela mestra diária e a executar o CatBoost salvo antes de encaminhar as portas ao Modelo 5.
-
-Na Task 6, a execução passou a reutilizar os modelos por padrão, com avaliação histórica opcional e um relatório que preserva todas as plataformas previstas, inclusive as que não puderam ser detalhadas por porta.
-
-Na Task 7, o ranking foi convertido em uma lista operacional configurável. As Tasks 8 e 9 tornaram a execução reproduzível por linha de comando e adicionaram uma verificação automática do contrato dos artefatos.
-
-O alinhamento do target e do uso do dia `D` no Modelo 5 fica registrado como aprimoramento metodológico posterior. Ele será necessário caso o grupo queira avaliar os dois estágios como um único modelo com exatamente o mesmo target, mas não impede a construção do primeiro pipeline sequencial.
-
-Com essas condições atendidas, o fluxo acordado será:
-
-```text
-Modelo 7 — CatBoost por plataforma
-              ↓ somente plataformas alertadas
-Modelo 5 — Random Forest por porta
-```
-
-## 12. Task 2 — Preparação do Modelo 5 para inferência
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">11. Preparação do Modelo 5 para inferência</h2>
+</div>
 
 O notebook novo `models/pipeline-sequencial/pipeline_sequencial_modelos_7_5.ipynb` reconstruiu o Modelo 5 exclusivamente a partir das bases existentes. Essa reconstrução continua disponível com `RETREINAR_MODELO_5 = True`; o padrão atual é reutilizar o artefato salvo. Nenhum notebook, dado ou documento das sprints anteriores foi alterado.
 
@@ -262,7 +262,10 @@ No teste temporal, o artefato obteve **14,51% de precisão**, **63,50% de recall
 
 Por fim, o artefato foi recarregado do disco e suas probabilidades foram comparadas às produzidas antes da gravação. Os valores foram iguais, confirmando que o modelo pode ser carregado posteriormente pelo pipeline sem mudança nas previsões.
 
-## 13. Task 3 — Padronização das chaves e encaminhamento
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">12. Padronização das chaves e encaminhamento</h2>
+</div>
 
 A Task 3 implementou a fronteira entre o nível de plataforma e o nível de porta. As chaves internas do Modelo 5 foram convertidas para o padrão canônico definido pelo contrato:
 
@@ -297,7 +300,10 @@ O arquivo `metadata_integracao_chaves.json`, quando gerado, permanece na raiz de
 
 Essa etapa não calcula o score das portas. Ela prepara e valida exatamente quais linhas podem ser avaliadas pelo Random Forest na Task 4.
 
-## 14. Task 4 — Inferência e priorização das portas
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">13. Inferência e priorização das portas</h2>
+</div>
 
 A Task 4 carregou o Random Forest serializado e o executou somente sobre as **9.744 portas encaminhadas**. Para cada porta, foram produzidos:
 
@@ -308,7 +314,7 @@ A Task 4 carregou o Random Forest serializado e o executou somente sobre as **9.
 
 O pipeline produziu **5.013 alertas de porta/dia** em 406 pares de plataforma e data. Uma mesma porta pode aparecer em diferentes dias. Todas as plataformas encaminhadas tiveram ao menos uma porta acima do limiar. Como o limiar permite múltiplos alertas, a quantidade média foi de aproximadamente 12 portas priorizadas por plataforma e data; o ranking permite selecionar primeiro a porta com maior score.
 
-### 14.1 Avaliação no período comum
+### 13.1 Avaliação no período comum
 
 A comparação foi feita entre **01/10/2025 e 31/10/2025**, usando somente as 11.904 linhas em que existem previsões do Modelo 7 e features do Modelo 5. Para medir o efeito do encadeamento, foram comparados o Random Forest isolado e a decisão final que exige alerta dos dois modelos.
 
@@ -321,7 +327,7 @@ O filtro do Modelo 7 reduziu em **18,15%** a quantidade de portas enviadas ao Ra
 
 Portanto, esta primeira versão comprova que o encadeamento técnico funciona e reduz o volume processado, mas **não demonstrou melhora da qualidade preditiva**. Antes de uso operacional, os modelos devem ser alinhados para o mesmo target, avaliados em um período comum maior e ter seus limiares ajustados em conjunto.
 
-### 14.2 Arquivos gerados
+### 13.2 Arquivos gerados
 
 As planilhas de resultado foram gravadas em `models/pipeline-sequencial/artefatos/planilhas/`:
 
@@ -335,41 +341,24 @@ O target histórico foi utilizado apenas na avaliação. Ele não aparece na sa�
 
 A avaliação acima foi inicialmente feita com as previsões de teste exportadas pelo Modelo 7. A Task 5 substituiu essa entrada por previsões calculadas diretamente no pipeline e confirmou a equivalência dos resultados.
 
-## 15. Task 5 — Preparação e inferência direta do CatBoost
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">14. Preparação e inferência direta do CatBoost</h2>
+</div>
 
-O notebook agora lê `data/processados/modelo-7/tabela_mestra_psd.csv`, reconstrói as 21 features e carrega `models/modelo-7/modelo_catboost.cbm`. As previsões resultantes alimentam as Tasks 3 e 4. Por essa dependência, o bloco da Task 5 aparece **antes da Task 3** no notebook.
-
-### 15.1 Preparação das entradas
-
-Foram reproduzidas as regras do notebook de processamento do Modelo 7:
+O notebook lê `tabela_mestra_psd.csv`, reconstrói as 21 features e carrega `modelo_catboost.cbm`. A preparação reproduz as regras do Modelo 7:
 
 - contagens e durações diárias, com janelas de alarmes de 7 dias;
 - contagens de manutenção em 30 dias;
 - tempo desde a última corretiva e preventiva, incluindo os eventos de D;
 - dia da semana e demais categorias com a representação e a ordem esperadas pelo artefato.
 
-As features usam informações disponíveis até o final de D. O target e as contagens futuras não participam dessa preparação. Quando nenhuma manutenção anterior foi observada, a recência permanece ausente, como no treinamento original. Datas duplicadas, lacunas no calendário, chaves inconsistentes e histórico insuficiente interrompem a preparação com uma mensagem de erro.
+Somente informações disponíveis até o final de D são utilizadas. No período padrão, foram calculadas **3.784 previsões de plataforma/dia**, com **3.293 alertas**. As probabilidades foram comparadas às previsões históricas e apresentaram as mesmas decisões. Para dados novos, ainda é necessário atualizar a tabela mestra e o painel de features.
 
-### 15.2 Execução e conferência
-
-As variáveis `INICIO_INFERENCIA_MODELO_7` e `FIM_INFERENCIA_MODELO_7` definem o período. O padrão mantém **01/10/2025 a 21/03/2026**, para comparação com o teste histórico. O horizonte continua em **7 dias** e o limiar é lido do metadata do CatBoost (`0,31738017595573687`).
-
-Nesse período, foram calculadas **3.784 previsões de plataforma/dia**, sendo **3.293 alertas**. As 21 features foram comparadas à base de teste original, e as probabilidades ao CSV histórico: a maior diferença foi inferior a `1e-12`, com todas as decisões iguais. Os resultados finais das Tasks 3 e 4 também foram preservados: 9.744 registros de porta/dia avaliados, 5.013 alertas finais, precisão de 11,05% e recall de 62,53%.
-
-Também foi verificado que uma previsão para D permanece igual quando todos os registros posteriores a D são removidos. A rotina conseguiu prever no último dia disponível da tabela mestra sem precisar de sete dias futuros nem do target. Entradas com duplicatas, dias ausentes, colunas faltantes e menos de 30 dias de histórico foram rejeitadas nos testes.
-
-### 15.3 Artefatos e uso
-
-O CSV fica em `models/pipeline-sequencial/artefatos/planilhas/`, enquanto o JSON, quando gerado, permanece na raiz de `artefatos/`:
-
-- `previsoes_modelo_7_pipeline.csv`: previsões calculadas pelo CatBoost, sem target;
-- `metadata_execucao_modelo_7.json`: período, features, limiar, versão do CatBoost e hashes dos arquivos de entrada e do modelo, para identificar a execução.
-
-Para executar, use o kernel com `catboost==1.2.10` instalado, ajuste a configuração inicial e execute as células em ordem. Desde a Task 6, `RETREINAR_MODELO_5 = False` é o padrão: as células de treino e exportação da Task 2 são ignoradas, e o pipeline carrega o Random Forest salvo.
-
-Esta etapa parte da **tabela mestra diária já agregada**. Para operar em datas novas, ainda é necessário atualizar essa tabela e o painel de features do Modelo 5 com os dados do parceiro. A limpeza das planilhas e a atualização automática dessas duas bases continuam fora desta etapa. A avaliação da Task 4 permanece restrita ao período histórico com cobertura e target disponíveis.
-
-## 16. Task 6 — Execução configurável e tratamento de ausência de dados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">15. Execução configurável e tratamento de ausência de dados</h2>
+</div>
 
 A execução pode ser iniciada com **Executar tudo** no notebook. A primeira célula de configuração reúne as opções:
 
@@ -387,44 +376,21 @@ A execução pode ser iniciada com **Executar tudo** no notebook. A primeira cé
 
 É possível usar outra pasta, como `execucoes/2025-10-15`, para guardar uma execução separada. Os modelos continuam sendo carregados dos seus diretórios originais. A previsão mantém o horizonte de sete dias e os limiares salvos.
 
-### 16.1 Casos sem detalhamento ou sem target
+O target é associado somente durante a avaliação; por isso, a inferência continua funcionando quando ele não está disponível. Casos sem portas, sem target ou com cobertura parcial são identificados nas saídas, e os modelos salvos não são alterados durante uma execução comum.
 
-Quando nenhuma porta é encaminhada, o pipeline exporta a saída de portas vazia, com os cabeçalhos, e preserva os resultados de plataforma. O Random Forest não é chamado com uma entrada vazia. Quando apenas parte das portas possui features, somente essas portas são avaliadas, e a cobertura parcial fica identificada.
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">16. Lista operacional de manutenção</h2>
+</div>
 
-O target `y` foi retirado da preparação das entradas de inferência e é associado às previsões apenas na avaliação. A execução sem target continua produzindo alertas. A avaliação registra um dos estados: `concluida`, `desativada`, `sem_target`, `target_incompleto` ou `sem_periodo_comum`. Métricas não calculadas são gravadas como `null`, e não como um desempenho igual a zero.
+A saída completa contém todas as portas acima do limiar. Já `recomendacoes_manutencao.csv` mantém, por padrão, somente a porta de maior risco de cada plataforma e informa a janela prevista entre D+1 e D+7.
 
-### 16.2 Relatório da execução
+No teste, essa limitação gerou **406 recomendações**, com **20,20% de precisão** e **9,26% de recall**. A lista operacional não é um novo modelo: ela apenas reduz o ranking conforme a capacidade de inspeção, trocando cobertura por uma quantidade menor de recomendações.
 
-Dois arquivos complementam os resultados anteriores:
-
-- `status_plataformas_pipeline.csv`: contém todas as plataformas e datas previstas, incluindo ausência de alerta, falta de cobertura, cobertura parcial e plataformas com portas priorizadas;
-- `resumo_execucao_pipeline.json`: registra configuração, identificação dos modelos, limiares, contagens e situação da avaliação.
-
-No relatório de plataformas, uma quantidade vazia de portas priorizadas significa que o Modelo 5 não foi executado para aquele caso. O valor zero significa que as portas foram avaliadas, mas nenhuma atingiu o limiar. Essa distinção evita interpretar ausência de dados como ausência de risco.
-
-As contagens distinguem **alertas de porta/dia** de **portas distintas**, pois uma mesma porta pode ser alertada em vários dias. O relatório de avaliação é atualizado em cada execução, mesmo quando as métricas não puderem ser calculadas.
-
-### 16.3 Verificação da execução
-
-Foram testados o período histórico completo, uma data sem cobertura do Random Forest, nenhuma plataforma alertada, nenhuma porta acima do limiar, inferência sem target, avaliação solicitada sem target, target incompleto e cobertura parcial de portas. Os testes verificaram que nenhuma chamada de treinamento ocorreu e que os arquivos dos modelos permaneceram idênticos.
-
-Na configuração padrão, o pipeline preservou os resultados anteriores: **9.744 registros de porta/dia avaliados**, **5.013 alertas** e **256 portas distintas com alerta**. A precisão permaneceu em 11,05% e o recall em 62,53%. A Task 6 melhora a execução e a rastreabilidade; não altera o modelo nem suas métricas.
-
-## 17. Task 7 — Lista operacional de manutenção
-
-A saída `saida_final_portas_priorizadas.csv` é mantida como resultado analítico completo: ela contém todas as portas que superaram o limiar do Modelo 5. Como esse arquivo gera em média aproximadamente 12 alertas por plataforma e data, ele não deve ser confundido com uma lista curta de inspeção.
-
-A Task 7 gera `recomendacoes_manutencao.csv`. Por padrão, o arquivo mantém somente a porta de maior probabilidade entre as que passaram pelos dois modelos em cada plataforma e data. Cada linha informa a data de referência, o intervalo futuro de `D+1` a `D+7`, a plataforma, a porta, os dois scores e a posição no ranking. O limite pode ser alterado na configuração sem modificar os artefatos dos modelos.
-
-No período comum de teste, a configuração de uma porta por plataforma gerou **406 recomendações de porta/dia**. A precisão subiu para **20,20%**, enquanto o recall caiu para **9,26%**. Essa redução do recall é esperada porque a lista operacional aceita apenas uma porta por plataforma. Portanto:
-
-- a saída completa deve ser usada para avaliação e análise dos alertas;
-- a lista operacional deve ser usada quando a capacidade de inspeção exige uma recomendação curta;
-- aumentar o limite de portas amplia a cobertura, mas também aumenta a quantidade de inspeções.
-
-A lista operacional não representa um terceiro modelo e não altera os limiares. Ela é apenas uma regra de priorização aplicada ao ranking já produzido pelo Random Forest.
-
-## 18. Task 8 — Execução automatizada
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">17. Execução automatizada</h2>
+</div>
 
 O pipeline pode ser executado sem abrir o notebook por meio de `models/pipeline-sequencial/executar_pipeline.py`. O programa carrega uma cópia do notebook em memória, aplica os argumentos à célula de configuração e executa todas as células de código na ordem. O arquivo `.ipynb` original não é sobrescrito.
 
@@ -438,36 +404,12 @@ python models/pipeline-sequencial/executar_pipeline.py \
   --max-portas 1
 ```
 
-O argumento `--sem-avaliacao` desativa as métricas históricas e mantém somente a inferência. O executor sempre define `RETREINAR_MODELO_5 = False`, evitando que uma execução operacional substitua o Random Forest salvo.
+O argumento `--sem-avaliacao` mantém somente a inferência. O executor desativa o retreinamento, preserva os modelos salvos e exporta os números com precisão fixa para tornar as execuções reproduzíveis.
 
-O comando foi testado em uma pasta isolada para um único dia, com avaliação desativada e duas portas por plataforma. A execução gerou 22 previsões de plataforma, avaliou 336 registros de porta e produziu 28 recomendações. Os hashes dos modelos permaneceram inalterados.
-
-Na inferência, o Random Forest é configurado em memória para usar uma única thread, e os números decimais são exportados com precisão fixa. Essa configuração não altera o modelo nem suas decisões; ela evita pequenas diferenças de arredondamento nos CSVs entre duas execuções idênticas.
-
-## 19. Task 9 — Validação automática e guia de entrega
-
-O arquivo `models/pipeline-sequencial/validar_pipeline.py` verifica uma execução já produzida sem chamar os modelos. Entre as condições verificadas estão:
-
-- existência dos artefatos obrigatórios;
-- unicidade das chaves de plataforma, porta e data;
-- probabilidades dentro do intervalo de zero a um;
-- correspondência das decisões com os limiares registrados;
-- preservação de todas as plataformas previstas;
-- ausência do target nas saídas de inferência;
-- consistência do ranking e da lista operacional;
-- horizonte correto entre `D+1` e `D+7`;
-- correspondência entre arquivos e contagens do relatório;
-- integridade dos modelos por SHA-256.
-
-A validação padrão é executada com:
-
-```bash
-python models/pipeline-sequencial/validar_pipeline.py
-```
-
-O arquivo `models/pipeline-sequencial/README.md` concentra as instruções, comandos, saídas e limitações. O arquivo `models/pipeline-sequencial/requirements.txt` registra as dependências específicas e suas versões testadas.
-
-## 20. Task 10 — Score do Modelo 7 como feature do Modelo 5
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">18. Score do Modelo 7 como feature do Modelo 5</h2>
+</div>
 
 Além do filtro rígido, foi testada uma integração em que o risco calculado pelo CatBoost para a plataforma entra diretamente no Random Forest de cada porta. Assim, todas as portas com features continuam sendo avaliadas, mas o Modelo 5 recebe também o contexto de risco da plataforma por meio da feature `score_modelo_7`.
 
@@ -483,15 +425,7 @@ O treino para escolha do limiar terminou em 23/04/2025, a validação cobriu 01/
 | Modelo 5 controle | 9,88% | **79,35%** | **17,58%** | 12,93% | 66,42% | 7.112 | **703** |
 | Modelo 5 + score do Modelo 7 | 9,88% | 78,67% | 17,56% | **13,02%** | **66,72%** | **7.053** | 697 |
 
-O modelo combinado detectou 697 das 886 falhas do teste, portanto superou a meta de recall fora da validação. Comparado ao experimento anterior, seu recall passou de 49,44% para 78,67%. Esse aumento ocorreu principalmente pela redução do limiar de `0,5468` para `0,4413`, e não pela nova feature.
-
-Quando os dois Random Forest usam a mesma meta, o controle apresenta recall e F1 ligeiramente maiores. O modelo com o score reduz 59 alertas, mas deixa de detectar seis falhas em relação ao controle. Em comparação ao pipeline de filtro rígido da Task 4, o modelo combinado aumenta o recall de 62,53% para 78,67%, porém reduz a precisão de 11,05% para 9,88% e o F1 de 18,78% para 17,56%. Portanto, aumentar o recall exige aceitar mais falsos alertas.
-
-### 20.1 Decisão sobre o experimento
-
-A ideia de fazer o Modelo 7 melhorar a previsão do Modelo 5 **não apresentou o resultado esperado**. Com a mesma meta de recall, o Modelo 5 controle alcançou recall de 79,35% e F1 de 17,58%, enquanto a versão com o score do Modelo 7 obteve recall de 78,67% e F1 de 17,56%. Portanto, a nova feature aumentou a complexidade do processo sem melhorar as métricas principais.
-
-Por esse motivo, o pipeline sequencial e o modelo combinado serão mantidos apenas como registro do experimento realizado na Sprint 3. A solução escolhida pelo grupo para continuidade do projeto é utilizar somente o **Modelo 5 da Sprint 2**, sem depender do Modelo 7.
+Com a mesma meta, o controle apresenta recall e F1 ligeiramente maiores. O modelo combinado utilizou o limiar `0,4413`, reduziu 59 alertas, mas detectou seis falhas a menos. Assim, o aumento de recall em relação às primeiras execuções veio da redução do limiar, e não da nova feature.
 
 Os artefatos gerados são:
 
@@ -502,7 +436,10 @@ Os artefatos gerados são:
 
 O Random Forest original não foi sobrescrito. Como o CatBoost utilizou parte de abril a setembro de 2025 em sua seleção de configuração, uma evolução metodologicamente mais rigorosa deve gerar scores temporais fora da amostra para o treinamento do Modelo 5. Outubro de 2025, usado no teste final, permaneceu fora dessa seleção.
 
-## 21. Situação final e limitações
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">19. Situação final e limitações</h2>
+</div>
 
 O pipeline sequencial foi implementado de ponta a ponta sobre as bases de features existentes: prepara e executa o Modelo 7, integra seu resultado ao Modelo 5, ranqueia as portas e gera a lista operacional. Essa implementação comprovou a viabilidade técnica da integração.
 
