@@ -128,6 +128,7 @@ export default defineConfig({
 								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
 								{ label: 'Arquitetura UML', slug: 'sprints/sprint-3/arquitetura-uml' },
 								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
+								{ label: 'Requisitos do Sistema', slug: 'sprints/sprint-3/requisitos' },
 								backendSidebar,
 								{
 									label: 'Modelos Preditivos',
