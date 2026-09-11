@@ -247,7 +247,13 @@
 }
 
 .overview-metric--station .overview-metric__value {
-  color: var(--brand);
+  color: var(--ink);
+}
+
+.overview-metric--station .overview-metric__foot {
+  border-color: var(--line);
+  background: #f6f8fb;
+  color: var(--muted);
 }
 
 .overview-panels {

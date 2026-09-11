@@ -117,17 +117,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .predicoes-kpi-card::before {
   display: none;
-}
-
-.predicoes-kpi-card:hover {
-  border-color: #b8c8e8;
-  box-shadow: 0 11px 25px #233b6718;
-  transform: translateY(-2px);
 }
 
 .predicoes-kpi-card span {
@@ -204,16 +197,6 @@
 
 .predicoes-kpi-card.is-horizon {
   background: #faf9ff;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .predicoes-kpi-card {
-    transition: none;
-  }
-
-  .predicoes-kpi-card:hover {
-    transform: none;
-  }
 }
 
 .predicoes-ai-banner {

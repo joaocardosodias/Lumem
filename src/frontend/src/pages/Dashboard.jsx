@@ -162,14 +162,14 @@ function Dashboard({ onNavigate }) {
         </button>
 
         <button className="overview-metric" type="button" onClick={() => onNavigate?.('inspecoes', { status: 'completed' })}>
-          <span className="overview-metric__top"><span>Inspeções concluídas</span><span aria-hidden="true"><NavIcon id="manutencoes" /></span></span>
+          <span className="overview-metric__top"><span>Inspeções concluídas</span><span aria-hidden="true"><NavIcon id="completed" /></span></span>
           <MetricValue value={summary?.completed_inspections} loading={loading} />
           <span className="overview-metric__description">Atividades finalizadas</span>
           <span className="overview-metric__foot">Ver concluídas <ArrowIcon /></span>
         </button>
 
         <article className="overview-metric overview-metric--station">
-          <span className="overview-metric__top"><span>Estação crítica</span><span aria-hidden="true"><NavIcon id="portas" /></span></span>
+          <span className="overview-metric__top"><span>Estação crítica</span><span aria-hidden="true"><NavIcon id="station" /></span></span>
           <MetricValue value={topStation?.station_code} loading={loading} />
           <span className="overview-metric__description" title={topStation ? stationLabel(topStation.station_code) : undefined}>{loading ? 'Consultando…' : topStation ? stationLabel(topStation.station_code) : error ? 'Resumo indisponível' : 'Sem estação crítica'}</span>
           <span className="overview-metric__foot">{loading ? 'Aguarde a análise' : topStation ? `${topStation.doors_at_risk} portas em risco` : error ? 'Tente novamente mais tarde' : 'Última análise disponível'}</span>
@@ -179,8 +179,7 @@ function Dashboard({ onNavigate }) {
       <div className="overview-panels">
         <section className="overview-panel" aria-labelledby="critical-stations-title">
           <header className="overview-panel__head">
-            <div><p className="overview-eyebrow">Distribuição por estação</p><h2 id="critical-stations-title">Estações prioritárias</h2></div>
-            <span className="overview-panel__icon" aria-hidden="true"><NavIcon id="alarmes" /></span>
+            <h2 id="critical-stations-title">Estações prioritárias</h2>
           </header>
           <div className="overview-panel__legend"><span>Estação</span><span>Portas em risco</span></div>
           {loading || error || !stations.length ? (

@@ -212,10 +212,10 @@ function Predicoes({ onNavigate, params }) {
     <section className="predicoes">
       <div className="page-head predicoes-head">
         <div>
-          <p className="dashboard__kicker">Prevenção e Confiabilidade</p>
+          <p className="dashboard__kicker">Última análise do modelo</p>
           <h1>Predições</h1>
           <p className="dashboard__lead">
-            Motor de Inteligência Artificial para prevenção de falhas em portas de plataforma.
+            Consulte as portas com risco previsto e encaminhe inspeções para a equipe de campo.
           </p>
         </div>
         <div className="predicoes-actions">
@@ -241,7 +241,7 @@ function Predicoes({ onNavigate, params }) {
             disabled={busy}
           >
             <TriggerIcon />
-            <span>{busy ? 'Executando...' : 'Executar Predição IA'}</span>
+            <span>{busy ? 'Executando...' : 'Executar análise'}</span>
           </button>
         </div>
       </div>

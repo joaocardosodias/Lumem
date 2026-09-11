@@ -103,6 +103,24 @@ function ToggleIcon({ collapsed }) {
 }
 
 export function NavIcon({ id }) {
+  if (id === 'completed') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="m8 12 3 3 5-6" />
+      </svg>
+    )
+  }
+
+  if (id === 'station') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12h5m8 0h5M12 3v5m0 8v5" />
+        <circle cx="12" cy="12" r="4" />
+      </svg>
+    )
+  }
+
   if (id === 'dashboard') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

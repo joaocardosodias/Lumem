@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import { NavIcon } from '../components/BarraNav'
 import { CountValue } from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
 import Filtros, { FiltroCampo } from '../components/Filtros'
@@ -8,7 +7,6 @@ import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
-import iconMotiva from '../assets/icon_motiva.svg'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
@@ -169,6 +167,7 @@ function Manutencoes({ params }) {
   const otherStations = stationRows.slice(6)
   const topType = typeRows[0]
   const durations = visible
+    .filter((item) => item.duration_hours != null && item.duration_hours !== '')
     .map((item) => Number(item.duration_hours))
     .filter((value) => Number.isFinite(value) && value >= 0)
   const averageDuration = durations.length
@@ -299,10 +298,10 @@ function Manutencoes({ params }) {
     <section className="manutencoes">
       <header className="page-head manutencoes__head">
         <div>
-          <p className="manutencoes__eyebrow"><span aria-hidden="true" />Histórico e registros SAP</p>
+          <p className="manutencoes__eyebrow"><span aria-hidden="true" />Histórico SAP</p>
           <h1>Manutenções</h1>
           <p className="manutencoes__lead">
-            Histórico consolidado de ordens de manutenção preventiva e corretiva da Linha 4.
+            Consulte ordens preventivas e corretivas registradas na Linha 4.
           </p>
         </div>
         <div className="page-head__actions">
@@ -321,122 +320,47 @@ function Manutencoes({ params }) {
           <div className="manutencoes__hero">
             <section className="manutencoes__metrics" aria-label="Resumo das manutenções">
               <article className="manutencoes__metric manutencoes__metric--primary">
-                <img className="manutencoes__metric-mark" src={iconMotiva} alt="" aria-hidden="true" />
                 <span className="manutencoes__metric-top">
-                  <span>Ordens filtradas</span>
-                  <NavIcon id="manutencoes" />
+                  <span>Ordens no recorte</span>
                 </span>
                 <strong className="manutencoes__metric-value"><CountValue value={visible.length} /></strong>
                 <span className="manutencoes__metric-description">
                   {rangeHint || 'Todo o período disponível'}
                 </span>
-                <span className="manutencoes__metric-foot">
-                  {items.length.toLocaleString('pt-BR')} registros carregados
-                </span>
               </article>
 
               <article className="manutencoes__metric">
                 <span className="manutencoes__metric-top">
-                  <span>Tipo predominante</span>
-                  <NavIcon id="alarmes" />
+                  <span>Tipo mais frequente</span>
                 </span>
                 <strong className="manutencoes__metric-value manutencoes__metric-value--code">
                   {topType?.[0] || '—'}
                 </strong>
                 <span className="manutencoes__metric-description">
-                  {topType ? `${topType[1].toLocaleString('pt-BR')} ordens neste recorte` : 'Sem ordens no período'}
+                  {topType ? `${topType[1].toLocaleString('pt-BR')} ordens` : 'Sem ordens no período'}
                 </span>
-                <span className="manutencoes__metric-foot">Distribuição por categoria</span>
               </article>
 
               <article className="manutencoes__metric">
                 <span className="manutencoes__metric-top">
-                  <span>Estações envolvidas</span>
-                  <NavIcon id="portas" />
+                  <span>Estações</span>
                 </span>
                 <strong className="manutencoes__metric-value"><CountValue value={stationRows.length} /></strong>
-                <span className="manutencoes__metric-description">Estações com registros no recorte</span>
-                <span className="manutencoes__metric-foot">Cobertura da Linha 4</span>
+                <span className="manutencoes__metric-description">Com ordens no recorte</span>
               </article>
 
               <article className="manutencoes__metric">
                 <span className="manutencoes__metric-top">
                   <span>Duração média</span>
-                  <NavIcon id="dashboard" />
                 </span>
                 <strong className="manutencoes__metric-value">
                   {averageDurationLabel}<small>h</small>
                 </strong>
                 <span className="manutencoes__metric-description">
-                  {durations.length ? `${durations.length.toLocaleString('pt-BR')} ordens com duração registrada` : 'Duração ainda não informada'}
+                  {durations.length ? `Calculada em ${durations.length.toLocaleString('pt-BR')} ordens` : 'Sem duração informada'}
                 </span>
-                <span className="manutencoes__metric-foot">Tempo entre início e conclusão</span>
               </article>
             </section>
-
-            <div className="manutencoes__charts">
-              <article className="manutencoes__chart">
-                <header className="manutencoes__panel-head">
-                  <div>
-                    <p>Distribuição por categoria</p>
-                    <h2>Ordens por tipo</h2>
-                  </div>
-                  <span aria-hidden="true"><NavIcon id="manutencoes" /></span>
-                </header>
-                <div className="manutencoes__chart-body">
-                  {typeRows.length ? typeRows.map(([label, value]) => (
-                    <div key={label} className="manutencoes__bar">
-                      <strong>{label}</strong>
-                      <span className="manutencoes__bar-track">
-                        <i style={{ width: `${(value / maxType) * 100}%` }} />
-                      </span>
-                      <em>{value}</em>
-                    </div>
-                  )) : <p className="manutencoes__empty">Nenhuma ordem neste recorte.</p>}
-                </div>
-              </article>
-              <article className="manutencoes__chart">
-                <header className="manutencoes__panel-head">
-                  <div>
-                    <p>Distribuição territorial</p>
-                    <h2>Ordens por estação</h2>
-                  </div>
-                  <span aria-hidden="true"><NavIcon id="portas" /></span>
-                </header>
-                <div className="manutencoes__chart-body">
-                  {stationRows.length ? (
-                    <div className="manutencoes__bars">
-                      <div>
-                        {topStations.map(([label, value]) => (
-                          <div key={label} className="manutencoes__bar">
-                            <strong>{label}</strong>
-                            <span className="manutencoes__bar-track">
-                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                            </span>
-                            <em>{value}</em>
-                          </div>
-                        ))}
-                      </div>
-                      {otherStations.length ? (
-                        <div>
-                          {otherStations.map(([label, value]) => (
-                            <div key={label} className="manutencoes__bar">
-                              <strong>{label}</strong>
-                              <span className="manutencoes__bar-track">
-                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                              </span>
-                              <em>{value}</em>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="manutencoes__empty">Nenhuma estação com ordens neste recorte.</p>
-                  )}
-                </div>
-              </article>
-            </div>
           </div>
 
           <Filtros
@@ -515,14 +439,19 @@ function Manutencoes({ params }) {
 
           <section className="manutencoes__list" aria-labelledby="maintenance-records-title">
             <header className="manutencoes__panel-head manutencoes__list-head">
-              <div>
-                <p>Detalhamento operacional</p>
-                <h2 id="maintenance-records-title">Registros de manutenção</h2>
-              </div>
+              <h2 id="maintenance-records-title">Histórico de manutenção</h2>
               <span className="manutencoes__record-count">
                 {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
               </span>
             </header>
+            <div className="manutencoes__table-head" aria-hidden="true">
+              <span>Ordem</span>
+              <span>Estação e local</span>
+              <span>Período</span>
+              <span>Duração</span>
+              <span>Ocorrência</span>
+              <span>Detalhes</span>
+            </div>
             <div className="manutencoes__records">
               {paged.length ? (
                 paged.map((item) => (
@@ -542,12 +471,68 @@ function Manutencoes({ params }) {
                 ))
               ) : (
                 <p className="page-empty">
-                  {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
+                  {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma manutenção cadastrada.'}
                 </p>
               )}
             </div>
             <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
           </section>
+
+          <div className="manutencoes__charts">
+            <article className="manutencoes__chart">
+              <header className="manutencoes__panel-head">
+                <h2>Ordens por tipo</h2>
+              </header>
+              <div className="manutencoes__chart-body">
+                {typeRows.length ? typeRows.map(([label, value]) => (
+                  <div key={label} className="manutencoes__bar">
+                    <strong>{label}</strong>
+                    <span className="manutencoes__bar-track">
+                      <i style={{ width: `${(value / maxType) * 100}%` }} />
+                    </span>
+                    <em>{value}</em>
+                  </div>
+                )) : <p className="manutencoes__empty">Nenhuma ordem neste recorte.</p>}
+              </div>
+            </article>
+            <article className="manutencoes__chart">
+              <header className="manutencoes__panel-head">
+                <h2>Ordens por estação</h2>
+              </header>
+              <div className="manutencoes__chart-body">
+                {stationRows.length ? (
+                  <div className="manutencoes__bars">
+                    <div>
+                      {topStations.map(([label, value]) => (
+                        <div key={label} className="manutencoes__bar">
+                          <strong>{label}</strong>
+                          <span className="manutencoes__bar-track">
+                            <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                          </span>
+                          <em>{value}</em>
+                        </div>
+                      ))}
+                    </div>
+                    {otherStations.length ? (
+                      <div>
+                        {otherStations.map(([label, value]) => (
+                          <div key={label} className="manutencoes__bar">
+                            <strong>{label}</strong>
+                            <span className="manutencoes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="manutencoes__empty">Nenhuma estação com ordens neste recorte.</p>
+                )}
+              </div>
+            </article>
+          </div>
         </>
       )}
 

@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import { NavIcon } from '../components/BarraNav'
 import { CountValue } from '../components/Card'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
-import iconMotiva from '../assets/icon_motiva.svg'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, resolveStation, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
-import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod } from '../lib/filters'
 import { getCachedInspections, loadInspections, patchCachedInspection } from '../lib/inspectionCache'
 import './Inspecoes.css'
 
@@ -168,24 +166,11 @@ function Inspecoes({ onNavigate, params }) {
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const rangeHint = periodHint(filters.period)
   const pending = scoped.filter((item) => item.status === 'pending').length
   const inProgress = scoped.filter((item) => item.status === 'in_progress').length
   const completed = scoped.filter((item) => item.status === 'completed').length
   const aiGenerated = scoped.filter(isAiInspection).length
-  const completionRate = visible.length ? Math.round((completed / visible.length) * 100) : 0
-
-  const statusRows = useMemo(() => {
-    return [
-      ['pending', 'Pendentes', pending],
-      ['in_progress', 'Em andamento', inProgress],
-      ['completed', 'Concluídas', completed],
-    ]
-  }, [pending, inProgress, completed])
-
-  const maxStatus = useMemo(() => {
-    return Math.max(pending, inProgress, completed, 1)
-  }, [pending, inProgress, completed])
+  const completionRate = scoped.length ? Math.round((completed / scoped.length) * 100) : 0
 
   const byStation = useMemo(() => {
     return countBy(visible, (item) => inspectionStation(item))
@@ -289,10 +274,10 @@ function Inspecoes({ onNavigate, params }) {
     <section className="inspecoes">
       <header className="page-head inspecoes__head">
         <div>
-          <p className="inspecoes__eyebrow"><span aria-hidden="true" />Ordens e manutenção de campo</p>
+          <p className="inspecoes__eyebrow"><span aria-hidden="true" />Operação de campo</p>
           <h1>Inspeções</h1>
           <p className="inspecoes__lead">
-            Acompanhamento de ordens de serviço e inspeções geradas pela IA e equipe operacional.
+            Acompanhe as portas que aguardam inspeção e atualize o trabalho em campo.
           </p>
         </div>
         <div className="page-head__actions">
@@ -311,184 +296,109 @@ function Inspecoes({ onNavigate, params }) {
           <div className="inspecoes__hero">
             <section className="inspecoes__metrics" aria-label="Resumo das inspeções">
               <article className="inspecoes__metric inspecoes__metric--primary">
-                <img className="inspecoes__metric-mark" src={iconMotiva} alt="" aria-hidden="true" />
-                <span className="inspecoes__metric-top">
-                  <span>Ordens filtradas</span>
-                  <NavIcon id="inspecoes" />
-                </span>
-                <strong className="inspecoes__metric-value"><CountValue value={visible.length} /></strong>
-                <span className="inspecoes__metric-description">
-                  {rangeHint || 'Todo o período disponível'}
-                </span>
-                <span className="inspecoes__metric-foot">
-                  {items.length.toLocaleString('pt-BR')} registros carregados
-                </span>
-              </article>
-
-              <article className="inspecoes__metric">
                 <span className="inspecoes__metric-top">
                   <span>Pendentes</span>
-                  <NavIcon id="alarmes" />
                 </span>
                 <strong className="inspecoes__metric-value"><CountValue value={pending} /></strong>
                 <span className="inspecoes__metric-description">
-                  {visible.length ? `${Math.round((pending / visible.length) * 100)}% das ordens no recorte` : 'Sem ordens pendentes'}
+                  {pending ? 'Aguardando atendimento em campo' : 'Nenhuma pendência neste recorte'}
                 </span>
-                <span className="inspecoes__metric-foot">Aguardando intervenção em campo</span>
+                <button
+                  type="button"
+                  className="inspecoes__pending-action"
+                  onClick={() => {
+                    setFilter('pending')
+                    document.getElementById('inspection-records-title')?.scrollIntoView({ block: 'start' })
+                  }}
+                >
+                  Ver pendentes
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                    <path d="M3 8h10m-4-4 4 4-4 4" />
+                  </svg>
+                </button>
               </article>
 
               <article className="inspecoes__metric">
                 <span className="inspecoes__metric-top">
-                  <span>Geradas por IA</span>
-                  <NavIcon id="predicoes" />
+                  <span>Em andamento</span>
+                </span>
+                <strong className="inspecoes__metric-value"><CountValue value={inProgress} /></strong>
+                <span className="inspecoes__metric-description">
+                  {inProgress ? 'Com atendimento iniciado' : 'Nenhuma ordem iniciada'}
+                </span>
+              </article>
+
+              <article className="inspecoes__metric">
+                <span className="inspecoes__metric-top">
+                  <span>Concluídas</span>
+                </span>
+                <strong className="inspecoes__metric-value"><CountValue value={completed} /></strong>
+                <span className="inspecoes__metric-description">
+                  {scoped.length ? `${completionRate}% das ordens do recorte` : 'Nenhuma ordem no recorte'}
+                </span>
+              </article>
+
+              <article className="inspecoes__metric">
+                <span className="inspecoes__metric-top">
+                  <span>Geradas pelo modelo</span>
                 </span>
                 <strong className="inspecoes__metric-value"><CountValue value={aiGenerated} /></strong>
                 <span className="inspecoes__metric-description">
-                  {aiGenerated ? `${aiGenerated} ordens preventivas automáticas` : 'Nenhuma ordem preditiva'}
+                  {aiGenerated ? `${aiGenerated} ordens automáticas` : 'Nenhuma ordem automática'}
                 </span>
-                <span className="inspecoes__metric-foot">Mitigação proativa de falhas</span>
-              </article>
-
-              <article className="inspecoes__metric">
-                <span className="inspecoes__metric-top">
-                  <span>Taxa de conclusão</span>
-                  <NavIcon id="dashboard" />
-                </span>
-                <strong className="inspecoes__metric-value">
-                  {completionRate}<small>%</small>
-                </strong>
-                <span className="inspecoes__metric-description">
-                  {completed} concluídas · {inProgress} em andamento
-                </span>
-                <span className="inspecoes__metric-foot">Eficiência das equipes técnicas</span>
               </article>
             </section>
-
-            <div className="inspecoes__charts">
-              <article className="inspecoes__chart">
-                <header className="inspecoes__panel-head">
-                  <div>
-                    <p>Distribuição de fluxo</p>
-                    <h2>Ordens por status</h2>
-                  </div>
-                  <span aria-hidden="true"><NavIcon id="inspecoes" /></span>
-                </header>
-                <div className="inspecoes__chart-body">
-                  {statusRows.some(([, , count]) => count > 0) ? (
-                    statusRows.map(([key, label, count]) => (
-                      <div key={key} className="inspecoes__bar">
-                        <strong>{label}</strong>
-                        <span className="inspecoes__bar-track">
-                          <i
-                            className={`bar--${key}`}
-                            style={{ width: `${(count / maxStatus) * 100}%` }}
-                          />
-                        </span>
-                        <em>{count}</em>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="inspecoes__empty">Nenhuma ordem neste recorte.</p>
-                  )}
-                </div>
-              </article>
-
-              <article className="inspecoes__chart">
-                <header className="inspecoes__panel-head">
-                  <div>
-                    <p>Distribuição territorial</p>
-                    <h2>Ordens por estação</h2>
-                  </div>
-                  <span aria-hidden="true"><NavIcon id="portas" /></span>
-                </header>
-                <div className="inspecoes__chart-body">
-                  {stationRows.length ? (
-                    <div className="inspecoes__bars">
-                      <div>
-                        {topStations.map(([label, value]) => (
-                          <div key={label} className="inspecoes__bar">
-                            <strong>{label}</strong>
-                            <span className="inspecoes__bar-track">
-                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                            </span>
-                            <em>{value}</em>
-                          </div>
-                        ))}
-                      </div>
-                      {otherStations.length ? (
-                        <div>
-                          {otherStations.map(([label, value]) => (
-                            <div key={label} className="inspecoes__bar">
-                              <strong>{label}</strong>
-                              <span className="inspecoes__bar-track">
-                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                              </span>
-                              <em>{value}</em>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="inspecoes__empty">Nenhuma estação com ordens neste recorte.</p>
-                  )}
-                </div>
-              </article>
-            </div>
           </div>
 
-      <Filtros
-        period={filters.period}
-        onPeriod={(period) => setFilters((current) => ({ ...current, period }))}
-        dirty={filtersDirty}
-        onClear={() => {
-          setSearch('')
-          setFilters(emptyFilters)
-        }}
-      >
-        <FiltroCampo label="Busca">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar por porta, notas..."
-          />
-        </FiltroCampo>
-        <FiltroCampo label="Estação">
-          <select value={filters.station} onChange={updateFilter('station')}>
-            <option value="">Todas</option>
-            {lineStations.map((station) => (
-              <option key={station.code} value={station.code}>
-                {station.code} — {station.name}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Plataforma">
-          <select value={filters.platform} onChange={updateFilter('platform')}>
-            <option value="">Todas</option>
-            {filterPlatforms.map((platform) => (
-              <option key={platform} value={platform}>
-                {platform}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Origem">
-          <select value={filters.origin} onChange={updateFilter('origin')}>
-            <option value="">Todas</option>
-            <option value="ai">Geradas por IA</option>
-            <option value="manual">Manuais</option>
-          </select>
-        </FiltroCampo>
-      </Filtros>
+          <Filtros
+            period={filters.period}
+            onPeriod={(period) => setFilters((current) => ({ ...current, period }))}
+            dirty={filtersDirty}
+            onClear={() => {
+              setSearch('')
+              setFilters(emptyFilters)
+            }}
+          >
+            <FiltroCampo label="Busca">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por porta, notas..."
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Estação">
+              <select value={filters.station} onChange={updateFilter('station')}>
+                <option value="">Todas</option>
+                {lineStations.map((station) => (
+                  <option key={station.code} value={station.code}>
+                    {station.code} — {station.name}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Plataforma">
+              <select value={filters.platform} onChange={updateFilter('platform')}>
+                <option value="">Todas</option>
+                {filterPlatforms.map((platform) => (
+                  <option key={platform} value={platform}>
+                    {platform}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Origem">
+              <select value={filters.origin} onChange={updateFilter('origin')}>
+                <option value="">Todas</option>
+                <option value="ai">Geradas por IA</option>
+                <option value="manual">Manuais</option>
+              </select>
+            </FiltroCampo>
+          </Filtros>
 
           <section className="inspecoes__list" aria-labelledby="inspection-records-title">
             <header className="inspecoes__panel-head">
-              <div>
-                <p>Ordens de campo</p>
-                <h2 id="inspection-records-title">Registros de inspeção</h2>
-              </div>
+              <h2 id="inspection-records-title">Fila de inspeções</h2>
               <span className="inspecoes__record-count">
                 {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
               </span>
@@ -501,93 +411,141 @@ function Inspecoes({ onNavigate, params }) {
                 ['in_progress', 'Em andamento', inProgress],
                 ['completed', 'Concluídas', completed],
               ].map(([value, label, count]) => (
-          <button
-            key={value || 'all'}
-            type="button"
-            role="tab"
-            aria-selected={filter === value}
-            className={filter === value ? 'is-active' : ''}
-            onClick={() => setFilter(value)}
-          >
-            <span>{label}</span>
-            <small>{count}</small>
-          </button>
-        ))}
+                <button
+                  key={value || 'all'}
+                  type="button"
+                  role="tab"
+                  aria-selected={filter === value}
+                  className={filter === value ? 'is-active' : ''}
+                  onClick={() => setFilter(value)}
+                >
+                  <span>{label}</span>
+                  <small>{count}</small>
+                </button>
+              ))}
             </div>
 
+            <div className="inspecoes__table-head" aria-hidden="true">
+              <span>Identificação</span>
+              <span>Estação</span>
+              <span>Plataforma e porta</span>
+              <span>Status</span>
+              <span>Ações</span>
+            </div>
             <div className="inspecoes__records">
-        {visible.length ? (
-          paged.map((item) => (
-            <article
-              key={item.id}
-              className="card-inspecao card-inspecao--clickable"
-              onClick={() => setSelectedInspection(item)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setSelectedInspection(item)
-                }
-              }}
-            >
-              <div>
-                <span>TAG SAP</span>
-                <strong>{`SP04-6-PSD-${item.station_code}-${item.platform}-PP${String(item.door_number).padStart(2, '0')}`}</strong>
-              </div>
-              <div>
-                <span>Estação</span>
-                <strong>{item.station_code}</strong>
-                <em>{stationLabel(item.station_code)}</em>
-              </div>
-              <div>
-                <span>Plat / Porta</span>
-                <strong>{item.platform} · P{String(item.door_number).padStart(2, '0')}</strong>
-                {item.notes && !isAiInspection(item) ? <em>{item.notes}</em> : null}
-              </div>
-              <label className="card-inspecao__status" onClick={(event) => event.stopPropagation()}>
-                <span>Status</span>
-                <select
-                  value={item.status}
-                  onChange={(event) => handleStatus(item.id, event.target.value)}
-                >
-                  <option value="pending">{STATUS_LABEL.pending}</option>
-                  <option value="in_progress">{STATUS_LABEL.in_progress}</option>
-                  <option value="completed">{STATUS_LABEL.completed}</option>
-                </select>
-              </label>
-              <div className="card-inspecao-actions" onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  className="btn-inspecao-action btn-inspecao-action--primary"
-                  onClick={() => setSelectedInspection(item)}
-                >
-                  Ver detalhes
-                </button>
-                <button
-                  type="button"
-                  className="btn-inspecao-action"
-                  onClick={() =>
-                    onNavigate?.('portas', {
-                      station: item.station_code,
-                      platform: item.platform,
-                      door: item.door_number,
-                    })
-                  }
-                >
-                  Ver porta
-                </button>
-              </div>
-            </article>
-          ))
-        ) : (
-          <p className="page-empty">
-            {items.length ? 'Nenhuma inspeção com esses filtros.' : 'Nenhuma inspeção retornada pela API.'}
-          </p>
-        )}
+              {visible.length ? (
+                paged.map((item) => (
+                  <article
+                    key={item.id}
+                    className="card-inspecao card-inspecao--clickable"
+                    onClick={() => setSelectedInspection(item)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedInspection(item)
+                      }
+                    }}
+                  >
+                    <div>
+                      <span>TAG SAP</span>
+                      <strong>{`SP04-6-PSD-${item.station_code}-${item.platform}-PP${String(item.door_number).padStart(2, '0')}`}</strong>
+                    </div>
+                    <div>
+                      <span>Estação</span>
+                      <strong>{item.station_code}</strong>
+                      <em>{stationLabel(item.station_code)}</em>
+                    </div>
+                    <div>
+                      <span>Plat / Porta</span>
+                      <strong>{item.platform} · P{String(item.door_number).padStart(2, '0')}</strong>
+                      {item.notes && !isAiInspection(item) ? <em>{item.notes}</em> : null}
+                    </div>
+                    <label className="card-inspecao__status" onClick={(event) => event.stopPropagation()}>
+                      <span>Status</span>
+                      <select
+                        value={item.status}
+                        onChange={(event) => handleStatus(item.id, event.target.value)}
+                      >
+                        <option value="pending">{STATUS_LABEL.pending}</option>
+                        <option value="in_progress">{STATUS_LABEL.in_progress}</option>
+                        <option value="completed">{STATUS_LABEL.completed}</option>
+                      </select>
+                    </label>
+                    <div className="card-inspecao-actions" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="btn-inspecao-action btn-inspecao-action--primary"
+                        onClick={() => setSelectedInspection(item)}
+                      >
+                        Ver detalhes
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-inspecao-action"
+                        onClick={() =>
+                          onNavigate?.('portas', {
+                            station: item.station_code,
+                            platform: item.platform,
+                            door: item.door_number,
+                          })
+                        }
+                      >
+                        Ver porta
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="page-empty">
+                  {items.length ? 'Nenhuma inspeção com esses filtros.' : 'Nenhuma inspeção cadastrada.'}
+                </p>
+              )}
             </div>
             <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
           </section>
+
+          <div className="inspecoes__charts">
+            <article className="inspecoes__chart">
+              <header className="inspecoes__panel-head">
+                <h2>Ordens por estação</h2>
+              </header>
+              <div className="inspecoes__chart-body">
+                {stationRows.length ? (
+                  <div className="inspecoes__bars">
+                    <div>
+                      {topStations.map(([label, value]) => (
+                        <div key={label} className="inspecoes__bar">
+                          <strong>{label}</strong>
+                          <span className="inspecoes__bar-track">
+                            <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                          </span>
+                          <em>{value}</em>
+                        </div>
+                      ))}
+                    </div>
+                    {otherStations.length ? (
+                      <div>
+                        {otherStations.map(([label, value]) => (
+                          <div key={label} className="inspecoes__bar">
+                            <strong>{label}</strong>
+                            <span className="inspecoes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="inspecoes__empty">Nenhuma estação com ordens neste recorte.</p>
+                )}
+              </div>
+            </article>
+          </div>
         </>
       )}
 
