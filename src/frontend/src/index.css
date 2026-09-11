@@ -72,6 +72,14 @@ select {
   font-family: var(--font);
 }
 
+select option {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 button {
   cursor: pointer;
 }

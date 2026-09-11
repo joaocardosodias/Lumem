@@ -298,22 +298,74 @@
   flex-wrap: wrap;
 }
 
-.portas__doors-search,
-.portas__doors-select {
-  padding: 8px 12px;
-  border-radius: 8px;
+.portas__doors-search {
+  min-height: 38px;
+  padding: 8px 14px 8px 36px;
+  border-radius: 9px;
   border: 1px solid var(--interactive-border, #d7dffd);
-  font-size: 0.86rem;
+  font-size: 12.5px;
+  font-weight: 600;
   font-family: inherit;
-  background: var(--white);
-  color: var(--text);
+  background-color: var(--white, #ffffff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238997AC' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  color: var(--ink, #172e52);
   outline: none;
-  transition: border-color 0.2s ease;
+  box-shadow: 0 1px 2px rgba(23, 46, 82, 0.03);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.portas__doors-search:focus,
+.portas__doors-search:hover {
+  border-color: #a5b4fa;
+  box-shadow: 0 2px 6px rgba(63, 0, 255, 0.05);
+}
+
+.portas__doors-search:focus {
+  border-color: var(--brand, #3f00ff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px rgba(63, 0, 255, 0.12);
+}
+
+.portas__doors-select {
+  min-height: 38px;
+  padding: 8px 36px 8px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--white, #ffffff);
+  color: var(--ink, #172e52);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2352647F' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  box-shadow: 0 1px 2px rgba(23, 46, 82, 0.03);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.portas__doors-select:hover {
+  border-color: #a5b4fa;
+  box-shadow: 0 2px 6px rgba(63, 0, 255, 0.05);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 .portas__doors-select:focus {
-  border-color: var(--brand);
+  border-color: var(--brand, #3f00ff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px rgba(63, 0, 255, 0.12);
+}
+
+.portas__doors-select option {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .portas-tabs {

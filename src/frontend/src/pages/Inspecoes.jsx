@@ -44,6 +44,19 @@ function inspectionStation(item) {
   return resolveStation(item) || String(item.station_code || '').toUpperCase()
 }
 
+function formatDateTime(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 function countBy(items, getKey) {
   return items.reduce((acc, item) => {
     const key = typeof getKey === 'function' ? getKey(item) : item[getKey]
@@ -62,6 +75,7 @@ function Inspecoes({ onNavigate, params }) {
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(emptyFilters)
   const [page, setPage] = useState(1)
+  const [selectedInspection, setSelectedInspection] = useState(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
@@ -80,6 +94,10 @@ function Inspecoes({ onNavigate, params }) {
     if (params?.door) {
       setSearch(String(params.door))
     }
+    if (params?.inspectionId && items.length) {
+      const match = items.find((i) => i.id === params.inspectionId)
+      if (match) setSelectedInspection(match)
+    }
     if (params?.openCreate) {
       setForm((prev) => ({
         ...prev,
@@ -88,7 +106,7 @@ function Inspecoes({ onNavigate, params }) {
       }))
       setOpen(true)
     }
-  }, [params])
+  }, [params, items])
 
   useEffect(() => {
     let cancelled = false
@@ -240,6 +258,7 @@ function Inspecoes({ onNavigate, params }) {
       await api.updateInspectionStatus(id, { status })
       patchCachedInspection(id, { status })
       setItems((current) => current.map((item) => (item.id === id ? { ...item, status } : item)))
+      setSelectedInspection((current) => (current?.id === id ? { ...current, status } : current))
       toast.success(`Status atualizado para ${STATUS_LABEL[status] || status}`)
     } catch (err) {
       const msg = errorMessage(err)
@@ -499,7 +518,19 @@ function Inspecoes({ onNavigate, params }) {
             <div className="inspecoes__records">
         {visible.length ? (
           paged.map((item) => (
-            <article key={item.id} className="card-inspecao">
+            <article
+              key={item.id}
+              className="card-inspecao card-inspecao--clickable"
+              onClick={() => setSelectedInspection(item)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedInspection(item)
+                }
+              }}
+            >
               <div>
                 <span>TAG SAP</span>
                 <strong>{`SP04-6-PSD-${item.station_code}-${item.platform}-PP${String(item.door_number).padStart(2, '0')}`}</strong>
@@ -514,7 +545,7 @@ function Inspecoes({ onNavigate, params }) {
                 <strong>{item.platform} · P{String(item.door_number).padStart(2, '0')}</strong>
                 {item.notes && !isAiInspection(item) ? <em>{item.notes}</em> : null}
               </div>
-              <label className="card-inspecao__status">
+              <label className="card-inspecao__status" onClick={(event) => event.stopPropagation()}>
                 <span>Status</span>
                 <select
                   value={item.status}
@@ -525,7 +556,14 @@ function Inspecoes({ onNavigate, params }) {
                   <option value="completed">{STATUS_LABEL.completed}</option>
                 </select>
               </label>
-              <div className="card-inspecao-actions">
+              <div className="card-inspecao-actions" onClick={(event) => event.stopPropagation()}>
+                <button
+                  type="button"
+                  className="btn-inspecao-action btn-inspecao-action--primary"
+                  onClick={() => setSelectedInspection(item)}
+                >
+                  Ver detalhes
+                </button>
                 <button
                   type="button"
                   className="btn-inspecao-action"
@@ -552,6 +590,146 @@ function Inspecoes({ onNavigate, params }) {
           </section>
         </>
       )}
+
+      {selectedInspection ? (
+        <div
+          className="inspecoes-modal inspecoes-modal--detalhes"
+          onClick={() => setSelectedInspection(null)}
+        >
+          <div
+            className="inspecao-detalhes"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detalhes-titulo"
+          >
+            <header className="inspecao-detalhes__head">
+              <div>
+                <div className="inspecao-detalhes__tags">
+                  <span className="inspecao-tag-id">Ordem #{selectedInspection.id}</span>
+                  <span className={`inspecao-badge inspecao-badge--${selectedInspection.status}`}>
+                    {STATUS_LABEL[selectedInspection.status] || selectedInspection.status}
+                  </span>
+                  <span className={`inspecao-badge inspecao-badge--${isAiInspection(selectedInspection) ? 'ai' : 'manual'}`}>
+                    {isAiInspection(selectedInspection) ? 'IA Preditiva' : 'Manual'}
+                  </span>
+                </div>
+                <h2 id="detalhes-titulo">
+                  {`SP04-6-PSD-${selectedInspection.station_code}-${selectedInspection.platform}-PP${String(selectedInspection.door_number).padStart(2, '0')}`}
+                </h2>
+                <p className="inspecao-detalhes__sub">
+                  Estação {selectedInspection.station_code} ({stationLabel(selectedInspection.station_code)}) · Plataforma {selectedInspection.platform} · Porta {String(selectedInspection.door_number).padStart(2, '0')}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="inspecao-detalhes__close"
+                onClick={() => setSelectedInspection(null)}
+                aria-label="Fechar detalhes"
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="inspecao-detalhes__body">
+              <div className="inspecao-detalhes__grid">
+                <div className="inspecao-detalhe-item">
+                  <span>TAG SAP</span>
+                  <strong>{`SP04-6-PSD-${selectedInspection.station_code}-${selectedInspection.platform}-PP${String(selectedInspection.door_number).padStart(2, '0')}`}</strong>
+                </div>
+                <div className="inspecao-detalhe-item">
+                  <span>Estação</span>
+                  <strong>{selectedInspection.station_code} — {stationLabel(selectedInspection.station_code)}</strong>
+                </div>
+                <div className="inspecao-detalhe-item">
+                  <span>Localização</span>
+                  <strong>Plataforma {selectedInspection.platform} · Porta {String(selectedInspection.door_number).padStart(2, '0')}</strong>
+                </div>
+                <div className="inspecao-detalhe-item">
+                  <span>Origem da Ordem</span>
+                  <strong>{isAiInspection(selectedInspection) ? 'Detecção Preditiva IA' : 'Abertura Manual de Campo'}</strong>
+                </div>
+                <div className="inspecao-detalhe-item">
+                  <span>Data de Abertura</span>
+                  <strong>{formatDateTime(selectedInspection.created_at)}</strong>
+                </div>
+                <div className="inspecao-detalhe-item">
+                  <span>Última Atualização</span>
+                  <strong>{formatDateTime(selectedInspection.updated_at)}</strong>
+                </div>
+                {selectedInspection.completed_at ? (
+                  <div className="inspecao-detalhe-item">
+                    <span>Data de Conclusão</span>
+                    <strong>{formatDateTime(selectedInspection.completed_at)}</strong>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="inspecao-detalhes__notes">
+                <h4>Observações / Diagnóstico</h4>
+                <div className="inspecao-detalhes__notes-content">
+                  {selectedInspection.notes ? (
+                    <p>{selectedInspection.notes}</p>
+                  ) : (
+                    <p className="inspecao-detalhes__no-notes">Nenhuma anotação técnica registrada para esta ordem de inspeção.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="inspecao-detalhes__status-flow">
+                <h4>Alterar Status da Ordem</h4>
+                <div className="inspecao-detalhes__status-actions">
+                  <button
+                    type="button"
+                    disabled={selectedInspection.status === 'pending'}
+                    className={`btn-flow-status btn-flow-status--pending ${selectedInspection.status === 'pending' ? 'is-current' : ''}`}
+                    onClick={() => handleStatus(selectedInspection.id, 'pending')}
+                  >
+                    Marcar como Pendente
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedInspection.status === 'in_progress'}
+                    className={`btn-flow-status btn-flow-status--in_progress ${selectedInspection.status === 'in_progress' ? 'is-current' : ''}`}
+                    onClick={() => handleStatus(selectedInspection.id, 'in_progress')}
+                  >
+                    Iniciar Atendimento
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedInspection.status === 'completed'}
+                    className={`btn-flow-status btn-flow-status--completed ${selectedInspection.status === 'completed' ? 'is-current' : ''}`}
+                    onClick={() => handleStatus(selectedInspection.id, 'completed')}
+                  >
+                    Concluir Inspeção
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <footer className="inspecao-detalhes__foot">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const item = selectedInspection
+                  setSelectedInspection(null)
+                  onNavigate?.('portas', {
+                    station: item.station_code,
+                    platform: item.platform,
+                    door: item.door_number,
+                  })
+                }}
+              >
+                Ver porta no mapa
+              </Button>
+              <Button type="button" onClick={() => setSelectedInspection(null)}>
+                Fechar
+              </Button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="inspecoes-modal" onClick={() => setOpen(false)}>

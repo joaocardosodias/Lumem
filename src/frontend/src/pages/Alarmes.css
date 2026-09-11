@@ -426,10 +426,6 @@
   white-space: nowrap;
 }
 
-.card-alarme__normalized {
-  color: #16a34a !important;
-}
-
 .card-alarme__open {
   color: #d12b3a !important;
 }

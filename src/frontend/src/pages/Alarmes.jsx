@@ -498,7 +498,7 @@ function Alarmes({ onNavigate, params }) {
                     </div>
                     <div>
                       <span>Normalização</span>
-                      <strong className={item.normalization_timestamp ? 'card-alarme__normalized' : 'card-alarme__open'}>
+                      <strong className={item.normalization_timestamp ? undefined : 'card-alarme__open'}>
                         {item.normalization_timestamp || 'Em aberto'}
                       </strong>
                     </div>
