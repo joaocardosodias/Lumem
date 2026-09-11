@@ -1,0 +1,80 @@
+---
+title: "API de Predição"
+description: "API HTTP que serve o Modelo 5 pro backend consumir — contrato, como funciona, arquitetura de deploy e o que foi validado contra o banco real."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Objetivo</h2>
+</div>
+
+Um código roda no backend em Go, os modelos de ML rodam em Python, e a API é a ponte entre os dois. Ela empacota o Modelo 5 (Random Forest) atrás de um endpoint HTTP, em um formato que o backend já espera consumir (`internal/adapter/mlclient/client.go`).
+
+Por que o Modelo 5 e não a RNN: os dois foram comparados na Sprint 3 (mesmo alvo, mesma partição temporal, mesma métrica) e o Modelo 5 venceu, PR-AUC 0,184 contra 0,154 da RNN — números do bundle real servido por esta API, reavaliado no teste (detalhes em [Modelo RNN](/sprints/sprint-3/modelos/modelo-rnn)). A RNN continua documentada como o experimento de comparação.
+
+Houve também um segundo modelo de RNN testado nesta sprint ([RNN-LSTM](/sprints/sprint-3/modelos/rnn-lstm)), com desempenho um pouco pior. (PR-AUC 0,051), por isso a comparação acima usa a RNN de melhor desempenho entre as duas, e não a única disponível.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Contrato</h2>
+</div>
+
+`POST /predict`
+
+```json
+// requisição (platform no formato "P1"/"P2", da tabela doors do backend)
+[{"station_code": "VSO", "platform": "P1", "door_number": 8}]
+
+// resposta
+[{"station_code": "VSO", "platform": "P1", "door_number": 8, "will_fail": true, "probability": 0.62}]
+```
+
+A requisição só identifica as portas — nenhum dado de telemetria trafega pela rede, quem busca isso é a própria API. `probability` é um campo a mais: o backend, hoje, só lê `will_fail`.
+
+`GET /health` é usado pelo healthcheck do container.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Como funciona</h2>
+</div>
+
+1. É recebido uma lista de portas.
+2. É feito uma busca no Postgres dos alarmes dos últimos 60 dias (`telemetry_alarms`) e o histórico completo de ordens de manutenção (`maintenance_events`) das estações pedidas.
+3. É calculado ao vivo, as mesmas 83 features candidatas usadas no treino do Modelo 5 (janelas móveis de 1/3/7/14/30 dias, decaimento por recência, histórico de corretivas ZM01/ZM02/ZM03), a mesma matemática de construir_painel.py, só que reescrita pra rodar num instante só, não numa base histórica inteira.
+4. Seleciona as 72 features que o SHAP manteve no treino, roda o modelo e aplica o limiar salvo (0,4831).
+
+O bundle do modelo (artifacts/modelo_5.joblib) é gerado por `exportar_modelo.py`, que reproduz as seções 1 a 6 do `modelo_5.ipynb`. É feito o mesmo split temporal, mesmos hiperparâmetros, mesma seleção de features por SHAP. O modelo é treinado com os dados fornecidos pelo parceiro (as mesmas planilhas de alarmes e ordens ZM01/ZM02/ZM03) e avaliado com as mesmas métricas definidas na documentação do Modelo 5 (precisão, recall, F1, PR-AUC, ROC-AUC).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Arquitetura de deploy</h2>
+</div>
+
+O serviço roda em container Docker próprio (`src/modelo/Dockerfile`), separado do container do backend. Cada um com seu `docker-compose.yml`, ligados pela mesma rede Docker compartilhada (`backend-network`), não por um compose único. Isso evita que as duas pessoas fiquem editando o mesmo arquivo de configuração.
+
+O .gitlab-ci.yml cobre o serviço inteiro: `pytest` → build da imagem → escaneamento de vulnerabilidade (Trivy) → publicação no Azure Container Registry a cada push na branch principal. Um Watchtower rodando na VM detecta a imagem nova e reinicia o container sozinho.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Validação</h2>
+</div>
+
+Foram feitos testes em quatro camadas:
+
+- **Testes automatizados** (`pytest`) com um banco de dados falso no lugar do Postgres, cobrindo o formato da resposta e os casos de borda (lista vazia, payload inválido).
+- **Container Docker rodando de verdade** (`docker build` + `docker run`) contra o banco de staging real, com portas reais, foi respondido no formato certo, sem erro.
+- **Schema do banco conferido contra dado real**: `order_type` em `maintenance_events` é literalmente `ZM01`/`ZM02`/`ZM03` (bate com o esperado); 41% das 5.773 ordens têm porta específica reconhecível no texto de localização — as features de ciclo/corretiva funcionam de verdade pra essas portas.
+- **Ponta a ponta com o backend Go real**: os dois serviços rodando juntos (rede Docker compartilhada) contra o banco de staging, autenticado, disparando /api/v1/predictions/trigger para 528 portas. Foi confirmado que doors.platform usa `"P1"`/`"P2"` (diferente de `telemetry_alarms.platform`, que usa `"BUT1"`). O código já lida com os dois formatos. O /predict respondeu em 3,3 segundos para as 528 portas, dentro do limite de 5s do cliente Go.
+
+Os detalhes técnicos de como rodar localmente estão em src/modelo/README.md.

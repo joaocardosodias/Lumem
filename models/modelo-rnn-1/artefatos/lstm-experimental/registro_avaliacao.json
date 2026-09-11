@@ -1,0 +1,14 @@
+{
+  "identificacao": {
+    "assinaturas_sha256": {
+      "pesos_lstm.pt": "d2061146e7fca80c1f729b6c5e9f0a74da01cafab6a4c51be1b38d05541a4aa7",
+      "preprocessadores.joblib": "c34ab963255284ae81dd7d890141adafe16872f87f38820cc37039a5aca84bde",
+      "predicoes_validacao.csv": "b1ddc2611502f17628a75df9885900181a1bb7fc48d4eae3a3af0e07196c8d28"
+    },
+    "base_teste_sha256": "e074efb13e07e58ac7c647327c2816c2092b2abac92924be532ddfeedab9a57b",
+    "limiar": 0.08316838
+  },
+  "avaliado_em_utc": "2026-09-09T23:42:48.438086+00:00",
+  "passagens_pelo_modelo_por_amostra": 1,
+  "predicoes_teste_sha256": "feed145263a5698bdad20bb1026157f28a0b4b68d909bd7189b9cdae61371596"
+}

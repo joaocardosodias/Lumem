@@ -1,0 +1,49 @@
+---
+title: ADR 003 — Armazenamento S3
+description: Registro formal da decisão de utilizar bucket privado compatível com S3 no Supabase Storage para desacoplar API e Worker e eliminar dependências de discos locais.
+---
+
+## 1. Contexto e Forças de Decisão
+
+A divisão do backend nos contêineres especializados `backend-linha4` (API) e `worker-linha4` (Processador River) exigiu uma estratégia compartilhada para transferência de arquivos brutos de telemetria.
+
+A opção de salvar os arquivos recebidos no diretório local `/tmp` do contêiner da API foi descartada durante o desenho da arquitetura na Sprint 3 por três motivos:
+1. **Sistemas de arquivos isolados:** o contêiner do worker possui seu próprio filesystem isolado (namespaces do Linux), não tendo acesso aos arquivos gravados pelo contêiner da API;
+2. **Volatilidade de contêineres:** se o contêiner da API sofresse recriação durante um deploy, arquivos em `/tmp` seriam apagados antes do processamento;
+3. **Inviabilidade de escalabilidade horizontal:** instâncias adicionais de workers executando em outros hosts físicos ou pods não conseguiriam ler dados de discos locais de outros contêineres.
+
+## 2. Decisão Arquitetural
+
+Adotar o **Supabase Storage através da API compatível com Amazon S3** para armazenamento compartilhado de arquivos de ingestão. A API e o Worker utilizam a biblioteca oficial **AWS SDK for Go v2** configurada com endpoint customizado e `UsePathStyle = true`.
+
+### Padrão de ciclo de vida do objeto
+1. **Nomeação determinística sem colisão:** a chave do objeto utiliza prefixo fixo e UUID v4 gerado pela API (ex: `ingestion/3b5d8434-d02d-45bf-a6d1-ec92ef943391.csv`), impossibilitando sobrescrita de arquivos com nomes idênticos;
+2. **Bucket estritamente privado:** o bucket não possui permissões públicas de leitura ou escrita. Todo acesso é autenticado via credenciais técnicas injetadas via variáveis de ambiente;
+3. **Expurgo definitivo pós-processamento:** o arquivo é mantido durante o processamento e tentativas de repetição. Ao atingir o estado terminal (`completed`, `failed` por erro permanente ou esgotamento de 5 tentativas), o worker persiste um job de limpeza no River. A exclusão ocorre em consumidor próprio, com novas tentativas a cada cinco minutos se o storage estiver indisponível.
+
+## 3. Matriz de Alternativas Avaliadas
+
+| Opção técnica | Prós | Contras | Veredito |
+|---|---|---|---|
+| **Disco Local (`/tmp`)** | Sem latência de rede; custo zero de infraestrutura | Isolado por contêiner; volátil; impede separação de API e Worker | **Rejeitada:** incompatível com arquitetura multi-processos |
+| **Volumes Docker Compartilhados (NFS / Bind Mounts)** | Acessível por múltiplos contêineres no mesmo host | Acopla fortemente a execução a um mesmo nó físico; permissões complexas de UID/GID | **Rejeitada:** limita escalabilidade e portabilidade em nuvem |
+| **Coluna Binária (`BYTEA`) no PostgreSQL** | Atomicidade total com as tabelas de banco; transação única | Causa inchaço massivo do banco (bloat); satura cache de memória RAM do PostgreSQL | **Rejeitada:** anti-padrão grave para planilhas de dezenas de megabytes |
+| **Object Storage S3 (Supabase Storage)** | **Desacoplamento físico total; durabilidade em nuvem; API padrão de mercado; suporte nativo a streaming** | Latência de rede para upload e download; necessidade de expurgo de objetos | **Aprovada:** solução de padrão industrial para sistemas distribuídos |
+
+## 4. Consequências da Decisão
+
+### Consequências Positivas
+- **Independência física:** API e Worker podem rodar em contêineres diferentes, servidores diferentes ou provedores diferentes sem perda de interoperabilidade;
+- **Compatibilidade com testes:** a porta `IngestionStorage` permitiu criar o adaptador `LocalTempStorage` para suítes de teste locais sem necessidade de credenciais de nuvem;
+- **Consumo previsível de RAM:** CSV é lido por linha; XLSX usa arquivo temporário, `OpenFile` e o iterador `Rows`. O caso de uso converte e grava lotes de até 500 registros.
+
+### Trade-offs e Custos Aceitos
+- Dependência da disponibilidade da API de storage do Supabase para aceitação de novos uploads;
+- A exclusão é eventual e depende de PostgreSQL e do consumidor da fila `ingestion_cleanup`. Falhas após registrar o job são repetidas automaticamente. Objetos criados antes de qualquer registro no banco continuam sujeitos à janela entre S3 e PostgreSQL, exigindo reconciliação em caso de queda nesse intervalo.
+
+
+## 5. Evidências de Conformidade no Código
+
+- [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go): interface `IngestionStorage` com `Store`, `Open` e `Delete`;
+- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go#L60-L80): configuração do AWS SDK v2 com `UsePathStyle = true` e endpoint customizado;
+- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go#L102-L144): implementação de `Store` com hashing SHA-256 e `PutObject`.

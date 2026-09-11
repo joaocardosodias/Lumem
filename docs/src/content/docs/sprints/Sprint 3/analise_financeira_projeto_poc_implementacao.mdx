@@ -132,7 +132,7 @@ A arquitetura da POC contempla:
 - modelo de Machine Learning já treinado;
 - empacotamento do modelo e de suas dependências em um container Docker;
 - ambiente Red Hat para realizar o deploy e executar o container;
-- banco de dados em Azure SQL Database;
+- banco de dados PostgreSQL gerenciado no Supabase;
 - utilização de dados operacionais da Motiva;
 - armazenamento das previsões geradas;
 - validação dos resultados ao longo do período.
@@ -143,7 +143,7 @@ hospedagem de interface web.
 ```text
 Dados operacionais da Motiva
       ↓
-   Azure SQL Database
+   PostgreSQL (Supabase)
       ↓
  Red Hat / OpenShift
       ↓
@@ -153,7 +153,7 @@ Modelo de Machine Learning
       ↓
       Predições
       ↓
-   Azure SQL Database
+   PostgreSQL (Supabase)
 ```
 
 ---
@@ -185,7 +185,7 @@ durante os 12 meses:
 1. atualização e disponibilização de novos dados operacionais;
 2. ambiente Red Hat utilizado para o deploy do modelo;
 3. recursos computacionais necessários para executar o container;
-4. banco de dados Azure SQL Database;
+4. banco de dados PostgreSQL no Supabase;
 5. armazenamento de arquivos, modelos e previsões;
 6. armazenamento e execução do container Docker;
 7. logs e monitoramento da aplicação;
@@ -295,27 +295,29 @@ ao porte de uma POC acadêmica.
 
 ---
 
-## 3.5. Banco de dados da POC — Azure SQL Database
+## 3.5. Banco de dados da POC — Supabase (PostgreSQL)
 
-A POC utiliza **Azure SQL Database** como banco de dados. A escolha decorre da estrutura
-relacional dos dados envolvidos: estações, plataformas, portas, alarmes, ordens de
-manutenção, datas, previsões e probabilidades geradas pelo modelo.
+A POC utiliza **PostgreSQL 16 gerenciado no Supabase** como banco de dados. A escolha
+decorre da estrutura relacional dos dados envolvidos: estações, plataformas, portas, alarmes,
+ordens de manutenção, datas, previsões e probabilidades geradas pelo modelo. É o mesmo
+serviço já adotado pelo backend da plataforma.
 
 O banco armazena tanto os dados necessários à execução da POC quanto as previsões produzidas
 pelo modelo.
 
-### 3.5.1. Camada gratuita
+### 3.5.1. Plano gratuito
 
-A POC utiliza a camada gratuita do Azure SQL Database. Segundo a documentação oficial da
-Microsoft, a oferta gratuita disponibiliza por banco de dados e por mês:
+A POC utiliza o plano **Free** do Supabase. Segundo a tabela pública de preços, esse plano
+disponibiliza por projeto:
 
-- até **100.000 vCore-segundos de compute serverless**;
-- até **32 GB de armazenamento de dados**;
-- até **32 GB de armazenamento de backup**;
-- disponível para até 10 bancos por assinatura.
+- até **500 MB** de banco PostgreSQL;
+- até **1 GB** de file storage;
+- até **5 GB** de egress;
+- até **2 projetos** ativos;
+- o projeto **pausa após uma semana de inatividade**.
 
 ```text
-Custo incremental anual do Azure SQL Database = R$ 0
+Custo incremental anual do Supabase = R$ 0
 ```
 
 ### 3.5.2. Justificativa de capacidade
@@ -323,18 +325,16 @@ Custo incremental anual do Azure SQL Database = R$ 0
 As fontes utilizadas pela solução são o histórico de alarmes, as ordens ZM01, ZM02 e ZM03,
 os dados processados para inferência e o histórico de previsões.
 
-O volume atual do projeto é reduzido em relação ao limite de 32 GB. Mesmo com a entrada de
-novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do
-limite da camada gratuita. Por esse motivo não foi considerada a contratação de plano pago.
+O limite de 500 MB do plano Free é mais restrito do que um banco empresarial. No recorte da
+POC, a expectativa é permanecer dentro desse teto, com monitoramento contínuo do tamanho da
+base. Por esse motivo não foi considerada a contratação do plano Pro durante a POC.
 
 ### 3.5.3. Controle de uso
 
-Durante a POC devem ser monitorados uso de processamento, armazenamento ocupado, crescimento
-mensal da base, volume de consultas e volume de backup. Caso algum indicador se aproxime dos
-limites gratuitos, a premissa financeira deve ser revisada.
-
-Deve também ser priorizada a configuração de auto-pause ao atingir o limite gratuito, que
-reduz o risco de cobranças inesperadas.
+Durante a POC devem ser monitorados tamanho da base, egress, storage e o risco de pausa por
+inatividade. Caso algum indicador se aproxime dos limites do Free, a premissa financeira deve
+ser revisada e o projeto migrado para o plano Pro, cujo custo está quantificado no cenário
+implementado (seção 4.5).
 
 ---
 
@@ -543,8 +543,8 @@ O custo incremental igual a zero decorre de quatro condições simultâneas, tod
 1. o desenvolvimento é realizado pelo grupo do Inteli, sem remuneração associada ao projeto;
 2. o ambiente de execução utiliza o Developer Sandbox nos primeiros 30 dias e o OpenShift
    Local em hardware já disponível nos 11 meses seguintes;
-3. o banco de dados permanece dentro da camada gratuita do Azure SQL Database, cujos limites
-   são compatíveis com o volume estimado do projeto;
+3. o banco de dados permanece no plano Free do Supabase, cujos limites são compatíveis com o
+   volume estimado da POC;
 4. as atividades de atualização de dados e validação operacional já integram a rotina de
    profissionais contratados pela Motiva.
 
@@ -1755,8 +1755,8 @@ revisão com impacto financeiro quantificado, e não por acréscimo percentual.
 | Cotação do dólar comercial | US$ 1 = R$ 5,10 | Cotação comercial de mercado | 09/09/2026 |
 | Red Hat OpenShift — taxa de cluster | US$ 263/ano | Preços públicos do Red Hat OpenShift Service on AWS (ROSA) | 10/09/2026 |
 | Red Hat OpenShift — worker node 4 vCPU | US$ 998/ano | ROSA, compromisso reservado de 1 ano (US$ 0,114 por 4vCPU/hora) | 10/09/2026 |
-| Azure SQL Database — camada gratuita | 100.000 vCore-segundos, 32 GB de dados, 32 GB de backup por mês | Documentação oficial da Microsoft | 10/09/2026 |
-| Azure SQL Database — compute serverless | US$ 0,5218 por vCore-hora | Tabela de preços do Azure SQL Database, General Purpose serverless | 10/09/2026 |
+| Supabase Free | 500 MB de banco, 1 GB de storage, 5 GB de egress, pausa após 1 semana | Tabela pública de preços do Supabase | 10/09/2026 |
+| Supabase Pro | US$ 25/mês (US$ 300/ano; R$ 1.530, arredondado para R$ 1.500 na consolidação) | Tabela pública de preços do Supabase | 10/09/2026 |
 | Vercel Pro | US$ 20 por membro/mês | Página oficial de planos da Vercel | 10/09/2026 |
 | Desenvolvedor Full-Stack Pleno | R$ 9.550 a R$ 15.900/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
 | Desenvolvedor Full-Stack Júnior | R$ 6.050 a R$ 8.750/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |

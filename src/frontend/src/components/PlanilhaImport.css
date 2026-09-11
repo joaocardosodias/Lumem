@@ -1,0 +1,94 @@
+.cadastro-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cadastro-tabs button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.cadastro-tabs button.is-active {
+  border-bottom-color: var(--white);
+  color: var(--white);
+  font-weight: 700;
+}
+
+.planilha-import {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--white);
+}
+
+.planilha-import span,
+.planilha-import small,
+.planilha-import p {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.planilha-import small {
+  opacity: 0.7;
+}
+
+.planilha-import p {
+  margin: 0;
+  color: #ffd4d4;
+}
+
+.planilha-import input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.planilha-import em {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 0 8px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0 0 6px 6px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.cadastro-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cadastro-select span {
+  font-size: 13px;
+}
+
+.cadastro-select select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 0 8px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: var(--white);
+  outline: none;
+}
+
+.cadastro-select select option {
+  color: var(--brand);
+}
