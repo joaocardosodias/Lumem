@@ -51,12 +51,47 @@ const backendSidebar = {
 	],
 };
 
+const fallbackSite = 'https://graduacao.pages.git.inteli.edu.br';
+const fallbackBase = '/2026-2a/t16/g04';
+const pagesUrl = process.env.CI_PAGES_URL;
+const site = pagesUrl ? new URL(pagesUrl).origin : fallbackSite;
+const base = pagesUrl
+	? (new URL(pagesUrl).pathname.replace(/\/$/, '') || '/')
+	: fallbackBase;
+const readmePath = `${base === '/' ? '' : base}/readme`;
+const basePrefix = base === '/' ? '' : base.replace(/\/$/, '');
+
+/** Prefix site-root links (`/sprints/...`) with Astro `base` so GitLab Pages works. */
+function rehypePrefixBase() {
+	return (tree) => {
+		walk(tree);
+		function walk(node) {
+			if (node.type === 'element' && node.tagName === 'a' && typeof node.properties?.href === 'string') {
+				const href = node.properties.href;
+				if (
+					basePrefix &&
+					href.startsWith('/') &&
+					!href.startsWith('//') &&
+					href !== basePrefix &&
+					!href.startsWith(`${basePrefix}/`)
+				) {
+					node.properties.href = `${basePrefix}${href}`;
+				}
+			}
+			if (Array.isArray(node.children)) node.children.forEach(walk);
+		}
+	};
+}
+
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://graduacao.pages.git.inteli.edu.br',
-	base: '/2026-2a/t16/g04',
+	site,
+	base,
 	redirects: {
-		'/': '/2026-2a/t16/g04/readme',
+		'/': readmePath,
+	},
+	markdown: {
+		rehypePlugins: [rehypePrefixBase],
 	},
 	integrations: [
 		mermaid({
