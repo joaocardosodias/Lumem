@@ -130,7 +130,7 @@ A arquitetura da POC contempla:
 - modelo de Machine Learning já treinado;
 - empacotamento do modelo e de suas dependências em um container Docker;
 - ambiente Red Hat para realizar o deploy e executar o container;
-- banco de dados em Azure SQL Database;
+- banco de dados PostgreSQL gerenciado no Supabase;
 - utilização de dados operacionais da Motiva;
 - armazenamento das previsões geradas;
 - validação dos resultados ao longo do período.
@@ -141,7 +141,7 @@ hospedagem de interface web.
 ```text
 Dados operacionais da Motiva
       ↓
-   Azure SQL Database
+   PostgreSQL (Supabase)
       ↓
  Red Hat / OpenShift
       ↓
@@ -151,7 +151,7 @@ Modelo de Machine Learning
       ↓
       Predições
       ↓
-   Azure SQL Database
+   PostgreSQL (Supabase)
 ```
 
 ---
@@ -183,7 +183,7 @@ durante os 12 meses:
 1. atualização e disponibilização de novos dados operacionais;
 2. ambiente Red Hat utilizado para o deploy do modelo;
 3. recursos computacionais necessários para executar o container;
-4. banco de dados Azure SQL Database;
+4. banco de dados PostgreSQL no Supabase;
 5. armazenamento de arquivos, modelos e previsões;
 6. armazenamento e execução do container Docker;
 7. logs e monitoramento da aplicação;
@@ -293,27 +293,29 @@ ao porte de uma POC acadêmica.
 
 ---
 
-## 3.5. Banco de dados da POC — Azure SQL Database
+## 3.5. Banco de dados da POC — Supabase (PostgreSQL)
 
-A POC utiliza **Azure SQL Database** como banco de dados. A escolha decorre da estrutura
-relacional dos dados envolvidos: estações, plataformas, portas, alarmes, ordens de
-manutenção, datas, previsões e probabilidades geradas pelo modelo.
+A POC utiliza **PostgreSQL 16 gerenciado no Supabase** como banco de dados. A escolha
+decorre da estrutura relacional dos dados envolvidos: estações, plataformas, portas, alarmes,
+ordens de manutenção, datas, previsões e probabilidades geradas pelo modelo. É o mesmo
+serviço já adotado pelo backend da plataforma.
 
 O banco armazena tanto os dados necessários à execução da POC quanto as previsões produzidas
 pelo modelo.
 
-### 3.5.1. Camada gratuita
+### 3.5.1. Plano gratuito
 
-A POC utiliza a camada gratuita do Azure SQL Database. Segundo a documentação oficial da
-Microsoft, a oferta gratuita disponibiliza por banco de dados e por mês:
+A POC utiliza o plano **Free** do Supabase. Segundo a tabela pública de preços, esse plano
+disponibiliza por projeto:
 
-- até **100.000 vCore-segundos de compute serverless**;
-- até **32 GB de armazenamento de dados**;
-- até **32 GB de armazenamento de backup**;
-- disponível para até 10 bancos por assinatura.
+- até **500 MB** de banco PostgreSQL;
+- até **1 GB** de file storage;
+- até **5 GB** de egress;
+- até **2 projetos** ativos;
+- o projeto **pausa após uma semana de inatividade**.
 
 ```text
-Custo incremental anual do Azure SQL Database = R$ 0
+Custo incremental anual do Supabase = R$ 0
 ```
 
 ### 3.5.2. Justificativa de capacidade
@@ -321,18 +323,16 @@ Custo incremental anual do Azure SQL Database = R$ 0
 As fontes utilizadas pela solução são o histórico de alarmes, as ordens ZM01, ZM02 e ZM03,
 os dados processados para inferência e o histórico de previsões.
 
-O volume atual do projeto é reduzido em relação ao limite de 32 GB. Mesmo com a entrada de
-novos dados durante os 12 meses, a expectativa é que o volume total permaneça abaixo do
-limite da camada gratuita. Por esse motivo não foi considerada a contratação de plano pago.
+O limite de 500 MB do plano Free é mais restrito do que um banco empresarial. No recorte da
+POC, a expectativa é permanecer dentro desse teto, com monitoramento contínuo do tamanho da
+base. Por esse motivo não foi considerada a contratação do plano Pro durante a POC.
 
 ### 3.5.3. Controle de uso
 
-Durante a POC devem ser monitorados uso de processamento, armazenamento ocupado, crescimento
-mensal da base, volume de consultas e volume de backup. Caso algum indicador se aproxime dos
-limites gratuitos, a premissa financeira deve ser revisada.
-
-Deve também ser priorizada a configuração de auto-pause ao atingir o limite gratuito, que
-reduz o risco de cobranças inesperadas.
+Durante a POC devem ser monitorados tamanho da base, egress, storage e o risco de pausa por
+inatividade. Caso algum indicador se aproxime dos limites do Free, a premissa financeira deve
+ser revisada e o projeto migrado para o plano Pro, cujo custo está quantificado no cenário
+implementado (seção 4.5).
 
 ---
 
@@ -506,7 +506,7 @@ mesmos adotados no cenário implementado:
 | Item | Arranjo na POC | Equivalente pago em 12 meses |
 |---|---|---:|
 | Ambiente Red Hat/OpenShift | Developer Sandbox + OpenShift Local em hardware existente | R$ 6.431,10 |
-| Banco de dados | Azure SQL Database em camada gratuita | R$ 1.500,00 |
+| Banco de dados | Supabase Free (equivalente pago: plano Pro) | R$ 1.500,00 |
 | Hardware de execução | Equipamento já disponível | não precificado |
 | Docker e bibliotecas | Open source | R$ 0 |
 
@@ -518,7 +518,7 @@ mesmos adotados no cenário implementado:
 |---|---:|---:|
 | Investimento inicial — desenvolvimento (700 h) | R$ 29.400,00 | R$ 0 |
 | Custos fixos recorrentes — ambiente Red Hat/OpenShift | R$ 6.431,10 | R$ 0 |
-| Custos variáveis — Azure SQL Database | R$ 1.500,00 | R$ 0 |
+| Custos variáveis — Supabase | R$ 1.500,00 | R$ 0 |
 | Custos operacionais incrementais — dados, validação, logs | não precificado | R$ 0 |
 | Licenciamento — Docker e bibliotecas open source | R$ 0 | R$ 0 |
 | **Total da POC em 12 meses** | **R$ 37.331,10** | **R$ 0** |
@@ -535,8 +535,8 @@ O custo incremental igual a zero decorre de quatro condições simultâneas, tod
 1. o desenvolvimento é realizado pelo grupo do Inteli, sem remuneração associada ao projeto;
 2. o ambiente de execução utiliza o Developer Sandbox nos primeiros 30 dias e o OpenShift
    Local em hardware já disponível nos 11 meses seguintes;
-3. o banco de dados permanece dentro da camada gratuita do Azure SQL Database, cujos limites
-   são compatíveis com o volume estimado do projeto;
+3. o banco de dados permanece no plano Free do Supabase, cujos limites são compatíveis com o
+   volume estimado da POC;
 4. as atividades de atualização de dados e validação operacional já integram a rotina de
    profissionais contratados pela Motiva.
 
@@ -551,7 +551,7 @@ impacto financeiro estimado a partir dos preços públicos levantados:
 | Gatilho | Impacto estimado em 12 meses |
 |---|---:|
 | Hardware disponível não suporta o OpenShift Local | migração para ambiente gerenciado: até R$ 6.431,10 |
-| Volume ultrapassa a camada gratuita do Azure SQL | até R$ 1.500,00 |
+| Volume ultrapassa o plano Free do Supabase | até R$ 1.500,00 |
 | Necessidade de publicar o frontend durante a POC | R$ 1.224,00 |
 | Necessidade de serviço externo de observabilidade | a cotar |
 | Contratação de profissional adicional ou horas extras | a cotar |
@@ -574,7 +574,7 @@ de manutenção.
 ```text
 Dados operacionais da Motiva
           ↓
-   Azure SQL Database
+   PostgreSQL (Supabase)
           ↓
   Red Hat / OpenShift
           ↓
@@ -616,7 +616,7 @@ semanas**, com as seguintes atribuições:
 
 - revisar e organizar o código desenvolvido na POC;
 - preparar a aplicação para produção e ajustar o backend;
-- integrar a aplicação ao Azure SQL Database;
+- integrar a aplicação ao PostgreSQL no Supabase;
 - preparar o container definitivo e configurar o deploy;
 - finalizar e publicar o frontend;
 - implementar tratamento de erros;
@@ -686,33 +686,32 @@ Custo estimado do frontend em 12 meses = R$ 1.224,00
 
 ---
 
-## 4.5. Azure SQL Database em produção
+## 4.5. Supabase em produção
 
-Na POC é utilizada a camada gratuita. Para o cenário implementado adotou-se postura mais
-conservadora: embora seja possível que o volume permaneça dentro da camada gratuita, não é
-adequado assumir que uma aplicação operacional dependerá integralmente do Free Tier.
+Na POC é utilizado o plano Free. Para o cenário implementado adotou-se postura mais
+conservadora: uma aplicação operacional não deve depender de projeto que pausa após uma
+semana de inatividade nem do teto de 500 MB.
 
-Foi constituída uma **reserva orçamentária anual**, dimensionada a partir do preço público da
-camada General Purpose serverless, de **US$ 0,5218 por vCore-hora**:
-
-```text
-Reserva mensal adotada = US$ 24,51
-Equivale a aproximadamente 47 vCore-horas de compute por mês
-                           além do limite gratuito
-Reserva anual          = US$ 294,12
-US$ 294,12 × R$ 5,10   = R$ 1.500,00
-```
-
-A reserva cobre consumo adicional de processamento, crescimento de armazenamento acima dos
-32 GB gratuitos, aumento no volume de consultas e armazenamento de backup. Caso a aplicação
-permaneça dentro dos limites gratuitos, o custo realizado será inferior à reserva.
+Foi adotado o plano **Pro** do Supabase, cujo preço público é de **US$ 25 por mês** e inclui
+PostgreSQL gerenciado, 8 GB de disco por projeto, 100 GB de file storage, 250 GB de egress,
+backups diários com retenção de 7 dias e ausência de pausa por inatividade.
 
 ```text
-Reserva anual para Azure SQL Database = R$ 1.500,00
+US$ 25 × 12 meses = US$ 300 por ano
+US$ 300 × R$ 5,10 = R$ 1.530,00
+Valor adotado na consolidação     = R$ 1.500,00
 ```
 
-Esse valor não representa preço fixo contratado da Microsoft, e sim estimativa orçamentária.
-Por depender de consumo, foi classificado como **custo variável**.
+O arredondamento para R$ 1.500,00 mantém a consolidação já calculada. O valor cobre o plano
+Pro; consumo acima de 8 GB de disco ou da cota de egress seria cobrado à parte e constitui
+gatilho de revisão.
+
+```text
+Custo anual do Supabase Pro = R$ 1.500,00
+```
+
+Por admitir overage conforme o volume de dados, o item permanece classificado como **custo
+variável** na consolidação.
 
 ---
 
@@ -743,10 +742,9 @@ Custo estimado Red Hat/OpenShift em 12 meses = R$ 6.431,10
 ### 4.6.1. Observações sobre a estimativa
 
 - A tabela do ROSA **não inclui a infraestrutura subjacente** (instâncias de computação,
-  tráfego de rede, armazenamento). Como a solução já utiliza Azure SQL Database, a
-  alternativa coerente em produção seria o Azure Red Hat OpenShift; o ROSA foi adotado como
-  referência por publicar preços abertos que permitem verificação, e a ordem de grandeza é
-  equivalente.
+  tráfego de rede, armazenamento). O banco permanece no **Supabase**, fora do cluster; o
+  ROSA foi adotado apenas como referência de preço aberto para o ambiente de execução, e a
+  ordem de grandeza é equivalente à de um OpenShift gerenciado mínimo.
 - O valor corresponde ao **dimensionamento mínimo**. Necessidades de redundância, alta
   disponibilidade ou mais vCPU elevam o custo proporcionalmente.
 - O preço reservado de 1 ano (US$ 0,114 por 4vCPU/hora) representa desconto relevante frente
@@ -836,7 +834,7 @@ que a ausência seja compreendida como decisão fundamentada, e não como omiss�
 |---|---|---|
 | Integração com as fontes de dados | R$ 0 | A solução consome os dados já extraídos e disponibilizados pela operação, sem integração automatizada com sistemas de origem no escopo atual |
 | Adequação à LGPD | R$ 0 | Os dados tratados são operacionais de equipamentos (portas, alarmes, ordens de manutenção), sem dados pessoais |
-| Segurança e controle de acesso | R$ 0 | Atendido pelos controles nativos do Azure e do OpenShift, sem contratação de ferramenta adicional |
+| Segurança e controle de acesso | R$ 0 | Atendido pelos controles nativos do Supabase e do OpenShift, sem contratação de ferramenta adicional |
 | Treinamento de usuários | R$ 0 | Interface destinada a equipe já familiarizada com os indicadores operacionais |
 | Licenciamento de software | R$ 0 | Stack integralmente open source |
 
@@ -867,7 +865,7 @@ desenvolvimento.
 
 | Item | Valor anual estimado |
 |---|---:|
-| Reserva orçamentária para Azure SQL Database | R$ 1.500,00 |
+| Supabase Pro | R$ 1.500,00 |
 | **Total de custos variáveis estimados** | **R$ 1.500,00** |
 
 ### Custos operacionais incrementais
@@ -908,12 +906,12 @@ de orçamento de investimento:
 |---|---|---:|
 | **CAPEX** — investimento inicial | Aprimoramento e implantação | R$ 18.000,00 |
 | **OPEX fixo anual** | Vercel Pro (R$ 1.224,00) + Red Hat/OpenShift (R$ 6.431,10) + sustentação (R$ 3.360,00) | R$ 11.015,10 |
-| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX variável anual** | Supabase Pro | R$ 1.500,00 |
 | **OPEX total anual** | | R$ 12.515,10 |
 | **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
 
 A sustentação foi classificada como OPEX fixo por não variar com o número de portas
-monitoradas. O Azure SQL Database é o único item cujo consumo escala com o volume de dados e,
+monitoradas. O Supabase é o único item cujo consumo escala com o volume de dados e,
 portanto, com a quantidade de portas.
 
 ```text
@@ -926,7 +924,7 @@ Custo variável por porta ao ano = R$ 1.500,00 ÷ 528 portas = R$ 2,84
 
 ### 4.12.1. Distribuição mensal
 
-| Mês | Investimento inicial | Vercel | Red Hat | Azure SQL | Sustentação | Total do mês | Acumulado |
+| Mês | Investimento inicial | Vercel | Red Hat | Supabase | Sustentação | Total do mês | Acumulado |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 1 | R$ 18.000,00 | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 19.042,93 | R$ 19.042,93 |
 | 2 | — | R$ 102,00 | R$ 535,93 | R$ 125,00 | R$ 280,00 | R$ 1.042,93 | R$ 20.085,86 |
@@ -952,9 +950,8 @@ Red Hat.
 - **Vercel e Red Hat:** diluídos linearmente, por serem assinaturas recorrentes. Na hipótese
   de pagamento antecipado do compromisso anual do OpenShift, os R$ 6.431,10 migram
   integralmente para o mês 1, elevando-o a R$ 24.938.
-- **Azure SQL:** diluído linearmente por representar reserva orçamentária, e não contrato. O
-  desembolso real ocorrerá apenas se e quando os limites gratuitos forem ultrapassados,
-  podendo concentrar-se nos meses finais conforme o crescimento da base.
+- **Supabase:** diluído linearmente, correspondente ao plano Pro mensal. O desembolso
+  real pode subir se houver overage de disco ou egress acima da cota do Pro.
 - **Sustentação:** diluída linearmente, refletindo a premissa de 4 horas mensais.
 
 ### 4.12.3. Concentração do desembolso
@@ -1013,7 +1010,7 @@ trabalhistas incidentes sobre a mesma remuneração bruta.
 ### 4.13.3. Sensibilidade cambial
 
 Três itens da projeção estão originalmente denominados em dólar — Vercel Pro, Red Hat/OpenShift
-e a reserva do Azure SQL Database — somando R$ 9.155,10, ou 30% do custo-base:
+e o Supabase Pro — somando R$ 9.155,10, ou 30% do custo-base:
 
 | Cotação | Parcela em dólar | Total em 12 meses | Variação |
 |---|---:|---:|---:|
@@ -1046,7 +1043,7 @@ Os valores devem ser revisados caso ocorram mudanças como:
 - necessidade de suporte recorrente acima das 4 horas mensais previstas;
 - necessidade de retreinamento completo do modelo durante os 12 meses;
 - necessidade de ambiente Red Hat/OpenShift maior ou com redundância;
-- consumo do banco Azure acima da reserva prevista;
+- consumo do Supabase acima da cota do plano Pro;
 - adição de membros ao plano Vercel;
 - necessidade de integração automatizada com os sistemas de origem;
 - maior necessidade de segurança ou observabilidade;
@@ -1308,7 +1305,7 @@ suficiente para absorver as 9 verificações adicionais por dia útil.
 |---|---|---:|
 | **CAPEX** | Aprimoramento e implantação (seção 4.3) | R$ 18.000,00 |
 | **OPEX fixo anual** | Vercel Pro + Red Hat/OpenShift + sustentação | R$ 11.015,10 |
-| **OPEX variável anual** | Reserva do Azure SQL Database | R$ 1.500,00 |
+| **OPEX variável anual** | Supabase Pro | R$ 1.500,00 |
 | **OPEX total anual** | | R$ 12.515,10 |
 | **Custo total do ano 1** | CAPEX + OPEX | R$ 30.515,10 |
 
@@ -1675,8 +1672,8 @@ revisão com impacto financeiro quantificado, e não por acréscimo percentual.
 | Cotação do dólar comercial | US$ 1 = R$ 5,10 | Cotação comercial de mercado | 09/09/2026 |
 | Red Hat OpenShift — taxa de cluster | US$ 263/ano | Preços públicos do Red Hat OpenShift Service on AWS (ROSA) | 10/09/2026 |
 | Red Hat OpenShift — worker node 4 vCPU | US$ 998/ano | ROSA, compromisso reservado de 1 ano (US$ 0,114 por 4vCPU/hora) | 10/09/2026 |
-| Azure SQL Database — camada gratuita | 100.000 vCore-segundos, 32 GB de dados, 32 GB de backup por mês | Documentação oficial da Microsoft | 10/09/2026 |
-| Azure SQL Database — compute serverless | US$ 0,5218 por vCore-hora | Tabela de preços do Azure SQL Database, General Purpose serverless | 10/09/2026 |
+| Supabase Free | 500 MB de banco, 1 GB de storage, 5 GB de egress, pausa após 1 semana | Tabela pública de preços do Supabase | 10/09/2026 |
+| Supabase Pro | US$ 25/mês (US$ 300/ano; R$ 1.530, arredondado para R$ 1.500 na consolidação) | Tabela pública de preços do Supabase | 10/09/2026 |
 | Vercel Pro | US$ 20 por membro/mês | Página oficial de planos da Vercel | 10/09/2026 |
 | Desenvolvedor Full-Stack Pleno | R$ 9.550 a R$ 15.900/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
 | Desenvolvedor Full-Stack Júnior | R$ 6.050 a R$ 8.750/mês | Guia Salarial 2026 — Robert Half | 10/09/2026 |
