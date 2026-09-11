@@ -3,10 +3,15 @@ import { CountValue } from '../components/Card'
 import { NavIcon } from '../components/BarraNav'
 import iconMotiva from '../assets/icon_motiva.svg'
 import { useAuth } from '../context/Auth'
-import { api, asList, errorMessage, mergeDashboard } from '../lib/api'
 import { stationLabel } from '../data/stations'
+import { api, asList, errorMessage, mergeDashboard } from '../lib/api'
 import { getCachedDashboard, setCachedDashboard } from '../lib/dashboardCache'
-import { getCachedPrediction, setCachedPrediction } from '../lib/predictionCache'
+import {
+  getCachedPrediction,
+  normalizePrediction,
+  predictionRun,
+  setCachedPrediction,
+} from '../lib/predictionCache'
 import './Dashboard.css'
 
 function ArrowIcon() {
@@ -85,23 +90,8 @@ function Dashboard({ onNavigate }) {
 
           if (!getCachedPrediction()?.items?.length) {
             const list = asList(latestResult.value)
-            const nextRunData = {
-              id: latestResult.value?.id || '',
-              horizon_days: latestResult.value?.horizon_days || 7,
-              total_doors_evaluated: latestResult.value?.total_doors_evaluated || 0,
-              total_doors_at_risk: latestResult.value?.total_doors_at_risk || 0,
-              created_at: latestResult.value?.created_at || '',
-            }
-            const nextItems = list.map((item) => ({
-              door_id: item.door_id ?? item.id,
-              run_id: item.run_id || '',
-              station_code: item.station_code || '',
-              station_name: stationLabel(item.station_code) || item.station_name || item.station_code || '',
-              platform: item.platform || 'P1',
-              door_number: item.door_number,
-              sap_tag: item.sap_tag || `SP04-6-PSD-${item.station_code || 'BUT'}-${item.platform || 'P1'}-PP${String(item.door_number || '01').padStart(2, '0')}`,
-              will_fail: Boolean(item.will_fail),
-            }))
+            const nextRunData = predictionRun(latestResult.value)
+            const nextItems = list.map(normalizePrediction)
             setCachedPrediction(nextRunData, nextItems)
           }
         } else if (!cached?.predictions?.length) {

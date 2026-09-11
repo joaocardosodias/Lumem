@@ -4,31 +4,18 @@ import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useToast } from '../context/Toast'
-import { lineStations, mapStation, stationLabel } from '../data/stations'
+import { lineStations, mapStation } from '../data/stations'
 import { api, asList, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
 import { PAGE_SIZE } from '../lib/filters'
 import { invalidateInspections } from '../lib/inspectionCache'
-import { getCachedPrediction, setCachedPrediction } from '../lib/predictionCache'
+import {
+  getCachedPrediction,
+  normalizePrediction,
+  predictionRun,
+  setCachedPrediction,
+} from '../lib/predictionCache'
 import './Predicoes.css'
-
-function formatTag(stationCode, platform, doorNumber) {
-  const pad = String(doorNumber || '').padStart(2, '0')
-  return `SP04-6-PSD-${stationCode}-${platform || 'P1'}-PP${pad}`
-}
-
-function normalizeItem(item) {
-  return {
-    door_id: item.door_id ?? item.id,
-    run_id: item.run_id || '',
-    station_code: item.station_code || '',
-    station_name: stationLabel(item.station_code) || item.station_name || item.station_code || '',
-    platform: item.platform || 'P1',
-    door_number: item.door_number,
-    sap_tag: item.sap_tag || formatTag(item.station_code, item.platform, item.door_number),
-    will_fail: Boolean(item.will_fail),
-  }
-}
 
 const emptyFilters = {
   station: '',
@@ -69,15 +56,9 @@ function Predicoes({ onNavigate, params }) {
     try {
       const response = await api.predictionsLatest()
       if (response && typeof response === 'object') {
-        const nextRunData = {
-          id: response.id || '',
-          horizon_days: response.horizon_days || 7,
-          total_doors_evaluated: response.total_doors_evaluated || 0,
-          total_doors_at_risk: response.total_doors_at_risk || 0,
-          created_at: response.created_at || '',
-        }
+        const nextRunData = predictionRun(response)
         const list = asList(response.predictions || response)
-        const nextItems = list.map(normalizeItem)
+        const nextItems = list.map(normalizePrediction)
         setRunData(nextRunData)
         setItems(nextItems)
         setCachedPrediction(nextRunData, nextItems)
@@ -111,15 +92,9 @@ function Predicoes({ onNavigate, params }) {
       invalidateInspections()
 
       if (result) {
-        const nextRunData = {
-          id: result.id || '',
-          horizon_days: result.horizon_days || horizonDays,
-          total_doors_evaluated: result.total_doors_evaluated || 0,
-          total_doors_at_risk: result.total_doors_at_risk || 0,
-          created_at: result.created_at || '',
-        }
+        const nextRunData = predictionRun(result, horizonDays)
         const list = asList(result.predictions || result)
-        const nextItems = list.map(normalizeItem)
+        const nextItems = list.map(normalizePrediction)
         setRunData(nextRunData)
         setItems(nextItems)
         setCachedPrediction(nextRunData, nextItems)

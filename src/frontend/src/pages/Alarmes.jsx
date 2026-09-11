@@ -52,7 +52,7 @@ function Alarmes({ onNavigate, params }) {
   const toast = useToast()
   const cachedAlarms = getCachedAlarms()
   const [items, setItems] = useState(() => cachedAlarms || [])
-  const [loading, setLoading] = useState(() => !cachedAlarms?.length)
+  const [loading, setLoading] = useState(() => cachedAlarms === null)
   const [error, setError] = useState('')
   const [openModal, setOpenModal] = useState(false)
   const [file, setFile] = useState(null)
@@ -66,7 +66,7 @@ function Alarmes({ onNavigate, params }) {
   const [page, setPage] = useState(1)
 
   async function load(isBackground = false) {
-    if (!isBackground && !getCachedAlarms()?.length) {
+    if (!isBackground && getCachedAlarms() === null) {
       setLoading(true)
     }
     setError('')
@@ -77,7 +77,7 @@ function Alarmes({ onNavigate, params }) {
       setItems(mapped)
       setCachedAlarms(mapped)
     } catch (err) {
-      if (!getCachedAlarms()?.length) {
+      if (getCachedAlarms() === null) {
         setError(errorMessage(err))
       }
     } finally {
@@ -86,7 +86,7 @@ function Alarmes({ onNavigate, params }) {
   }
 
   useEffect(() => {
-    load(Boolean(cachedAlarms?.length))
+    load(cachedAlarms !== null)
   }, [])
 
   async function handleImportSpreadsheet(event) {

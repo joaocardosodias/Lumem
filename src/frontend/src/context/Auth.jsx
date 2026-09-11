@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { api, getToken, setToken, setUnauthorizedHandler, unwrapUser } from '../lib/api'
-import { invalidateMaintenance } from '../lib/maintenanceCache'
-import { invalidateInspections } from '../lib/inspectionCache'
+import { invalidateApplicationCache } from '../lib/appPrefetch'
 
 const AuthContext = createContext(null)
 
@@ -12,8 +11,7 @@ export function AuthProvider({ children }) {
   function logout() {
     setToken(null)
     setUser(null)
-    invalidateMaintenance()
-    invalidateInspections()
+    invalidateApplicationCache()
   }
 
   useEffect(() => {

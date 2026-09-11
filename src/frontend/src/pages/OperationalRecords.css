@@ -291,6 +291,23 @@
   grid-template-columns: minmax(190px, 1.4fr) minmax(110px, 0.85fr) minmax(120px, 0.9fr) minmax(125px, 0.9fr) minmax(180px, 1.25fr);
 }
 
+.inspecoes__table-head span:nth-child(4) {
+  text-align: center;
+}
+
+.card-inspecao__status {
+  display: flex;
+  align-self: stretch;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.card-inspecao__status select {
+  text-align: center;
+  text-align-last: center;
+}
+
 .alarmes__table-head,
 .card-alarme {
   grid-template-columns: minmax(190px, 1.35fr) minmax(150px, 1fr) minmax(180px, 1.25fr) minmax(160px, 1.15fr) minmax(170px, 1.15fr) minmax(86px, 0.55fr);

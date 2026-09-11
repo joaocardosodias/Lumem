@@ -4,7 +4,6 @@ import { PredictionLoadProvider } from './components/PredictionLoad'
 import { AuthProvider, useAuth } from './context/Auth'
 import { ToastProvider } from './context/Toast'
 import { getCurrentPage, getCurrentParams, navigateTo, subscribeToNavigation } from './lib/router'
-import { prefetchAlarms } from './lib/alarmCache'
 import Alarmes from './pages/Alarmes'
 import Dashboard from './pages/Dashboard'
 import Inspecoes from './pages/Inspecoes'
@@ -24,14 +23,6 @@ function AppShell() {
       setParams(nextParams)
     })
   }, [])
-
-  useEffect(() => {
-    if (!user) return
-    const timer = setTimeout(() => {
-      prefetchAlarms()
-    }, 1500)
-    return () => clearTimeout(timer)
-  }, [user])
 
   function handleNavigate(target, targetParams = {}, replace = false) {
     navigateTo(target, targetParams, replace)

@@ -5,13 +5,14 @@ import StationPlan from '../components/StationPlan'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, stationLabel } from '../data/stations'
-import { api, asList, errorMessage, mergeDashboard, normalizeDoors, relatedMaintenances } from '../lib/api'
+import { api, asList, errorMessage, mergeDashboard, relatedMaintenances } from '../lib/api'
 import { getCachedDashboard, setCachedDashboard, invalidateDashboard } from '../lib/dashboardCache'
 import {
   getCachedDoorDossier,
   getCachedStationDoors,
   getLastOpenedStation,
   invalidateDoorsCache,
+  loadStationDoors as loadCachedStationDoors,
   setCachedDoorDossier,
   setCachedStationDoors,
   setLastOpenedStation,
@@ -203,19 +204,20 @@ function Portas({ onNavigate, params = {} }) {
     openTooltip(code)
   }
 
-  async function loadStationDoors(code) {
+  async function loadStationDoors(code, { force = false } = {}) {
     const station = lineStations.find((item) => item.code === code)
     const cached = getCachedStationDoors(code)
     if (cached && cached.length) {
       setDoors(cached)
       setActivePlatform(cached[0]?.platform ?? station?.platforms?.[0] ?? 'P1')
       setLastPrediction(cached[0]?.last_evaluated_at || null)
+      if (force) setLoadingDoors(true)
     } else {
       setLoadingDoors(true)
     }
     setError('')
     try {
-      const next = normalizeDoors(await api.stationDoors(code), code, station?.name)
+      const next = await loadCachedStationDoors(code, station?.name, { force })
       setDoors(next)
       setCachedStationDoors(code, next)
       setActivePlatform(next[0]?.platform ?? station?.platforms?.[0] ?? 'P1')
@@ -415,7 +417,7 @@ function Portas({ onNavigate, params = {} }) {
             </div>
           </div>
           <div className="page-head__actions">
-            <Button variant="secondary" disabled={loadingDoors || busy} onClick={() => loadStationDoors(openedCode)}>
+            <Button variant="secondary" disabled={loadingDoors || busy} onClick={() => loadStationDoors(openedCode, { force: true })}>
               Atualizar dados
             </Button>
             <Button disabled={loadingDoors || busy} onClick={handlePredict}>

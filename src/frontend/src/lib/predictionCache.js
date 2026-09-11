@@ -1,7 +1,37 @@
+import { stationLabel } from '../data/stations'
+
 const STORAGE_KEY = 'motiva:latest_prediction'
 
 let memoryRunData = null
 let memoryItems = null
+
+function formatTag(stationCode, platform, doorNumber) {
+  const pad = String(doorNumber || '').padStart(2, '0')
+  return `SP04-6-PSD-${stationCode}-${platform || 'P1'}-PP${pad}`
+}
+
+export function predictionRun(response, fallbackHorizonDays = 7) {
+  return {
+    id: response?.id || '',
+    horizon_days: response?.horizon_days || fallbackHorizonDays,
+    total_doors_evaluated: response?.total_doors_evaluated || 0,
+    total_doors_at_risk: response?.total_doors_at_risk || 0,
+    created_at: response?.created_at || '',
+  }
+}
+
+export function normalizePrediction(item) {
+  return {
+    door_id: item.door_id ?? item.id,
+    run_id: item.run_id || '',
+    station_code: item.station_code || '',
+    station_name: stationLabel(item.station_code) || item.station_name || item.station_code || '',
+    platform: item.platform || 'P1',
+    door_number: item.door_number,
+    sap_tag: item.sap_tag || formatTag(item.station_code, item.platform, item.door_number),
+    will_fail: Boolean(item.will_fail),
+  }
+}
 
 export function getCachedPrediction() {
   if (memoryRunData && memoryItems && memoryItems.length) {

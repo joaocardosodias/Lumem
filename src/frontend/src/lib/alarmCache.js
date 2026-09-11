@@ -23,7 +23,7 @@ export function mapAlarm(item) {
 }
 
 export function getCachedAlarms() {
-  if (memoryAlarms && memoryAlarms.length) {
+  if (memoryAlarms !== null) {
     return memoryAlarms
   }
 
@@ -33,7 +33,7 @@ export function getCachedAlarms() {
     const raw = sessionStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed) && parsed.length) {
+    if (Array.isArray(parsed)) {
       memoryAlarms = parsed
       return parsed
     }

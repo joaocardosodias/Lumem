@@ -6,6 +6,7 @@ import Grainient from '../components/Grainient'
 import Input from '../components/Input'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
+import { prefetchApplicationData } from '../lib/appPrefetch'
 import { errorMessage } from '../lib/api'
 import './Login.css'
 
@@ -38,11 +39,7 @@ function Login() {
           brand: brandRef.current,
           logo: logoRef.current,
         },
-        task: async (onProgress) => {
-          onProgress?.({ loaded: 45, pages: 1, total: 100 })
-          await new Promise((resolve) => setTimeout(resolve, 200))
-          onProgress?.({ loaded: 100, pages: 1, total: 100 })
-        },
+        task: (onProgress) => prefetchApplicationData({ onProgress }),
         onReady: () => acceptUser(profile),
       })
     } catch (err) {

@@ -22,10 +22,11 @@ const STAGES = {
     [88, 'Publicando o modelo'],
   ],
   login: [
-    [0, 'Autenticando o acesso'],
-    [24, 'Disparando a inferência'],
-    [52, 'Avaliando as portas da linha'],
-    [78, 'Carregando as ordens de manutenção'],
+    [0, 'Preparando os dados da operação'],
+    [24, 'Carregando painel e predições'],
+    [52, 'Carregando registros operacionais'],
+    [78, 'Atualizando o status das portas'],
+    [94, 'Finalizando o acesso'],
   ],
 }
 
