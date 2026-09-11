@@ -1,0 +1,151 @@
+---
+title: "Requisitos do Sistema"
+description: "Documentação dos requisitos funcionais e não funcionais da plataforma de manutenção preditiva de Portas de Plataforma."
+---
+
+# Requisitos do Sistema
+
+## Objetivos
+
+Desenvolver uma solução de manutenção preditiva para Portas de Plataforma (PSDs) na qual dados históricos de alarmes e manutenção sejam processados por modelos de machine learning para identificar ativos com risco de falha e apoiar a priorização de intervenções pela equipe de Engenharia de Manutenção.
+
+## Benefícios do projeto
+
+- Redução de falhas e indisponibilidades operacionais.
+- Otimização dos planos de manutenção.
+- Redução de custos com manutenção corretiva.
+- Aumento da segurança operacional.
+- Uso mais eficiente dos dados disponíveis.
+- Base para evolução para manutenção prescritiva.
+
+## Escopo
+
+Desenvolver um modelo analítico preditivo baseado em dados históricos das PSDs, incluindo:
+
+- Análise exploratória dos dados (EDA).
+- Tratamento e preparação da base.
+- Identificação de variáveis relevantes para previsão de falhas.
+- Desenvolvimento de modelos de machine learning para predição.
+- Avaliação de performance dos modelos.
+- Geração de insights operacionais.
+- Proposta de visualização por dashboard ou output analítico.
+
+**Usuários:** equipe de Engenharia de Manutenção.
+
+**Validação:** líder técnico e área de manutenção.
+
+**Aplicação:** suporte à decisão de manutenção e priorização de intervenções.
+
+Esta documentação estabelece a referência funcional e técnica para a validação da plataforma. Os requisitos foram definidos a partir do problema de negócio, dos dados disponibilizados e dos fluxos implementados para autenticação, ingestão de dados, predição e acompanhamento das inspeções. A solução apoia a decisão da equipe de manutenção; ela não substitui a avaliação técnica nem executa intervenções diretamente nos ativos.
+
+## Classificação dos requisitos
+
+Os requisitos são classificados conforme sua prioridade para a operação do sistema:
+
+- **Essenciais:** requisitos sem os quais o sistema não funciona.
+- **Importantes:** requisitos cuja ausência permite o funcionamento do sistema, mas com debilidades.
+- **Desejáveis:** requisitos opcionais cuja ausência não impede o funcionamento correto do sistema.
+
+As classificações orientam a priorização do desenvolvimento e da validação. Um requisito classificado como essencial deve ser atendido para que a entrega seja considerada funcional; requisitos importantes devem ser avaliados antes da validação operacional; e requisitos desejáveis podem ser planejados para evoluções futuras.
+
+## Fluxo coberto pelos requisitos
+
+Os requisitos funcionais representam o fluxo principal da plataforma:
+
+1. O usuário se autentica e acessa a aplicação com as permissões correspondentes ao seu perfil.
+2. A equipe importa alarmes e registros de manutenção ou cadastra uma intervenção manualmente.
+3. O sistema valida e consolida os dados recebidos para alimentar as análises.
+4. O usuário inicia uma rodada de predição para as portas ativas e define o horizonte de análise.
+5. O modelo classifica as portas, e a plataforma apresenta os riscos no dashboard e nos alertas.
+6. As portas críticas são priorizadas para inspeção, cujo acompanhamento ocorre até a conclusão.
+
+Esse fluxo conecta a ingestão dos dados históricos ao objetivo de apoiar a priorização de intervenções, mantendo o profissional de manutenção como responsável pela decisão final.
+
+## Requisitos funcionais
+
+| Requisito | Descrição | Dor atendida | Classificação |
+| --- | --- | --- | --- |
+| RF01 | O sistema deve permitir o acesso por meio de e-mail e senha. | Dificuldade de controlar o acesso à plataforma. | **Essencial** |
+| RF02 | O sistema deve permitir que somente usuários autenticados acessem os dados e recursos protegidos. | Risco de acesso não autorizado a dados operacionais e de manutenção. | **Essencial** |
+| RF03 | O usuário deve poder importar arquivos CSV ou XLSX com o histórico de alarmes das portas. | Processamento manual e descentralizado dos registros de alarmes. | **Essencial** |
+| RF04 | O usuário deve poder importar registros de manutenção corretiva, programada, preventiva e alarmes. | Informações de manutenção armazenadas em diferentes fontes e formatos. | **Essencial** |
+| RF05 | O usuário deve poder cadastrar manualmente e consultar registros de manutenção. | Falta de centralização e dificuldade de acompanhamento das intervenções. | **Importante** |
+| RF06 | O sistema deve permitir filtrar manutenções, alertas e inspeções por estação, período, prioridade ou status. | Dificuldade para localizar informações e priorizar atividades. | **Importante** |
+| RF07 | O usuário deve poder iniciar uma rodada de predição para as portas ativas. | Manutenção predominantemente reativa e ausência de previsões sistemáticas. | **Essencial** |
+| RF08 | O sistema deve permitir informar o horizonte de previsão, utilizando sete dias como padrão. | Falta de padronização do período utilizado para planejamento das intervenções. | **Importante** |
+| RF09 | O sistema deve classificar cada porta como estável ou em risco de falha com base nos dados históricos. | Dificuldade de identificar antecipadamente portas com possibilidade de falha. | **Essencial** |
+| RF10 | O sistema deve apresentar indicadores de portas monitoradas, portas em risco, inspeções e estações críticas. | Falta de visão consolidada sobre a situação operacional dos ativos. | **Importante** |
+| RF11 | O sistema deve destacar portas e estações críticas e gerar inspeções prioritárias para ativos identificados como em risco. | Dificuldade para transformar previsões em ações de manutenção priorizadas. | **Importante** |
+
+### Descrição detalhada dos requisitos funcionais
+
+**RF01:** O sistema deve permitir o acesso de usuários previamente cadastrados por meio de e-mail e senha, validando as credenciais informadas e disponibilizando a plataforma somente após a autenticação bem-sucedida.
+
+**RF02:** O sistema deve permitir que somente usuários autenticados acessem os dados operacionais, históricos de manutenção, resultados das predições e demais recursos protegidos da plataforma.
+
+**RF03:** O sistema deve permitir o envio de arquivos nos formatos CSV ou XLSX contendo o histórico de alarmes das portas, realizando a leitura e o processamento dos registros para armazenamento na base de dados.
+
+**RF04:** O sistema deve permitir a importação de registros de manutenção corretiva, programada, preventiva e alarmes, identificando o tipo de registro e associando as informações à respectiva estação, plataforma ou porta.
+
+**RF05:** O sistema deve permitir o cadastro manual de registros de manutenção, incluindo informações como estação, localização, tipo de ordem, período, duração, sintomas, descrição, causa e ação executada, além de permitir a consulta desses registros posteriormente.
+
+**RF06:** O sistema deve permitir que o usuário filtre os registros de manutenções, alertas e inspeções por estação, período, prioridade ou status, apresentando somente os dados compatíveis com os critérios selecionados.
+
+**RF07:** O sistema deve permitir que o usuário inicie uma rodada de predição para as portas ativas, utilizando os dados históricos de alarmes e manutenção como entrada para o modelo de inteligência artificial.
+
+**RF08:** O sistema deve permitir que o usuário informe o horizonte de previsão da análise, representado pela quantidade de dias futuros avaliados pelo modelo, utilizando sete dias como valor padrão.
+
+**RF09:** O sistema deve analisar os dados históricos de cada porta e classificá-la como estável ou em risco de falha, considerando os padrões identificados pelo modelo preditivo no horizonte de tempo configurado.
+
+**RF10:** O sistema deve apresentar um dashboard operacional com indicadores consolidados, incluindo a quantidade total de portas monitoradas, portas em risco, inspeções pendentes, inspeções concluídas e estações com maior criticidade.
+
+**RF11:** O sistema deve destacar as portas e estações classificadas como críticas e gerar automaticamente inspeções prioritárias para os ativos identificados como em risco, vinculando cada inspeção ao respectivo resultado da predição.
+
+## Requisitos não funcionais
+
+| Requisito | Descrição | Dor atendida | Classificação |
+| --- | --- | --- | --- |
+| RNF01 | O sistema deve proteger as funcionalidades restritas por autenticação e autorização de usuários. | Acesso indevido às funcionalidades e alterações não autorizadas. | **Essencial** |
+| RNF02 | O sistema deve proteger dados operacionais, de manutenção e de ativos contra acesso não autorizado. | Risco de vazamento, manipulação ou uso indevido de dados estratégicos. | **Essencial** |
+| RNF03 | O sistema deve tratar dados pessoais conforme a legislação aplicável, especialmente informações de usuários. | Uso inadequado de dados pessoais e riscos de não conformidade legal. | **Importante** |
+| RNF04 | A comunicação entre frontend, backend, banco de dados e serviço de IA deve utilizar conexões seguras. | Interceptação ou alteração de informações durante a transmissão. | **Importante** |
+| RNF05 | O sistema deve preservar a integridade dos dados e evitar duplicidade ou perda durante importações e predições. | Inconsistências que comprometem os dados e os resultados das predições. | **Essencial** |
+| RNF06 | O sistema deve validar formatos, campos obrigatórios, tipos de arquivo e inconsistências antes de armazenar os dados. | Entrada de dados inválidos, erros de processamento e retrabalho. | **Essencial** |
+| RNF07 | A interface deve permitir que a equipe de manutenção consulte riscos e execute ações sem conhecimento técnico de programação. | Dificuldade de uso por profissionais não especializados em tecnologia. | **Importante** |
+| RNF08 | A arquitetura deve permitir o aumento da quantidade de portas, estações, usuários e registros históricos sem reestruturação completa. | Limitações de capacidade e necessidade de reconstrução da solução. | **Desejável** |
+| RNF09 | O código deve ser modular, documentado e testável, permitindo a evolução independente do frontend, backend e modelo de machine learning. | Dificuldade para corrigir erros, manter o sistema e adicionar funcionalidades. | **Importante** |
+
+### Descrição detalhada dos requisitos não funcionais
+
+**RNF01:** O sistema deve proteger as funcionalidades restritas por meio de autenticação e autorização de usuários, validando as credenciais e permitindo que cada usuário acesse somente os recursos compatíveis com seu perfil e nível de permissão.
+
+**RNF02:** O sistema deve proteger dados operacionais, registros de manutenção e informações dos ativos contra acesso não autorizado, alteração indevida ou exposição, utilizando mecanismos adequados de controle e restrição de acesso.
+
+**RNF03:** O sistema deve tratar os dados pessoais dos usuários conforme a legislação aplicável, especialmente a LGPD, coletando, armazenando e utilizando apenas as informações necessárias para autenticação, identificação e operação da plataforma.
+
+**RNF04:** O sistema deve utilizar conexões seguras e mecanismos de criptografia na comunicação entre frontend, backend, banco de dados e serviço de inteligência artificial, garantindo a proteção das informações durante a transmissão.
+
+**RNF05:** O sistema deve preservar a integridade dos dados durante as etapas de importação, armazenamento, processamento e predição, evitando registros duplicados, perda de informações ou associações incorretas entre portas, alarmes e manutenções.
+
+**RNF06:** O sistema deve validar os formatos dos arquivos, os campos obrigatórios, os tipos de dados, os tipos de arquivo permitidos e possíveis inconsistências antes de armazenar as informações na base de dados.
+
+**RNF07:** A interface deve apresentar informações, alertas e ações de forma clara, organizada e intuitiva, permitindo que a equipe de manutenção consulte riscos, analise ativos e registre intervenções sem conhecimento técnico de programação.
+
+**RNF08:** A arquitetura deve suportar o crescimento da quantidade de portas, estações, usuários e registros históricos, mantendo o desempenho e o funcionamento do sistema sem exigir uma reestruturação completa da solução.
+
+**RNF09:** O código deve ser desenvolvido de forma modular, documentada e testável, permitindo a manutenção, correção de falhas e evolução independente do frontend, backend, banco de dados e modelo de machine learning.
+
+## Rastreabilidade da solução
+
+A implementação atual possui correspondência direta com os principais grupos de requisitos:
+
+| Grupo de requisitos | Evidência na solução |
+| --- | --- |
+| RF01–RF02 e RNF01–RNF04 | Tela de login, sessão autenticada, middleware de autenticação e comunicação entre os serviços. |
+| RF03–RF04, RNF05 e RNF06 | Upload de alarmes e manutenções, validação de arquivos, processamento assíncrono e registro do status da importação. |
+| RF05–RF06 | Telas de Manutenções, Alertas e Inspeções, com cadastro, consulta, filtros e paginação. |
+| RF07–RF09 | Serviço de machine learning, execução de rodada de predição, horizonte padrão de sete dias e classificação das portas. |
+| RF10–RF11 | Dashboard operacional, ranking de estações críticas, alertas e geração de inspeções vinculadas às predições. |
+| RNF07–RNF09 | Interface orientada à equipe de manutenção, separação entre frontend, backend e modelo, testes automatizados e documentação técnica. |
+
+Essa rastreabilidade deve ser atualizada quando novos fluxos forem adicionados ou quando um requisito tiver sua implementação alterada.
