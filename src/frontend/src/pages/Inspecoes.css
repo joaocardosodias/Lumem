@@ -493,73 +493,30 @@
   -webkit-appearance: none;
   width: 100%;
   min-height: 30px;
-  padding: 4px 24px 4px 10px;
-  border: 1px solid transparent;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--interactive-border, #d7dffd);
   border-radius: 6px;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2352647F' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  color: #ffffff;
-  font-size: 12px;
+  color: var(--ink, #172e52);
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 1.35;
   cursor: pointer;
   outline: none;
-  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.card-inspecao__status select.status-select--pending {
-  background-color: #ff003b;
-  border-color: #ff003b;
-  color: #ffffff;
+.card-inspecao__status select:hover {
+  border-color: #a5b4fa;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
-.card-inspecao__status select.status-select--pending:hover {
-  background-color: #e60035;
-  border-color: #e60035;
-  box-shadow: 0 2px 6px rgba(255, 0, 59, 0.35);
-}
-
-.card-inspecao__status select.status-select--pending:focus {
-  box-shadow: 0 0 0 2px rgba(255, 0, 59, 0.4);
-}
-
-.card-inspecao__status select.status-select--in_progress {
-  background-color: #ffaa00;
-  border-color: #ffaa00;
-  color: #ffffff;
-}
-
-.card-inspecao__status select.status-select--in_progress:hover {
-  background-color: #e69900;
-  border-color: #e69900;
-  box-shadow: 0 2px 6px rgba(255, 170, 0, 0.35);
-}
-
-.card-inspecao__status select.status-select--in_progress:focus {
-  box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.4);
-}
-
-.card-inspecao__status select.status-select--completed {
-  background-color: #00c853;
-  border-color: #00c853;
-  color: #ffffff;
-}
-
-.card-inspecao__status select.status-select--completed:hover {
-  background-color: #00b34a;
-  border-color: #00b34a;
-  box-shadow: 0 2px 6px rgba(0, 200, 83, 0.35);
-}
-
-.card-inspecao__status select.status-select--completed:focus {
-  box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.4);
-}
-
-.card-inspecao__status select option {
-  background: #ffffff;
-  color: var(--ink, #172e52);
-  font-weight: 600;
+.card-inspecao__status select:focus {
+  border-color: var(--brand, #3f00ff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 2px rgba(63, 0, 255, 0.12);
 }
 
 .card-inspecao-actions {
