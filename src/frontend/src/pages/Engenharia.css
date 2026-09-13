@@ -96,6 +96,11 @@
   box-shadow: 0 0 0 4px var(--brand-soft, #f0f5ff);
 }
 
+.engenharia-status-dot--stable {
+  background: #64748b;
+  box-shadow: 0 0 0 4px #f1f5f9;
+}
+
 .engenharia-tabs {
   display: flex;
   gap: 0;
@@ -768,8 +773,21 @@
   background: #9aa8ba;
 }
 
-.engenharia .badge-tag.is-active::before {
+.engenharia .badge-tag.is-active::before,
+.engenharia .badge-tag.is-production::before {
   background: var(--brand, #3f00ff);
+}
+
+.engenharia .badge-tag.is-completed::before {
+  background: #00c853;
+}
+
+.engenharia .badge-tag.is-running::before {
+  background: #ffaa00;
+}
+
+.engenharia .badge-tag.is-failed::before {
+  background: #ff003b;
 }
 
 .engenharia .badge-tag.is-muted {

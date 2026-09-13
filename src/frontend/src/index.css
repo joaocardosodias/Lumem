@@ -16,6 +16,26 @@
   --nav-collapsed: 74px;
   --font: 'Manrope', 'Segoe UI', sans-serif;
   --grad-brand: linear-gradient(145deg, #6a28ff 0%, #3f00ff 100%);
+  --status-red: #ff003b;
+  --status-red-bg: #fff0f3;
+  --status-red-border: #ffb8c6;
+  --status-red-text: #d90032;
+  --status-yellow: #ffaa00;
+  --status-yellow-bg: #fff9e6;
+  --status-yellow-border: #ffe299;
+  --status-yellow-text: #b86200;
+  --status-green: #00c853;
+  --status-green-bg: #eafff2;
+  --status-green-border: #9cf2bd;
+  --status-green-text: #008a38;
+  --status-blue: #3f00ff;
+  --status-blue-bg: #f0f3ff;
+  --status-blue-border: #c5d0ff;
+  --status-blue-text: #3f00ff;
+  --status-gray: #64748b;
+  --status-gray-bg: #f8fafc;
+  --status-gray-border: #e2e8f0;
+  --status-gray-text: #475569;
 }
 
 *,

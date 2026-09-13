@@ -442,7 +442,11 @@
 }
 
 .card-alarme__open {
-  color: #d12b3a !important;
+  color: #ff003b !important;
+}
+
+.card-alarme__normalized {
+  color: #00993e !important;
 }
 
 .card-alarme-actions {

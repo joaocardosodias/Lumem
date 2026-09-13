@@ -392,11 +392,11 @@
 }
 
 .portas__status-risk {
-  color: #d12b3a;
+  color: #ff003b;
 }
 
 .portas__status-ok {
-  color: #16a34a;
+  color: #475569;
 }
 
 .portas__dossier-actions {
@@ -614,12 +614,12 @@
   display: block;
   height: 100%;
   border-radius: 99px;
-  background: #e23b4a;
+  background: #ff003b;
 }
 
 .portas-risk em {
   min-width: 36px;
-  color: #e23b4a;
+  color: #ff003b;
   font-style: normal;
   font-weight: 700;
   font-size: 13px;
@@ -631,15 +631,17 @@
   min-width: 88px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, #e23b4a 14%, white);
-  color: #e23b4a;
+  background: #fff0f3;
+  color: #d90032;
+  border: 1px solid #ffb8c6;
   font-size: 13px;
   font-weight: 700;
 }
 
 .portas-status.is-ok {
-  background: var(--brand-soft);
-  color: var(--brand);
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
 }
 
 .portas__actions {
@@ -689,10 +691,6 @@
 }
 
 
-
-/* ==========================================================================
-   MODAL DE DETALHES DA PORTA (INSPECTOR TÉCNICO)
-   ========================================================================== */
 
 .portas-modal-backdrop {
   position: fixed;
@@ -832,15 +830,15 @@
 }
 
 .door-status-banner.is-risk {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: #fff0f3;
+  border: 1px solid #ff99ab;
+  color: #d90032;
 }
 
 .door-status-banner.is-ok {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
 }
 
 .door-status-banner__info {
@@ -970,15 +968,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #fff8f8;
-  border: 1px solid #fed7d7;
+  background: #fff5f7;
+  border: 1px solid #ffd1da;
   border-radius: 8px;
   font-size: 12.5px;
 }
 
 .alarm-main strong {
   display: block;
-  color: #c53030;
+  color: #ff003b;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1021,9 +1019,9 @@
 .maint-badge {
   font-size: 12px;
   font-weight: 800;
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
   padding: 2px 7px;
   border-radius: 4px;
   white-space: nowrap;

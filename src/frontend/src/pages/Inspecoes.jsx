@@ -466,6 +466,7 @@ function Inspecoes({ onNavigate, params }) {
                     <label className="card-inspecao__status" onClick={(event) => event.stopPropagation()}>
                       <span>Status</span>
                       <select
+                        className={`status-select--${item.status}`}
                         value={item.status}
                         onChange={(event) => handleStatus(item.id, event.target.value)}
                       >

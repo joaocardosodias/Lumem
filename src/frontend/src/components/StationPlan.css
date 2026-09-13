@@ -166,9 +166,9 @@
 }
 
 .station-plan__key--risk {
-  border-color: #c8953f;
-  background: #fff7e8;
-  color: #8d570e;
+  border-color: #ff003b;
+  background: #ff003b;
+  color: #ffffff;
 }
 
 .station-plan__key--selected {
@@ -272,7 +272,8 @@
 }
 
 .station-plan__platform-count > span {
-  color: #8d570e;
+  color: #ff003b;
+  font-weight: 800;
 }
 
 .station-plan__deck {
@@ -552,7 +553,6 @@
   right: 2px;
 }
 
-/* Faróis (luz branca e facho luminoso) */
 .station-plan__cab-light--headlight,
 .station-plan__cab--lead .station-plan__cab-light:not(.station-plan__cab-light--taillight) {
   background: #ffffff;
@@ -567,7 +567,6 @@
   box-shadow: 0 0 5px 1.5px rgba(254, 240, 138, 0.95), 5px 0 8px 1.5px rgba(254, 240, 138, 0.55), 0 0 2px #ffffff;
 }
 
-/* Lanternas traseiras (luz vermelha) */
 .station-plan__cab-light--taillight,
 .station-plan__cab--trail .station-plan__cab-light:not(.station-plan__cab-light--headlight) {
   background: #ef4444;
@@ -741,9 +740,9 @@
 }
 
 .station-plan__door.is-risk {
-  border-color: #d4ad68;
-  background: #fff8eb;
-  color: #8d570e;
+  border-color: #ff8097;
+  background: #fff0f3;
+  color: #d90032;
 }
 
 .station-plan__door > i {
@@ -754,12 +753,13 @@
   place-items: center;
   width: 13px;
   height: 13px;
-  border: 1px solid #d4ad68;
+  border: 1px solid #ff003b;
   border-radius: 4px;
-  background: #fff1d7;
-  color: #8d570e;
+  background: #ff003b;
+  color: #ffffff;
   font-size: 9px;
   font-style: normal;
+  font-weight: 800;
 }
 
 .station-plan__door.is-selected {
@@ -852,6 +852,12 @@
   .station-plan__door.is-selected:not(:disabled):hover {
     background: var(--brand, #3f00ff);
     color: #fff;
+  }
+
+  .station-plan__door.is-risk:not(:disabled):hover {
+    border-color: #ff003b;
+    background: #ffe3e8;
+    color: #d90032;
   }
 
   .station-plan__door:not(:disabled):hover .station-plan__leaf-left { transform: translateX(-1px); }

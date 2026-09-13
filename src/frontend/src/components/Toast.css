@@ -45,11 +45,11 @@
 }
 
 .toast-item--success .toast-item__indicator {
-  background: #10b981;
+  background: #00c853;
 }
 
 .toast-item--error .toast-item__indicator {
-  background: #ef4444;
+  background: #ff003b;
 }
 
 .toast-item--info .toast-item__indicator {

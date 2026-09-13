@@ -465,7 +465,6 @@ function Portas({ onNavigate, params = {} }) {
           onSelectDoor={handleOpenDoor}
         />
 
-        {/* TABELA REGISTROS DAS PORTAS (REFERÊNCIA OPERACIONAL) */}
         <article className="portas__panel portas__records-panel" aria-labelledby="door-records-title">
           <header className="portas__doors-header portas__records-head">
             <div>
@@ -545,8 +544,6 @@ function Portas({ onNavigate, params = {} }) {
         </article>
 
         {lastPrediction ? <p className="portas__eval">Última avaliação de modelo: {lastPrediction}</p> : null}
-
-        {/* MODAL / INSPECTOR DE DETALHES DA PORTA CLICADA */}
         {openedDoor ? (
           <div className="portas-modal-backdrop" onClick={handleBackFromDoor}>
             <div
@@ -605,7 +602,6 @@ function Portas({ onNavigate, params = {} }) {
               </header>
 
               <div className="portas-modal-body">
-                {/* KPI / STATUS BANNER */}
                 <div className={`door-status-banner ${openedDoor.will_fail ? 'is-risk' : 'is-ok'}`}>
                   <div className="door-status-banner__info">
                     <span className="banner-kicker">Diagnóstico Preditivo da IA</span>
@@ -623,7 +619,6 @@ function Portas({ onNavigate, params = {} }) {
                   </div>
                 </div>
 
-                {/* TECHNICAL METRICS GRID */}
                 <div className="door-specs-grid">
                   <div className="spec-item">
                     <span>TAG SAP</span>
@@ -651,7 +646,6 @@ function Portas({ onNavigate, params = {} }) {
                   </div>
                 </div>
 
-                {/* ALARMS SECTION */}
                 <div className="door-modal-section">
                   <div className="door-modal-section__head">
                     <h4>Alarmes de Telemetria Recentes</h4>
@@ -677,7 +671,6 @@ function Portas({ onNavigate, params = {} }) {
                   )}
                 </div>
 
-                {/* MAINTENANCES SECTION */}
                 <div className="door-modal-section">
                   <div className="door-modal-section__head">
                     <h4>Histórico de Manutenções Relacionadas</h4>
@@ -700,7 +693,6 @@ function Portas({ onNavigate, params = {} }) {
                   )}
                 </div>
 
-                {/* OPEN INSPECTION FORM */}
                 <div className="door-modal-section door-modal-section--inspection">
                   <div className="door-modal-section__head">
                     <h4>Abrir Ordem de Inspeção em Campo</h4>

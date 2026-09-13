@@ -508,7 +508,7 @@ function Engenharia() {
                         <td><strong>{run.version}</strong></td>
                         <td>{run.algorithm || 'Random Forest Classifier'}</td>
                         <td>
-                          <span className={`badge-tag ${run.status === 'production' || run.status === 'completed' ? 'is-active' : ''}`}>
+                          <span className={`badge-tag is-${run.status || 'stable'}`}>
                             {trainingStatusLabel(run.status)}
                           </span>
                         </td>
@@ -532,7 +532,7 @@ function Engenharia() {
       {!loading && activeTab === 'drift' ? (
         <div className="engenharia-panel-full" id="engineering-panel-drift" role="tabpanel" aria-labelledby="engineering-tab-drift">
           <div className="drift-status-banner">
-            <span className="engenharia-status-dot" aria-hidden="true" />
+            <span className="engenharia-status-dot engenharia-status-dot--stable" aria-hidden="true" />
             <div>
               <strong>Distribuição de telemetria estável</strong>
               <p>PSI geral: {drift?.psi_score ?? '0.084'} · Limite de atenção: 0,100. As variáveis dos últimos 30 dias permanecem alinhadas ao treino.</p>

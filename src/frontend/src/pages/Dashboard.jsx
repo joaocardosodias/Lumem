@@ -132,21 +132,21 @@ function Dashboard({ onNavigate }) {
       {error && <p className="overview-error" role="alert">Não foi possível carregar o resumo: {error}</p>}
 
       <div className="overview-metrics">
-        <button className="overview-metric overview-metric--primary" type="button" onClick={() => onNavigate?.('predicoes', { status: 'fail' })}>
+        <button className="overview-metric overview-metric--primary overview-metric--risk" type="button" onClick={() => onNavigate?.('predicoes', { status: 'fail' })}>
           <span className="overview-metric__top">Portas em risco</span>
           <MetricValue value={summary?.doors_at_risk} loading={loading} />
           <span className="overview-metric__description">Horizonte de 7 dias</span>
           <span className="overview-metric__foot">{loading ? 'Carregando…' : summary ? `${summary.total_doors.toLocaleString('pt-BR')} portas na linha` : 'Resumo indisponível'}</span>
         </button>
 
-        <button className="overview-metric" type="button" onClick={() => onNavigate?.('inspecoes', { status: 'pending' })}>
+        <button className="overview-metric overview-metric--pending" type="button" onClick={() => onNavigate?.('inspecoes', { status: 'pending' })}>
           <span className="overview-metric__top">Inspeções pendentes</span>
           <MetricValue value={summary?.pending_inspections} loading={loading} />
           <span className="overview-metric__description">Aguardando execução</span>
           <span className="overview-metric__foot">Ver pendentes</span>
         </button>
 
-        <button className="overview-metric" type="button" onClick={() => onNavigate?.('inspecoes', { status: 'completed' })}>
+        <button className="overview-metric overview-metric--completed" type="button" onClick={() => onNavigate?.('inspecoes', { status: 'completed' })}>
           <span className="overview-metric__top">Inspeções concluídas</span>
           <MetricValue value={summary?.completed_inspections} loading={loading} />
           <span className="overview-metric__description">Atividades finalizadas</span>
@@ -208,7 +208,7 @@ function Dashboard({ onNavigate }) {
                     <strong>{item.sap_tag || `Porta ${item.door_number ?? '—'}`}</strong>
                     <span>{item.station_name || stationLabel(item.station_code)} · {item.platform || 'Plataforma não informada'}</span>
                   </span>
-                  <span className="overview-risk"><i aria-hidden="true" />Risco de falha</span>
+                  <span className="overview-risk">Risco de falha</span>
                   <ArrowIcon />
                 </button>
               ))}
