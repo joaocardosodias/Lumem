@@ -19,7 +19,7 @@ export const lineStations = [
   { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra, platforms: ['P1', 'P2'] },
   { code: 'OFR', name: 'Oscar Freire', photo: imgOsc, platforms: ['P1', 'P2'] },
   { code: 'PAU', name: 'Paulista', photo: imgPau, platforms: ['P1', 'P2'] },
-  { code: 'HIG', name: 'Higienópolis-Mackenzie', photo: imgHig, platforms: ['P1', 'P2'] },
+  { code: 'HIG', name: 'Higienópolis', photo: imgHig, platforms: ['P1', 'P2'] },
   { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2', 'P3', 'P4'] },
   { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2', 'P3', 'P4'] },
 ]

@@ -258,79 +258,6 @@ function Predicoes({ onNavigate, params }) {
         </div>
       </div>
 
-      {modelConfig ? (
-        <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
-          <header className="predicoes-model-profile__header">
-            <div>
-              <span className="predicoes-model-profile__status">
-                <span aria-hidden="true" />
-                Modelo em produção
-              </span>
-              <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
-              <p>Parâmetros aplicados às análises exibidas nesta página.</p>
-            </div>
-            {canRunPrediction && onNavigate ? (
-              <button
-                type="button"
-                className="predicoes-model-profile__link"
-                onClick={() => onNavigate('engenharia')}
-              >
-                Configurar em Engenharia
-                <span aria-hidden="true">→</span>
-              </button>
-            ) : null}
-          </header>
-
-          <dl className="predicoes-model-profile__grid">
-            <div className="predicoes-model-profile__item is-model">
-              <dt>Modelo</dt>
-              <dd>
-                <strong>{modelConfig.modelName}</strong>
-                <small>{modelConfig.version}</small>
-              </dd>
-            </div>
-
-            <div className="predicoes-model-profile__item is-artifact">
-              <dt>Artefato</dt>
-              <dd>
-                <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
-                <small>Arquivo serializado</small>
-              </dd>
-            </div>
-
-            <div className="predicoes-model-profile__item">
-              <dt>Limiar ativo</dt>
-              <dd>
-                <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
-                <small>Corte de classificação</small>
-              </dd>
-            </div>
-
-            <div className="predicoes-model-profile__item">
-              <dt>Horizonte</dt>
-              <dd>
-                <strong>{modelConfig.defaultHorizon} dias</strong>
-                <small>Janela padrão</small>
-              </dd>
-            </div>
-
-            <div className="predicoes-model-profile__item is-performance">
-              <dt>Desempenho no teste</dt>
-              <dd className="predicoes-model-profile__performance">
-                <span>
-                  <strong>{modelConfig.recall.replace('.', ',')}</strong>
-                  <small>Recall</small>
-                </span>
-                <span>
-                  <strong>{modelConfig.precision.replace('.', ',')}</strong>
-                  <small>Precisão</small>
-                </span>
-              </dd>
-            </div>
-          </dl>
-        </article>
-      ) : null}
-
       {loading ? <p className="page-status">Carregando dados da última rodada preditiva…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
@@ -366,6 +293,10 @@ function Predicoes({ onNavigate, params }) {
         </div>
       ) : null}
 
+      {canRunPrediction && modelConfig ? (
+        <ModelProfile modelConfig={modelConfig} onNavigate={onNavigate} />
+      ) : null}
+
       {runData && (runData.total_doors_at_risk > 0 || countRisk > 0) ? (
         <aside className="predicoes-inspection-callout" aria-label="Inspeções preventivas abertas">
           <div className="predicoes-inspection-callout__body">
@@ -385,44 +316,6 @@ function Predicoes({ onNavigate, params }) {
           </button>
         </aside>
       ) : null}
-
-      <Filtros
-        showPeriod={false}
-        dirty={filtersDirty}
-        onClear={() => {
-          setFilters(emptyFilters)
-          setPage(1)
-        }}
-      >
-        <FiltroCampo label="Busca">
-          <input
-            type="search"
-            value={filters.search}
-            onChange={updateFilter('search')}
-            placeholder="Buscar por TAG SAP, porta, estação..."
-          />
-        </FiltroCampo>
-        <FiltroCampo label="Estação">
-          <select value={filters.station} onChange={updateFilter('station')}>
-            <option value="">Todas as estações</option>
-            {lineStations.map((station) => (
-              <option key={station.code} value={station.code}>
-                {station.code} — {station.name}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Plataforma">
-          <select value={filters.platform} onChange={updateFilter('platform')}>
-            <option value="">Todas</option>
-            {platforms.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-      </Filtros>
 
       <div className="predicoes-tabs" role="tablist">
         <button
@@ -462,6 +355,44 @@ function Predicoes({ onNavigate, params }) {
           Estáveis ({countOk})
         </button>
       </div>
+
+      <Filtros
+        showPeriod={false}
+        dirty={filtersDirty}
+        onClear={() => {
+          setFilters(emptyFilters)
+          setPage(1)
+        }}
+      >
+        <FiltroCampo label="Busca">
+          <input
+            type="search"
+            value={filters.search}
+            onChange={updateFilter('search')}
+            placeholder="Buscar por TAG SAP, porta, estação..."
+          />
+        </FiltroCampo>
+        <FiltroCampo label="Estação">
+          <select value={filters.station} onChange={updateFilter('station')}>
+            <option value="">Todas as estações</option>
+            {lineStations.map((station) => (
+              <option key={station.code} value={station.code}>
+                {station.code} — {station.name}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Plataforma">
+          <select value={filters.platform} onChange={updateFilter('platform')}>
+            <option value="">Todas</option>
+            {platforms.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+      </Filtros>
 
       <section className="predicoes-list" aria-labelledby="prediction-records-title">
         <header className="predicoes-list-head">
@@ -552,7 +483,83 @@ function Predicoes({ onNavigate, params }) {
         </div>
         <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </section>
+
     </section>
+  )
+}
+
+function ModelProfile({ modelConfig, onNavigate }) {
+  return (
+    <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
+      <header className="predicoes-model-profile__header">
+        <div>
+          <span className="predicoes-model-profile__status">
+            <span aria-hidden="true" />
+            Modelo em produção
+          </span>
+          <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
+          <p>Parâmetros aplicados às análises exibidas nesta página.</p>
+        </div>
+        {onNavigate ? (
+          <button
+            type="button"
+            className="predicoes-model-profile__link"
+            onClick={() => onNavigate('engenharia')}
+          >
+            Configurar em Engenharia
+            <span aria-hidden="true">→</span>
+          </button>
+        ) : null}
+      </header>
+
+      <dl className="predicoes-model-profile__grid">
+        <div className="predicoes-model-profile__item is-model">
+          <dt>Modelo</dt>
+          <dd>
+            <strong>{modelConfig.modelName}</strong>
+            <small>{modelConfig.version}</small>
+          </dd>
+        </div>
+
+        <div className="predicoes-model-profile__item is-artifact">
+          <dt>Artefato</dt>
+          <dd>
+            <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
+            <small>Arquivo serializado</small>
+          </dd>
+        </div>
+
+        <div className="predicoes-model-profile__item">
+          <dt>Limiar ativo</dt>
+          <dd>
+            <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
+            <small>Corte de classificação</small>
+          </dd>
+        </div>
+
+        <div className="predicoes-model-profile__item">
+          <dt>Horizonte</dt>
+          <dd>
+            <strong>{modelConfig.defaultHorizon} dias</strong>
+            <small>Janela padrão</small>
+          </dd>
+        </div>
+
+        <div className="predicoes-model-profile__item is-performance">
+          <dt>Desempenho no teste</dt>
+          <dd className="predicoes-model-profile__performance">
+            <span>
+              <strong>{modelConfig.recall.replace('.', ',')}</strong>
+              <small>Recall</small>
+            </span>
+            <span>
+              <strong>{modelConfig.precision.replace('.', ',')}</strong>
+              <small>Precisão</small>
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </article>
   )
 }
 

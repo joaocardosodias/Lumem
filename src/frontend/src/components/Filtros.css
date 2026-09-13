@@ -40,13 +40,16 @@
 
 .filtros__periodos-control {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 4px;
   border: 1px solid var(--interactive-border, #d7dffd);
   border-radius: 9px;
   background: var(--interactive, #f0f3ff);
+  scrollbar-width: thin;
 }
 
 .filtros__periodos button {
@@ -227,7 +230,7 @@
   }
 
   .filtros__periodos button {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
   }
 
   .filtros__campos {
@@ -249,14 +252,7 @@
     border-radius: 12px;
   }
 
-  .filtros__periodos-control {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
-  }
-
   .filtros__periodos button {
-    width: 100%;
     padding-inline: 6px;
   }
 

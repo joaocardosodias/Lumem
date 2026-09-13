@@ -184,8 +184,6 @@ function Alarmes({ onNavigate, params }) {
     () => Math.max(...stationRows.map(([, count]) => count), 1),
     [stationRows],
   )
-  const topStations = stationRows.slice(0, 5)
-  const otherStations = stationRows.slice(5)
 
   const durations = useMemo(
     () =>
@@ -332,7 +330,7 @@ function Alarmes({ onNavigate, params }) {
                 <div className="alarmes__chart-body">
                   {typeRows.length ? (
                     typeRows.map(([label, value]) => (
-                      <div key={label} className="alarmes__bar">
+                      <div key={label} className="alarmes__bar alarmes__bar--type">
                         <strong title={label}>{label}</strong>
                         <span className="alarmes__bar-track">
                           <i style={{ width: `${(value / maxType) * 100}%` }} />
@@ -352,31 +350,16 @@ function Alarmes({ onNavigate, params }) {
                 </header>
                 <div className="alarmes__chart-body">
                   {stationRows.length ? (
-                    <div className="alarmes__bars">
-                      <div>
-                        {topStations.map(([label, value]) => (
-                          <div key={label} className="alarmes__bar">
-                            <strong title={label}>{label}</strong>
-                            <span className="alarmes__bar-track">
-                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                            </span>
-                            <em>{value}</em>
-                          </div>
-                        ))}
-                      </div>
-                      {otherStations.length ? (
-                        <div>
-                          {otherStations.map(([label, value]) => (
-                            <div key={label} className="alarmes__bar">
-                              <strong title={label}>{label}</strong>
-                              <span className="alarmes__bar-track">
-                                <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                              </span>
-                              <em>{value}</em>
-                            </div>
-                          ))}
+                    <div className="alarmes__bars alarmes__bars--full">
+                      {stationRows.map(([label, value]) => (
+                        <div key={label} className="alarmes__bar">
+                          <strong title={label}>{label}</strong>
+                          <span className="alarmes__bar-track">
+                            <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                          </span>
+                          <em>{value}</em>
                         </div>
-                      ) : null}
+                      ))}
                     </div>
                   ) : (
                     <p className="alarmes__empty">Nenhuma estação com alarmes neste recorte.</p>
