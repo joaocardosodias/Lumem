@@ -11,9 +11,11 @@ import { exportToCsv } from '../lib/exportCsv'
 import { PAGE_SIZE } from '../lib/filters'
 import { invalidateInspections } from '../lib/inspectionCache'
 import {
+  getCachedModelConfig,
   getCachedPrediction,
   normalizePrediction,
   predictionRun,
+  setCachedModelConfig,
   setCachedPrediction,
 } from '../lib/predictionCache'
 import './Predicoes.css'
@@ -41,7 +43,7 @@ function Predicoes({ onNavigate, params }) {
     ...emptyFilters,
     station: params?.station || '',
   }))
-  const [modelConfig, setModelConfig] = useState(null)
+  const [modelConfig, setModelConfig] = useState(() => getCachedModelConfig())
   const [page, setPage] = useState(1)
 
   useEffect(() => {
@@ -65,15 +67,17 @@ function Predicoes({ onNavigate, params }) {
         api.getActiveModel().catch(() => null),
       ])
       if (cfg || active) {
-        setModelConfig({
+        const nextConfig = {
           threshold: cfg?.threshold ?? 0.28,
           defaultHorizon: cfg?.default_horizon_days ?? 7,
           modelName: 'Random Forest',
           version: active?.version || 'v1.0.0',
           artifact: active?.artifact_path ? 'modelo_5.joblib' : 'modelo_5.joblib',
-          recall: active?.test_metrics?.recall ? `${(active.test_metrics.recall * 100).toFixed(1)}%` : '55.3%',
-          precision: active?.test_metrics?.precision ? `${(active.test_metrics.precision * 100).toFixed(1)}%` : '15.9%',
-        })
+          recall: active?.test_metrics?.recall ? `${(active.test_metrics.recall * 100).toFixed(1)}%` : '55,3%',
+          precision: active?.test_metrics?.precision ? `${(active.test_metrics.precision * 100).toFixed(1)}%` : '15,9%',
+        }
+        setModelConfig(nextConfig)
+        setCachedModelConfig(nextConfig)
       }
       if (response && typeof response === 'object') {
         const nextRunData = predictionRun(response)
@@ -123,15 +127,17 @@ function Predicoes({ onNavigate, params }) {
         }
         api.getMLConfig().then((cfg) => {
           if (cfg) {
-            setModelConfig((curr) =>
-              curr
+            setModelConfig((curr) => {
+              const next = curr
                 ? {
                     ...curr,
                     threshold: cfg.threshold ?? curr.threshold,
                     defaultHorizon: cfg.default_horizon_days ?? curr.defaultHorizon,
                   }
-                : null,
-            )
+                : curr
+              if (next) setCachedModelConfig(next)
+              return next
+            })
           }
         }).catch(() => null)
       }
@@ -293,8 +299,73 @@ function Predicoes({ onNavigate, params }) {
         </div>
       ) : null}
 
-      {canRunPrediction && modelConfig ? (
-        <ModelProfile modelConfig={modelConfig} onNavigate={onNavigate} />
+      {modelConfig ? (
+        <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
+          <header className="predicoes-model-profile__header">
+            <div>
+              <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
+              <p>Parâmetros aplicados às análises exibidas nesta página.</p>
+            </div>
+            {canRunPrediction && onNavigate ? (
+              <button
+                type="button"
+                className="predicoes-model-profile__link"
+                onClick={() => onNavigate('engenharia')}
+              >
+                Configurar em Engenharia
+                <span aria-hidden="true">→</span>
+              </button>
+            ) : null}
+          </header>
+
+          <dl className="predicoes-model-profile__grid">
+            <div className="predicoes-model-profile__item is-model">
+              <dt>Modelo</dt>
+              <dd>
+                <strong>{modelConfig.modelName}</strong>
+                <small>{modelConfig.version}</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-artifact">
+              <dt>Artefato</dt>
+              <dd>
+                <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
+                <small>Arquivo serializado</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Limiar ativo</dt>
+              <dd>
+                <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
+                <small>Corte de classificação</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Horizonte</dt>
+              <dd>
+                <strong>{modelConfig.defaultHorizon} dias</strong>
+                <small>Janela padrão</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-performance">
+              <dt>Desempenho no teste</dt>
+              <dd className="predicoes-model-profile__performance">
+                <span>
+                  <strong>{String(modelConfig.recall || '55,3%').replace('.', ',')}</strong>
+                  <small>Recall</small>
+                </span>
+                <span>
+                  <strong>{String(modelConfig.precision || '15,9%').replace('.', ',')}</strong>
+                  <small>Precisão</small>
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </article>
       ) : null}
 
       {runData && (runData.total_doors_at_risk > 0 || countRisk > 0) ? (
@@ -485,81 +556,6 @@ function Predicoes({ onNavigate, params }) {
       </section>
 
     </section>
-  )
-}
-
-function ModelProfile({ modelConfig, onNavigate }) {
-  return (
-    <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
-      <header className="predicoes-model-profile__header">
-        <div>
-          <span className="predicoes-model-profile__status">
-            <span aria-hidden="true" />
-            Modelo em produção
-          </span>
-          <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
-          <p>Parâmetros aplicados às análises exibidas nesta página.</p>
-        </div>
-        {onNavigate ? (
-          <button
-            type="button"
-            className="predicoes-model-profile__link"
-            onClick={() => onNavigate('engenharia')}
-          >
-            Configurar em Engenharia
-            <span aria-hidden="true">→</span>
-          </button>
-        ) : null}
-      </header>
-
-      <dl className="predicoes-model-profile__grid">
-        <div className="predicoes-model-profile__item is-model">
-          <dt>Modelo</dt>
-          <dd>
-            <strong>{modelConfig.modelName}</strong>
-            <small>{modelConfig.version}</small>
-          </dd>
-        </div>
-
-        <div className="predicoes-model-profile__item is-artifact">
-          <dt>Artefato</dt>
-          <dd>
-            <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
-            <small>Arquivo serializado</small>
-          </dd>
-        </div>
-
-        <div className="predicoes-model-profile__item">
-          <dt>Limiar ativo</dt>
-          <dd>
-            <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
-            <small>Corte de classificação</small>
-          </dd>
-        </div>
-
-        <div className="predicoes-model-profile__item">
-          <dt>Horizonte</dt>
-          <dd>
-            <strong>{modelConfig.defaultHorizon} dias</strong>
-            <small>Janela padrão</small>
-          </dd>
-        </div>
-
-        <div className="predicoes-model-profile__item is-performance">
-          <dt>Desempenho no teste</dt>
-          <dd className="predicoes-model-profile__performance">
-            <span>
-              <strong>{modelConfig.recall.replace('.', ',')}</strong>
-              <small>Recall</small>
-            </span>
-            <span>
-              <strong>{modelConfig.precision.replace('.', ',')}</strong>
-              <small>Precisão</small>
-            </span>
-          </dd>
-        </div>
-      </dl>
-    </article>
   )
 }
 

@@ -9,19 +9,43 @@ import {
   invalidatePredictionCache,
   normalizePrediction,
   predictionRun,
+  setCachedModelConfig,
   setCachedPrediction,
 } from './predictionCache'
 
-let prefetching = null
+let prefetchingEssential = null
+let prefetchingBackground = null
 
 function report(onProgress, loaded, total) {
   onProgress?.({ loaded, total, pages: loaded })
 }
 
-async function prefetchDashboard() {
-  const [dashboardResult, predictionsResult] = await Promise.allSettled([
-    api.dashboard(),
-    api.predictionsLatest(),
+export async function prefetchDashboard({ onProgress } = {}) {
+  let loaded = 0
+  const total = 4
+  report(onProgress, 0, total)
+
+  const [dashboardResult, predictionsResult, configResult, activeModelResult] = await Promise.allSettled([
+    api.dashboard().then((res) => {
+      loaded += 1
+      report(onProgress, loaded, total)
+      return res
+    }),
+    api.predictionsLatest().then((res) => {
+      loaded += 1
+      report(onProgress, loaded, total)
+      return res
+    }),
+    api.getMLConfig().then((res) => {
+      loaded += 1
+      report(onProgress, loaded, total)
+      return res
+    }).catch(() => null),
+    api.getActiveModel().then((res) => {
+      loaded += 1
+      report(onProgress, loaded, total)
+      return res
+    }).catch(() => null),
   ])
 
   const predictions =
@@ -40,6 +64,20 @@ async function prefetchDashboard() {
       asList(response.predictions || response).map(normalizePrediction),
     )
   }
+
+  const cfg = configResult.status === 'fulfilled' ? configResult.value : null
+  const active = activeModelResult.status === 'fulfilled' ? activeModelResult.value : null
+  if (cfg || active) {
+    setCachedModelConfig({
+      threshold: cfg?.threshold ?? 0.28,
+      defaultHorizon: cfg?.default_horizon_days ?? 7,
+      modelName: 'Random Forest',
+      version: active?.version || 'v1.0.0',
+      artifact: active?.artifact_path ? 'modelo_5.joblib' : 'modelo_5.joblib',
+      recall: active?.test_metrics?.recall ? `${(active.test_metrics.recall * 100).toFixed(1)}%` : '55,3%',
+      precision: active?.test_metrics?.precision ? `${(active.test_metrics.precision * 100).toFixed(1)}%` : '15,9%',
+    })
+  }
 }
 
 async function prefetchStationDoors() {
@@ -52,7 +90,6 @@ async function prefetchStationDoors() {
       try {
         await loadStationDoors(station.code, station.name)
       } catch {
-        // Uma estação indisponível não deve impedir o acesso às demais telas.
       }
     }
   }
@@ -60,36 +97,43 @@ async function prefetchStationDoors() {
   await Promise.all(Array.from({ length: workers }, work))
 }
 
-export function prefetchApplicationData({ onProgress } = {}) {
-  if (prefetching) return prefetching
+export async function prefetchEssentialData({ onProgress } = {}) {
+  if (prefetchingEssential) return prefetchingEssential
+
+  prefetchingEssential = prefetchDashboard({ onProgress }).finally(() => {
+    prefetchingEssential = null
+  })
+
+  return prefetchingEssential
+}
+
+export function prefetchBackgroundData() {
+  if (prefetchingBackground) return prefetchingBackground
 
   const tasks = [
-    prefetchDashboard,
     prefetchAlarms,
     loadMaintenance,
     loadInspections,
     prefetchStationDoors,
   ]
-  const total = tasks.length
-  let loaded = 0
-  report(onProgress, loaded, total)
 
-  prefetching = Promise.all(
+  prefetchingBackground = Promise.all(
     tasks.map(async (task) => {
       try {
         await task()
       } catch {
-        // A tela correspondente tentará novamente quando for aberta.
-      } finally {
-        loaded += 1
-        report(onProgress, loaded, total)
       }
     }),
   ).finally(() => {
-    prefetching = null
+    prefetchingBackground = null
   })
 
-  return prefetching
+  return prefetchingBackground
+}
+
+export async function prefetchApplicationData({ onProgress } = {}) {
+  await prefetchEssentialData({ onProgress })
+  prefetchBackgroundData()
 }
 
 export function invalidateApplicationCache() {

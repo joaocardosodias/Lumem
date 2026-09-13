@@ -23,9 +23,8 @@ const STAGES = {
   ],
   login: [
     [0, 'Preparando os dados da operação'],
-    [24, 'Carregando painel e predições'],
-    [52, 'Carregando registros operacionais'],
-    [78, 'Atualizando o status das portas'],
+    [24, 'Carregando resumo e predições'],
+    [75, 'Liberando o painel de operação'],
     [94, 'Finalizando o acesso'],
   ],
 }
