@@ -25,10 +25,9 @@
 .portas__eyebrow {
   margin: 0 0 2px;
   color: var(--brand, #3f00ff);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 
 .portas--station {
@@ -38,8 +37,8 @@
 
 .portas--station .page-head .portas__eyebrow {
   margin: 0 0 8px;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .portas--station .page-head__actions .ui-button {
@@ -218,7 +217,7 @@
   width: max-content;
   max-width: 84px;
   color: var(--brand);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.25;
   text-align: center;
@@ -555,8 +554,9 @@
 
 .portas-risk-chart__col strong {
   color: var(--brand);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .portas__table {
@@ -739,17 +739,16 @@
 
 .portas-modal-eyebrow span:first-child {
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
 }
 
 .portas-modal-car-tag {
   background: #eef2f7;
   color: #334155;
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   padding: 2px 7px;
   border-radius: 4px;
 }
@@ -764,7 +763,7 @@
 
 .portas-modal-sub {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted, #52647f);
 }
 
@@ -783,7 +782,7 @@
   border: 1px solid var(--interactive-border, #d7dffd);
   background: #ffffff;
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 160ms ease;
@@ -850,10 +849,10 @@
 
 .banner-kicker {
   display: block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
   margin-bottom: 4px;
   opacity: 0.85;
 }
@@ -866,7 +865,7 @@
 
 .door-status-banner p {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   opacity: 0.9;
 }
@@ -880,20 +879,21 @@
 }
 
 .door-status-banner__metric span {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .door-status-banner__metric strong {
   font-size: 26px;
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
   line-height: 1.1;
   margin: 2px 0;
 }
 
 .door-status-banner__metric small {
-  font-size: 9.5px;
+  font-size: 12px;
   opacity: 0.8;
 }
 
@@ -909,18 +909,19 @@
 
 .spec-item span {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--muted, #52647f);
   margin-bottom: 3px;
 }
 
 .spec-item strong {
   display: block;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--ink, #172e52);
   word-break: break-word;
 }
@@ -939,15 +940,15 @@
 
 .door-modal-section__head h4 {
   margin: 0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--muted, #52647f);
 }
 
 .section-counter {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   background: #e2e8f0;
   color: #475569;
@@ -972,23 +973,24 @@
   background: #fff8f8;
   border: 1px solid #fed7d7;
   border-radius: 8px;
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 
 .alarm-main strong {
   display: block;
   color: #c53030;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .alarm-main span {
-  font-size: 10px;
+  font-size: 12px;
   color: #718096;
 }
 
 .alarm-meta {
   text-align: right;
-  font-size: 10px;
+  font-size: 12px;
   color: #718096;
 }
 
@@ -999,6 +1001,7 @@
 
 .alarm-meta code {
   font-family: monospace;
+  font-variant-numeric: tabular-nums;
   background: #edf2f7;
   padding: 1px 4px;
   border-radius: 3px;
@@ -1012,11 +1015,11 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 
 .maint-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   background: #eff6ff;
   color: #1d4ed8;
@@ -1033,11 +1036,12 @@
 .maint-content strong {
   display: block;
   color: var(--ink, #172e52);
-  font-size: 12px;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .maint-content span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted, #52647f);
 }
 
@@ -1047,7 +1051,7 @@
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
   border-radius: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: #94a3b8;
   font-style: italic;
 }
@@ -1064,7 +1068,7 @@
   padding: 0 12px;
   border-radius: 8px;
   border: 1px solid var(--line, #e2e8f0);
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--ink, #172e52);
   outline: none;
   background: #ffffff;
@@ -1078,7 +1082,7 @@
 .door-insp-form .cadastrar-button {
   min-height: 38px;
   padding: 0 16px;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -1126,8 +1130,8 @@
   }
 
   .linha-map__name {
-    max-width: 52px;
-    font-size: 9px;
+    max-width: 60px;
+    font-size: 11px;
   }
 
   .door-specs-grid {

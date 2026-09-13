@@ -20,10 +20,9 @@
   gap: 8px;
   margin: 0 0 12px;
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
   text-wrap: balance;
 }
 
@@ -41,9 +40,9 @@
   max-width: 48rem;
   margin: 12px 0 0;
   color: var(--muted, #52647f);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
@@ -175,7 +174,7 @@
   border-top: 1px solid var(--interactive-border, #d7dffd);
   background: var(--interactive, #f0f3ff);
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.5;
   white-space: nowrap;
@@ -246,10 +245,9 @@
 .manutencoes__panel-head p {
   margin: 0 0 8px;
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 
 .manutencoes__panel-head h2 {
@@ -298,7 +296,7 @@
 
 .manutencoes__bar strong {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -359,7 +357,7 @@
   border-radius: 7px;
   background: #f8faff;
   color: var(--muted, #52647f);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -393,11 +391,10 @@
   margin-bottom: 5px;
   overflow: hidden;
   color: var(--muted, #52647f);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
-  text-transform: uppercase;
-  letter-spacing: 0.35px;
+  letter-spacing: normal;
   white-space: nowrap;
 }
 
@@ -405,8 +402,9 @@
   display: block;
   overflow: hidden;
   color: var(--ink, #172e52);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1.45;
   text-overflow: ellipsis;
   word-break: normal;
@@ -418,7 +416,7 @@
   border-top: 1px solid #eaf0f7;
   background: #fbfcfe;
   color: var(--muted, #52647f);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -428,7 +426,7 @@
 
 .manutencoes__list .paginacao button {
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .manutencoes-modal {
@@ -504,9 +502,9 @@
 .manutencoes-modal .cadastro-select span,
 .manutencoes-modal .planilha-import > span {
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
 }
 
 .manutencoes-modal .ui-input input,
@@ -520,8 +518,8 @@
   outline: none;
   background: #fbfcff;
   color: var(--ink, #172e52);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 550;
 }
 
 .manutencoes-modal .ui-input input:focus,
@@ -712,7 +710,7 @@
   .manutencoes__metric-top {
     align-items: flex-start;
     min-height: 30px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -730,7 +728,7 @@
   }
 
   .manutencoes__metric-description {
-    font-size: 10px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -739,7 +737,7 @@
     margin-inline: -14px;
     padding-inline: 14px;
     overflow: hidden;
-    font-size: 9px;
+    font-size: 12px;
     text-overflow: ellipsis;
   }
 

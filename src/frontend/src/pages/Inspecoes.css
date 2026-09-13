@@ -20,10 +20,9 @@
   gap: 8px;
   margin: 0 0 12px;
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
   text-wrap: balance;
 }
 
@@ -41,9 +40,9 @@
   max-width: 48rem;
   margin: 12px 0 0;
   color: var(--muted, #52647f);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
@@ -169,7 +168,7 @@
   border-top: 1px solid var(--interactive-border, #d7dffd);
   background: var(--interactive, #f0f3ff);
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.5;
   white-space: nowrap;
@@ -240,10 +239,9 @@
 .inspecoes__panel-head p {
   margin: 0 0 8px;
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 
 .inspecoes__panel-head h2 {
@@ -292,7 +290,7 @@
 
 .inspecoes__bar strong {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -361,7 +359,7 @@
   border-radius: 7px;
   background: #f8faff;
   color: var(--muted, #52647f);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -386,7 +384,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--muted, #52647f);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 180ms ease;
@@ -403,7 +401,7 @@
   border-radius: 999px;
   background: #e9eff8;
   color: var(--muted, #52647f);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -459,11 +457,10 @@
   margin-bottom: 5px;
   overflow: hidden;
   color: var(--muted, #52647f);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
-  text-transform: uppercase;
-  letter-spacing: 0.35px;
+  letter-spacing: normal;
   white-space: nowrap;
 }
 
@@ -471,8 +468,9 @@
   display: block;
   overflow: hidden;
   color: var(--ink, #172e52);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1.45;
   text-overflow: ellipsis;
   word-break: normal;
@@ -483,7 +481,7 @@
   overflow: hidden;
   margin-top: 2px;
   color: var(--muted, #52647f);
-  font-size: 10px;
+  font-size: 12px;
   font-style: normal;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -503,7 +501,7 @@
   background-repeat: no-repeat;
   background-position: right 8px center;
   color: var(--ink, #172e52);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   outline: none;
@@ -539,7 +537,7 @@
   border-radius: 6px;
   background: #ffffff;
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -571,7 +569,7 @@
   border-top: 1px solid #eaf0f7;
   background: #fbfcfe;
   color: var(--muted, #52647f);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -581,7 +579,7 @@
 
 .inspecoes__list .paginacao button {
   color: var(--brand, #3f00ff);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .inspecoes-modal {
@@ -634,9 +632,9 @@
 .inspecoes-modal .ui-input span,
 .inspecoes-modal .cadastro-select span {
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
 }
 
 .inspecoes-modal .ui-input input,
@@ -649,8 +647,8 @@
   outline: none;
   background: #ffffff;
   color: var(--ink, #172e52);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 550;
   box-shadow: 0 1px 2px rgba(23, 46, 82, 0.03);
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
@@ -755,7 +753,7 @@
 }
 
 .inspecao-tag-id {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted, #52647f);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -769,7 +767,7 @@
   align-items: center;
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -863,17 +861,18 @@
   display: block;
   margin-bottom: 3px;
   color: var(--muted, #52647f);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .inspecao-detalhe-item strong {
   display: block;
   color: var(--ink, #172e52);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
 
@@ -888,10 +887,10 @@
 .inspecao-detalhes__status-flow h4 {
   margin: 0;
   color: var(--muted, #52647f);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .inspecao-detalhes__notes-content {
@@ -927,7 +926,7 @@
   padding: 6px 12px;
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
   cursor: pointer;
@@ -1108,7 +1107,7 @@
   .inspecoes__metric-top {
     align-items: flex-start;
     min-height: 30px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -1122,7 +1121,7 @@
   }
 
   .inspecoes__metric-description {
-    font-size: 10px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -1131,7 +1130,7 @@
     margin-inline: -14px;
     padding-inline: 14px;
     overflow: hidden;
-    font-size: 9px;
+    font-size: 12px;
     text-overflow: ellipsis;
   }
 

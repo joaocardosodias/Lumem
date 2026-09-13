@@ -36,10 +36,9 @@
   gap: 8px;
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
   text-wrap: balance;
 }
 
@@ -64,8 +63,8 @@
 .overview-lead {
   margin: 12px 0 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
@@ -182,7 +181,7 @@
   min-height: 0;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
   overflow: hidden;
@@ -228,8 +227,8 @@
 
 .overview-panel__head .overview-eyebrow {
   margin-bottom: 8px;
-  font-size: 10px;
-  letter-spacing: 0.7px;
+  font-size: 13px;
+  letter-spacing: normal;
 }
 
 .overview-panel h2 {
@@ -260,7 +259,7 @@
   padding-bottom: 12px;
   border-bottom: 1px solid #edf1f7;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -276,7 +275,7 @@
   border-radius: 7px;
   background: var(--interactive);
   color: var(--brand);
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 700;
   white-space: nowrap;
   transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
@@ -325,7 +324,7 @@
   border-radius: 7px;
   background: white;
   color: var(--brand);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -419,8 +418,9 @@
 }
 
 .overview-prediction__body strong {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -428,7 +428,7 @@
 
 .overview-prediction__body > span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -445,7 +445,7 @@
   border-radius: 5px;
   background: #fff6f5;
   color: #ad4148;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -477,7 +477,7 @@
   border-top: 1px solid #eaf0f7;
   background: #fbfcfe;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
 }
@@ -514,7 +514,7 @@
 .overview-empty > span:last-child {
   max-width: 250px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -557,7 +557,7 @@
   margin-top: 24px;
   padding-top: 16px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -691,7 +691,7 @@
   }
 
   .overview-metric__top {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .overview-metric__value {
@@ -699,11 +699,11 @@
   }
 
   .overview-metric__description {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .overview-metric__foot {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .overview-panel__head {
@@ -717,7 +717,7 @@
   }
 
   .overview-panel__head .overview-eyebrow {
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .overview-panel__legend {
@@ -753,7 +753,7 @@
   .overview-risk {
     grid-column: 2;
     justify-self: start;
-    font-size: 10px;
+    font-size: 12px;
     padding: 4px 6px;
   }
 

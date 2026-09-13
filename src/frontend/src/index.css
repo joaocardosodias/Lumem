@@ -29,11 +29,13 @@ body,
 #root {
   height: 100%;
   font-family: var(--font);
+  font-variant-numeric: tabular-nums;
 }
 
 body {
   margin: 0;
   font-family: var(--font);
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--paper);
   scrollbar-width: thin;
@@ -70,6 +72,7 @@ textarea,
 select {
   font: inherit;
   font-family: var(--font);
+  font-variant-numeric: tabular-nums;
 }
 
 select option {
@@ -112,21 +115,20 @@ h1 {
 }
 
 .dashboard__kicker {
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   color: var(--muted, #52647f);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 
 .dashboard__lead {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   max-width: 48rem;
   color: var(--muted, #52647f);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
