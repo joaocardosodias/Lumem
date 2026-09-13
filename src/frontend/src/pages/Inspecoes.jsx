@@ -564,7 +564,7 @@ function Inspecoes({ onNavigate, params }) {
             <header className="inspecao-detalhes__head">
               <div>
                 <div className="inspecao-detalhes__tags">
-                  <span className="inspecao-tag-id">Ordem #{selectedInspection.id}</span>
+                  <span className="inspecao-detalhes__eyebrow">Detalhes da inspeção</span>
                   <span className={`inspecao-badge inspecao-badge--${selectedInspection.status}`}>
                     {STATUS_LABEL[selectedInspection.status] || selectedInspection.status}
                   </span>
@@ -572,11 +572,11 @@ function Inspecoes({ onNavigate, params }) {
                     {isAiInspection(selectedInspection) ? 'IA Preditiva' : 'Manual'}
                   </span>
                 </div>
-                <h2 id="detalhes-titulo">
-                  {`SP04-6-PSD-${selectedInspection.station_code}-${selectedInspection.platform}-PP${String(selectedInspection.door_number).padStart(2, '0')}`}
+                <h2 id="detalhes-titulo" title={`Ordem #${selectedInspection.id}`}>
+                  Ordem #{String(selectedInspection.id).slice(0, 8)}
                 </h2>
                 <p className="inspecao-detalhes__sub">
-                  Estação {selectedInspection.station_code} ({stationLabel(selectedInspection.station_code)}) · Plataforma {selectedInspection.platform} · Porta {String(selectedInspection.door_number).padStart(2, '0')}
+                  {`SP04-6-PSD-${selectedInspection.station_code}-${selectedInspection.platform}-PP${String(selectedInspection.door_number).padStart(2, '0')}`} · {stationLabel(selectedInspection.station_code)}
                 </p>
               </div>
               <button
@@ -592,7 +592,7 @@ function Inspecoes({ onNavigate, params }) {
             <div className="inspecao-detalhes__body">
               <div className="inspecao-detalhes__grid">
                 <div className="inspecao-detalhe-item">
-                  <span>TAG SAP</span>
+                  <span>Tag SAP</span>
                   <strong>{`SP04-6-PSD-${selectedInspection.station_code}-${selectedInspection.platform}-PP${String(selectedInspection.door_number).padStart(2, '0')}`}</strong>
                 </div>
                 <div className="inspecao-detalhe-item">
@@ -604,27 +604,27 @@ function Inspecoes({ onNavigate, params }) {
                   <strong>Plataforma {selectedInspection.platform} · Porta {String(selectedInspection.door_number).padStart(2, '0')}</strong>
                 </div>
                 <div className="inspecao-detalhe-item">
-                  <span>Origem da Ordem</span>
-                  <strong>{isAiInspection(selectedInspection) ? 'Detecção Preditiva IA' : 'Abertura Manual de Campo'}</strong>
+                  <span>Origem da ordem</span>
+                  <strong>{isAiInspection(selectedInspection) ? 'Detecção preditiva' : 'Abertura manual'}</strong>
                 </div>
                 <div className="inspecao-detalhe-item">
-                  <span>Data de Abertura</span>
+                  <span>Data de abertura</span>
                   <strong>{formatDateTime(selectedInspection.created_at)}</strong>
                 </div>
                 <div className="inspecao-detalhe-item">
-                  <span>Última Atualização</span>
+                  <span>Última atualização</span>
                   <strong>{formatDateTime(selectedInspection.updated_at)}</strong>
                 </div>
                 {selectedInspection.completed_at ? (
                   <div className="inspecao-detalhe-item">
-                    <span>Data de Conclusão</span>
+                    <span>Data de conclusão</span>
                     <strong>{formatDateTime(selectedInspection.completed_at)}</strong>
                   </div>
                 ) : null}
               </div>
 
               <div className="inspecao-detalhes__notes">
-                <h4>Observações / Diagnóstico</h4>
+                <h4>Observações e diagnóstico</h4>
                 <div className="inspecao-detalhes__notes-content">
                   {selectedInspection.notes ? (
                     <p>{selectedInspection.notes}</p>
@@ -635,7 +635,10 @@ function Inspecoes({ onNavigate, params }) {
               </div>
 
               <div className="inspecao-detalhes__status-flow">
-                <h4>Alterar Status da Ordem</h4>
+                <div className="inspecao-detalhes__section-head">
+                  <h4>Atualizar status</h4>
+                  <p>Selecione a etapa atual do atendimento em campo.</p>
+                </div>
                 <div className="inspecao-detalhes__status-actions">
                   <button
                     type="button"
@@ -643,7 +646,7 @@ function Inspecoes({ onNavigate, params }) {
                     className={`btn-flow-status btn-flow-status--pending ${selectedInspection.status === 'pending' ? 'is-current' : ''}`}
                     onClick={() => handleStatus(selectedInspection.id, 'pending')}
                   >
-                    Marcar como Pendente
+                    Pendente
                   </button>
                   <button
                     type="button"
@@ -651,7 +654,7 @@ function Inspecoes({ onNavigate, params }) {
                     className={`btn-flow-status btn-flow-status--in_progress ${selectedInspection.status === 'in_progress' ? 'is-current' : ''}`}
                     onClick={() => handleStatus(selectedInspection.id, 'in_progress')}
                   >
-                    Iniciar Atendimento
+                    Em andamento
                   </button>
                   <button
                     type="button"
@@ -659,7 +662,7 @@ function Inspecoes({ onNavigate, params }) {
                     className={`btn-flow-status btn-flow-status--completed ${selectedInspection.status === 'completed' ? 'is-current' : ''}`}
                     onClick={() => handleStatus(selectedInspection.id, 'completed')}
                   >
-                    Concluir Inspeção
+                    Concluída
                   </button>
                 </div>
               </div>

@@ -223,7 +223,7 @@ function StationPlan({
 
       <div className="station-plan__legend" aria-label="Legenda da planta">
         <span><i className="station-plan__key" />Estável</span>
-        <span><i className="station-plan__key station-plan__key--risk">!</i>Em risco</span>
+        <span><i className="station-plan__key station-plan__key--risk" />Em risco</span>
         <span><i className="station-plan__key station-plan__key--selected" />Selecionada</span>
         <span><i className="station-plan__key station-plan__key--missing" />Sem registro</span>
         <span><i className="station-plan__safety-key" />Linha de segurança</span>

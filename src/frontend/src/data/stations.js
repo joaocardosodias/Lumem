@@ -14,14 +14,14 @@ export const lineStations = [
   { code: 'VSO', name: 'Vila Sônia', photo: imgVso, platforms: ['P1', 'P2'] },
   { code: 'MBI', name: 'São Paulo-Morumbi', photo: imgMbi, platforms: ['P1', 'P2'] },
   { code: 'BUT', name: 'Butantã', photo: imgBut, platforms: ['P1', 'P2'] },
-  { code: 'PIN', name: 'Pinheiros', photo: imgPin, platforms: ['P1', 'P2', 'P3', 'P4'] },
+  { code: 'PIN', name: 'Pinheiros', photo: imgPin, platforms: ['P1', 'P2'] },
   { code: 'FAL', name: 'Faria Lima', photo: imgFal, platforms: ['P1', 'P2'] },
   { code: 'FRA', name: 'Fradique Coutinho', photo: imgFra, platforms: ['P1', 'P2'] },
   { code: 'OFR', name: 'Oscar Freire', photo: imgOsc, platforms: ['P1', 'P2'] },
   { code: 'PAU', name: 'Paulista', photo: imgPau, platforms: ['P1', 'P2'] },
   { code: 'HIG', name: 'Higienópolis', photo: imgHig, platforms: ['P1', 'P2'] },
-  { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2', 'P3', 'P4'] },
-  { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2', 'P3', 'P4'] },
+  { code: 'REP', name: 'República', photo: imgRep, platforms: ['P1', 'P2'] },
+  { code: 'LUZ', name: 'Luz', photo: imgLuz, platforms: ['P1', 'P2'] },
 ]
 
 const knownStations = new Set(lineStations.map((item) => item.code))

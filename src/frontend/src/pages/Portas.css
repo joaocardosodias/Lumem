@@ -699,19 +699,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(6px);
+  padding: 24px;
+  background: rgba(23, 46, 82, 0.42);
+  backdrop-filter: blur(5px);
   animation: modal-fade-in 0.2s ease;
 }
 
 .portas-modal-content {
-  width: min(720px, 100%);
-  max-height: min(90vh, 840px);
+  width: min(880px, 100%);
+  max-height: min(92vh, 900px);
   background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid var(--line, #e2e8f0);
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  border-radius: 14px;
+  border: 1px solid #dfe6f0;
+  box-shadow: 0 24px 64px rgba(23, 46, 82, 0.22);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -723,46 +723,48 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 26px 18px;
-  border-bottom: 1px solid var(--line, #e2e8f0);
-  background: #ffffff;
+  padding: 24px 28px 22px;
+  border-bottom: 1px solid #e8edf4;
+  background: #fbfcff;
 }
 
 .portas-modal-eyebrow {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .portas-modal-eyebrow span:first-child {
   color: var(--muted, #52647f);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: normal;
+  font-weight: 600;
 }
 
 .portas-modal-car-tag {
-  background: #eef2f7;
-  color: #334155;
+  background: #edf1f7;
+  color: var(--ink, #172e52);
   font-size: 12px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
 }
 
 .portas-modal-head h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: clamp(20px, 2.4vw, 25px);
   font-weight: 800;
   color: var(--ink, #172e52);
-  letter-spacing: -0.4px;
+  letter-spacing: -0.65px;
+  line-height: 1.2;
 }
 
 .portas-modal-sub {
-  margin: 4px 0 0;
+  margin: 7px 0 0;
   font-size: 13px;
   color: var(--muted, #52647f);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .portas-modal-nav-actions {
@@ -775,20 +777,22 @@
 .btn-door-nav {
   display: inline-flex;
   align-items: center;
-  padding: 5px 11px;
-  border-radius: 7px;
-  border: 1px solid var(--interactive-border, #d7dffd);
+  min-height: 34px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid #dfe6f0;
   background: #ffffff;
-  color: var(--brand, #3f00ff);
+  color: var(--ink, #172e52);
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
 }
 
 .btn-door-nav:hover {
-  border-color: var(--brand, #3f00ff);
+  border-color: #c7d2e3;
   background: var(--interactive, #f0f3ff);
+  transform: translateY(-1px);
 }
 
 .portas-modal-close {
@@ -798,47 +802,52 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--interactive-border, #d7dffd);
+  border: 1px solid #dfe6f0;
   background: #ffffff;
   color: var(--muted, #52647f);
   font-size: 14px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
 .portas-modal-close:hover {
   background: #f1f5f9;
   color: var(--ink, #172e52);
   border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.btn-door-nav:focus-visible,
+.portas-modal-close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #3f00ff) 20%, transparent);
+  outline-offset: 2px;
 }
 
 .portas-modal-body {
-  padding: 22px 26px;
+  padding: 24px 28px 28px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .door-status-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 16px 20px;
+  gap: 24px;
+  padding: 20px 22px;
+  border: 1px solid #dfe6f0;
   border-radius: 12px;
+  background: #ffffff;
 }
 
 .door-status-banner.is-risk {
-  background: #fff0f3;
-  border: 1px solid #ff99ab;
-  color: #d90032;
+  color: var(--ink, #172e52);
 }
 
 .door-status-banner.is-ok {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  color: var(--ink, #172e52);
 }
 
 .door-status-banner__info {
@@ -848,24 +857,32 @@
 .banner-kicker {
   display: block;
   font-size: 12px;
-  font-weight: 700;
+  color: var(--muted, #52647f);
+  font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  margin-bottom: 4px;
-  opacity: 0.85;
+  margin-bottom: 6px;
 }
 
 .door-status-banner h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
+  margin: 0 0 6px;
+  color: var(--ink, #172e52);
+  font-size: 17px;
   font-weight: 800;
+  letter-spacing: -0.25px;
+}
+
+.door-status-banner.is-risk h3,
+.door-status-banner.is-risk .door-status-banner__metric strong {
+  color: #c9253d;
 }
 
 .door-status-banner p {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  opacity: 0.9;
+  max-width: 58ch;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .door-status-banner__metric {
@@ -874,35 +891,55 @@
   align-items: flex-end;
   text-align: right;
   flex-shrink: 0;
+  min-width: 160px;
+  padding-left: 22px;
+  border-left: 1px solid #e8edf4;
 }
 
 .door-status-banner__metric span {
+  color: var(--muted, #52647f);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: none;
 }
 
 .door-status-banner__metric strong {
-  font-size: 26px;
-  font-weight: 900;
+  color: var(--ink, #172e52);
+  font-size: 32px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
-  margin: 2px 0;
+  margin: 5px 0 3px;
 }
 
 .door-status-banner__metric small {
+  color: var(--muted, #52647f);
   font-size: 12px;
-  opacity: 0.8;
 }
 
 .door-specs-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 14px 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  gap: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+}
+
+.spec-item {
+  min-width: 0;
+  padding: 16px 18px;
+  border-left: 1px solid #e8edf4;
+  border-top: 1px solid #e8edf4;
+}
+
+.spec-item:nth-child(3n + 1) {
+  border-left: 0;
+}
+
+.spec-item:nth-child(-n + 3) {
+  border-top: 0;
 }
 
 .spec-item span {
@@ -912,12 +949,12 @@
   letter-spacing: normal;
   text-transform: none;
   color: var(--muted, #52647f);
-  margin-bottom: 3px;
+  margin-bottom: 7px;
 }
 
 .spec-item strong {
   display: block;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink, #172e52);
@@ -927,31 +964,43 @@
 .door-modal-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #e8edf4;
 }
 
 .door-modal-section__head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .door-modal-section__head h4 {
   margin: 0;
-  font-size: 12.5px;
-  font-weight: 700;
+  color: var(--ink, #172e52);
+  font-size: 15px;
+  font-weight: 800;
   letter-spacing: normal;
   text-transform: none;
+}
+
+.door-modal-section__head p {
+  margin: 5px 0 0;
   color: var(--muted, #52647f);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .section-counter {
   font-size: 12px;
   font-weight: 700;
-  background: #e2e8f0;
-  color: #475569;
-  padding: 1px 6px;
-  border-radius: 99px;
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #edf1f7;
+  color: var(--ink, #172e52);
+  text-align: center;
 }
 
 .door-alarms-list,
@@ -968,15 +1017,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #fff5f7;
-  border: 1px solid #ffd1da;
+  background: #ffffff;
+  border: 1px solid #e3e8f0;
   border-radius: 8px;
   font-size: 12.5px;
 }
 
 .alarm-main strong {
   display: block;
-  color: #ff003b;
+  color: #c9253d;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1010,8 +1059,8 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border: 1px solid #e3e8f0;
   border-radius: 8px;
   font-size: 12.5px;
 }
@@ -1045,18 +1094,24 @@
 
 .door-empty-state {
   margin: 0;
-  padding: 12px 14px;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  padding: 13px 14px;
   border-radius: 8px;
+  background: #f7f9fc;
+  color: var(--muted, #52647f);
   font-size: 12px;
-  color: #94a3b8;
-  font-style: italic;
+  font-style: normal;
+}
+
+.door-modal-section--inspection {
+  padding: 18px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #f7f9ff;
 }
 
 .door-insp-form {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -1065,8 +1120,9 @@
   min-height: 38px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid var(--line, #e2e8f0);
-  font-size: 13.5px;
+  border: 1px solid #d7dfeb;
+  font-family: var(--font);
+  font-size: 13px;
   color: var(--ink, #172e52);
   outline: none;
   background: #ffffff;
@@ -1089,9 +1145,17 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  padding: 16px 26px;
-  border-top: 1px solid var(--line, #e2e8f0);
+  padding: 16px 28px;
+  border-top: 1px solid #e8edf4;
   background: #fbfcfe;
+}
+
+.portas-modal-foot .ui-button {
+  min-height: 42px;
+  min-width: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 12px;
 }
 
 @keyframes modal-fade-in {
@@ -1136,6 +1200,17 @@
     grid-template-columns: 1fr;
   }
 
+  .spec-item,
+  .spec-item:nth-child(3n + 1),
+  .spec-item:nth-child(-n + 3) {
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+
+  .spec-item:first-child {
+    border-top: 0;
+  }
+
   .door-status-banner {
     flex-direction: column;
     align-items: flex-start;
@@ -1144,7 +1219,12 @@
   .door-status-banner__metric {
     align-items: flex-start;
     text-align: left;
-    margin-top: 8px;
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
+    padding: 16px 0 0;
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
   }
 
   .door-insp-form {
@@ -1158,5 +1238,42 @@
 
   .portas-modal-foot button {
     width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .portas-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .portas-modal-content {
+    max-height: 94dvh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .portas-modal-head {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .portas-modal-nav-actions {
+    width: 100%;
+  }
+
+  .portas-modal-close {
+    margin-left: auto;
+  }
+
+  .portas-modal-body {
+    padding: 20px;
+  }
+
+  .door-status-banner {
+    padding: 18px;
+  }
+
+  .portas-modal-foot {
+    padding: 14px 20px 18px;
   }
 }

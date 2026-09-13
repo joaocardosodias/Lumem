@@ -558,8 +558,8 @@ function Portas({ onNavigate, params = {} }) {
               <header className="portas-modal-head">
                 <div>
                   <div className="portas-modal-eyebrow">
-                    <span>DOSSIÊ DE TELEMETRIA · ATIVO FERROVIÁRIO</span>
-                    <span className="portas-modal-car-tag">VAGÃO {Math.ceil(openedDoor.door_number / 4)}</span>
+                    <span>Detalhes do ativo</span>
+                    <span className="portas-modal-car-tag">Carro {Math.ceil(openedDoor.door_number / 4)}</span>
                   </div>
                   <h2 id="dossier-door-title">
                     Porta {padDoor(openedDoor.door_number)} · Plataforma {openedDoor.platform}
@@ -604,8 +604,8 @@ function Portas({ onNavigate, params = {} }) {
               <div className="portas-modal-body">
                 <div className={`door-status-banner ${openedDoor.will_fail ? 'is-risk' : 'is-ok'}`}>
                   <div className="door-status-banner__info">
-                    <span className="banner-kicker">Diagnóstico Preditivo da IA</span>
-                    <h3>{openedDoor.will_fail ? 'Alerta: Risco de Falha Prevista' : 'Operação Estável e Normal'}</h3>
+                    <span className="banner-kicker">Diagnóstico preditivo</span>
+                    <h3>{openedDoor.will_fail ? 'Risco de falha identificado' : 'Operação estável'}</h3>
                     <p>
                       {openedDoor.will_fail
                         ? 'Os modelos preditivos identificaram anomalia de corrente ou tempo de ciclo de manobra nesta porta. Recomendada inspeção preventiva.'
@@ -613,7 +613,7 @@ function Portas({ onNavigate, params = {} }) {
                     </p>
                   </div>
                   <div className="door-status-banner__metric">
-                    <span>Probabilidade de Falha</span>
+                    <span>Probabilidade de falha</span>
                     <strong>{Math.round(openedDoor.risk * 100)}%</strong>
                     <small>Avaliação: {openedDoor.last_evaluated_at ? String(openedDoor.last_evaluated_at).slice(0, 10) : 'Recente'}</small>
                   </div>
@@ -621,7 +621,7 @@ function Portas({ onNavigate, params = {} }) {
 
                 <div className="door-specs-grid">
                   <div className="spec-item">
-                    <span>TAG SAP</span>
+                    <span>Tag SAP</span>
                     <strong>{openedDoor.sap_tag || '—'}</strong>
                   </div>
                   <div className="spec-item">
@@ -633,22 +633,22 @@ function Portas({ onNavigate, params = {} }) {
                     <strong>{openedDoor.platform}</strong>
                   </div>
                   <div className="spec-item">
-                    <span>Posição no Trem</span>
+                    <span>Posição no trem</span>
                     <strong>Porta {padDoor(openedDoor.door_number)} · Carro {Math.ceil(openedDoor.door_number / 4)}</strong>
                   </div>
                   <div className="spec-item">
-                    <span>Status Operacional</span>
-                    <strong>{openedDoor.status ?? 'Ativa'}</strong>
+                    <span>Status operacional</span>
+                    <strong>{openedDoor.status === 'active' ? 'Ativa' : (openedDoor.status ?? 'Ativa')}</strong>
                   </div>
                   <div className="spec-item">
-                    <span>ID do Ativo</span>
+                    <span>ID do ativo</span>
                     <strong>#{openedDoor.door_id}</strong>
                   </div>
                 </div>
 
                 <div className="door-modal-section">
                   <div className="door-modal-section__head">
-                    <h4>Alarmes de Telemetria Recentes</h4>
+                    <h4>Alarmes recentes</h4>
                     <span className="section-counter">{doorAlarms.length}</span>
                   </div>
                   {doorAlarms.length ? (
@@ -673,7 +673,7 @@ function Portas({ onNavigate, params = {} }) {
 
                 <div className="door-modal-section">
                   <div className="door-modal-section__head">
-                    <h4>Histórico de Manutenções Relacionadas</h4>
+                    <h4>Histórico de manutenções</h4>
                     <span className="section-counter">{doorMaintenances.length}</span>
                   </div>
                   {doorMaintenances.length ? (
@@ -695,7 +695,10 @@ function Portas({ onNavigate, params = {} }) {
 
                 <div className="door-modal-section door-modal-section--inspection">
                   <div className="door-modal-section__head">
-                    <h4>Abrir Ordem de Inspeção em Campo</h4>
+                    <div>
+                      <h4>Abrir ordem de inspeção</h4>
+                      <p>Registre uma observação para encaminhar a equipe de campo.</p>
+                    </div>
                   </div>
                   {inspError ? <p className="page-status is-error">{inspError}</p> : null}
                   <form className="door-insp-form" onSubmit={handleCreateInspection}>
@@ -705,7 +708,7 @@ function Portas({ onNavigate, params = {} }) {
                       value={inspNotes}
                       onChange={(e) => setInspNotes(e.target.value)}
                     />
-                    <Button type="submit">Cadastrar Ordem</Button>
+                    <Button type="submit">Abrir ordem</Button>
                   </form>
                 </div>
               </div>
@@ -723,10 +726,10 @@ function Portas({ onNavigate, params = {} }) {
                     })
                   }}
                 >
-                  Ver Ordens de Inspeção Desta Porta
+                  Ver inspeções desta porta
                 </Button>
                 <Button onClick={handleBackFromDoor}>
-                  Fechar Detalhes
+                  Fechar
                 </Button>
               </footer>
             </div>
