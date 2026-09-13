@@ -4,6 +4,7 @@ import './AppLayout.css'
 const pageLabels = {
   dashboard: 'Visão geral', predicoes: 'Predições', portas: 'Portas',
   alarmes: 'Alarmes', alertas: 'Alarmes', manutencoes: 'Manutenções', inspecoes: 'Inspeções',
+  engenharia: 'Engenharia de dados',
 }
 
 function AppLayout({ current, user, onNavigate, onLogout, children }) {

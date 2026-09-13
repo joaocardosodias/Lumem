@@ -1,0 +1,86 @@
+package http
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/g04/backend/internal/usecase"
+	"github.com/gin-gonic/gin"
+)
+
+type UpdateMLConfigRequest struct {
+	Threshold          float64 `json:"threshold"`
+	DefaultHorizonDays int     `json:"default_horizon_days"`
+}
+
+type MLOpsHandler struct {
+	mlopsUC *usecase.MLOpsUseCase
+}
+
+func NewMLOpsHandler(mlopsUC *usecase.MLOpsUseCase) *MLOpsHandler {
+	return &MLOpsHandler{mlopsUC: mlopsUC}
+}
+
+func (h *MLOpsHandler) GetConfig(c *gin.Context) {
+	cfg, err := h.mlopsUC.GetConfig(c.Request.Context())
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, cfg)
+}
+
+func (h *MLOpsHandler) UpdateConfig(c *gin.Context) {
+	var req UpdateMLConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Requisicao Invalida", "Formato de dados JSON incorreto.")
+		return
+	}
+
+	userID := c.GetString("userID")
+	cfg, err := h.mlopsUC.UpdateConfig(c.Request.Context(), req.Threshold, req.DefaultHorizonDays, userID)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, cfg)
+}
+
+func (h *MLOpsHandler) GetActiveModel(c *gin.Context) {
+	model, err := h.mlopsUC.GetActiveModel(c.Request.Context())
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, model)
+}
+
+func (h *MLOpsHandler) ListModelHistory(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, _ := strconv.Atoi(limitStr)
+	runs, err := h.mlopsUC.ListModelRuns(c.Request.Context(), limit)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, runs)
+}
+
+func (h *MLOpsHandler) TriggerRetrain(c *gin.Context) {
+	userID := c.GetString("userID")
+	run, err := h.mlopsUC.TriggerRetrain(c.Request.Context(), userID)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, run)
+}
+
+func (h *MLOpsHandler) GetDrift(c *gin.Context) {
+	drift, err := h.mlopsUC.GetDrift(c.Request.Context())
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, drift)
+}

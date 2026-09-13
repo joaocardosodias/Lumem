@@ -14,8 +14,12 @@ const items = [
 
 function BarraNav({ current, user, onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
+  const navItems = [
+    ...items,
+    ...(user?.role === 'enginner' ? [{ id: 'engenharia', label: 'Engenharia de Dados' }] : []),
+  ]
   const activeIndex = Math.max(
-    items.findIndex((item) => item.id === current),
+    navItems.findIndex((item) => item.id === current),
     0,
   )
 
@@ -34,7 +38,7 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
       <nav aria-label="Navegação principal">
         <div className="barra-nav__indicator" style={{ '--i': String(activeIndex) }} aria-hidden="true" />
         <ul>
-          {items.map((item) => (
+          {navItems.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
@@ -54,11 +58,19 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
 
       {user ? (
         <div className="barra-nav__user" title={`${user.name} (${user.email || user.role || 'Operador'})`}>
-          <div className="barra-nav__user-avatar">{user.name ? user.name.charAt(0).toUpperCase() : 'O'}</div>
+          <div className="barra-nav__user-avatar">
+            {user.name ? user.name.charAt(0).toUpperCase() : user.role === 'enginner' ? 'E' : 'O'}
+          </div>
           {!collapsed ? (
             <div className="barra-nav__user-info">
               <strong>{user.name}</strong>
-              <small>{user.role === 'operator' ? 'Operador' : user.role || 'Operador Linha 4'}</small>
+              <small>
+                {user.role === 'enginner'
+                  ? 'Engenheiro(a)'
+                  : user.role === 'operator'
+                    ? 'Operador(a)'
+                    : user.role || 'Operador Linha 4'}
+              </small>
             </div>
           ) : null}
         </div>
@@ -171,6 +183,15 @@ export function NavIcon({ id }) {
         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
         <rect x="9" y="3" width="6" height="4" rx="1" />
         <path d="M9 12h6M9 16h4" />
+      </svg>
+    )
+  }
+
+  if (id === 'engenharia') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+        <circle cx="12" cy="12" r="3" />
       </svg>
     )
   }

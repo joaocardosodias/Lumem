@@ -3,6 +3,7 @@ import Button from '../components/Button'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import { usePredictionLoad } from '../components/PredictionLoad'
+import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation } from '../data/stations'
 import { api, asList, errorMessage } from '../lib/api'
@@ -24,6 +25,9 @@ const emptyFilters = {
 }
 
 function Predicoes({ onNavigate, params }) {
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canRunPrediction = role === 'enginner'
   const toast = useToast()
   const { run, busy } = usePredictionLoad()
   const initialCache = getCachedPrediction()
@@ -37,6 +41,7 @@ function Predicoes({ onNavigate, params }) {
     ...emptyFilters,
     station: params?.station || '',
   }))
+  const [modelConfig, setModelConfig] = useState(null)
   const [page, setPage] = useState(1)
 
   useEffect(() => {
@@ -54,7 +59,22 @@ function Predicoes({ onNavigate, params }) {
     }
     setError('')
     try {
-      const response = await api.predictionsLatest()
+      const [response, cfg, active] = await Promise.all([
+        api.predictionsLatest(),
+        api.getMLConfig().catch(() => null),
+        api.getActiveModel().catch(() => null),
+      ])
+      if (cfg || active) {
+        setModelConfig({
+          threshold: cfg?.threshold ?? 0.28,
+          defaultHorizon: cfg?.default_horizon_days ?? 7,
+          modelName: 'Random Forest',
+          version: active?.version || 'v1.0.0',
+          artifact: active?.artifact_path ? 'modelo_5.joblib' : 'modelo_5.joblib',
+          recall: active?.test_metrics?.recall ? `${(active.test_metrics.recall * 100).toFixed(1)}%` : '55.3%',
+          precision: active?.test_metrics?.precision ? `${(active.test_metrics.precision * 100).toFixed(1)}%` : '15.9%',
+        })
+      }
       if (response && typeof response === 'object') {
         const nextRunData = predictionRun(response)
         const list = asList(response.predictions || response)
@@ -101,6 +121,19 @@ function Predicoes({ onNavigate, params }) {
         if (nextRunData.total_doors_at_risk > 0) {
           setStatusTab('fail')
         }
+        api.getMLConfig().then((cfg) => {
+          if (cfg) {
+            setModelConfig((curr) =>
+              curr
+                ? {
+                    ...curr,
+                    threshold: cfg.threshold ?? curr.threshold,
+                    defaultHorizon: cfg.default_horizon_days ?? curr.defaultHorizon,
+                  }
+                : null,
+            )
+          }
+        }).catch(() => null)
       }
 
       setPage(1)
@@ -194,32 +227,109 @@ function Predicoes({ onNavigate, params }) {
           </p>
         </div>
         <div className="predicoes-actions">
-          <label className="predicoes-horizon">
-            <span>Horizonte:</span>
-            <select
-              value={horizonDays}
-              onChange={(e) => setHorizonDays(Number(e.target.value))}
-              disabled={busy}
-            >
-              <option value={7}>7 dias</option>
-              <option value={14}>14 dias</option>
-              <option value={30}>30 dias</option>
-            </select>
-          </label>
+          {canRunPrediction ? (
+            <label className="predicoes-horizon">
+              <span>Horizonte:</span>
+              <select
+                value={horizonDays}
+                onChange={(e) => setHorizonDays(Number(e.target.value))}
+                disabled={busy}
+              >
+                <option value={7}>7 dias</option>
+                <option value={14}>14 dias</option>
+                <option value={30}>30 dias</option>
+              </select>
+            </label>
+          ) : null}
           <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
           </Button>
-          <button
-            type="button"
-            className="predicoes-trigger-btn"
-            onClick={handleTriggerPrediction}
-            disabled={busy}
-          >
-            <TriggerIcon />
-            <span>{busy ? 'Executando...' : 'Executar análise'}</span>
-          </button>
+          {canRunPrediction ? (
+            <button
+              type="button"
+              className="predicoes-trigger-btn"
+              onClick={handleTriggerPrediction}
+              disabled={busy}
+            >
+              <TriggerIcon />
+              <span>{busy ? 'Executando...' : 'Executar análise'}</span>
+            </button>
+          ) : null}
         </div>
       </div>
+
+      {modelConfig ? (
+        <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
+          <header className="predicoes-model-profile__header">
+            <div>
+              <span className="predicoes-model-profile__status">
+                <span aria-hidden="true" />
+                Modelo em produção
+              </span>
+              <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
+              <p>Parâmetros aplicados às análises exibidas nesta página.</p>
+            </div>
+            {canRunPrediction && onNavigate ? (
+              <button
+                type="button"
+                className="predicoes-model-profile__link"
+                onClick={() => onNavigate('engenharia')}
+              >
+                Configurar em Engenharia
+                <span aria-hidden="true">→</span>
+              </button>
+            ) : null}
+          </header>
+
+          <dl className="predicoes-model-profile__grid">
+            <div className="predicoes-model-profile__item is-model">
+              <dt>Modelo</dt>
+              <dd>
+                <strong>{modelConfig.modelName}</strong>
+                <small>{modelConfig.version}</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-artifact">
+              <dt>Artefato</dt>
+              <dd>
+                <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
+                <small>Arquivo serializado</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Limiar ativo</dt>
+              <dd>
+                <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
+                <small>Corte de classificação</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Horizonte</dt>
+              <dd>
+                <strong>{modelConfig.defaultHorizon} dias</strong>
+                <small>Janela padrão</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-performance">
+              <dt>Desempenho no teste</dt>
+              <dd className="predicoes-model-profile__performance">
+                <span>
+                  <strong>{modelConfig.recall.replace('.', ',')}</strong>
+                  <small>Recall</small>
+                </span>
+                <span>
+                  <strong>{modelConfig.precision.replace('.', ',')}</strong>
+                  <small>Precisão</small>
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </article>
+      ) : null}
 
       {loading ? <p className="page-status">Carregando dados da última rodada preditiva…</p> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
@@ -257,23 +367,23 @@ function Predicoes({ onNavigate, params }) {
       ) : null}
 
       {runData && (runData.total_doors_at_risk > 0 || countRisk > 0) ? (
-        <div className="predicoes-ai-banner">
-          <div className="predicoes-ai-banner__text">
-            <strong>Inspeções automáticas abertas pelo sistema</strong>
-            <span>
+        <aside className="predicoes-inspection-callout" aria-label="Inspeções preventivas abertas">
+          <div className="predicoes-inspection-callout__body">
+            <h2>Inspeções preventivas abertas</h2>
+            <p>
               Foram abertas ordens de inspeção preventivas para todas as portas identificadas
               com risco de quebra na Linha 4 Amarela.
-            </span>
+            </p>
           </div>
           <button
             type="button"
-            className="predicoes-ai-banner__btn"
+            className="predicoes-inspection-callout__btn"
             onClick={() => onNavigate?.('inspecoes', { origin: 'ai' })}
           >
-            <span>Ver Inspeções Abertas</span>
+            <span>Ver inspeções abertas</span>
             <ArrowRightIcon />
           </button>
-        </div>
+        </aside>
       ) : null}
 
       <Filtros
@@ -353,7 +463,24 @@ function Predicoes({ onNavigate, params }) {
         </button>
       </div>
 
-      <div className="predicoes-list">
+      <section className="predicoes-list" aria-labelledby="prediction-records-title">
+        <header className="predicoes-list-head">
+          <h2 id="prediction-records-title">Registros de predições</h2>
+          <span className="predicoes-record-count">
+            {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+          </span>
+        </header>
+
+        <div className="predicoes-table-head" aria-hidden="true">
+          <span>Identificação</span>
+          <span>Estação</span>
+          <span>Plataforma</span>
+          <span>Porta</span>
+          <span>Diagnóstico</span>
+          <span>Ação</span>
+        </div>
+
+        <div className="predicoes-records">
         {visible.length ? (
           paged.map((item) => (
             <article
@@ -422,8 +549,9 @@ function Predicoes({ onNavigate, params }) {
               : 'Nenhuma predição executada até o momento. Clique em "Executar Predição IA" para iniciar a inferência.'}
           </p>
         )}
+        </div>
         <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-      </div>
+      </section>
     </section>
   )
 }

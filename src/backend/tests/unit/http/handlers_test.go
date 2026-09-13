@@ -449,7 +449,7 @@ type mockMLClientForHTTP struct {
 	err   error
 }
 
-func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

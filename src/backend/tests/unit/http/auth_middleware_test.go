@@ -111,3 +111,62 @@ func TestAuthMiddleware_UnexpectedSigningMethod(t *testing.T) {
 		t.Fatalf("esperava status 401 para metodo none, obteve %d", w.Code)
 	}
 }
+
+func setupRoleRouter(secret string, allowedRoles ...string) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(httpAdapter.AuthMiddleware(secret))
+	r.POST("/engineer-only", httpAdapter.RequireRole(allowedRoles...), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+	return r
+}
+
+func TestRequireRole_AllowedRole(t *testing.T) {
+	secret := "test-secret"
+	router := setupRoleRouter(secret, "enginner")
+
+	token := createValidToken(secret, "usr_eng_1", "engenheiro@motiva.com.br", "enginner")
+	req := httptest.NewRequest(http.MethodPost, "/engineer-only", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava status 200 para enginner, obteve %d", w.Code)
+	}
+}
+
+func TestRequireRole_ForbiddenRole(t *testing.T) {
+	secret := "test-secret"
+	router := setupRoleRouter(secret, "enginner")
+
+	token := createValidToken(secret, "usr_op_1", "operador@motiva.com.br", "operator")
+	req := httptest.NewRequest(http.MethodPost, "/engineer-only", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("esperava status 403 para operator, obteve %d", w.Code)
+	}
+}
+
+func TestRequireRole_MissingRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/role-check", httpAdapter.RequireRole("enginner"), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/role-check", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("esperava status 403 para contexto sem role, obteve %d", w.Code)
+	}
+}
+

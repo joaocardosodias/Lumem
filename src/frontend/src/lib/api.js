@@ -481,6 +481,32 @@ export const api = {
       body: { horizon_days: Number(horizonDays) || 7 },
     }).then((result) => result.data)
   },
+  getMLConfig() {
+    return request('/api/v1/ml/config').then((result) => result.data)
+  },
+  updateMLConfig(threshold, defaultHorizonDays) {
+    return request('/api/v1/ml/config', {
+      method: 'PUT',
+      body: {
+        threshold: Number(threshold),
+        default_horizon_days: Number(defaultHorizonDays),
+      },
+    }).then((result) => result.data)
+  },
+  getActiveModel() {
+    return request('/api/v1/ml/model/active').then((result) => result.data)
+  },
+  getModelHistory(limit = 10) {
+    return request(`/api/v1/ml/model/history${queryString({ limit })}`).then((result) => result.data)
+  },
+  triggerRetrain() {
+    return request('/api/v1/ml/retrain', {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  getMLDrift() {
+    return request('/api/v1/ml/drift').then((result) => result.data)
+  },
   alarms(limit = 50, offset = 0, filters = {}) {
     const query = typeof limit === 'object' ? limit : { limit, offset, ...filters }
     return request(`/api/v1/alarms${queryString(query)}`).then((result) => result.data)

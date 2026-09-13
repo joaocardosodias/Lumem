@@ -10,10 +10,11 @@ import (
 )
 
 type TriggerPredictionsUseCase struct {
-	predRepo port.PredictionRepository
-	mlClient port.MLClient
-	eventBus port.EventBus
-	uow      port.UnitOfWork
+	predRepo  port.PredictionRepository
+	mlClient  port.MLClient
+	eventBus  port.EventBus
+	uow       port.UnitOfWork
+	mlopsRepo port.MLOpsRepository
 }
 
 func NewTriggerPredictionsUseCase(
@@ -28,6 +29,10 @@ func NewTriggerPredictionsUseCase(
 		eventBus: eventBus,
 		uow:      uow,
 	}
+}
+
+func (uc *TriggerPredictionsUseCase) SetMLOpsRepository(repo port.MLOpsRepository) {
+	uc.mlopsRepo = repo
 }
 
 func countDoorsAtRisk(items []domain.PredictionItem) int {
@@ -121,6 +126,20 @@ func toPredictionItemDTOs(items []domain.PredictionItem) []PredictionItemOutputD
 }
 
 func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays int) (*PredictionRunOutputDTO, error) {
+	return uc.ExecuteWithThreshold(ctx, horizonDays, nil)
+}
+
+func (uc *TriggerPredictionsUseCase) ExecuteWithThreshold(ctx context.Context, horizonDays int, customThreshold *float64) (*PredictionRunOutputDTO, error) {
+	threshold := customThreshold
+	if threshold == nil && uc.mlopsRepo != nil {
+		if cfg, err := uc.mlopsRepo.GetConfig(ctx); err == nil && cfg != nil {
+			threshold = &cfg.Threshold
+			if horizonDays <= 0 && cfg.DefaultHorizonDays > 0 {
+				horizonDays = cfg.DefaultHorizonDays
+			}
+		}
+	}
+
 	if horizonDays <= 0 {
 		horizonDays = 7
 	}
@@ -134,7 +153,7 @@ func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays in
 		return nil, domain.ErrNoActiveDoors
 	}
 
-	predictedItems, err := uc.mlClient.PredictBatch(ctx, doors)
+	predictedItems, err := uc.mlClient.PredictBatch(ctx, doors, threshold)
 	if err != nil {
 		return nil, err
 	}

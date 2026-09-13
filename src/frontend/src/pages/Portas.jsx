@@ -3,6 +3,7 @@ import Button from '../components/Button'
 import { CountValue } from '../components/Card'
 import StationPlan from '../components/StationPlan'
 import { usePredictionLoad } from '../components/PredictionLoad'
+import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { lineStations, mapStation, stationLabel } from '../data/stations'
 import { api, asList, errorMessage, mergeDashboard, relatedMaintenances } from '../lib/api'
@@ -61,6 +62,9 @@ function Portas({ onNavigate, params = {} }) {
   const [inspError, setInspError] = useState('')
   const [error, setError] = useState('')
   const [loadingDoors, setLoadingDoors] = useState(false)
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canRunPrediction = role === 'enginner'
   const { run, busy } = usePredictionLoad()
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
@@ -422,9 +426,11 @@ function Portas({ onNavigate, params = {} }) {
             <Button variant="secondary" disabled={loadingDoors || busy} onClick={() => loadStationDoors(openedCode, { force: true })}>
               Atualizar dados
             </Button>
-            <Button disabled={loadingDoors || busy} onClick={handlePredict}>
-              Executar diagnóstico
-            </Button>
+            {canRunPrediction ? (
+              <Button disabled={loadingDoors || busy} onClick={handlePredict}>
+                Executar diagnóstico
+              </Button>
+            ) : null}
           </div>
         </div>
 

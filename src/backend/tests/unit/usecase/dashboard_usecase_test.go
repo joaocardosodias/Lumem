@@ -73,11 +73,13 @@ func (m *mockPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domai
 }
 
 type mockMLClient struct {
-	items []domain.PredictionItem
-	err   error
+	items         []domain.PredictionItem
+	err           error
+	lastThreshold *float64
 }
 
-func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
+	m.lastThreshold = threshold
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -536,3 +538,29 @@ func TestTriggerPredictionsUseCase_Errors(t *testing.T) {
 		t.Fatalf("expected success with nil event bus, got %v", err)
 	}
 }
+
+func TestDashboardUseCase_TriggerPredictions_CustomThreshold(t *testing.T) {
+	doors := []domain.Door{
+		{ID: 1, StationID: 1, StationCode: "FAL", Platform: "P1", DoorNumber: 1, Status: "active"},
+	}
+	predRepo := &mockPredictionRepo{doors: doors}
+	dashRepo := &mockDashboardRepo{}
+	ml := &mockMLClient{}
+	uow := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: predRepo, insRepo: newMockInspectionRepo()},
+	}
+
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, nil, uow)
+	thresholdVal := 0.35
+	run, err := uc.TriggerPredictionsWithThreshold(context.Background(), 14, &thresholdVal)
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if run == nil || run.HorizonDays != 14 {
+		t.Fatalf("expected horizon 14, got %+v", run)
+	}
+	if ml.lastThreshold == nil || *ml.lastThreshold != 0.35 {
+		t.Fatalf("expected threshold 0.35, got %v", ml.lastThreshold)
+	}
+}
+

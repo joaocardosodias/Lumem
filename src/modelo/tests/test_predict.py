@@ -76,3 +76,25 @@ def test_health():
     client = app.test_client()
     resp = client.get('/health')
     assert resp.get_json() == {'status': 'ok'}
+
+
+def test_metadata():
+    from app import app
+    client = app.test_client()
+    resp = client.get('/metadata')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['version'] == 'v1.0.0'
+    assert 'RandomForestClassifier' in data['algorithm']
+    assert data['features_count'] > 0
+
+
+def test_drift():
+    from app import app
+    client = app.test_client()
+    resp = client.get('/drift')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['status'] == 'healthy'
+    assert isinstance(data['features_drift'], list)
+

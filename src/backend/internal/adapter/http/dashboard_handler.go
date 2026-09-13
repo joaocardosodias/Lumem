@@ -257,11 +257,12 @@ func (h *DashboardHandler) GetStationDoorsStatus(c *gin.Context) {
 
 func (h *DashboardHandler) TriggerPredictions(c *gin.Context) {
 	var input struct {
-		HorizonDays int `json:"horizon_days"`
+		HorizonDays int      `json:"horizon_days"`
+		Threshold   *float64 `json:"threshold,omitempty"`
 	}
 	_ = c.ShouldBindJSON(&input)
 
-	run, err := h.uc.TriggerPredictions(c.Request.Context(), input.HorizonDays)
+	run, err := h.uc.TriggerPredictionsWithThreshold(c.Request.Context(), input.HorizonDays, input.Threshold)
 	if err != nil {
 		RespondDomainError(c, err)
 		return

@@ -11,6 +11,7 @@ import Login from './pages/Login'
 import Manutencoes from './pages/Manutencoes'
 import Portas from './pages/Portas'
 import Predicoes from './pages/Predicoes'
+import Engenharia from './pages/Engenharia'
 
 function AppShell() {
   const { user, ready, logout } = useAuth()
@@ -42,6 +43,7 @@ function AppShell() {
     if (page === 'alarmes' || page === 'alertas') return <Alarmes onNavigate={handleNavigate} params={params} />
     if (page === 'manutencoes') return <Manutencoes onNavigate={handleNavigate} params={params} />
     if (page === 'inspecoes') return <Inspecoes onNavigate={handleNavigate} params={params} />
+    if (page === 'engenharia') return <Engenharia onNavigate={handleNavigate} params={params} />
     return <Dashboard onNavigate={handleNavigate} />
   }
 

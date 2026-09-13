@@ -31,22 +31,22 @@
 }
 
 :is(.manutencoes__chart, .inspecoes__chart, .alarmes__chart),
-:is(.manutencoes__list, .inspecoes__list, .alarmes__list) {
+:is(.manutencoes__list, .inspecoes__list, .alarmes__list, .predicoes-list) {
   border-color: #dfe6f0;
   box-shadow: none;
 }
 
-:is(.manutencoes__panel-head, .inspecoes__panel-head, .alarmes__panel-head) {
+:is(.manutencoes__panel-head, .inspecoes__panel-head, .alarmes__panel-head, .predicoes-list-head) {
   min-height: 61px;
   padding: 19px 22px 17px;
 }
 
-:is(.manutencoes__panel-head, .inspecoes__panel-head, .alarmes__panel-head) h2 {
+:is(.manutencoes__panel-head, .inspecoes__panel-head, .alarmes__panel-head, .predicoes-list-head) h2 {
   font-size: 15px;
   letter-spacing: -0.025em;
 }
 
-:is(.manutencoes__record-count, .inspecoes__record-count, .alarmes__record-count) {
+:is(.manutencoes__record-count, .inspecoes__record-count, .alarmes__record-count, .predicoes-record-count) {
   width: auto;
   padding: 0;
   border: 0;
@@ -276,7 +276,7 @@
 }
 
 /* Desktop data rows use one shared header instead of repeating labels in cards. */
-:is(.manutencoes__table-head, .inspecoes__table-head, .alarmes__table-head) {
+:is(.manutencoes__table-head, .inspecoes__table-head, .alarmes__table-head, .predicoes-table-head) {
   display: grid;
   align-items: center;
   gap: 18px;
@@ -499,13 +499,13 @@
   outline-offset: -3px;
 }
 
-:is(.manutencoes__records, .inspecoes__records, .alarmes__records) {
+:is(.manutencoes__records, .inspecoes__records, .alarmes__records, .predicoes-records) {
   display: grid;
   gap: 0;
   padding: 0;
 }
 
-:is(.card-manutencao, .card-inspecao, .card-alarme) {
+:is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao) {
   gap: 18px;
   align-items: center;
   padding: 15px 20px;
@@ -516,11 +516,12 @@
   transform: none;
 }
 
-:is(.card-manutencao, .card-inspecao, .card-alarme):last-child {
+:is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao):last-child {
   border-bottom: 0;
 }
 
 :is(.card-manutencao, .card-inspecao, .card-alarme) > div > span,
+.card-predicao > div > span:first-child,
 .card-inspecao__status > span {
   position: absolute;
   width: 1px;
@@ -531,14 +532,14 @@
   white-space: nowrap;
 }
 
-:is(.card-manutencao, .card-inspecao, .card-alarme) strong {
+:is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao) strong {
   color: var(--ink, #172e52);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
 }
 
-:is(.card-manutencao, .card-inspecao, .card-alarme) em {
+:is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao) em {
   display: block;
   margin-top: 3px;
   color: var(--muted);
@@ -634,7 +635,7 @@
   outline-offset: -3px;
 }
 
-:is(.manutencoes__records, .inspecoes__records, .alarmes__records) .page-empty {
+:is(.manutencoes__records, .inspecoes__records, .alarmes__records, .predicoes-records) .page-empty {
   margin: 0;
   padding: 24px;
   color: var(--muted);
@@ -658,7 +659,7 @@
     box-shadow: inset 3px 0 0 var(--brand, #3f00ff);
   }
 
-  .card-alarme:hover {
+  :is(.card-alarme, .card-predicao):hover {
     border-color: #e8edf4;
     background: #ffffff;
     transform: none;
@@ -777,6 +778,36 @@
   }
 }
 
+@media (max-width: 1080px) {
+  .predicoes-table-head {
+    display: none;
+  }
+
+  .predicoes .card-predicao {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+    margin: 10px;
+    padding: 16px;
+    border: 1px solid #dfe6f0;
+    border-radius: 10px;
+  }
+
+  .predicoes .card-predicao > div > span:first-child {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+  }
+
+  .predicoes .card-predicao-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 900px) {
   .portas__table-head {
     display: none;
@@ -848,14 +879,15 @@
     font-size: 20px;
   }
 
-  :is(.card-manutencao, .card-inspecao, .card-alarme) {
+  :is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
 
   .card-inspecao > div:first-child,
   .card-inspecao-actions,
-  .card-alarme > div:first-child {
+  .card-alarme > div:first-child,
+  .card-predicao > div:first-child {
     grid-column: 1 / -1;
   }
 
@@ -864,7 +896,7 @@
     gap: 16px;
   }
 
-  :is(.card-inspecao, .card-alarme) strong {
+  :is(.card-inspecao, .card-alarme, .card-predicao) strong {
     overflow-wrap: anywhere;
   }
 

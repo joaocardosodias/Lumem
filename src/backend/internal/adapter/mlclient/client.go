@@ -43,7 +43,12 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
-func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+type BatchPredictionRequest struct {
+	Doors     []PredictionRequest `json:"doors"`
+	Threshold *float64            `json:"threshold,omitempty"`
+}
+
+func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
 	reqPayload := make([]PredictionRequest, len(doors))
 	for i, d := range doors {
 		reqPayload[i] = PredictionRequest{
@@ -53,7 +58,12 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) ([]domai
 		}
 	}
 
-	bodyBytes, err := json.Marshal(reqPayload)
+	payload := BatchPredictionRequest{
+		Doors:     reqPayload,
+		Threshold: threshold,
+	}
+
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}

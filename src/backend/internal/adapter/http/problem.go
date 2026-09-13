@@ -54,6 +54,8 @@ func RespondDomainError(c *gin.Context, err error) {
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Upload Nao Encontrado", "O upload solicitado nao foi localizado.")
 	case errors.Is(err, domain.ErrDoorNotFound):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Porta Nao Encontrada", "A porta solicitada nao foi localizada.")
+	case errors.Is(err, domain.ErrModelNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Modelo Nao Encontrado", "O modelo ou rodada solicitada nao foi localizada.")
 	case errors.Is(err, domain.ErrNoPredictions):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Sem Previsoes", "Nenhuma rodada de previsao calculada ate o momento.")
 	case errors.Is(err, domain.ErrUserInactive):
@@ -61,6 +63,7 @@ func RespondDomainError(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrDuplicateUpload):
 		RespondProblem(c, http.StatusConflict, "ERR_DUPLICATE_UPLOAD", "Arquivo Duplicado", "Arquivo ja processado anteriormente pelo sistema.")
 	case errors.Is(err, domain.ErrEmailPasswordRequired),
+		errors.Is(err, domain.ErrInvalidConfig),
 		errors.Is(err, domain.ErrStationRequired),
 		errors.Is(err, domain.ErrInvalidDoorID),
 		errors.Is(err, domain.ErrNoActiveDoors),

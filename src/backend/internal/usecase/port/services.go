@@ -9,7 +9,7 @@ import (
 )
 
 type MLClient interface {
-	PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error)
+	PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error)
 }
 
 type EventHandler func(ctx context.Context, event domain.Event) error

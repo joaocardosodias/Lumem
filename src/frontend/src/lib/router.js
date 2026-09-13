@@ -6,6 +6,7 @@ const ROUTES = {
   manutencoes: '/manutencoes',
   inspecoes: '/inspecoes',
   alertas: '/alarmes',
+  engenharia: '/engenharia',
 }
 
 const PATH_TO_PAGE = {
@@ -22,6 +23,8 @@ const PATH_TO_PAGE = {
   '/doors': 'portas',
   '/inspecoes': 'inspecoes',
   '/inspections': 'inspecoes',
+  '/engenharia': 'engenharia',
+  '/mlops': 'engenharia',
 }
 
 export function getCurrentPage() {

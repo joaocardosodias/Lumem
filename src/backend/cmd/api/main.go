@@ -130,6 +130,7 @@ type appHandlers struct {
 	dash      *httpAdapter.DashboardHandler
 	health    *httpAdapter.HealthHandler
 	docs      *httpAdapter.DocsHandler
+	mlops     *httpAdapter.MLOpsHandler
 	jwtSecret string
 }
 
@@ -165,8 +166,15 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.GET("/dashboard/summary", h.dash.GetSummary)
 		protected.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
 		protected.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
-		protected.POST("/predictions/trigger", h.dash.TriggerPredictions)
+		protected.POST("/predictions/trigger", httpAdapter.RequireRole("enginner"), h.dash.TriggerPredictions)
 		protected.GET("/predictions/latest", h.dash.GetLatestPredictions)
+
+		protected.GET("/ml/config", h.mlops.GetConfig)
+		protected.PUT("/ml/config", httpAdapter.RequireRole("enginner"), h.mlops.UpdateConfig)
+		protected.GET("/ml/model/active", h.mlops.GetActiveModel)
+		protected.GET("/ml/model/history", httpAdapter.RequireRole("enginner"), h.mlops.ListModelHistory)
+		protected.POST("/ml/retrain", httpAdapter.RequireRole("enginner"), h.mlops.TriggerRetrain)
+		protected.GET("/ml/drift", httpAdapter.RequireRole("enginner"), h.mlops.GetDrift)
 
 		protected.GET("/auth/me", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -354,6 +362,8 @@ func main() {
 	hasher := security.NewBcryptPasswordHasher(0)
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
+	mlopsRepo := repository.NewPostgresMLOpsRepository(db)
+
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCaseWithQueue(alarmRepo, alarmRepo, ingestionStorage, alarmParser, ingestionQueue, uow, logger)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCaseWithQueue(maintRepo, alarmRepo, ingestionStorage, maintParser, ingestionQueue, uow, logger)
@@ -361,6 +371,8 @@ func main() {
 	listAlarmsUC := usecase.NewListAlarmsUseCase(alarmRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
+	dashUC.SetMLOpsRepository(mlopsRepo)
+	mlopsUC := usecase.NewMLOpsUseCase(mlopsRepo)
 
 	handlers := appHandlers{
 		auth:      httpAdapter.NewAuthHandler(loginUC),
@@ -371,6 +383,7 @@ func main() {
 		dash:      httpAdapter.NewDashboardHandler(dashUC),
 		health:    httpAdapter.NewHealthHandler(db),
 		docs:      httpAdapter.NewDocsHandler("docs/openapi.json"),
+		mlops:     httpAdapter.NewMLOpsHandler(mlopsUC),
 		jwtSecret: cfg.JWTSecret,
 	}
 
