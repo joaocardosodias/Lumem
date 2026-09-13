@@ -13,6 +13,8 @@ services:
     env_file:
       - .env
     environment:
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      MIGRATIONS_PATH: /app/migrations
       OTEL_ENABLED: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
       OTEL_EXPORTER_OTLP_INSECURE: "true"

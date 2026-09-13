@@ -12,6 +12,7 @@ type DashboardUseCase struct {
 	statusUC      *GetStationDoorsStatusUseCase
 	triggerPredUC *TriggerPredictionsUseCase
 	latestPredUC  *GetLatestPredictionsUseCase
+	historyPredUC *GetDoorPredictionHistoryUseCase
 }
 
 func NewDashboardUseCase(
@@ -27,6 +28,7 @@ func NewDashboardUseCase(
 		statusUC:      NewGetStationDoorsStatusUseCase(dashRepo),
 		triggerPredUC: NewTriggerPredictionsUseCase(predRepo, mlClient, eventBus, uow),
 		latestPredUC:  NewGetLatestPredictionsUseCase(predRepo),
+		historyPredUC: NewGetDoorPredictionHistoryUseCase(predRepo),
 	}
 }
 
@@ -58,4 +60,20 @@ func (uc *DashboardUseCase) SetMLOpsRepository(repo port.MLOpsRepository) {
 
 func (uc *DashboardUseCase) GetLatestPredictions(ctx context.Context) (*PredictionRunOutputDTO, error) {
 	return uc.latestPredUC.Execute(ctx)
+}
+
+func (uc *DashboardUseCase) GetDoorPredictionHistory(ctx context.Context, doorID, limit int) ([]DoorPredictionHistoryOutputDTO, error) {
+	return uc.historyPredUC.Execute(ctx, doorID, limit)
+}
+
+func (uc *DashboardUseCase) RunPredictionExperiment(ctx context.Context, threshold float64) (*PredictionRunOutputDTO, error) {
+	return uc.triggerPredUC.ExecuteExperiment(ctx, threshold)
+}
+
+func (uc *DashboardUseCase) ListPredictionExperiments(ctx context.Context, limit int) ([]PredictionRunOutputDTO, error) {
+	return uc.triggerPredUC.ListExperiments(ctx, limit)
+}
+
+func (uc *DashboardUseCase) PromotePredictionExperiment(ctx context.Context, id, userID string) (*PredictionRunOutputDTO, error) {
+	return uc.triggerPredUC.PromoteExperiment(ctx, id, userID)
 }

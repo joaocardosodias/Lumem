@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
+import DataPageSkeleton from '../components/DataPageSkeleton'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
@@ -109,7 +110,7 @@ function Alarmes({ onNavigate, params }) {
       setUpload(null)
       setOpenModal(false)
       invalidateAlarms()
-      toast.success('Planilha de alarmes processada com sucesso!')
+      toast.success('Planilha de alarmes processada com sucesso.')
       await load()
     } catch (err) {
       const msg = errorMessage(err)
@@ -225,7 +226,7 @@ function Alarmes({ onNavigate, params }) {
       { label: 'Origem', key: 'source' },
     ]
     exportToCsv('alarmes_telemetria.csv', columns, visible)
-    toast.success(`${visible.length} alarmes exportados com sucesso!`)
+    toast.success(`${visible.length} alarmes exportados com sucesso.`)
   }
 
   function updateFilter(field) {
@@ -267,7 +268,7 @@ function Alarmes({ onNavigate, params }) {
         </div>
       </header>
 
-      {loading ? <p className="page-status">Carregando alarmes do banco…</p> : null}
+      {loading ? <DataPageSkeleton label="Carregando alarmes" /> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       {loading ? null : (
@@ -509,12 +510,30 @@ function Alarmes({ onNavigate, params }) {
 
       {openModal ? (
         <div className="alarmes-modal" onClick={() => setOpenModal(false)}>
-          <form onClick={(e) => e.stopPropagation()} onSubmit={handleImportSpreadsheet}>
+          <form
+            className="form-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleImportSpreadsheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="alarm-import-title"
+          >
             <div className="alarmes-modal-head">
-              <h2>Importar alarmes</h2>
-              <p className="alarmes-modal-desc">
-                Envie um arquivo de planilha no formato CSV ou XLSX contendo os eventos de telemetria da Linha 4.
-              </p>
+              <div>
+                <span className="form-modal__eyebrow">Entrada de dados</span>
+                <h2 id="alarm-import-title">Importar alarmes</h2>
+                <p className="alarmes-modal-desc">
+                  Envie uma planilha CSV ou XLSX com os eventos de telemetria da Linha 4.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="form-modal__close"
+                onClick={() => setOpenModal(false)}
+                aria-label="Fechar importação"
+              >
+                ✕
+              </button>
             </div>
             {importError ? <p className="page-status is-error">{importError}</p> : null}
             <PlanilhaImport file={file} onFile={setFile} />
@@ -524,7 +543,7 @@ function Alarmes({ onNavigate, params }) {
                 Cancelar
               </Button>
               <Button type="submit" disabled={!file || importing}>
-                {importing ? 'Processando planilha...' : 'Importar Planilha'}
+                {importing ? 'Processando planilha…' : 'Importar planilha'}
               </Button>
             </div>
           </form>

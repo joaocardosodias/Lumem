@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -65,29 +66,26 @@ func checkLiveness(ctx context.Context, endpoint string) error {
 	return nil
 }
 
-func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) {
+func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) error {
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer pingCancel()
 
 	if err := db.PingContext(pingCtx); err != nil {
-		logger.Warn("aviso: conexao inicial com supabase indisponivel ou aguardando credenciais",
-			slog.String("error", err.Error()),
-		)
-		return
+		return fmt.Errorf("conexao inicial com postgres indisponivel: %w", err)
 	}
 
 	logger.Info("conexao com supabase postgres estabelecida com sucesso")
 	if !cfg.RunMigrations {
 		logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
-		return
+		return nil
 	}
 
 	logger.Info("aplicando migracoes no banco de dados", slog.String("migrations_path", cfg.MigrationsPath))
 	if err := runMigrations(db, cfg.MigrationsPath); err != nil {
-		logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
-		return
+		return fmt.Errorf("aplicar migracoes: %w", err)
 	}
 	logger.Info("migracoes aplicadas com sucesso")
+	return nil
 }
 
 func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
@@ -102,7 +100,11 @@ func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
 	db.SetConnMaxLifetime(10 * time.Minute)
 	db.SetConnMaxIdleTime(2 * time.Minute)
 
-	checkDatabaseConnection(db, cfg, logger)
+	if err := checkDatabaseConnection(db, cfg, logger); err != nil {
+		logger.Error("falha ao preparar banco de dados", slog.String("error", err.Error()))
+		_ = db.Close()
+		os.Exit(1)
+	}
 	return db
 }
 
@@ -165,9 +167,13 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 
 		protected.GET("/dashboard/summary", h.dash.GetSummary)
 		protected.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
+		protected.GET("/doors/:id/predictions", h.dash.GetDoorPredictionHistory)
 		protected.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
 		protected.POST("/predictions/trigger", httpAdapter.RequireRole("enginner"), h.dash.TriggerPredictions)
 		protected.GET("/predictions/latest", h.dash.GetLatestPredictions)
+		protected.POST("/predictions/experiments", httpAdapter.RequireRole("enginner"), h.dash.RunPredictionExperiment)
+		protected.GET("/predictions/experiments", httpAdapter.RequireRole("enginner"), h.dash.ListPredictionExperiments)
+		protected.POST("/predictions/experiments/:id/promote", httpAdapter.RequireRole("enginner"), h.dash.PromotePredictionExperiment)
 
 		protected.GET("/ml/config", h.mlops.GetConfig)
 		protected.PUT("/ml/config", httpAdapter.RequireRole("enginner"), h.mlops.UpdateConfig)

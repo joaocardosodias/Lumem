@@ -146,7 +146,7 @@ func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms 
 		return nil
 	}
 
-	const chunkSize = 50
+	const chunkSize = 500
 	for i := 0; i < len(alarms); i += chunkSize {
 		end := i + chunkSize
 		if end > len(alarms) {

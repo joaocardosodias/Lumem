@@ -58,6 +58,7 @@ func (uc *GetDoorTimelineUseCase) Execute(ctx context.Context, doorID int) (*Doo
 			Status:      i.Status,
 			Notes:       i.Notes,
 			CompletedAt: i.CompletedAt,
+			CreatedAt:   i.CreatedAt,
 		})
 	}
 

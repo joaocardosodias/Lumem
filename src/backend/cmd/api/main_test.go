@@ -74,16 +74,22 @@ func TestCheckDatabaseConnection_AndMigrations(t *testing.T) {
 	cfgNoMig := &config.Config{
 		RunMigrations: false,
 	}
-	checkDatabaseConnection(db, cfgNoMig, logger)
+	if err := checkDatabaseConnection(db, cfgNoMig, logger); err != nil {
+		t.Fatalf("nao esperava erro sem migracoes: %v", err)
+	}
 
 	cfgMig := &config.Config{
 		RunMigrations:  true,
 		MigrationsPath: "../../migrations",
 	}
-	checkDatabaseConnection(db, cfgMig, logger)
+	if err := checkDatabaseConnection(db, cfgMig, logger); err != nil {
+		t.Fatalf("nao esperava erro com migracoes: %v", err)
+	}
 
 	closedDB, _ := sql.Open("pgx", "postgres://invalido:invalido@localhost:54321/db?sslmode=disable")
-	checkDatabaseConnection(closedDB, cfgMig, logger)
+	if err := checkDatabaseConnection(closedDB, cfgMig, logger); err == nil {
+		t.Fatal("esperava erro para banco indisponivel")
+	}
 	closedDB.Close()
 
 	if err := runMigrations(db, "../../migrations"); err != nil {

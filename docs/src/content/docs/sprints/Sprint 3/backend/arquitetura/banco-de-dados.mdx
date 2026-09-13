@@ -265,6 +265,10 @@ Consolida os metadados de cada lote de inferência gerado pelo modelo preditivo 
 |---|---|---|---|
 | `id` | `TEXT` | `PRIMARY KEY` | Identificador UUID da rodada preditiva |
 | `horizon_days` | `INTEGER` | `NOT NULL, DEFAULT 7` | Horizonte temporal avaliado em dias (padrão: 7 dias) |
+| `threshold_used` | `REAL` | Permite nulo, valor entre 0 e 1 | Limiar efetivamente aplicado na rodada, preservado para auditoria mesmo após mudanças de configuração |
+| `model_version` | `TEXT` | `NOT NULL, DEFAULT ''` | Versão do artefato responsável pelos resultados |
+| `is_experiment` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | Separa cenários do laboratório das rodadas que alimentam a operação |
+| `published_at` | `TIMESTAMP WITH TIME ZONE` | Permite nulo | Registra quando a engenharia adotou a rodada como oficial; permanece nulo enquanto o cenário está isolado |
 | `total_doors_evaluated` | `INTEGER` | `NOT NULL, DEFAULT 0` | Total de portas avaliadas na execução |
 | `total_doors_at_risk` | `INTEGER` | `NOT NULL, DEFAULT 0` | Contagem total de portas com probabilidade de falha |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Data e hora de execução da predição |
@@ -281,6 +285,7 @@ Detalha a classificação preditiva de cada porta de plataforma avaliada em uma 
 | `platform` | `TEXT` | `NOT NULL` | Plataforma da porta |
 | `door_number` | `INTEGER` | `NOT NULL` | Número da porta avaliada |
 | `will_fail` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | Flag binária indicando se há risco iminente de falha |
+| `probability` | `REAL` | Permite nulo, valor entre 0 e 1 | Probabilidade bruta devolvida pelo modelo; permanece nula nas rodadas legadas que só armazenavam a classe |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Data de gravação |
 
 ### 3.9 Tabela `inspections`
@@ -321,6 +326,9 @@ Para assegurar respostas em poucos milissegundos nas rotas do dashboard e consul
 | `idx_maintenance_events_upload_id` | `maintenance_events` | `upload_id` | Viabiliza rastreamento direto entre ordens importadas e a planilha de origem |
 | `idx_predictions_run_id` | `predictions` | `run_id` | Permite recuperação em lote de todas as classificações de uma rodada preditiva |
 | `idx_predictions_will_fail` | `predictions` | `(run_id, will_fail)` | Viabiliza o cálculo imediato do card de portas em risco no painel operacional |
+| `idx_predictions_door_history` | `predictions` | `(station_code, platform, door_number, created_at DESC)` | Recupera a evolução preditiva de uma porta sem varrer resultados de outras estações e plataformas |
+| `idx_prediction_runs_published` | `prediction_runs` | `(published_at DESC) WHERE is_experiment = FALSE` | Encontra a configuração oficial mais recente sem misturar cenários de laboratório |
+| `idx_prediction_runs_experiments` | `prediction_runs` | `(created_at DESC) WHERE is_experiment = TRUE` | Lista rapidamente os testes ainda disponíveis para comparação e promoção |
 | `idx_inspections_status` | `inspections` | `status` | Agiliza a contagem de inspeções pendentes e em andamento para o dashboard |
 | `idx_inspections_station_door` | `inspections` | `(station_code, platform, door_number)` | Acelera a recuperação da timeline histórica de eventos por porta individual |
 
@@ -353,7 +361,17 @@ migrations/
 ├── 000008_seed_stations_and_doors.up.sql
 ├── 000008_seed_stations_and_doors.down.sql
 ├── 000009_add_file_hash_to_uploads.up.sql
-└── 000009_add_file_hash_to_uploads.down.sql
+├── 000009_add_file_hash_to_uploads.down.sql
+├── 000010_drop_priority_from_inspections.up.sql
+├── 000010_drop_priority_from_inspections.down.sql
+├── 000011_add_engineer_role_and_user.up.sql
+├── 000011_add_engineer_role_and_user.down.sql
+├── 000012_create_mlops_tables.up.sql
+├── 000012_create_mlops_tables.down.sql
+├── 000013_add_prediction_history_metadata.up.sql
+├── 000013_add_prediction_history_metadata.down.sql
+├── 000014_add_prediction_experiments.up.sql
+└── 000014_add_prediction_experiments.down.sql
 ```
 
 ### Execução Automatizada e Controle de Ambiente

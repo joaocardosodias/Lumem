@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Button from '../components/Button'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { api, errorMessage } from '../lib/api'
+import { invalidateApplicationCache } from '../lib/appPrefetch'
 import './Engenharia.css'
 
 function TriggerIcon() {
@@ -15,7 +16,7 @@ function TriggerIcon() {
 
 const engineeringTabs = [
   { id: 'model', label: 'Modelo e métricas' },
-  { id: 'calibration', label: 'Calibração' },
+  { id: 'calibration', label: 'Laboratório' },
   { id: 'retrain', label: 'Ciclo de retreino' },
   { id: 'drift', label: 'Qualidade dos dados' },
 ]
@@ -49,7 +50,8 @@ function Engenharia() {
 
   const [activeTab, setActiveTab] = useState('model')
   const [loading, setLoading] = useState(true)
-  const [savingConfig, setSavingConfig] = useState(false)
+  const [runningExperiment, setRunningExperiment] = useState(false)
+  const [promotingExperiment, setPromotingExperiment] = useState('')
   const [retraining, setRetraining] = useState(false)
 
   const [config, setConfig] = useState({
@@ -61,26 +63,30 @@ function Engenharia() {
   const [model, setModel] = useState(null)
   const [history, setHistory] = useState([])
   const [drift, setDrift] = useState(null)
+  const [experiments, setExperiments] = useState([])
+  const [officialRun, setOfficialRun] = useState(null)
 
   const [selectedThreshold, setSelectedThreshold] = useState(0.48)
-  const [selectedHorizon, setSelectedHorizon] = useState(7)
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
-        const [cfgData, modelData, histData, driftData] = await Promise.all([
+        const [cfgData, modelData, histData, driftData, experimentData, officialData] = await Promise.all([
           api.getMLConfig().catch(() => ({ threshold: 0.48, default_horizon_days: 7 })),
           api.getActiveModel().catch(() => null),
           api.getModelHistory(5).catch(() => []),
           api.getMLDrift().catch(() => null),
+          api.predictionExperiments(20).catch(() => []),
+          api.predictionsLatest().catch(() => null),
         ])
         setConfig(cfgData)
         setSelectedThreshold(cfgData.threshold || 0.48)
-        setSelectedHorizon(cfgData.default_horizon_days || 7)
         setModel(modelData)
         setHistory(histData || [])
         setDrift(driftData)
+        setExperiments(experimentData || [])
+        setOfficialRun(officialData)
       } finally {
         setLoading(false)
       }
@@ -88,37 +94,34 @@ function Engenharia() {
     loadData()
   }, [])
 
-  const simulatedImpact = useMemo(() => {
-    const t = Number(selectedThreshold)
-    const baseDoorsAtRisk = 24
-    const delta = (0.48 - t) * 90
-    const estimatedRisk = Math.max(6, Math.min(75, Math.round(baseDoorsAtRisk + delta)))
-    const estimatedRecall = Math.max(35, Math.min(88, Math.round(55.3 + (0.48 - t) * 65)))
-    const weeklyInspections = Math.round(estimatedRisk * 1.25)
-
-    let sensitivity = 'Equilibrada'
-    if (t < 0.38) sensitivity = 'Alta sensibilidade'
-    else if (t > 0.58) sensitivity = 'Conservadora'
-
-    return {
-      doorsAtRisk: estimatedRisk,
-      recallPct: estimatedRecall,
-      inspectionsPerWeek: weeklyInspections,
-      sensitivity,
-    }
-  }, [selectedThreshold])
-
-  async function handleSaveConfig(e) {
+  async function handleRunExperiment(e) {
     e.preventDefault()
     try {
-      setSavingConfig(true)
-      const updated = await api.updateMLConfig(selectedThreshold, selectedHorizon)
-      setConfig(updated)
-      toast.success('Calibração operacional salva.')
+      setRunningExperiment(true)
+      const result = await api.runPredictionExperiment(selectedThreshold)
+      setExperiments((current) => [result, ...current])
+      toast.success('Cenário concluído e salvo no laboratório.')
     } catch (err) {
-      toast.error('Falha ao salvar calibração: ' + errorMessage(err))
+      toast.error('Falha ao executar cenário: ' + errorMessage(err))
     } finally {
-      setSavingConfig(false)
+      setRunningExperiment(false)
+    }
+  }
+
+  async function handlePromoteExperiment(run) {
+    try {
+      setPromotingExperiment(run.id)
+      const promoted = await api.promotePredictionExperiment(run.id)
+      setOfficialRun(promoted)
+      setConfig((current) => ({ ...current, threshold: promoted.threshold_used, default_horizon_days: 7 }))
+      setSelectedThreshold(promoted.threshold_used)
+      setExperiments((current) => current.filter((item) => item.id !== run.id))
+      invalidateApplicationCache()
+      toast.success('Cenário adotado como predição oficial.')
+    } catch (err) {
+      toast.error('Falha ao publicar cenário: ' + errorMessage(err))
+    } finally {
+      setPromotingExperiment('')
     }
   }
 
@@ -329,90 +332,92 @@ function Engenharia() {
       ) : null}
 
       {!loading && activeTab === 'calibration' ? (
-        <article className="engenharia-card engenharia-card--calibration" id="engineering-panel-calibration" role="tabpanel" aria-labelledby="engineering-tab-calibration">
-          <header className="engenharia-card__head">
-            <h2>Calibração de limiar operacional e horizonte de análise</h2>
-            <span className="engenharia-tag">Configuração ativa</span>
-          </header>
+        <div className="engenharia-lab" id="engineering-panel-calibration" role="tabpanel" aria-labelledby="engineering-tab-calibration">
+          <section className="lab-official" aria-labelledby="official-config-title">
+            <div>
+              <span className="lab-eyebrow">Configuração oficial</span>
+              <h2 id="official-config-title">Diagnóstico exibido na operação</h2>
+              <p>Esta é a rodada que alimenta Dashboard, Predições e a abertura de inspeções preventivas.</p>
+            </div>
+            <dl>
+              <div><dt>Modelo</dt><dd>{officialRun?.model_version || model?.version || 'v1.0.0'}</dd></div>
+              <div><dt>Threshold</dt><dd>{Number(officialRun?.threshold_used ?? config.threshold ?? 0.48).toFixed(2)}</dd></div>
+              <div><dt>Portas em risco</dt><dd>{officialRun?.total_doors_at_risk ?? '—'}</dd></div>
+              <div><dt>Última publicação</dt><dd className="lab-official__date">{officialRun?.published_at ? new Date(officialRun.published_at).toLocaleDateString('pt-BR') : '—'}</dd></div>
+            </dl>
+          </section>
 
-          <div className="engenharia-card__body">
-            <form className="calibration-form-wrap" onSubmit={handleSaveConfig}>
-              <div className="calibration-field">
-                <div className="calibration-field__top">
-                  <label htmlFor="threshold-slider">Limiar de decisão</label>
-                  <span className="calibration-value-badge">{Number(selectedThreshold).toFixed(2)}</span>
-                </div>
-                <input
-                  id="threshold-slider"
-                  type="range"
-                  className="calibration-slider-input"
-                  min="0.20"
-                  max="0.80"
-                  step="0.01"
-                  value={selectedThreshold}
-                  onChange={(e) => setSelectedThreshold(Number(e.target.value))}
-                />
-                <div className="calibration-ticks">
-                  <span>0,20 · mais sensível</span>
-                  <span>0,48 · ponto calibrado</span>
-                  <span>0,80 · mais preciso</span>
-                </div>
-                <p className="calibration-field__note">
-                  O limiar padrão do bundle é 0.48 (calibrado no treino temporal). Reduzir o limiar antecipa mais falhas gerando mais ordens de serviço; aumentar restringe os alertas a portas com alta probabilidade de pane.
-                </p>
+          <section className="lab-workbench">
+            <form className="lab-controls" onSubmit={handleRunExperiment}>
+              <div className="lab-controls__intro">
+                <span className="lab-eyebrow">Novo cenário</span>
+                <h2>Laboratório de cenários</h2>
+                <p>Compare outras configurações antes de alterar o diagnóstico usado pela operação.</p>
               </div>
-
-              <div className="calibration-field">
-                <div className="calibration-field__top">
-                  <label htmlFor="horizon-select">Horizonte de predição padrão</label>
+              <div className="lab-control-grid">
+                <div className="lab-threshold-control">
+                  <div className="calibration-field__top">
+                    <label htmlFor="threshold-slider">Limiar de decisão</label>
+                    <output className="calibration-value-badge" htmlFor="threshold-slider">{Number(selectedThreshold).toFixed(2)}</output>
+                  </div>
+                  <input
+                    id="threshold-slider"
+                    type="range"
+                    className="calibration-slider-input"
+                    min="0.05"
+                    max="0.95"
+                    step="0.01"
+                    value={selectedThreshold}
+                    onChange={(event) => setSelectedThreshold(Number(event.target.value))}
+                  />
+                  <div className="calibration-ticks"><span>mais alertas</span><span>menos alertas</span></div>
                 </div>
-                <label className="calibration-horizon">
-                  <span>Horizonte:</span>
-                  <select
-                    id="horizon-select"
-                    value={selectedHorizon}
-                    onChange={(e) => setSelectedHorizon(Number(e.target.value))}
-                  >
-                    <option value={7}>7 dias · manutenções imediatas</option>
-                    <option value={14}>14 dias · planejamento semanal</option>
-                    <option value={30}>30 dias · gestão de ativos</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="simulation-panel">
-                <div className="simulation-panel__head">
-                  <h3>Impacto operacional estimado</h3>
-                  <p>Estimativa projetada sobre o parque ativo de 264 portas da Linha 4 Amarela</p>
-                </div>
-                <div className="simulation-grid">
-                  <div className="simulation-tile">
-                    <span>Sensibilidade</span>
-                    <strong>{simulatedImpact.sensitivity}</strong>
-                  </div>
-                  <div className="simulation-tile">
-                    <span>Recall projetado</span>
-                    <strong>{simulatedImpact.recallPct}%</strong>
-                  </div>
-                  <div className="simulation-tile">
-                    <span>Portas em risco</span>
-                    <strong>{simulatedImpact.doorsAtRisk} portas</strong>
-                  </div>
-                  <div className="simulation-tile">
-                    <span>Ordens preventivas</span>
-                    <strong>~{simulatedImpact.inspectionsPerWeek} ordens/sem</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="calibration-actions">
-                <Button type="submit" variant="primary" disabled={savingConfig}>
-                  {savingConfig ? 'Salvando calibração…' : 'Salvar calibração operacional'}
+                <Button type="submit" disabled={runningExperiment}>
+                  {runningExperiment ? 'Executando…' : 'Executar cenário'}
                 </Button>
               </div>
             </form>
-          </div>
-        </article>
+
+            <div className="lab-results">
+              <header>
+                <div><span className="lab-eyebrow">Resultados reais</span><h2>Cenários disponíveis</h2></div>
+                <span>{experiments.length} {experiments.length === 1 ? 'execução' : 'execuções'}</span>
+              </header>
+              {experiments.length ? (
+                <div className="lab-scenarios">
+                  {experiments.map((run) => {
+                    const total = Number(run.total_doors_evaluated) || 0
+                    const risk = Number(run.total_doors_at_risk) || 0
+                    const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
+                    const delta = risk - officialRisk
+                    const percent = (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'
+                    return (
+                      <article className="lab-scenario" key={run.id}>
+                        <header>
+                          <div className="lab-scenario__identity">
+                            <strong>Limiar {Number(run.threshold_used).toFixed(2)}</strong>
+                            <span>{new Date(String(run.created_at).replace(' ', 'T')).toLocaleString('pt-BR')} · {run.id.slice(0, 8)}</span>
+                          </div>
+                          <span className="lab-scenario__kind">Teste sobre as portas atuais</span>
+                          <button type="button" onClick={() => handlePromoteExperiment(run)} disabled={Boolean(promotingExperiment)}>{promotingExperiment === run.id ? 'Publicando…' : 'Usar na operação'}</button>
+                        </header>
+                        <dl className="lab-scenario__metrics">
+                          <div><dt>Portas em risco</dt><dd>{risk}</dd><small>{delta > 0 ? '+' : ''}{delta} versus atual</small></div>
+                          <div><dt>Taxa de alerta</dt><dd>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</dd><small>{risk} de {total} portas</small></div>
+                          <div title="Chance média esperada de falha entre as portas sinalizadas"><dt>Precisão esperada</dt><dd>{percent(run.estimated_precision)}</dd></div>
+                          <div title="Parcela do risco probabilístico coberta pelas portas sinalizadas"><dt>Recall esperado</dt><dd>{percent(run.estimated_recall)}</dd></div>
+                          <div><dt>Equilíbrio P/R</dt><dd>{percent(run.estimated_f1)}</dd><small>F1 esperado</small></div>
+                          <div><dt>Maior risco</dt><dd>{percent(run.maximum_probability)}</dd></div>
+                        </dl>
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : <p className="lab-empty">Nenhum cenário foi executado. Escolha um threshold e rode a primeira comparação.</p>}
+              <footer>As métricas “esperadas” ajudam a comparar cenários. Os valores definitivos dependem das falhas que realmente acontecerem depois do período escolhido.</footer>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {!loading && activeTab === 'retrain' ? (

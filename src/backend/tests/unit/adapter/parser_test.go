@@ -54,6 +54,21 @@ func TestAlarmParser_CSV_Success(t *testing.T) {
 	}
 }
 
+func TestAlarmParser_NormalizesConsolidatedPlatform(t *testing.T) {
+	p := parser.NewDefaultAlarmParser()
+	csvData := "tag,estacao,porta,alarme,horario_alarme,plataforma_extraida\n" +
+		"PSD_FAL_FAL2_PDM09_OBS,FAL,9,OBS,2026-05-12 08:16:52.657,FAL2\n" +
+		"PSD_LUZ_LUZ1_PDM08_OBS,LUZ,8,OBS,2026-05-12 08:15:09.913,LUZ1\n"
+
+	records, err := p.ParseAlarms(strings.NewReader(csvData), "csv")
+	if err != nil {
+		t.Fatalf("falha ao processar formato consolidado: %v", err)
+	}
+	if len(records) != 2 || records[0].Platform != "P2" || records[1].Platform != "P1" {
+		t.Fatalf("plataformas consolidadas nao normalizadas: %+v", records)
+	}
+}
+
 func TestMaintenanceParser_CSV_EmptyError(t *testing.T) {
 	p := parser.NewDefaultMaintenanceParser()
 	if _, err := p.ParseMaintenance(strings.NewReader(""), "csv", ""); err == nil {

@@ -58,9 +58,9 @@ function CardManutencao({
         <div><dt>Origem</dt><dd>{source || 'Não informada'}</dd></div>
         <div><dt>Início</dt><dd>{startedAt || 'Não informado'}</dd></div>
         <div><dt>Fim</dt><dd>{endedAt || 'Não informado'}</dd></div>
-        <div className="maintenance-record__wide"><dt>Local de instalação</dt><dd>{location || 'Não informado'}</dd></div>
-        <div className="maintenance-record__wide"><dt>Sintoma</dt><dd>{symptom || 'Não informado'}</dd></div>
-        <div className="maintenance-record__wide"><dt>Descrição</dt><dd>{description || 'Não informada'}</dd></div>
+        <div><dt>Local de instalação</dt><dd>{location || 'Não informado'}</dd></div>
+        <div><dt>Sintoma</dt><dd>{symptom || 'Não informado'}</dd></div>
+        <div><dt>Descrição</dt><dd>{description || 'Não informada'}</dd></div>
       </dl>
     </details>
   )

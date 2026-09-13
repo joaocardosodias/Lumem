@@ -67,20 +67,20 @@ func TestMLOpsUseCase_GetAndBuildConfig(t *testing.T) {
 		t.Errorf("esperava threshold 0.27, obteve %f", cfg.Threshold)
 	}
 
-	updated, err := uc.UpdateConfig(context.Background(), 0.32, 14, "usr_engineer_01")
+	updated, err := uc.UpdateConfig(context.Background(), 0.32, 7, "usr_engineer_01")
 	if err != nil {
 		t.Fatalf("esperava sucesso ao atualizar config: %v", err)
 	}
-	if updated.Threshold != 0.32 || updated.DefaultHorizonDays != 14 {
+	if updated.Threshold != 0.32 || updated.DefaultHorizonDays != 7 {
 		t.Errorf("valores atualizados incorretos: %+v", updated)
 	}
 
-	_, err = uc.UpdateConfig(context.Background(), 0.01, 14, "usr_engineer_01")
+	_, err = uc.UpdateConfig(context.Background(), 0.01, 7, "usr_engineer_01")
 	if err == nil {
 		t.Errorf("esperava erro para threshold fora dos limites")
 	}
 
-	_, err = uc.UpdateConfig(context.Background(), 0.30, 0, "usr_engineer_01")
+	_, err = uc.UpdateConfig(context.Background(), 0.30, 14, "usr_engineer_01")
 	if err == nil {
 		t.Errorf("esperava erro para horizonte invalido")
 	}

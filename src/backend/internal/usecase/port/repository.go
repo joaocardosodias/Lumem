@@ -60,5 +60,9 @@ type DashboardRepository interface {
 type PredictionRepository interface {
 	SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error
 	GetLatestRun(ctx context.Context) (*domain.PredictionRun, error)
+	GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error)
+	ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error)
+	PromoteExperiment(ctx context.Context, id, userID string) error
+	GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error)
 	ListDoorsForInference(ctx context.Context) ([]domain.Door, error)
 }

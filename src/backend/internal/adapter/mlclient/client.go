@@ -21,10 +21,11 @@ type PredictionRequest struct {
 }
 
 type PredictionResponse struct {
-	StationCode string `json:"station_code"`
-	Platform    string `json:"platform"`
-	DoorNumber  int    `json:"door_number"`
-	WillFail    bool   `json:"will_fail"`
+	StationCode string  `json:"station_code"`
+	Platform    string  `json:"platform"`
+	DoorNumber  int     `json:"door_number"`
+	WillFail    bool    `json:"will_fail"`
+	Probability float64 `json:"probability"`
 }
 
 type Client struct {
@@ -96,11 +97,13 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door, threshol
 
 	items := make([]domain.PredictionItem, len(mlResp))
 	for i, r := range mlResp {
+		probability := r.Probability
 		items[i] = domain.PredictionItem{
 			StationCode: r.StationCode,
 			Platform:    r.Platform,
 			DoorNumber:  r.DoorNumber,
 			WillFail:    r.WillFail,
+			Probability: &probability,
 		}
 	}
 	return items, nil

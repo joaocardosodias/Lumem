@@ -2,7 +2,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 90;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -15,12 +15,12 @@
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
   background: #ffffff;
-  border-radius: 12px;
-  padding: 14px 18px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(63, 0, 255, 0.08);
-  border: 1px solid rgba(63, 0, 255, 0.1);
+  border-radius: 10px;
+  padding: 13px 14px;
+  box-shadow: 0 14px 34px rgba(23, 46, 82, .14);
+  border: 1px solid #dfe6f0;
   animation: toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -37,19 +37,19 @@
 }
 
 .toast-item__indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 3px;
+  height: 32px;
+  border-radius: 3px;
   flex-shrink: 0;
   background: var(--brand, #3f00ff);
 }
 
 .toast-item--success .toast-item__indicator {
-  background: #00c853;
+  background: #237a57;
 }
 
 .toast-item--error .toast-item__indicator {
-  background: #ff003b;
+  background: #c9253d;
 }
 
 .toast-item--info .toast-item__indicator {
@@ -58,24 +58,35 @@
 
 .toast-item__msg {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 13px;
   font-weight: 500;
-  color: #1e1e24;
-  line-height: 1.4;
+  color: var(--ink, #172e52);
+  line-height: 1.45;
   flex: 1;
 }
 
 .toast-item__close {
   background: transparent;
   border: none;
-  font-size: 1.25rem;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 18px;
   line-height: 1;
-  color: #888888;
+  color: var(--muted, #52647f);
   cursor: pointer;
-  padding: 0 4px;
-  transition: color 0.15s ease;
+  padding: 0 0 2px;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 .toast-item__close:hover {
-  color: #1e1e24;
+  background: #f1f5f9;
+  color: var(--ink, #172e52);
+}
+
+.toast-item__close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #3f00ff) 20%, transparent);
+  outline-offset: 2px;
 }

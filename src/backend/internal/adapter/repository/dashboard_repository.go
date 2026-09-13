@@ -31,7 +31,8 @@ func (r *PostgresDashboardRepository) GetSummary(ctx context.Context) (*domain.D
 	_ = r.db.QueryRowContext(ctx, `
 		SELECT COALESCE(total_doors_at_risk, 0)
 		FROM prediction_runs
-		ORDER BY created_at DESC LIMIT 1
+		WHERE is_experiment = FALSE AND published_at IS NOT NULL
+		ORDER BY published_at DESC LIMIT 1
 	`).Scan(&doorsAtRisk)
 
 	var pendingInspections, completedInspections int
@@ -43,7 +44,11 @@ func (r *PostgresDashboardRepository) GetSummary(ctx context.Context) (*domain.D
 		FROM predictions p
 		JOIN prediction_runs pr ON p.run_id = pr.id
 		JOIN stations s ON p.station_code = s.code
-		WHERE p.will_fail = TRUE AND pr.id = (SELECT id FROM prediction_runs ORDER BY created_at DESC LIMIT 1)
+		WHERE p.will_fail = TRUE AND pr.id = (
+			SELECT id FROM prediction_runs
+			WHERE is_experiment = FALSE AND published_at IS NOT NULL
+			ORDER BY published_at DESC LIMIT 1
+		)
 		GROUP BY s.code
 		ORDER BY COUNT(p.id) DESC
 		LIMIT 5
@@ -104,7 +109,11 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 		FROM predictions p
 		JOIN prediction_runs pr ON p.run_id = pr.id
 		WHERE p.station_code = $1 AND p.platform = $2 AND p.door_number = $3
-		  AND p.run_id = (SELECT id FROM prediction_runs ORDER BY created_at DESC LIMIT 1)
+		  AND p.run_id = (
+			SELECT id FROM prediction_runs
+			WHERE is_experiment = FALSE AND published_at IS NOT NULL
+			ORDER BY published_at DESC LIMIT 1
+		)
 		LIMIT 1
 	`, door.StationCode, door.Platform, door.DoorNumber).Scan(&willFail, &lastEvalAt)
 
@@ -112,10 +121,10 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 	alarmRows, err := r.db.QueryContext(ctx, `
 		SELECT id, tag, alarm_type, duration_seconds, event_timestamp, COALESCE(normalization_timestamp, '')
 		FROM telemetry_alarms
-		WHERE door_number = $1 AND station_code = $2
+		WHERE door_number = $1 AND station_code = $2 AND platform = $3
 		ORDER BY event_timestamp DESC
 		LIMIT 20
-	`, door.DoorNumber, door.StationCode)
+	`, door.DoorNumber, door.StationCode, door.Platform)
 	if err == nil {
 		defer alarmRows.Close()
 		for alarmRows.Next() {
@@ -147,7 +156,7 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 
 	var inspections []*domain.Inspection
 	insRows, err := r.db.QueryContext(ctx, `
-		SELECT id, status, COALESCE(notes, ''), completed_at
+		SELECT id, status, COALESCE(notes, ''), completed_at, created_at
 		FROM inspections
 		WHERE station_code = $1 AND platform = $2 AND door_number = $3
 		ORDER BY created_at DESC
@@ -159,7 +168,7 @@ func (r *PostgresDashboardRepository) GetDoorTimeline(ctx context.Context, doorI
 			var i domain.Inspection
 			var notesStr string
 			var compAt *time.Time
-			if err := insRows.Scan(&i.ID, &i.Status, &notesStr, &compAt); err == nil {
+			if err := insRows.Scan(&i.ID, &i.Status, &notesStr, &compAt, &i.CreatedAt); err == nil {
 				i.Notes = notesStr
 				i.CompletedAt = compAt
 				inspections = append(inspections, &i)
@@ -185,7 +194,11 @@ func (r *PostgresDashboardRepository) GetStationDoorsStatus(ctx context.Context,
 		           SELECT p.will_fail
 		           FROM predictions p
 		           WHERE p.station_code = s.code AND p.platform = d.platform AND p.door_number = d.door_number
-		             AND p.run_id = (SELECT id FROM prediction_runs ORDER BY created_at DESC LIMIT 1)
+		             AND p.run_id = (
+				 SELECT id FROM prediction_runs
+				 WHERE is_experiment = FALSE AND published_at IS NOT NULL
+				 ORDER BY published_at DESC LIMIT 1
+			 )
 		           LIMIT 1
 		       ), FALSE) as will_fail
 		FROM doors d

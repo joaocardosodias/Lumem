@@ -475,10 +475,27 @@ export const api = {
   predictionsLatest() {
     return request('/api/v1/predictions/latest').then((result) => result.data)
   },
+  doorPredictionHistory(doorId, limit = 30) {
+    return request(`/api/v1/doors/${doorId}/predictions${queryString({ limit })}`).then((result) => result.data)
+  },
   triggerPredictions(horizonDays = 7) {
     return request('/api/v1/predictions/trigger', {
       method: 'POST',
       body: { horizon_days: Number(horizonDays) || 7 },
+    }).then((result) => result.data)
+  },
+  predictionExperiments(limit = 20) {
+    return request(`/api/v1/predictions/experiments${queryString({ limit })}`).then((result) => result.data)
+  },
+  runPredictionExperiment(threshold) {
+    return request('/api/v1/predictions/experiments', {
+      method: 'POST',
+      body: { threshold: Number(threshold) },
+    }).then((result) => result.data)
+  },
+  promotePredictionExperiment(id) {
+    return request(`/api/v1/predictions/experiments/${id}/promote`, {
+      method: 'POST',
     }).then((result) => result.data)
   },
   getMLConfig() {

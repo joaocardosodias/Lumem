@@ -54,8 +54,8 @@ function Login() {
       <aside ref={brandRef} className="login__brand">
         <div className="login__grainient" aria-hidden="true">
           <Grainient
-            color1="#1f03ff"
-            color2="#0e2697"
+            color1="#3f00ff"
+            color2="#3100cd"
             color3="#597dfd"
             timeSpeed={1.25}
             colorBalance={0}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
+import DataPageSkeleton from '../components/DataPageSkeleton'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Paginacao from '../components/Paginacao'
 import { usePredictionLoad } from '../components/PredictionLoad'
@@ -37,7 +38,6 @@ function Predicoes({ onNavigate, params }) {
   const [items, setItems] = useState(() => initialCache?.items || [])
   const [loading, setLoading] = useState(() => !initialCache?.items?.length)
   const [error, setError] = useState('')
-  const [horizonDays, setHorizonDays] = useState(7)
   const [statusTab, setStatusTab] = useState(() => (params?.status || 'all'))
   const [filters, setFilters] = useState(() => ({
     ...emptyFilters,
@@ -105,18 +105,19 @@ function Predicoes({ onNavigate, params }) {
     setError('')
     try {
       let result = null
+	  const officialHorizon = Number(modelConfig.defaultHorizon) || 7
       await run({
         variant: 'overlay',
         mode: 'predict',
         task: async () => {
-          result = await api.triggerPredictions(horizonDays)
+          result = await api.triggerPredictions(officialHorizon)
         },
       })
 
       invalidateInspections()
 
       if (result) {
-        const nextRunData = predictionRun(result, horizonDays)
+        const nextRunData = predictionRun(result, officialHorizon)
         const list = asList(result.predictions || result)
         const nextItems = list.map(normalizePrediction)
         setRunData(nextRunData)
@@ -144,7 +145,7 @@ function Predicoes({ onNavigate, params }) {
 
       setPage(1)
       toast.success(
-        `Predição executada com sucesso! ${result?.total_doors_at_risk || 0} portas em risco de falha.`,
+        `Predição executada com sucesso. ${result?.total_doors_at_risk || 0} portas em risco de falha.`,
       )
     } catch (err) {
       const msg = errorMessage(err)
@@ -207,7 +208,7 @@ function Predicoes({ onNavigate, params }) {
       { label: 'Horizonte (dias)', value: () => String(runData?.horizon_days || 7) },
     ]
     exportToCsv('predicoes_linha4.csv', columns, visible)
-    toast.success(`${visible.length} predições exportadas com sucesso!`)
+    toast.success(`${visible.length} predições exportadas com sucesso.`)
   }
 
   function updateFilter(field) {
@@ -233,20 +234,6 @@ function Predicoes({ onNavigate, params }) {
           </p>
         </div>
         <div className="predicoes-actions">
-          {canRunPrediction ? (
-            <label className="predicoes-horizon">
-              <span>Horizonte:</span>
-              <select
-                value={horizonDays}
-                onChange={(e) => setHorizonDays(Number(e.target.value))}
-                disabled={busy}
-              >
-                <option value={7}>7 dias</option>
-                <option value={14}>14 dias</option>
-                <option value={30}>30 dias</option>
-              </select>
-            </label>
-          ) : null}
           <Button variant="secondary" onClick={handleExportCsv}>
             Exportar CSV
           </Button>
@@ -264,9 +251,11 @@ function Predicoes({ onNavigate, params }) {
         </div>
       </div>
 
-      {loading ? <p className="page-status">Carregando dados da última rodada preditiva…</p> : null}
+      {loading ? <DataPageSkeleton metrics={5} label="Carregando dados da última rodada preditiva" /> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
+      {!loading ? (
+        <>
       {runData ? (
         <div className="predicoes-kpis">
           <div className="predicoes-kpi-card is-run">
@@ -539,7 +528,7 @@ function Predicoes({ onNavigate, params }) {
                     })
                   }
                 >
-                  Ver Porta
+                  Ver histórico
                 </button>
               </div>
             </article>
@@ -554,6 +543,9 @@ function Predicoes({ onNavigate, params }) {
         </div>
         <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
       </section>
+
+        </>
+      ) : null}
 
     </section>
   )

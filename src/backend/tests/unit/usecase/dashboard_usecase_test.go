@@ -3,6 +3,7 @@ package usecase_test
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -43,10 +44,33 @@ func (m *mockDashboardRepo) GetStationDoorsStatus(ctx context.Context, stationCo
 
 type mockPredictionRepo struct {
 	latestRun  *domain.PredictionRun
+	history    []domain.DoorPredictionHistoryItem
 	doors      []domain.Door
 	runErr     error
 	doorsErr   error
 	saveRunErr error
+}
+
+func (m *mockPredictionRepo) GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error) {
+	if m.latestRun == nil || m.latestRun.ID != id {
+		return nil, domain.ErrExperimentNotFound
+	}
+	return m.latestRun, nil
+}
+
+func (m *mockPredictionRepo) ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error) {
+	if m.latestRun != nil && m.latestRun.IsExperiment {
+		return []domain.PredictionRun{*m.latestRun}, nil
+	}
+	return []domain.PredictionRun{}, nil
+}
+
+func (m *mockPredictionRepo) PromoteExperiment(ctx context.Context, id, userID string) error {
+	if m.latestRun == nil || m.latestRun.ID != id || !m.latestRun.IsExperiment {
+		return domain.ErrExperimentNotFound
+	}
+	m.latestRun.IsExperiment = false
+	return nil
 }
 
 func (m *mockPredictionRepo) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
@@ -54,6 +78,7 @@ func (m *mockPredictionRepo) SaveRun(ctx context.Context, run *domain.Prediction
 		return m.saveRunErr
 	}
 	run.ID = "run-test-123"
+	run.Predictions = append([]domain.PredictionItem(nil), items...)
 	m.latestRun = run
 	return nil
 }
@@ -63,6 +88,13 @@ func (m *mockPredictionRepo) GetLatestRun(ctx context.Context) (*domain.Predicti
 		return nil, m.runErr
 	}
 	return m.latestRun, nil
+}
+
+func (m *mockPredictionRepo) GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error) {
+	if m.runErr != nil {
+		return nil, m.runErr
+	}
+	return m.history, nil
 }
 
 func (m *mockPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
@@ -385,6 +417,31 @@ func TestDashboardUseCase_GetLatestPredictions_Success(t *testing.T) {
 	}
 }
 
+func TestDashboardUseCase_GetDoorPredictionHistory(t *testing.T) {
+	probability := 0.72
+	threshold := 0.28
+	createdAt := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+	repo := &mockPredictionRepo{history: []domain.DoorPredictionHistoryItem{{
+		PredictionItem: domain.PredictionItem{ID: "pred-1", RunID: "run-1", Probability: &probability, WillFail: true},
+		HorizonDays:    7, ThresholdUsed: &threshold, ModelVersion: "v1.0.0", CreatedAt: createdAt,
+	}}}
+	uc := usecase.NewGetDoorPredictionHistoryUseCase(repo)
+
+	items, err := uc.Execute(context.Background(), 12, 30)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("historico inesperado: %+v, erro: %v", items, err)
+	}
+	if items[0].Probability == nil || *items[0].Probability != probability {
+		t.Fatalf("probabilidade nao preservada: %+v", items[0])
+	}
+	if !items[0].WindowEndsAt.Equal(createdAt.AddDate(0, 0, 7)) {
+		t.Fatalf("fim da janela incorreto: %v", items[0].WindowEndsAt)
+	}
+	if _, err := uc.Execute(context.Background(), 0, 30); !errors.Is(err, domain.ErrInvalidDoorID) {
+		t.Fatalf("esperava ErrInvalidDoorID, obteve %v", err)
+	}
+}
+
 type mockPredictionRepoNotFound struct {
 	mockPredictionRepo
 }
@@ -556,11 +613,77 @@ func TestDashboardUseCase_TriggerPredictions_CustomThreshold(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
-	if run == nil || run.HorizonDays != 14 {
-		t.Fatalf("expected horizon 14, got %+v", run)
+	if run == nil || run.HorizonDays != 7 {
+		t.Fatalf("expected fixed horizon 7, got %+v", run)
 	}
 	if ml.lastThreshold == nil || *ml.lastThreshold != 0.35 {
 		t.Fatalf("expected threshold 0.35, got %v", ml.lastThreshold)
 	}
 }
 
+func TestDashboardUseCase_PredictionExperimentIsIsolatedUntilPromotion(t *testing.T) {
+	doors := []domain.Door{
+		{ID: 7, StationID: 1, StationCode: "FAL", Platform: "P1", DoorNumber: 7, Status: "active"},
+	}
+	predRepo := &mockPredictionRepo{doors: doors}
+	insRepo := newMockInspectionRepo()
+	bus := &mockEventBus{}
+	uow := &mockUnitOfWork{store: &mockUOWStore{predRepo: predRepo, insRepo: insRepo}}
+	baseProbability := 0.4
+	ml := &mockMLClient{items: []domain.PredictionItem{{
+		StationCode: "FAL", Platform: "P1", DoorNumber: 7, Probability: &baseProbability,
+	}}}
+	uc := usecase.NewDashboardUseCase(&mockDashboardRepo{}, predRepo, ml, bus, uow)
+
+	run, err := uc.RunPredictionExperiment(context.Background(), 0.35)
+	if err != nil {
+		t.Fatalf("expected experiment success, got %v", err)
+	}
+	if !run.IsExperiment || run.PublishedAt != nil || run.HorizonDays != 7 {
+		t.Fatalf("experiment metadata is invalid: %+v", run)
+	}
+	if run.ThresholdUsed == nil || *run.ThresholdUsed != 0.35 {
+		t.Fatalf("expected threshold 0.35, got %v", run.ThresholdUsed)
+	}
+	if run.AverageProbability == nil || math.Abs(*run.AverageProbability-0.4) > 0.000001 {
+		t.Fatalf("expected original probability 0.4, got %v", run.AverageProbability)
+	}
+	if run.EstimatedPrecision == nil || math.Abs(*run.EstimatedPrecision-0.4) > 0.000001 || run.EstimatedRecall == nil || *run.EstimatedRecall != 1 {
+		t.Fatalf("unexpected estimated metrics: precision=%v recall=%v", run.EstimatedPrecision, run.EstimatedRecall)
+	}
+	inspections, _ := insRepo.List(context.Background(), 10, 0, "")
+	if len(inspections) != 0 {
+		t.Fatalf("experiment must not create inspections, got %d", len(inspections))
+	}
+	if len(bus.published) != 0 {
+		t.Fatalf("experiment must not publish operational events, got %d", len(bus.published))
+	}
+
+	experiments, err := uc.ListPredictionExperiments(context.Background(), 20)
+	if err != nil || len(experiments) != 1 {
+		t.Fatalf("expected saved experiment, got %+v, err=%v", experiments, err)
+	}
+
+	promoted, err := uc.PromotePredictionExperiment(context.Background(), run.ID, "engineer-1")
+	if err != nil {
+		t.Fatalf("expected promotion success, got %v", err)
+	}
+	if promoted.IsExperiment || promoted.PublishedAt == nil {
+		t.Fatalf("promoted run must be official: %+v", promoted)
+	}
+	inspections, _ = insRepo.List(context.Background(), 10, 0, "")
+	if len(inspections) != 1 {
+		t.Fatalf("promotion must create one inspection, got %d", len(inspections))
+	}
+	if len(bus.published) < 2 {
+		t.Fatalf("promotion must publish risk and completion events, got %d", len(bus.published))
+	}
+}
+
+func TestDashboardUseCase_PredictionExperimentRejectsInvalidThreshold(t *testing.T) {
+	predRepo := &mockPredictionRepo{}
+	uc := usecase.NewDashboardUseCase(&mockDashboardRepo{}, predRepo, &mockMLClient{}, nil, &mockUnitOfWork{})
+	if _, err := uc.RunPredictionExperiment(context.Background(), 0.01); !errors.Is(err, domain.ErrInvalidConfig) {
+		t.Fatalf("expected ErrInvalidConfig, got %v", err)
+	}
+}

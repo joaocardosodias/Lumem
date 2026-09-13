@@ -28,6 +28,7 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 				Platform:    reqBody.Doors[0].Platform,
 				DoorNumber:  reqBody.Doors[0].DoorNumber,
 				WillFail:    true,
+				Probability: 0.72,
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -46,6 +47,9 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 	}
 	if len(items) != 1 || !items[0].WillFail {
 		t.Fatalf("unexpected items: %+v", items)
+	}
+	if items[0].Probability == nil || *items[0].Probability != 0.72 {
+		t.Fatalf("expected probability to be preserved, got %+v", items[0])
 	}
 	if client.CircuitState() != mlclient.StateClosed {
 		t.Fatalf("expected closed circuit state")

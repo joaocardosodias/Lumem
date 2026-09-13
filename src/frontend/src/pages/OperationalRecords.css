@@ -630,10 +630,6 @@
   white-space: pre-wrap;
 }
 
-.maintenance-record__wide {
-  grid-column: 1 / -1;
-}
-
 .card-manutencao:focus-visible,
 .card-inspecao--clickable:focus-visible {
   outline: 2px solid var(--brand);

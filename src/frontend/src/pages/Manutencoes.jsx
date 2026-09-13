@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
+import DataPageSkeleton from '../components/DataPageSkeleton'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
@@ -218,7 +219,7 @@ function Manutencoes({ params }) {
       setForm(emptyForm)
       setOpen(false)
       setPage(1)
-      toast.success('Ordem de manutenção cadastrada com sucesso!')
+      toast.success('Ordem de manutenção cadastrada com sucesso.')
       setReloadAt(Date.now())
     } catch (err) {
       const msg = errorMessage(err)
@@ -247,7 +248,7 @@ function Manutencoes({ params }) {
       setUpload(null)
       setOpen(false)
       setPage(1)
-      toast.success('Planilha de manutenções processada com sucesso!')
+      toast.success('Planilha de manutenções processada com sucesso.')
       setReloadAt(Date.now())
     } catch (err) {
       const msg = errorMessage(err)
@@ -276,7 +277,7 @@ function Manutencoes({ params }) {
       { label: 'Origem', key: 'source' },
     ]
     exportToCsv('manutencoes.csv', columns, visible)
-    toast.success(`${visible.length} manutenções exportadas com sucesso!`)
+    toast.success(`${visible.length} manutenções exportadas com sucesso.`)
   }
 
   function updateFilter(field) {
@@ -312,7 +313,7 @@ function Manutencoes({ params }) {
         </div>
       </header>
 
-      {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
+      {loading ? <DataPageSkeleton label="Carregando ordens de manutenção" /> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       {loading ? null : (
@@ -539,10 +540,29 @@ function Manutencoes({ params }) {
       {open ? (
         <div className="manutencoes-modal" onClick={() => !importing && setOpen(false)}>
           <form
+            className="form-modal"
             onClick={(event) => event.stopPropagation()}
             onSubmit={mode === 'import' ? handleImport : handleSubmit}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="maintenance-create-title"
           >
-            <h2>Cadastrar manutenção</h2>
+            <header className="form-modal__head">
+              <div>
+                <span className="form-modal__eyebrow">Registro operacional</span>
+                <h2 id="maintenance-create-title">Cadastrar manutenção</h2>
+                <p>Adicione uma ordem manualmente ou importe registros de uma planilha.</p>
+              </div>
+              <button
+                type="button"
+                className="form-modal__close"
+                onClick={() => setOpen(false)}
+                disabled={importing}
+                aria-label="Fechar cadastro"
+              >
+                ✕
+              </button>
+            </header>
             <div className="cadastro-tabs">
               <button
                 type="button"
@@ -581,9 +601,14 @@ function Manutencoes({ params }) {
                   error={importError}
                 />
                 {upload ? <UploadStatus upload={upload} /> : null}
-                <Button type="submit" variant="light">
-                  {importing ? 'Processando upload…' : 'Enviar planilha'}
-                </Button>
+                <div className="form-modal__actions">
+                  <Button type="button" variant="secondary" disabled={importing} onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {importing ? 'Processando upload…' : 'Enviar planilha'}
+                  </Button>
+                </div>
               </>
             ) : (
               <>
@@ -674,9 +699,14 @@ function Manutencoes({ params }) {
                   value={form.description}
                   onChange={updateField('description')}
                 />
-                <Button type="submit" variant="light">
-                  Cadastrar
-                </Button>
+                <div className="form-modal__actions">
+                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    Cadastrar
+                  </Button>
+                </div>
               </>
             )}
           </form>

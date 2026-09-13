@@ -253,8 +253,8 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
     <div ref={rootRef} className="prediction-load" role="alert" aria-live="assertive" aria-busy="true">
       <div className="prediction-load__grainient">
         <Grainient
-          color1="#1f03ff"
-          color2="#0e2697"
+          color1="#3f00ff"
+          color2="#3100cd"
           color3="#597dfd"
           timeSpeed={1.25}
           colorBalance={0}

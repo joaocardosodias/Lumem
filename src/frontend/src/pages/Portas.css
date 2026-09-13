@@ -1102,6 +1102,11 @@
   font-style: normal;
 }
 
+.door-empty-state.is-error {
+  background: #fff4f5;
+  color: #b52539;
+}
+
 .door-modal-section--inspection {
   padding: 18px;
   border: 1px solid #dfe6f0;

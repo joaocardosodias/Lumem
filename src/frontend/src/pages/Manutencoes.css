@@ -342,6 +342,16 @@
   margin-bottom: 18px;
 }
 
+.manutencoes .filtros__campos {
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    minmax(120px, .9fr)
+    minmax(80px, .6fr)
+    minmax(95px, .75fr)
+    repeat(2, minmax(70px, .5fr))
+    auto;
+}
+
 .manutencoes__list {
   margin-bottom: 8px;
 }
@@ -655,6 +665,12 @@
   .card-manutencao {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     row-gap: 16px;
+  }
+}
+
+@container manutencoes (max-width: 900px) {
+  .manutencoes .filtros__campos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

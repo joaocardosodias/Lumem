@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
 import StationPlan from '../components/StationPlan'
+import PredictionHistory from '../components/PredictionHistory'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -56,6 +57,10 @@ function Portas({ onNavigate, params = {} }) {
   const [openedDoor, setOpenedDoor] = useState(null)
   const [doorMaintenances, setDoorMaintenances] = useState([])
   const [doorAlarms, setDoorAlarms] = useState([])
+  const [doorAlarmsError, setDoorAlarmsError] = useState('')
+  const [doorPredictions, setDoorPredictions] = useState([])
+  const [doorPredictionsLoading, setDoorPredictionsLoading] = useState(false)
+  const [doorPredictionsError, setDoorPredictionsError] = useState('')
   const [doorSearch, setDoorSearch] = useState('')
   const [doorFilter, setDoorFilter] = useState('all')
   const [inspNotes, setInspNotes] = useState('')
@@ -69,12 +74,15 @@ function Portas({ onNavigate, params = {} }) {
   const hideTimer = useRef(null)
   const pendingCode = useRef(null)
   const doorDialogRef = useRef(null)
+  const predictionHistoryRequestRef = useRef(0)
   const doorDetailsOpen = Boolean(openedDoor)
 
   const openedStation = lineStations.find((item) => item.code === openedCode)
   const selectedStation = lineStations.find((item) => item.code === selectedCode)
   const topStation = summary.critical_stations[0]
   const doorsAtRisk = doors.filter((item) => item.will_fail).length
+  const recordedDoorProbability = Number(doorPredictions[0]?.probability)
+  const hasRecordedDoorProbability = doorPredictions[0]?.probability != null && Number.isFinite(recordedDoorProbability)
   const platforms = useMemo(() => {
     return [...new Set([...(openedStation?.platforms ?? []), ...doors.map((item) => item.platform)])]
       .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
@@ -252,14 +260,15 @@ function Portas({ onNavigate, params = {} }) {
     if (busy || !openedCode) return
     setError('')
     try {
+      const config = await api.getMLConfig().catch(() => ({ default_horizon_days: 7 }))
       await run({
         variant: 'overlay',
         mode: 'predict',
-        task: () => api.triggerPredictions('7'),
+        task: () => api.triggerPredictions(config.default_horizon_days || 7),
       })
       invalidateDoorsCache()
       invalidateDashboard()
-      toast.success('Diagnóstico preditivo executado com sucesso!')
+      toast.success('Diagnóstico preditivo executado com sucesso.')
       await loadStationDoors(openedCode)
     } catch (err) {
       setError(errorMessage(err))
@@ -284,15 +293,38 @@ function Portas({ onNavigate, params = {} }) {
     }
     setInspNotes('')
     setInspError('')
+    setDoorAlarmsError('')
+    setDoorPredictions([])
+    setDoorPredictionsError('')
+    setDoorPredictionsLoading(true)
+    const historyRequest = predictionHistoryRequestRef.current + 1
+    predictionHistoryRequestRef.current = historyRequest
+
+    api.doorPredictionHistory(door.door_id, 30)
+      .then((payload) => {
+        if (predictionHistoryRequestRef.current !== historyRequest) return
+        const history = asList(payload?.history || payload)
+        setDoorPredictions(history)
+      })
+      .catch((err) => {
+        if (predictionHistoryRequestRef.current === historyRequest) setDoorPredictionsError(errorMessage(err))
+      })
+      .finally(() => {
+        if (predictionHistoryRequestRef.current === historyRequest) setDoorPredictionsLoading(false)
+      })
 
     let extraMaintenances = cachedDossier?.maintenances || []
     let extraAlarms = cachedDossier?.alarms || []
     let updatedDoor = cachedDossier?.door || door
+    let timelineLoaded = false
 
     try {
       const dossier = await api.doorTimeline(door.door_id)
+      timelineLoaded = true
       updatedDoor = { ...door, ...dossier, station_code: door.station_code }
       setOpenedDoor(updatedDoor)
+      extraAlarms = asList(dossier?.recent_alarms)
+      setDoorAlarms(extraAlarms)
       const extra = asList(dossier?.maintenances || dossier?.maintenance)
       if (extra.length) {
         extraMaintenances = extra
@@ -315,17 +347,24 @@ function Portas({ onNavigate, params = {} }) {
       }
     }
 
-    try {
-      const rawAlarms = await api.alarms({
-        station_code: door.station_code || openedCode,
-        door_number: door.door_number,
-        limit: 10,
-      })
-      const alarms = asList(rawAlarms?.data || rawAlarms?.alarms || rawAlarms)
-      extraAlarms = alarms
-      setDoorAlarms(alarms)
-    } catch {
-      if (!cachedDossier) setDoorAlarms([])
+    if (!timelineLoaded) {
+      try {
+        const rawAlarms = await api.alarms({
+          station_code: door.station_code || openedCode,
+          platform: door.platform,
+          door_number: door.door_number,
+          limit: 20,
+        })
+        extraAlarms = asList(rawAlarms?.data || rawAlarms?.alarms || rawAlarms)
+        setDoorAlarms(extraAlarms)
+      } catch {
+        setDoorAlarmsError(
+          cachedDossier
+            ? 'Não foi possível atualizar os alarmes. Exibindo os dados salvos.'
+            : 'Não foi possível carregar os alarmes desta porta.',
+        )
+        if (!cachedDossier) setDoorAlarms([])
+      }
     }
 
     setCachedDoorDossier(door.door_id, {
@@ -347,7 +386,7 @@ function Portas({ onNavigate, params = {} }) {
         notes: inspNotes.trim() || undefined,
       })
       invalidateInspections()
-      toast.success(`Ordem de inspeção para a porta ${padDoor(openedDoor.door_number)} cadastrada com sucesso!`)
+      toast.success(`Ordem de inspeção para a porta ${padDoor(openedDoor.door_number)} cadastrada com sucesso.`)
       onNavigate?.('inspecoes')
     } catch (err) {
       setInspError(errorMessage(err))
@@ -356,6 +395,7 @@ function Portas({ onNavigate, params = {} }) {
   }
 
   function handleBackFromDoor() {
+    predictionHistoryRequestRef.current += 1
     setOpenedDoor(null)
     if (openedCode) {
       onNavigate?.('portas', { station: openedCode })
@@ -613,8 +653,14 @@ function Portas({ onNavigate, params = {} }) {
                     </p>
                   </div>
                   <div className="door-status-banner__metric">
-                    <span>Probabilidade de falha</span>
-                    <strong>{Math.round(openedDoor.risk * 100)}%</strong>
+                    <span>{hasRecordedDoorProbability ? 'Probabilidade de falha' : 'Classificação do modelo'}</span>
+                    <strong>
+                      {hasRecordedDoorProbability
+                        ? `${Math.round(recordedDoorProbability * 100)}%`
+                        : doorPredictionsLoading
+                          ? '…'
+                          : openedDoor.will_fail ? 'Em risco' : 'Estável'}
+                    </strong>
                     <small>Avaliação: {openedDoor.last_evaluated_at ? String(openedDoor.last_evaluated_at).slice(0, 10) : 'Recente'}</small>
                   </div>
                 </div>
@@ -646,11 +692,31 @@ function Portas({ onNavigate, params = {} }) {
                   </div>
                 </div>
 
+                <div className="door-modal-section door-modal-section--predictions">
+                  <div className="door-modal-section__head">
+                    <div>
+                      <h4>Histórico preditivo</h4>
+                      <p>Evolução do risco e janelas previstas em todas as rodadas registradas.</p>
+                    </div>
+                    <span className="section-counter">{doorPredictionsLoading ? '…' : doorPredictions.length}</span>
+                  </div>
+                  <PredictionHistory
+                    history={doorPredictions}
+                    loading={doorPredictionsLoading}
+                    error={doorPredictionsError}
+                  />
+                </div>
+
                 <div className="door-modal-section">
                   <div className="door-modal-section__head">
                     <h4>Alarmes recentes</h4>
-                    <span className="section-counter">{doorAlarms.length}</span>
+                    <span className="section-counter">
+                      {doorAlarmsError && !doorAlarms.length ? '—' : doorAlarms.length}
+                    </span>
                   </div>
+                  {doorAlarmsError ? (
+                    <p className="door-empty-state is-error">{doorAlarmsError}</p>
+                  ) : null}
                   {doorAlarms.length ? (
                     <div className="door-alarms-list">
                       {doorAlarms.map((item) => (
@@ -666,9 +732,9 @@ function Portas({ onNavigate, params = {} }) {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : !doorAlarmsError ? (
                     <p className="door-empty-state">Nenhum alarme de telemetria registrado para esta porta.</p>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="door-modal-section">

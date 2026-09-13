@@ -472,6 +472,52 @@ func testDashboardRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 		t.Fatalf("unexpected door id: %d", timeline.Door.ID)
 	}
 
+	matchingAlarmID := uuid.New().String()
+	otherPlatformAlarmID := uuid.New().String()
+	otherPlatform := "P2"
+	if timeline.Door.Platform == "P2" {
+		otherPlatform = "P1"
+	}
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO telemetry_alarms
+			(id, tag, station_code, platform, door_number, alarm_type, duration_seconds, event_timestamp, source)
+		VALUES
+			($1, $2, $3, $4, $5, 'timeline-match', 1, '2099-01-02T00:00:00Z', 'integration-test'),
+			($6, $7, $3, $8, $5, 'timeline-other-platform', 1, '2099-01-03T00:00:00Z', 'integration-test')
+	`,
+		matchingAlarmID,
+		"timeline-"+timeline.Door.Platform,
+		timeline.Door.StationCode,
+		timeline.Door.Platform,
+		timeline.Door.DoorNumber,
+		otherPlatformAlarmID,
+		"timeline-"+otherPlatform,
+		otherPlatform,
+	)
+	if err != nil {
+		t.Fatalf("prepare timeline platform alarms: %v", err)
+	}
+	defer func() {
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM telemetry_alarms WHERE id IN ($1, $2)`, matchingAlarmID, otherPlatformAlarmID)
+	}()
+
+	platformTimeline, err := dashRepo.GetDoorTimeline(ctx, timeline.Door.ID)
+	if err != nil {
+		t.Fatalf("GetDoorTimeline with platform alarms failed: %v", err)
+	}
+	matchingAlarmFound := false
+	for _, alarm := range platformTimeline.RecentAlarms {
+		if alarm.ID == otherPlatformAlarmID {
+			t.Fatalf("timeline included alarm from platform %s in platform %s", otherPlatform, timeline.Door.Platform)
+		}
+		if alarm.ID == matchingAlarmID {
+			matchingAlarmFound = true
+		}
+	}
+	if !matchingAlarmFound {
+		t.Fatal("timeline did not include alarm from the door platform")
+	}
+
 	timeline145, err := dashRepo.GetDoorTimeline(ctx, 145)
 	if err != nil {
 		t.Fatalf("dashRepo.GetDoorTimeline 145 failed: %v", err)
@@ -549,6 +595,11 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 		DoorNumber:  1,
 		WillFail:    true,
 	}
+	probability := 0.72
+	threshold := 0.28
+	itemNoID.Probability = &probability
+	runNoID.ThresholdUsed = &threshold
+	runNoID.ModelVersion = "v1.0.0"
 	if err := predRepo.SaveRun(ctx, runNoID, []domain.PredictionItem{itemNoID}); err != nil {
 		t.Fatalf("predRepo.SaveRun without IDs failed: %v", err)
 	}
@@ -559,6 +610,13 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 	runWithItems, err := predRepo.GetLatestRun(ctx)
 	if err != nil || len(runWithItems.Predictions) == 0 {
 		t.Fatalf("esperava run com items preenchidos, obteve %+v", runWithItems)
+	}
+	history, err := predRepo.GetDoorHistory(ctx, 1, 30)
+	if err != nil || len(history) == 0 {
+		t.Fatalf("esperava historico da porta preenchido, obteve %+v: %v", history, err)
+	}
+	if history[0].Probability == nil || *history[0].Probability != probability || history[0].ModelVersion != "v1.0.0" {
+		t.Fatalf("metadados preditivos nao preservados: %+v", history[0])
 	}
 
 	dupItemID := uuid.New().String()

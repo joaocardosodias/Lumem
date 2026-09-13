@@ -31,7 +31,11 @@ export function ToastProvider({ children }) {
       {children}
       <div className="toast-container" aria-live="polite">
         {toasts.map((item) => (
-          <div key={item.id} className={`toast-item toast-item--${item.type}`}>
+          <div
+            key={item.id}
+            className={`toast-item toast-item--${item.type}`}
+            role={item.type === 'error' ? 'alert' : 'status'}
+          >
             <span className="toast-item__indicator" />
             <p className="toast-item__msg">{item.message}</p>
             <button

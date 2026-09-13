@@ -58,6 +58,8 @@ func RespondDomainError(c *gin.Context, err error) {
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Modelo Nao Encontrado", "O modelo ou rodada solicitada nao foi localizada.")
 	case errors.Is(err, domain.ErrNoPredictions):
 		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Sem Previsoes", "Nenhuma rodada de previsao calculada ate o momento.")
+	case errors.Is(err, domain.ErrExperimentNotFound):
+		RespondProblem(c, http.StatusNotFound, "ERR_NOT_FOUND", "Experimento Nao Encontrado", "O experimento solicitado nao existe ou ja foi publicado.")
 	case errors.Is(err, domain.ErrUserInactive):
 		RespondProblem(c, http.StatusForbidden, "ERR_USER_INACTIVE", "Usuario Inativo", "O operador esta desativado no sistema.")
 	case errors.Is(err, domain.ErrDuplicateUpload):

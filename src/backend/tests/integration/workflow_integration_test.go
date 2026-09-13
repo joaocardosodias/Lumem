@@ -432,6 +432,22 @@ func (r *intPredictionRepo) GetLatestRun(ctx context.Context) (*domain.Predictio
 	latest.Predictions = r.store.predictions
 	return latest, nil
 }
+
+func (r *intPredictionRepo) GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error) {
+	return []domain.DoorPredictionHistoryItem{}, nil
+}
+
+func (r *intPredictionRepo) GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error) {
+	return r.GetLatestRun(ctx)
+}
+
+func (r *intPredictionRepo) ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error) {
+	return []domain.PredictionRun{}, nil
+}
+
+func (r *intPredictionRepo) PromoteExperiment(ctx context.Context, id, userID string) error {
+	return nil
+}
 func (r *intPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
 	r.store.mu.RLock()
 	defer r.store.mu.RUnlock()

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
+import DataPageSkeleton from '../components/DataPageSkeleton'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
@@ -229,7 +230,7 @@ function Inspecoes({ onNavigate, params }) {
       })
       setForm(emptyForm)
       setOpen(false)
-      toast.success('Ordem de inspeção criada com sucesso!')
+      toast.success('Ordem de inspeção criada com sucesso.')
       setReloadAt(Date.now())
     } catch (err) {
       const msg = errorMessage(err)
@@ -267,7 +268,7 @@ function Inspecoes({ onNavigate, params }) {
       { label: 'Notas', key: 'notes' },
     ]
     exportToCsv('inspecoes.csv', columns, visible)
-    toast.success(`${visible.length} inspeções exportadas com sucesso!`)
+    toast.success(`${visible.length} inspeções exportadas com sucesso.`)
   }
 
   return (
@@ -288,7 +289,7 @@ function Inspecoes({ onNavigate, params }) {
         </div>
       </header>
 
-      {loading ? <p className="page-status">Carregando inspeções…</p> : null}
+      {loading ? <DataPageSkeleton label="Carregando inspeções" /> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       {loading ? null : (
@@ -694,8 +695,29 @@ function Inspecoes({ onNavigate, params }) {
 
       {open ? (
         <div className="inspecoes-modal" onClick={() => setOpen(false)}>
-          <form onClick={(event) => event.stopPropagation()} onSubmit={handleSubmit}>
-            <h2>Nova ordem de inspeção</h2>
+          <form
+            className="form-modal"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={handleSubmit}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="inspection-create-title"
+          >
+            <header className="form-modal__head">
+              <div>
+                <span className="form-modal__eyebrow">Operação de campo</span>
+                <h2 id="inspection-create-title">Nova ordem de inspeção</h2>
+                <p>Informe a porta e registre as orientações para o atendimento.</p>
+              </div>
+              <button
+                type="button"
+                className="form-modal__close"
+                onClick={() => setOpen(false)}
+                aria-label="Fechar cadastro"
+              >
+                ✕
+              </button>
+            </header>
             {formError ? <p className="page-status is-error">{formError}</p> : null}
             <label className="cadastro-select">
               <span>Estação</span>
@@ -728,9 +750,14 @@ function Inspecoes({ onNavigate, params }) {
               onChange={updateField('door_number')}
             />
             <Input id="insp-notes" label="Notas" value={form.notes} onChange={updateField('notes')} />
-            <Button type="submit">
-              Abrir ordem
-            </Button>
+            <div className="form-modal__actions">
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Abrir ordem
+              </Button>
+            </div>
           </form>
         </div>
       ) : null}

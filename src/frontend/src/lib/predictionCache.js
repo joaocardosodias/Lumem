@@ -42,6 +42,7 @@ export function normalizePrediction(item) {
     door_number: item.door_number,
     sap_tag: item.sap_tag || formatTag(item.station_code, item.platform, item.door_number),
     will_fail: Boolean(item.will_fail),
+    probability: typeof item.probability === 'number' ? item.probability : null,
   }
 }
 

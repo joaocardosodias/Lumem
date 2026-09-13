@@ -26,8 +26,8 @@ func (uc *MLOpsUseCase) UpdateConfig(ctx context.Context, threshold float64, hor
 	if threshold < 0.05 || threshold > 0.95 {
 		return nil, fmt.Errorf("%w: threshold deve estar entre 0.05 e 0.95", domain.ErrInvalidConfig)
 	}
-	if horizon <= 0 || horizon > 365 {
-		return nil, fmt.Errorf("%w: horizonte deve estar entre 1 e 365 dias", domain.ErrInvalidConfig)
+	if horizon != 7 {
+		return nil, fmt.Errorf("%w: o modelo ativo suporta apenas o horizonte de 7 dias", domain.ErrInvalidConfig)
 	}
 
 	cfg := &domain.MLConfig{

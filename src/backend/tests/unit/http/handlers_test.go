@@ -421,11 +421,31 @@ type mockPredictionRepoForHTTP struct {
 	saveRunErr error
 }
 
+func (m *mockPredictionRepoForHTTP) GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error) {
+	if m.run == nil || m.run.ID != id {
+		return nil, domain.ErrExperimentNotFound
+	}
+	return m.run, nil
+}
+
+func (m *mockPredictionRepoForHTTP) ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error) {
+	return []domain.PredictionRun{}, nil
+}
+
+func (m *mockPredictionRepoForHTTP) PromoteExperiment(ctx context.Context, id, userID string) error {
+	if m.run == nil || m.run.ID != id {
+		return domain.ErrExperimentNotFound
+	}
+	m.run.IsExperiment = false
+	return nil
+}
+
 func (m *mockPredictionRepoForHTTP) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
 	if m.saveRunErr != nil {
 		return m.saveRunErr
 	}
 	run.ID = "run-1"
+	run.Predictions = append([]domain.PredictionItem(nil), items...)
 	m.run = run
 	return nil
 }
@@ -435,6 +455,10 @@ func (m *mockPredictionRepoForHTTP) GetLatestRun(ctx context.Context) (*domain.P
 		return nil, m.runErr
 	}
 	return m.run, nil
+}
+
+func (m *mockPredictionRepoForHTTP) GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error) {
+	return []domain.DoorPredictionHistoryItem{}, nil
 }
 
 func (m *mockPredictionRepoForHTTP) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
@@ -578,6 +602,9 @@ func setupDashboardTestRouter() (*gin.Engine, *mockDashboardRepoForHTTP, *mockPr
 	r.GET("/doors/:id/timeline", handler.GetDoorTimeline)
 	r.GET("/stations/:code/doors/status", handler.GetStationDoorsStatus)
 	r.POST("/predictions/trigger", handler.TriggerPredictions)
+	r.POST("/predictions/experiments", handler.RunPredictionExperiment)
+	r.GET("/predictions/experiments", handler.ListPredictionExperiments)
+	r.POST("/predictions/experiments/:id/promote", handler.PromotePredictionExperiment)
 	r.GET("/predictions/latest", handler.GetLatestPredictions)
 	return r, dashRepo, predRepo
 }
@@ -680,6 +707,32 @@ func TestDashboardHandler_Predictions(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("esperava 500, obteve %d", w.Code)
+	}
+}
+
+func TestDashboardHandler_PredictionExperimentLifecycle(t *testing.T) {
+	r, _, _ := setupDashboardTestRouter()
+
+	req := httptest.NewRequest(http.MethodPost, "/predictions/experiments", strings.NewReader(`{"threshold":0.35}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("esperava 201 ao executar experimento, obteve %d: %s", w.Code, w.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/predictions/experiments?limit=20", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava 200 ao listar experimentos, obteve %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/predictions/experiments/run-1/promote", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava 200 ao promover experimento, obteve %d: %s", w.Code, w.Body.String())
 	}
 }
 
