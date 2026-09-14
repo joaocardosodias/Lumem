@@ -75,7 +75,8 @@ function RiskChart({ history }) {
 }
 
 function RiskCalendar({ history }) {
-  const latestDate = parseDate(history[0]?.created_at) || new Date()
+  const latestPrediction = history[0]
+  const latestDate = parseDate(latestPrediction?.created_at) || new Date()
   const year = latestDate.getFullYear()
   const month = latestDate.getMonth()
   const firstOfMonth = new Date(year, month, 1)
@@ -90,23 +91,26 @@ function RiskCalendar({ history }) {
   const monthLabel = calendarEnd.getMonth() === month
     ? monthFormatter.format(latestDate)
     : `${new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(latestDate)} — ${monthFormatter.format(calendarEnd)}`
+  const latestWindowStart = parseDate(latestPrediction?.created_at)
+  const latestWindowEnd = parseDate(latestPrediction?.window_ends_at) || latestWindowStart
 
   function dayState(day) {
     if (!day) return { strength: 0, predictions: 0 }
     const timestamp = day.setHours(12, 0, 0, 0)
-    let strength = 0
     let predictions = 0
     history.forEach((item) => {
       const start = parseDate(item.created_at)
-      const end = parseDate(item.window_ends_at)
       if (!start) return
       const startDay = new Date(start).setHours(0, 0, 0, 0)
-      const endDay = new Date(end || start).setHours(23, 59, 59, 999)
       if (startDay === new Date(day).setHours(0, 0, 0, 0)) predictions += 1
-      if (item.will_fail && timestamp >= startDay && timestamp <= endDay) {
-        strength = Math.max(strength, percent(item))
-      }
     })
+
+    let strength = 0
+    if (latestPrediction?.will_fail && latestWindowStart) {
+      const startDay = new Date(latestWindowStart).setHours(0, 0, 0, 0)
+      const endDay = new Date(latestWindowEnd).setHours(23, 59, 59, 999)
+      if (timestamp >= startDay && timestamp <= endDay) strength = percent(latestPrediction)
+    }
     return { strength, predictions }
   }
 
@@ -168,7 +172,7 @@ export default function PredictionHistory({ history = [], loading, error }) {
           <RiskChart history={history} />
         </section>
         <section>
-          <header><div><h5>Janela prevista</h5><p>Os dias destacados pertencem ao horizonte de risco.</p></div></header>
+          <header><div><h5>Janela prevista</h5><p>Os dias destacados representam somente a predição oficial mais recente.</p></div></header>
           <RiskCalendar history={history} />
         </section>
       </div>

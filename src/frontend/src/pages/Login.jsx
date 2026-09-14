@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import iconMotiva from '../assets/icon_motiva.svg'
 import logo from '../assets/logo.svg'
 import Button from '../components/Button'
 import Grainient from '../components/Grainient'
 import Input from '../components/Input'
-import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
 import { prefetchApplicationData } from '../lib/appPrefetch'
 import { errorMessage } from '../lib/api'
@@ -12,9 +11,6 @@ import './Login.css'
 
 function Login() {
   const { authenticate, acceptUser } = useAuth()
-  const { run, busy } = usePredictionLoad()
-  const brandRef = useRef(null)
-  const logoRef = useRef(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -22,7 +18,7 @@ function Login() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (busy || submitting) return
+    if (submitting) return
 
     setSubmitting(true)
     setError('')
@@ -32,16 +28,8 @@ function Login() {
       const identifier = String(data.get('email') ?? email).trim()
       const secret = String(data.get('password') ?? password)
       const profile = await authenticate(identifier, secret)
-      await run({
-        variant: 'login',
-        mode: 'login',
-        source: {
-          brand: brandRef.current,
-          logo: logoRef.current,
-        },
-        task: (onProgress) => prefetchApplicationData({ onProgress }),
-        onReady: () => acceptUser(profile),
-      })
+      await prefetchApplicationData()
+      acceptUser(profile)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -50,8 +38,8 @@ function Login() {
   }
 
   return (
-    <section className={`login${busy ? ' is-loading' : ''}`}>
-      <aside ref={brandRef} className="login__brand">
+    <section className="login">
+      <aside className="login__brand">
         <div className="login__grainient" aria-hidden="true">
           <Grainient
             color1="#3f00ff"
@@ -78,7 +66,7 @@ function Login() {
             zoom={0.9}
           />
         </div>
-        <img ref={logoRef} className="login__logo" src={logo} alt="motiva" />
+        <img className="login__logo" src={logo} alt="motiva" />
 
         <div className="login__intro">
           <p>Manutenção preditiva das portas de plataforma</p>
@@ -119,7 +107,7 @@ function Login() {
 
           {error ? <p className="login__error">{error}</p> : null}
 
-          <Button type="submit">{submitting || busy ? 'Entrando…' : 'Logar'}</Button>
+          <Button type="submit" disabled={submitting}>{submitting ? 'Entrando…' : 'Logar'}</Button>
         </form>
       </div>
     </section>

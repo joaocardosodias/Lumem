@@ -11,12 +11,12 @@ var (
 )
 
 type MLConfig struct {
-	ID                 string         `json:"id"`
-	Threshold          float64        `json:"threshold"`
-	DefaultHorizonDays int            `json:"default_horizon_days"`
-	AutoRetrainEnabled bool           `json:"auto_retrain_enabled"`
-	UpdatedAt          time.Time      `json:"updated_at"`
-	UpdatedBy          string         `json:"updated_by"`
+	ID                 string    `json:"id"`
+	Threshold          float64   `json:"threshold"`
+	DefaultHorizonDays int       `json:"default_horizon_days"`
+	AutoRetrainEnabled bool      `json:"auto_retrain_enabled"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	UpdatedBy          string    `json:"updated_by"`
 }
 
 type MLModelRun struct {

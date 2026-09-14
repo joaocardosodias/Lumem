@@ -169,4 +169,3 @@ func TestRequireRole_MissingRole(t *testing.T) {
 		t.Fatalf("esperava status 403 para contexto sem role, obteve %d", w.Code)
 	}
 }
-

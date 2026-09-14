@@ -34,6 +34,13 @@ function trainingStatusLabel(status) {
   return labels[status] || status || 'Desconhecido'
 }
 
+function thresholdProfile(value) {
+  const threshold = Number(value)
+  if (threshold < 0.4) return { label: 'Mais sensível', detail: 'captura mais falhas e amplia o volume de inspeções' }
+  if (threshold > 0.6) return { label: 'Mais seletivo', detail: 'reduz alertas e prioriza os casos de maior confiança' }
+  return { label: 'Faixa equilibrada', detail: 'equilibra cobertura de falhas e esforço operacional' }
+}
+
 function EngineeringLoading() {
   return (
     <div className="engenharia-loading" role="status" aria-label="Carregando métricas e telemetria do modelo ativo">
@@ -70,6 +77,7 @@ function Engenharia() {
   const [officialRun, setOfficialRun] = useState(null)
 
   const [selectedThreshold, setSelectedThreshold] = useState(0.48)
+  const selectedProfile = thresholdProfile(selectedThreshold)
 
   useEffect(() => {
     async function loadData() {
@@ -385,7 +393,7 @@ function Engenharia() {
         <div className="engenharia-lab" id="engineering-panel-calibration" role="tabpanel" aria-labelledby="engineering-tab-calibration">
           <section className="lab-official" aria-labelledby="official-config-title">
             <div>
-              <span className="lab-eyebrow">Configuração oficial</span>
+              <span className="lab-eyebrow"><i aria-hidden="true" />Configuração oficial</span>
               <h2 id="official-config-title">Diagnóstico exibido na operação</h2>
               <p>Esta é a rodada que alimenta Dashboard, Predições e a abertura de inspeções preventivas.</p>
             </div>
@@ -401,13 +409,16 @@ function Engenharia() {
             <form className="lab-controls" onSubmit={handleRunExperiment}>
               <div className="lab-controls__intro">
                 <span className="lab-eyebrow">Novo cenário</span>
-                <h2>Laboratório de cenários</h2>
-                <p>Ajuste o limiar desejado para salvar na configuração operacional ou simule um cenário de teste antes de publicar.</p>
+                <h2>Defina o nível de sensibilidade</h2>
+                <p>Simule primeiro. O resultado fica isolado até que você decida adotá-lo na operação.</p>
               </div>
               <div className="lab-control-grid">
                 <div className="lab-threshold-control">
                   <div className="calibration-field__top">
-                    <label htmlFor="threshold-slider">Limiar de decisão</label>
+                    <div>
+                      <label htmlFor="threshold-slider">Threshold</label>
+                      <span className="lab-threshold-profile"><strong>{selectedProfile.label}</strong> · {selectedProfile.detail}</span>
+                    </div>
                     <output className="calibration-value-badge" htmlFor="threshold-slider">{Number(selectedThreshold).toFixed(2)}</output>
                   </div>
                   <input
@@ -418,24 +429,25 @@ function Engenharia() {
                     max="0.95"
                     step="0.01"
                     value={selectedThreshold}
+                    style={{ '--threshold-progress': `${((selectedThreshold - 0.05) / 0.9) * 100}%` }}
                     onChange={(event) => setSelectedThreshold(Number(event.target.value))}
                   />
-                  <div className="calibration-ticks"><span>mais alertas</span><span>menos alertas</span></div>
+                  <div className="calibration-ticks"><span>0.05 · mais alertas</span><span>0.95 · menos alertas</span></div>
                 </div>
                 <div className="lab-control-actions">
                   <Button
-                    type="button"
-                    onClick={handleSaveThreshold}
+                    type="submit"
                     disabled={savingConfig || runningExperiment}
                   >
-                    {savingConfig ? 'Salvando…' : 'Salvar limiar'}
+                    {runningExperiment ? 'Executando cenário…' : 'Executar cenário'}
                   </Button>
                   <Button
-                    type="submit"
+                    type="button"
                     variant="secondary"
+                    onClick={handleSaveThreshold}
                     disabled={runningExperiment || savingConfig}
                   >
-                    {runningExperiment ? 'Executando…' : 'Executar cenário'}
+                    {savingConfig ? 'Salvando…' : 'Salvar como oficial'}
                   </Button>
                 </div>
               </div>
@@ -451,39 +463,61 @@ function Engenharia() {
 
             <div className="lab-results">
               <header>
-                <div><span className="lab-eyebrow">Resultados reais</span><h2>Cenários disponíveis</h2></div>
-                <span>{experiments.length} {experiments.length === 1 ? 'execução' : 'execuções'}</span>
+                <div>
+                  <span className="lab-eyebrow">Resultados reais</span>
+                  <h2>Cenários disponíveis</h2>
+                  <p>Compare o impacto operacional e o desempenho histórico antes de escolher a configuração oficial.</p>
+                </div>
+                <span className="lab-results__count">{experiments.length} {experiments.length === 1 ? 'execução' : 'execuções'}</span>
               </header>
               {experiments.length ? (
-                <div className="lab-scenarios">
-                  {experiments.map((run) => {
-                    const total = Number(run.total_doors_evaluated) || 0
-                    const risk = Number(run.total_doors_at_risk) || 0
-                    const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
-                    const delta = risk - officialRisk
-                    const percent = (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'
-                    const calibrated = getThresholdMetrics(run.threshold_used)
-                    return (
-                      <article className="lab-scenario" key={run.id}>
-                        <header>
-                          <div className="lab-scenario__identity">
-                            <strong>Limiar {Number(run.threshold_used).toFixed(2)}</strong>
-                            <span>{new Date(String(run.created_at).replace(' ', 'T')).toLocaleString('pt-BR')} · {run.id.slice(0, 8)}</span>
-                          </div>
-                          <span className="lab-scenario__kind">Teste sobre as portas atuais</span>
-                          <button type="button" onClick={() => handlePromoteExperiment(run)} disabled={Boolean(promotingExperiment)}>{promotingExperiment === run.id ? 'Publicando…' : 'Usar na operação'}</button>
-                        </header>
-                        <dl className="lab-scenario__metrics">
-                          <div><dt>Portas em risco</dt><dd>{risk}</dd><small>{delta > 0 ? '+' : ''}{delta} versus atual</small></div>
-                          <div><dt>Taxa de alerta</dt><dd>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</dd><small>{risk} de {total} portas</small></div>
-                          <div title="Precisão calculada sobre o conjunto de teste real histórico"><dt>Precisão no teste</dt><dd>{percent(calibrated.precision)}</dd></div>
-                          <div title="Recall de falhas reais capturadas no teste histórico"><dt>Recall de falhas</dt><dd>{percent(calibrated.recall)}</dd></div>
-                          <div title="Média harmônica F1 no teste histórico"><dt>F1-Score</dt><dd>{percent(calibrated.f1)}</dd><small>Massa de teste</small></div>
-                          <div><dt>Maior risco</dt><dd>{percent(run.maximum_probability)}</dd></div>
-                        </dl>
-                      </article>
-                    )
-                  })}
+                <div className="lab-scenarios-table-wrap">
+                  <table className="lab-scenarios-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Cenário</th>
+                        <th scope="col">Threshold</th>
+                        <th scope="col">Perfil</th>
+                        <th scope="col">Portas em risco</th>
+                        <th scope="col">Taxa de alerta</th>
+                        <th scope="col">Precisão</th>
+                        <th scope="col">Recall</th>
+                        <th scope="col">F1-Score</th>
+                        <th scope="col">Maior risco</th>
+                        <th scope="col" className="lab-scenarios-table__action-title">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {experiments.map((run) => {
+                        const total = Number(run.total_doors_evaluated) || 0
+                        const risk = Number(run.total_doors_at_risk) || 0
+                        const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
+                        const delta = risk - officialRisk
+                        const percent = (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'
+                        const calibrated = getThresholdMetrics(run.threshold_used)
+                        return (
+                          <tr key={run.id}>
+                            <td className="lab-scenarios-table__identity">
+                              <strong>Cenário {run.id.slice(0, 4).toUpperCase()}</strong>
+                              <time dateTime={run.created_at}>{new Date(String(run.created_at).replace(' ', 'T')).toLocaleString('pt-BR')}</time>
+                              <small>ID {run.id.slice(0, 8)}</small>
+                            </td>
+                            <td className="lab-scenarios-table__threshold">{Number(run.threshold_used).toFixed(2)}</td>
+                            <td><span className="lab-scenario__kind">{thresholdProfile(run.threshold_used).label}</span></td>
+                            <td><strong>{risk}</strong><small>{delta > 0 ? '+' : ''}{delta} versus o oficial</small></td>
+                            <td><strong>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</strong><small>{risk} de {total} portas</small></td>
+                            <td title="Precisão calculada sobre o conjunto de teste real histórico">{percent(calibrated.precision)}</td>
+                            <td title="Recall de falhas reais capturadas no teste histórico">{percent(calibrated.recall)}</td>
+                            <td title="Média harmônica F1 no teste histórico">{percent(calibrated.f1)}</td>
+                            <td>{percent(run.maximum_probability)}</td>
+                            <td className="lab-scenarios-table__action">
+                              <button type="button" onClick={() => handlePromoteExperiment(run)} disabled={Boolean(promotingExperiment)}>{promotingExperiment === run.id ? 'Publicando…' : 'Usar na operação'}</button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               ) : <p className="lab-empty">Nenhum cenário foi executado. Escolha um threshold e rode a primeira comparação.</p>}
               <footer>Métricas de desempenho (Recall, Precisão e F1-Score) avaliadas sobre o conjunto de teste real histórico (71.184 registros porta-dia) para o limiar selecionado.</footer>

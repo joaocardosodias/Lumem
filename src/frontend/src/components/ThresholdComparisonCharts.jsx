@@ -21,9 +21,9 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
   const [hoverTh, setHoverTh] = useState(null)
   const activeTh = hoverTh ?? selectedThreshold
 
-  const width = 540
-  const height = 230
-  const inset = { top: 24, right: 26, bottom: 36, left: 46 }
+  const width = 760
+  const height = 300
+  const inset = { top: 34, right: 32, bottom: 46, left: 54 }
   const chartWidth = width - inset.left - inset.right
   const chartHeight = height - inset.top - inset.bottom
 
@@ -36,7 +36,7 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
 
   const activeMetrics = getThresholdMetrics(activeTh)
 
-  const selectedX = x(selectedThreshold)
+  const activeX = x(activeTh)
   const officialX = x(officialThreshold)
 
   function handlePointer(event) {
@@ -142,21 +142,21 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
           <polyline points={f1Polyline} className="threshold-line is-f1" />
 
           <line
-            x1={selectedX}
-            x2={selectedX}
+            x1={activeX}
+            x2={activeX}
             y1={inset.top}
             y2={height - inset.bottom}
             className="threshold-cursor-line"
           />
 
-          <circle cx={selectedX} cy={y(activeMetrics.recall)} r="5" className="threshold-point is-recall" />
-          <circle cx={selectedX} cy={y(activeMetrics.precision)} r="5" className="threshold-point is-precision" />
-          <circle cx={selectedX} cy={y(activeMetrics.f1)} r="5" className="threshold-point is-f1" />
+          <circle cx={activeX} cy={y(activeMetrics.recall)} r="6" className="threshold-point is-recall" />
+          <circle cx={activeX} cy={y(activeMetrics.precision)} r="6" className="threshold-point is-precision" />
+          <circle cx={activeX} cy={y(activeMetrics.f1)} r="6" className="threshold-point is-f1" />
 
-          <g transform={`translate(${selectedX}, ${height - inset.bottom})`}>
-            <rect x="-18" y="4" width="36" height="18" rx="4" className="threshold-badge-bg" />
-            <text x="0" y="17" textAnchor="middle" className="threshold-badge-text">
-              {Number(selectedThreshold).toFixed(2)}
+          <g transform={`translate(${activeX}, ${height - inset.bottom})`}>
+            <rect x="-23" y="6" width="46" height="22" rx="4" className="threshold-badge-bg" />
+            <text x="0" y="21" textAnchor="middle" className="threshold-badge-text">
+              {Number(activeTh).toFixed(2)}
             </text>
           </g>
         </svg>
@@ -164,7 +164,7 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
 
       <footer className="threshold-chart-card__footer">
         <span>Ponto ótimo de equilíbrio F1: <strong>0.48</strong> (F1: 24.7%, Recall: 55.3%, Precisão: 15.9%).</span>
-        <span>Clique na curva para selecionar um limiar diretamente.</span>
+        <span>Mova o cursor para explorar. Clique para selecionar.</span>
       </footer>
     </article>
   )
@@ -229,31 +229,25 @@ function OperationalImpactChart({
     }
 
     const items = Array.from(map.values())
-    items.sort((a, b) => a.threshold - b.threshold)
-    return items
+    if (items.length > 7) {
+      const relevant = items
+        .sort((a, b) => {
+          if (a.isOfficial !== b.isOfficial) return a.isOfficial ? -1 : 1
+          if (a.isSimulated !== b.isSimulated) return a.isSimulated ? -1 : 1
+          return Math.abs(a.threshold - selectedThreshold) - Math.abs(b.threshold - selectedThreshold)
+        })
+        .slice(0, 7)
+      return relevant.sort((a, b) => a.threshold - b.threshold)
+    }
+    return items.sort((a, b) => a.threshold - b.threshold)
   }, [experiments, officialRun, officialThreshold, selectedThreshold])
-
-  const width = 540
-  const height = 230
-  const inset = { top: 28, right: 26, bottom: 42, left: 46 }
-  const chartWidth = width - inset.left - inset.right
-  const chartHeight = height - inset.top - inset.bottom
 
   const maxDoors = Math.max(
     5,
     ...comparisonItems.map((item) => item.doorsAtRisk),
     Number(officialRun?.total_doors_at_risk) || 1
   )
-  const ceiling = Math.ceil(maxDoors * 1.25)
-
-  const y = (doors) => inset.top + (1 - Math.min(ceiling, Math.max(0, doors)) / ceiling) * chartHeight
-
-  const barCount = comparisonItems.length
-  const groupWidth = chartWidth / Math.max(1, barCount)
-  const barWidth = Math.min(48, Math.max(20, groupWidth * 0.65))
-
   const officialDoors = Number(officialRun?.total_doors_at_risk) || 1
-  const officialY = y(officialDoors)
 
   return (
     <article className="threshold-chart-card">
@@ -274,101 +268,34 @@ function OperationalImpactChart({
         </div>
       </header>
 
-      <div className="threshold-chart-svg-wrap">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="threshold-chart-svg"
-          role="img"
-          aria-label="Gráfico comparativo de portas em risco na frota de 528 portas entre os limiares testados"
-        >
-          {[0, Math.round(ceiling / 2), ceiling].map((tick) => (
-            <g key={tick}>
-              <line x1={inset.left} x2={width - inset.right} y1={y(tick)} y2={y(tick)} className="threshold-grid-line" />
-              <text x={inset.left - 8} y={y(tick) + 4} textAnchor="end" className="threshold-axis-label">
-                {tick}
-              </text>
-            </g>
-          ))}
-
-          <line
-            x1={inset.left}
-            x2={width - inset.right}
-            y1={officialY}
-            y2={officialY}
-            className="threshold-official-line"
-          />
-          <text
-            x={width - inset.right}
-            y={officialY - 6}
-            textAnchor="end"
-            className="threshold-official-label"
-          >
-            Oficial: {officialDoors} p.
-          </text>
-
-          {comparisonItems.map((item, index) => {
-            const centerX = inset.left + index * groupWidth + groupWidth / 2
-            const barX = centerX - barWidth / 2
-            const barHeight = Math.max(4, chartHeight - (y(item.doorsAtRisk) - inset.top))
-            const barY = y(item.doorsAtRisk)
-            const isSelected = Math.abs(item.threshold - selectedThreshold) < 0.005
-            const alertRate = ((item.doorsAtRisk / item.totalDoors) * 100).toFixed(1)
-
-            let barClass = 'threshold-bar'
-            if (isSelected) barClass += ' is-selected'
-            else if (item.isOfficial) barClass += ' is-official'
-            else if (item.isSimulated) barClass += ' is-simulated'
-
-            return (
-              <g
-                key={item.threshold}
-                className="threshold-bar-group"
-                onClick={() => onSelectThreshold(item.threshold)}
-                role="button"
-                tabIndex={0}
-                aria-label={`Limiar ${item.threshold.toFixed(2)}: ${item.doorsAtRisk} portas em risco`}
-              >
-                <rect
-                  x={barX}
-                  y={barY}
-                  width={barWidth}
-                  height={barHeight}
-                  rx="4"
-                  className={barClass}
-                />
-                <text
-                  x={centerX}
-                  y={barY - 6}
-                  textAnchor="middle"
-                  className="threshold-bar-value"
-                >
-                  {item.doorsAtRisk}
-                </text>
-                <text
-                  x={centerX}
-                  y={height - inset.bottom + 16}
-                  textAnchor="middle"
-                  className={`threshold-bar-label ${isSelected ? 'is-active' : ''}`}
-                >
-                  {item.threshold.toFixed(2)}
-                </text>
-                <text
-                  x={centerX}
-                  y={height - inset.bottom + 28}
-                  textAnchor="middle"
-                  className="threshold-bar-sublabel"
-                >
-                  {alertRate}%
-                </text>
-              </g>
-            )
-          })}
-        </svg>
+      <div className="threshold-impact-list" role="list" aria-label="Portas em risco por threshold">
+        {comparisonItems.map((item) => {
+          const isSelected = Math.abs(item.threshold - selectedThreshold) < 0.005
+          const alertRate = item.totalDoors ? (item.doorsAtRisk / item.totalDoors) * 100 : 0
+          const width = maxDoors ? Math.max(2, (item.doorsAtRisk / maxDoors) * 100) : 2
+          return (
+            <button
+              type="button"
+              role="listitem"
+              key={`${item.runId}-${item.threshold}`}
+              className={`threshold-impact-row${isSelected ? ' is-selected' : ''}${item.isOfficial ? ' is-official' : ''}`}
+              onClick={() => onSelectThreshold(item.threshold)}
+            >
+              <span className="threshold-impact-row__threshold">{item.threshold.toFixed(2)}</span>
+              <span className="threshold-impact-row__visual">
+                <span className="threshold-impact-row__track"><i style={{ width: `${width}%` }} /></span>
+                <span>{item.isOfficial ? 'Oficial' : isSelected ? 'Selecionado' : 'Cenário'}</span>
+              </span>
+              <strong>{item.doorsAtRisk}</strong>
+              <small>{alertRate.toFixed(1)}% da frota</small>
+            </button>
+          )
+        })}
       </div>
 
       <footer className="threshold-chart-card__footer">
         <span>Linha de referência: operação atual com <strong>{officialDoors}</strong> portas em risco de 528 portas monitoradas.</span>
-        <span>Clique nas colunas para carregar o limiar correspondente.</span>
+        <span>Clique em uma linha para carregar o threshold correspondente.</span>
       </footer>
     </article>
   )

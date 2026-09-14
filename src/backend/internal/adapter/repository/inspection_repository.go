@@ -29,8 +29,14 @@ func (r *PostgresInspectionRepository) Create(ctx context.Context, ins *domain.I
 	query := `
 		INSERT INTO inspections (id, prediction_id, station_code, platform, door_number, status, notes)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (station_code, platform, door_number)
+			WHERE status IN ('pending', 'in_progress')
+		DO UPDATE SET updated_at = inspections.updated_at
+		RETURNING id, prediction_id, station_code, platform, door_number, status,
+		          COALESCE(notes, ''), completed_at, created_at, updated_at
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	var completedAt *time.Time
+	err := r.db.QueryRowContext(ctx, query,
 		ins.ID,
 		ins.PredictionID,
 		ins.StationCode,
@@ -38,7 +44,19 @@ func (r *PostgresInspectionRepository) Create(ctx context.Context, ins *domain.I
 		ins.DoorNumber,
 		ins.Status,
 		ins.Notes,
+	).Scan(
+		&ins.ID,
+		&ins.PredictionID,
+		&ins.StationCode,
+		&ins.Platform,
+		&ins.DoorNumber,
+		&ins.Status,
+		&ins.Notes,
+		&completedAt,
+		&ins.CreatedAt,
+		&ins.UpdatedAt,
 	)
+	ins.CompletedAt = completedAt
 	return err
 }
 

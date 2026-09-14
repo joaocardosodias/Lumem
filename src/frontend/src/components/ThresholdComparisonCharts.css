@@ -1,9 +1,10 @@
 .threshold-comparison-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 25px 26px 24px;
-  border-bottom: 1px solid #dbe3ed;
+  gap: 18px;
+  padding: 27px 28px 28px;
+  border: 1px solid #d5dfeb;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -30,9 +31,9 @@
 .threshold-delta-panel {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  border: 1px solid #dfe6f0;
-  border-radius: 9px;
-  background: #f8faff;
+  border: 1px solid #d9e3ef;
+  border-radius: 8px;
+  background: #f7faff;
   overflow: hidden;
 }
 
@@ -41,7 +42,8 @@
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  padding: 14px 18px;
+  min-height: 88px;
+  padding: 15px 18px;
   border-right: 1px solid #e3e9f2;
 }
 
@@ -50,8 +52,8 @@
 }
 
 .threshold-delta-label {
-  color: #66758c;
-  font-size: 11px;
+  color: #5e6f86;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: normal;
 }
@@ -66,15 +68,15 @@
 }
 
 .threshold-delta-value.is-positive {
-  color: #008a38;
+  color: var(--brand, #3f00ff);
 }
 
 .threshold-delta-value.is-negative {
-  color: #d90032;
+  color: #1c3554;
 }
 
 .threshold-delta-value.is-warning {
-  color: #b86200;
+  color: #315d91;
 }
 
 .threshold-delta-value.is-neutral {
@@ -92,8 +94,8 @@
 
 .threshold-comparison-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.18fr) minmax(380px, .82fr);
+  gap: 14px;
 }
 
 .threshold-chart-card {
@@ -102,8 +104,8 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid #dfe6f0;
-  border-radius: 10px;
-  background: #fff;
+  border-radius: 9px;
+  background: #fbfcfe;
 }
 
 .threshold-chart-card__head {
@@ -111,8 +113,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 58px;
-  padding: 16px 20px 14px;
+  min-height: 66px;
+  padding: 17px 19px 15px;
   border-bottom: 1px solid #e8edf4;
 }
 
@@ -136,11 +138,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 9px;
-  border-radius: 6px;
+  border: 1px solid #e0e7ef;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 650;
   color: #52647f;
-  background: #f0f4f9;
+  background: #fff;
 }
 
 .legend-chip strong {
@@ -160,11 +163,11 @@
 }
 
 .legend-chip.is-precision .legend-chip__dot {
-  background: #00a846;
+  background: #2e73c5;
 }
 
 .legend-chip.is-f1 .legend-chip__dot {
-  background: #b86200;
+  background: #172e52;
 }
 
 .legend-chip.is-official .legend-chip__dot {
@@ -177,7 +180,7 @@
 
 .threshold-chart-svg-wrap {
   position: relative;
-  padding: 12px 16px 6px;
+  padding: 16px 18px 9px;
 }
 
 .threshold-chart-svg {
@@ -199,31 +202,31 @@
 
 .threshold-axis-label {
   fill: #68778c;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 650;
   font-family: var(--font, 'Manrope', sans-serif);
 }
 
 .threshold-line.is-recall {
   fill: none;
   stroke: var(--brand, #3f00ff);
-  stroke-width: 2.6;
+  stroke-width: 3.2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .threshold-line.is-precision {
   fill: none;
-  stroke: #00a846;
-  stroke-width: 2.6;
+  stroke: #2e73c5;
+  stroke-width: 3.2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .threshold-line.is-f1 {
   fill: none;
-  stroke: #b86200;
-  stroke-width: 2.6;
+  stroke: #172e52;
+  stroke-width: 3.2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
@@ -236,7 +239,7 @@
 
 .threshold-official-label {
   fill: #64748b;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   font-family: var(--font, 'Manrope', sans-serif);
 }
@@ -256,11 +259,11 @@
 }
 
 .threshold-point.is-precision {
-  fill: #00a846;
+  fill: #2e73c5;
 }
 
 .threshold-point.is-f1 {
-  fill: #b86200;
+  fill: #172e52;
 }
 
 .threshold-badge-bg {
@@ -269,7 +272,7 @@
 
 .threshold-badge-text {
   fill: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 750;
   font-family: var(--font, 'Manrope', sans-serif);
 }
@@ -284,7 +287,7 @@
 }
 
 .threshold-bar {
-  fill: #cbd5e1;
+  fill: #c5d4e7;
   transition: fill 160ms ease;
 }
 
@@ -293,7 +296,7 @@
 }
 
 .threshold-bar.is-selected {
-  fill: #172e52;
+  fill: #1d4778;
 }
 
 .threshold-bar.is-simulated {
@@ -329,6 +332,106 @@
   font-family: var(--font, 'Manrope', sans-serif);
 }
 
+.threshold-impact-list {
+  display: grid;
+  gap: 0;
+  padding: 12px 18px 14px;
+}
+
+.threshold-impact-row {
+  display: grid;
+  grid-template-columns: 48px minmax(150px, 1fr) 44px 78px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 4px;
+  border: 0;
+  border-bottom: 1px solid #e7ecf2;
+  background: transparent;
+  color: #203957;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.threshold-impact-row:last-child {
+  border-bottom: 0;
+}
+
+.threshold-impact-row:hover {
+  background: #f5f8fc;
+}
+
+.threshold-impact-row.is-selected {
+  background: #f0f5ff;
+}
+
+.threshold-impact-row__threshold {
+  color: #263f5e;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.threshold-impact-row__visual {
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) 68px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: #65758a;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.threshold-impact-row__track {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e6ecf3;
+}
+
+.threshold-impact-row__track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #9eb5d0;
+  transform-origin: left;
+  animation: threshold-bar-in 320ms ease-out both;
+}
+
+.threshold-impact-row.is-official .threshold-impact-row__track i {
+  background: var(--brand, #3f00ff);
+}
+
+.threshold-impact-row.is-selected .threshold-impact-row__track i {
+  background: #1d4778;
+}
+
+.threshold-impact-row > strong {
+  color: #152b49;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.threshold-impact-row > small {
+  color: #68788d;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@keyframes threshold-bar-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 .threshold-chart-card__footer {
   display: flex;
   align-items: center;
@@ -337,7 +440,7 @@
   gap: 8px;
   padding: 12px 20px;
   border-top: 1px solid #e8edf4;
-  background: #fbfcfd;
+  background: #f6f8fb;
   color: var(--muted, #52647f);
   font-size: 11px;
   font-weight: 600;
@@ -381,5 +484,17 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+
+  .threshold-impact-row {
+    grid-template-columns: 42px minmax(100px, 1fr) 38px;
+  }
+
+  .threshold-impact-row > small {
+    display: none;
+  }
+
+  .threshold-impact-row__visual {
+    grid-template-columns: minmax(60px, 1fr) 62px;
   }
 }

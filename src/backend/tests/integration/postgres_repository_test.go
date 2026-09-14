@@ -370,6 +370,20 @@ func testInspectionRepo(t *testing.T, ctx context.Context, db *sql.DB, predID st
 		t.Fatalf("inspRepo.Create failed: %v", err)
 	}
 
+	duplicate := &domain.Inspection{
+		ID:          uuid.New().String(),
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  1,
+		Status:      "pending",
+	}
+	if err := inspRepo.Create(ctx, duplicate); err != nil {
+		t.Fatalf("inspRepo.Create duplicate failed: %v", err)
+	}
+	if duplicate.ID != inspID {
+		t.Fatalf("esperava reutilizar inspecao %s, obteve %s", inspID, duplicate.ID)
+	}
+
 	fetchedInsp, err := inspRepo.GetByID(ctx, inspID)
 	if err != nil || fetchedInsp.Status != "pending" {
 		t.Fatalf("inspRepo.GetByID failed: %v", err)
