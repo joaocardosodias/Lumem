@@ -80,31 +80,13 @@ func calculatePredictionMetrics(items []domain.PredictionItem) (average, p95, ma
 	return &averageValue, &p95Value, &maximumValue
 }
 
-func calculateEstimatedClassificationMetrics(items []domain.PredictionItem) (precision, recall, f1 *float64) {
-	totalExpectedPositives := 0.0
-	predictedPositiveProbability := 0.0
-	predictedPositives := 0
-	for _, item := range items {
-		if item.Probability == nil {
-			continue
-		}
-		totalExpectedPositives += *item.Probability
-		if item.WillFail {
-			predictedPositiveProbability += *item.Probability
-			predictedPositives++
-		}
+func calculateClassificationMetrics(threshold *float64) (precision, recall, f1 *float64) {
+	t := 0.48
+	if threshold != nil {
+		t = *threshold
 	}
-	if predictedPositives == 0 || totalExpectedPositives == 0 {
-		zero := 0.0
-		return &zero, &zero, &zero
-	}
-	precisionValue := predictedPositiveProbability / float64(predictedPositives)
-	recallValue := predictedPositiveProbability / totalExpectedPositives
-	f1Value := 0.0
-	if precisionValue+recallValue > 0 {
-		f1Value = 2 * precisionValue * recallValue / (precisionValue + recallValue)
-	}
-	return &precisionValue, &recallValue, &f1Value
+	p, r, f := domain.GetThresholdCalibrationMetrics(t)
+	return &p, &r, &f
 }
 
 func assignItemRunIDs(items []domain.PredictionItem, runID string) {
@@ -233,7 +215,7 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 	}
 	applyPredictionThreshold(predictedItems, threshold)
 	averageProbability, p95Probability, maximumProbability := calculatePredictionMetrics(predictedItems)
-	estimatedPrecision, estimatedRecall, estimatedF1 := calculateEstimatedClassificationMetrics(predictedItems)
+	estimatedPrecision, estimatedRecall, estimatedF1 := calculateClassificationMetrics(threshold)
 
 	now := time.Now()
 	var publishedAt *time.Time
@@ -335,7 +317,7 @@ func (uc *TriggerPredictionsUseCase) PromoteExperiment(ctx context.Context, id, 
 			return domain.ErrExperimentNotFound
 		}
 		run.AverageProbability, run.P95Probability, run.MaximumProbability = calculatePredictionMetrics(run.Predictions)
-		run.EstimatedPrecision, run.EstimatedRecall, run.EstimatedF1 = calculateEstimatedClassificationMetrics(run.Predictions)
+		run.EstimatedPrecision, run.EstimatedRecall, run.EstimatedF1 = calculateClassificationMetrics(run.ThresholdUsed)
 		if err := store.Predictions().PromoteExperiment(ctx, id, userID); err != nil {
 			return err
 		}

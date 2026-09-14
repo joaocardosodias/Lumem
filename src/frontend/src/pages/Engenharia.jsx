@@ -4,6 +4,8 @@ import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { api, errorMessage } from '../lib/api'
 import { invalidateApplicationCache } from '../lib/appPrefetch'
+import { getThresholdMetrics } from '../data/calibration'
+import { ThresholdComparisonCharts } from '../components/ThresholdComparisonCharts'
 import './Engenharia.css'
 
 function TriggerIcon() {
@@ -51,6 +53,7 @@ function Engenharia() {
   const [activeTab, setActiveTab] = useState('model')
   const [loading, setLoading] = useState(true)
   const [runningExperiment, setRunningExperiment] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
   const [promotingExperiment, setPromotingExperiment] = useState('')
   const [retraining, setRetraining] = useState(false)
 
@@ -93,6 +96,40 @@ function Engenharia() {
     }
     loadData()
   }, [])
+
+  async function handleSaveThreshold() {
+    try {
+      setSavingConfig(true)
+      const updatedConfig = await api.updateMLConfig(selectedThreshold, 7)
+      setConfig((current) => ({
+        ...current,
+        threshold: updatedConfig.threshold ?? selectedThreshold,
+        default_horizon_days: updatedConfig.default_horizon_days ?? 7,
+        updated_at: updatedConfig.updated_at ?? new Date().toISOString(),
+      }))
+
+      let newRun = null
+      try {
+        newRun = await api.triggerPredictions(7, selectedThreshold)
+        if (newRun) {
+          setOfficialRun(newRun)
+        }
+      } catch {
+        newRun = null
+      }
+
+      invalidateApplicationCache()
+      if (newRun) {
+        toast.success(`Limiar ${Number(selectedThreshold).toFixed(2)} salvo e aplicado à operação com sucesso.`)
+      } else {
+        toast.success(`Limiar ${Number(selectedThreshold).toFixed(2)} salvo nas configurações.`)
+      }
+    } catch (err) {
+      toast.error('Falha ao salvar limiar: ' + errorMessage(err))
+    } finally {
+      setSavingConfig(false)
+    }
+  }
 
   async function handleRunExperiment(e) {
     e.preventDefault()
@@ -184,6 +221,10 @@ function Engenharia() {
             <span className="engenharia-status-dot" aria-hidden="true" />
             <span><small>Modelo em produção</small><strong>{model?.version || 'v1.0.0'}</strong></span>
           </div>
+          <div className="engenharia-model-state">
+            <span className="engenharia-status-dot" aria-hidden="true" />
+            <span><small>Limiar operacional</small><strong>{Number(config?.threshold || 0.48).toFixed(2)}</strong></span>
+          </div>
         </div>
       </div>
 
@@ -209,16 +250,25 @@ function Engenharia() {
 
       {!loading && activeTab === 'model' ? (
         <div className="engenharia-tab-panel" id="engineering-panel-model" role="tabpanel" aria-labelledby="engineering-tab-model">
+          <div className="engenharia-benchmark-banner">
+            <div>
+              <span className="lab-eyebrow">Benchmark de teste · Avaliação walk-forward</span>
+              <p>
+                Métricas avaliadas sobre 71.184 registros de teste com o <strong>limiar base de referência 0.48</strong>. O limiar ativo na operação é <strong>{Number(config?.threshold || 0.48).toFixed(2)}</strong>.
+              </p>
+            </div>
+          </div>
+
           <div className="engenharia-metrics">
             <div className="engenharia-metric engenharia-metric--version">
               <span>Modelo ativo</span>
               <strong>{model?.version || 'v1.0.0'}</strong>
-              <small>Random Forest (modelo-5)</small>
+              <small>Random Forest (modelo-5) · corte base 0.48</small>
             </div>
             <div className="engenharia-metric">
               <span>Recall de falhas</span>
               <strong>{((model?.test_metrics?.recall ?? 0.553) * 100).toFixed(1)}%</strong>
-              <small>3.432 de 6.202 falhas cobertas</small>
+              <small>3.432 de 6.202 falhas (limiar 0.48)</small>
             </div>
             <div className="engenharia-metric">
               <span>ROC-AUC</span>
@@ -228,12 +278,12 @@ function Engenharia() {
             <div className="engenharia-metric">
               <span>F1-Score</span>
               <strong>{((model?.test_metrics?.f1 ?? 0.247) * 100).toFixed(1)}%</strong>
-              <small>Limiar calibrado ({Number(config?.threshold || 0.48).toFixed(2)})</small>
+              <small>Limiar base de teste (0.48)</small>
             </div>
             <div className="engenharia-metric">
               <span>Precisão</span>
               <strong>{((model?.test_metrics?.precision ?? 0.159) * 100).toFixed(1)}%</strong>
-              <small>3.432 acertos em 21.564 alertas</small>
+              <small>3.432 acertos em 21.564 alertas (limiar 0.48)</small>
             </div>
           </div>
 
@@ -241,7 +291,7 @@ function Engenharia() {
             <article className="engenharia-card">
               <header className="engenharia-card__head">
                 <h2>Matriz de confusão · teste walk-forward</h2>
-                <span className="engenharia-tag">71.184 registros</span>
+                <span className="engenharia-tag">Limiar de corte 0.48 · 71.184 registros</span>
               </header>
 
               <div className="engenharia-card__body">
@@ -283,7 +333,7 @@ function Engenharia() {
               </div>
 
               <footer className="engenharia-card__footer">
-                <span>Avaliação walk-forward sobre 71.184 registros porta-dia no período de teste (maio a junho/2025).</span>
+                <span>Avaliação walk-forward sobre 71.184 registros porta-dia no período de teste (maio a junho/2025) com limiar de referência 0.48.</span>
                 <span>Taxa de falha real no teste: 8.71%</span>
               </footer>
             </article>
@@ -352,7 +402,7 @@ function Engenharia() {
               <div className="lab-controls__intro">
                 <span className="lab-eyebrow">Novo cenário</span>
                 <h2>Laboratório de cenários</h2>
-                <p>Compare outras configurações antes de alterar o diagnóstico usado pela operação.</p>
+                <p>Ajuste o limiar desejado para salvar na configuração operacional ou simule um cenário de teste antes de publicar.</p>
               </div>
               <div className="lab-control-grid">
                 <div className="lab-threshold-control">
@@ -372,11 +422,32 @@ function Engenharia() {
                   />
                   <div className="calibration-ticks"><span>mais alertas</span><span>menos alertas</span></div>
                 </div>
-                <Button type="submit" disabled={runningExperiment}>
-                  {runningExperiment ? 'Executando…' : 'Executar cenário'}
-                </Button>
+                <div className="lab-control-actions">
+                  <Button
+                    type="button"
+                    onClick={handleSaveThreshold}
+                    disabled={savingConfig || runningExperiment}
+                  >
+                    {savingConfig ? 'Salvando…' : 'Salvar limiar'}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    disabled={runningExperiment || savingConfig}
+                  >
+                    {runningExperiment ? 'Executando…' : 'Executar cenário'}
+                  </Button>
+                </div>
               </div>
             </form>
+
+            <ThresholdComparisonCharts
+              selectedThreshold={selectedThreshold}
+              officialThreshold={Number(officialRun?.threshold_used ?? config.threshold ?? 0.48)}
+              officialRun={officialRun}
+              experiments={experiments}
+              onSelectThreshold={setSelectedThreshold}
+            />
 
             <div className="lab-results">
               <header>
@@ -391,6 +462,7 @@ function Engenharia() {
                     const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
                     const delta = risk - officialRisk
                     const percent = (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'
+                    const calibrated = getThresholdMetrics(run.threshold_used)
                     return (
                       <article className="lab-scenario" key={run.id}>
                         <header>
@@ -404,9 +476,9 @@ function Engenharia() {
                         <dl className="lab-scenario__metrics">
                           <div><dt>Portas em risco</dt><dd>{risk}</dd><small>{delta > 0 ? '+' : ''}{delta} versus atual</small></div>
                           <div><dt>Taxa de alerta</dt><dd>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</dd><small>{risk} de {total} portas</small></div>
-                          <div title="Chance média esperada de falha entre as portas sinalizadas"><dt>Precisão esperada</dt><dd>{percent(run.estimated_precision)}</dd></div>
-                          <div title="Parcela do risco probabilístico coberta pelas portas sinalizadas"><dt>Recall esperado</dt><dd>{percent(run.estimated_recall)}</dd></div>
-                          <div><dt>Equilíbrio P/R</dt><dd>{percent(run.estimated_f1)}</dd><small>F1 esperado</small></div>
+                          <div title="Precisão calculada sobre o conjunto de teste real histórico"><dt>Precisão no teste</dt><dd>{percent(calibrated.precision)}</dd></div>
+                          <div title="Recall de falhas reais capturadas no teste histórico"><dt>Recall de falhas</dt><dd>{percent(calibrated.recall)}</dd></div>
+                          <div title="Média harmônica F1 no teste histórico"><dt>F1-Score</dt><dd>{percent(calibrated.f1)}</dd><small>Massa de teste</small></div>
                           <div><dt>Maior risco</dt><dd>{percent(run.maximum_probability)}</dd></div>
                         </dl>
                       </article>
@@ -414,7 +486,7 @@ function Engenharia() {
                   })}
                 </div>
               ) : <p className="lab-empty">Nenhum cenário foi executado. Escolha um threshold e rode a primeira comparação.</p>}
-              <footer>As métricas “esperadas” ajudam a comparar cenários. Os valores definitivos dependem das falhas que realmente acontecerem depois do período escolhido.</footer>
+              <footer>Métricas de desempenho (Recall, Precisão e F1-Score) avaliadas sobre o conjunto de teste real histórico (71.184 registros porta-dia) para o limiar selecionado.</footer>
             </div>
           </section>
         </div>
@@ -484,7 +556,7 @@ function Engenharia() {
             </div>
 
             <footer className="engenharia-card__footer">
-              <span>O Random Forest é o único modelo serializado em artefato .joblib e em operação no serviço preditivo da Linha 4.</span>
+              <span>O Random Forest é o único modelo serializado em artefato .joblib e em operação no serviço preditivo da Linha 4 (métricas avaliadas com limiar de teste 0.48).</span>
             </footer>
           </article>
 

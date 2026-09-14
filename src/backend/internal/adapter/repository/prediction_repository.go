@@ -220,13 +220,14 @@ func (r *PostgresPredictionRepository) ListExperiments(ctx context.Context, limi
 			&run.EstimatedPrecision, &run.EstimatedRecall); err != nil {
 			return nil, err
 		}
-		if run.EstimatedPrecision != nil && run.EstimatedRecall != nil {
-			value := 0.0
-			if *run.EstimatedPrecision+*run.EstimatedRecall > 0 {
-				value = 2 * *run.EstimatedPrecision * *run.EstimatedRecall / (*run.EstimatedPrecision + *run.EstimatedRecall)
-			}
-			run.EstimatedF1 = &value
+		var thresholdVal float64 = 0.48
+		if run.ThresholdUsed != nil {
+			thresholdVal = *run.ThresholdUsed
 		}
+		prec, rec, f1Val := domain.GetThresholdCalibrationMetrics(thresholdVal)
+		run.EstimatedPrecision = &prec
+		run.EstimatedRecall = &rec
+		run.EstimatedF1 = &f1Val
 		runs = append(runs, run)
 	}
 	return runs, rows.Err()

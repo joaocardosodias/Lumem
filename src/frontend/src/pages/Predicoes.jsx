@@ -341,7 +341,7 @@ function Predicoes({ onNavigate, params }) {
             </div>
 
             <div className="predicoes-model-profile__item is-performance">
-              <dt>Desempenho no teste</dt>
+              <dt>Desempenho no teste (limiar 0.48)</dt>
               <dd className="predicoes-model-profile__performance">
                 <span>
                   <strong>{String(modelConfig.recall || '55,3%').replace('.', ',')}</strong>

@@ -478,10 +478,14 @@ export const api = {
   doorPredictionHistory(doorId, limit = 30) {
     return request(`/api/v1/doors/${doorId}/predictions${queryString({ limit })}`).then((result) => result.data)
   },
-  triggerPredictions(horizonDays = 7) {
+  triggerPredictions(horizonDays = 7, threshold = null) {
+    const body = { horizon_days: Number(horizonDays) || 7 }
+    if (threshold !== null && threshold !== undefined) {
+      body.threshold = Number(threshold)
+    }
     return request('/api/v1/predictions/trigger', {
       method: 'POST',
-      body: { horizon_days: Number(horizonDays) || 7 },
+      body,
     }).then((result) => result.data)
   },
   predictionExperiments(limit = 20) {
