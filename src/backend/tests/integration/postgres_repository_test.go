@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,12 +20,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type prepareErrorDB struct {
+type predictionInsertErrorDB struct {
 	*sql.DB
 }
 
-func (db *prepareErrorDB) PrepareContext(context.Context, string) (*sql.Stmt, error) {
-	return nil, errors.New("falha simulada ao preparar statement")
+func (db *predictionInsertErrorDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	if strings.Contains(query, "INSERT INTO predictions") {
+		return nil, errors.New("falha simulada ao inserir previsoes")
+	}
+	return db.DB.ExecContext(ctx, query, args...)
 }
 
 func testUserRepo(t *testing.T, ctx context.Context, db *sql.DB) {
@@ -625,11 +630,20 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 	if err != nil || len(runWithItems.Predictions) == 0 {
 		t.Fatalf("esperava run com items preenchidos, obteve %+v", runWithItems)
 	}
-	history, err := predRepo.GetDoorHistory(ctx, 1, 30)
+	var doorID int
+	if err := db.QueryRowContext(ctx, `
+		SELECT d.id
+		FROM doors d
+		JOIN stations s ON s.id = d.station_id
+		WHERE s.code = $1 AND d.platform = $2 AND d.door_number = $3
+	`, "PIN", "P1", 1).Scan(&doorID); err != nil {
+		t.Fatalf("falha ao localizar porta usada no historico: %v", err)
+	}
+	history, err := predRepo.GetDoorHistory(ctx, doorID, 30)
 	if err != nil || len(history) == 0 {
 		t.Fatalf("esperava historico da porta preenchido, obteve %+v: %v", history, err)
 	}
-	if history[0].Probability == nil || *history[0].Probability != probability || history[0].ModelVersion != "v1.0.0" {
+	if history[0].Probability == nil || math.Abs(*history[0].Probability-probability) > 1e-6 || history[0].ModelVersion != "v1.0.0" {
 		t.Fatalf("metadados preditivos nao preservados: %+v", history[0])
 	}
 
@@ -707,13 +721,13 @@ func testRepositoryErrorPaths(t *testing.T, ctx context.Context, db *sql.DB) {
 		t.Fatalf("reverter views temporarias: %v", err)
 	}
 
-	repoWithPrepareFailure := repository.NewPostgresPredictionRepository(&prepareErrorDB{DB: db})
-	err = repoWithPrepareFailure.SaveRun(ctx, &domain.PredictionRun{
+	repoWithInsertFailure := repository.NewPostgresPredictionRepository(&predictionInsertErrorDB{DB: db})
+	err = repoWithInsertFailure.SaveRun(ctx, &domain.PredictionRun{
 		ID:          uuid.NewString(),
 		HorizonDays: 7,
 	}, []domain.PredictionItem{{StationCode: "PIN", Platform: "P1", DoorNumber: 1}})
-	if err == nil || err.Error() != "falha simulada ao preparar statement" {
-		t.Fatalf("esperava erro ao preparar insercao de previsoes, obteve %v", err)
+	if err == nil || err.Error() != "falha simulada ao inserir previsoes" {
+		t.Fatalf("esperava erro ao inserir previsoes, obteve %v", err)
 	}
 }
 
