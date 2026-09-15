@@ -58,9 +58,9 @@ Em `MODEL_REGISTRY_DRIVER=s3`, a candidata é publicada automaticamente no prefi
 
 ## Dados de treinamento
 
-No repositório local, o pipeline lê `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx`. Esses arquivos não entram na imagem. Em produção, configure caminhos montados com `MODEL_PANEL_PATH` e `MODEL_MAINTENANCE_PATH`, ou chaves privadas do S3 com `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY`. O download é feito para `MODEL_TRAINING_CACHE_DIR` antes do treinamento.
+No repositório local, o pipeline lê `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx`. Esses arquivos não entram na imagem. Os arquivos Compose os montam como somente leitura nos caminhos padrão de `/app/training-data`. Se o ambiente de produção não possuir o checkout completo, configure `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY`; o download será feito para `MODEL_TRAINING_CACHE_DIR` antes do treinamento.
 
-Os jobs ficam em `/var/lib/g04/training-jobs`, montado como volume persistente nos arquivos Compose. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
+Os jobs ficam em `/var/lib/g04/training-jobs`, e o registry local fica em `/app/artifacts`; ambos usam volumes persistentes nos arquivos Compose. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
 
 ## Execução local
 

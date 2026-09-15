@@ -108,6 +108,7 @@ ZM01_PATH = materialize_training_input(
 
 log('lendo painel...')
 painel = pd.read_parquet(PAINEL)
+painel['Data'] = pd.to_datetime(painel['Data']).astype('datetime64[ns]')
 
 PAT_LOC = re.compile(r'^SP04-6-PSD-([A-Z]{3})(?:-PLT(\d)|-P(\d)S\d)?(?:-PP(\d{2})(PDM|PFX|PSE))?')
 
@@ -121,7 +122,7 @@ def carrega_ordens(caminho, aba):
     df = df.dropna(subset=['est', 'via', 'porta', 'inicio_avaria_datetime']).copy()
     df['porta'] = df['porta'].astype(int)
     df['id_porta'] = df['est'] + '_' + df['via'] + '_' + df['porta'].astype(str).str.zfill(2)
-    df['Data'] = pd.to_datetime(df['inicio_avaria_datetime']).dt.normalize()
+    df['Data'] = pd.to_datetime(df['inicio_avaria_datetime']).dt.normalize().astype('datetime64[ns]')
     return df
 
 

@@ -16,7 +16,8 @@ COPY openapi.yaml ./openapi.yaml
 COPY artifacts ./artifacts
 
 RUN useradd -u 10001 -m appuser
-RUN mkdir -p /var/lib/g04/training-jobs && chown -R appuser:appuser /var/lib/g04
+RUN mkdir -p /var/lib/g04/training-jobs && \
+    chown -R appuser:appuser /var/lib/g04 /app/artifacts
 USER 10001
 
 EXPOSE 8000

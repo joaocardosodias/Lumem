@@ -13,6 +13,9 @@ services:
       TRAINING_JOB_DIR: /var/lib/g04/training-jobs
     volumes:
       - ml-training-jobs:/var/lib/g04/training-jobs
+      - ml-model-artifacts:/app/artifacts
+      - ../../models/modelo-5/painel.parquet:/app/training-data/painel.parquet:ro
+      - ../../data/Corretiva Emergencial/processados/ZM01_limpa.xlsx:/app/training-data/ZM01_limpa.xlsx:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 15s
@@ -32,3 +35,4 @@ networks:
 
 volumes:
   ml-training-jobs:
+  ml-model-artifacts:
