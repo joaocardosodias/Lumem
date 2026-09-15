@@ -180,7 +180,11 @@ func toPredictionItemDTOs(items []domain.PredictionItem) []PredictionItemOutputD
 }
 
 func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays int) (*PredictionRunOutputDTO, error) {
-	return uc.execute(ctx, horizonDays, nil, false)
+	return uc.execute(ctx, horizonDays, nil, false, "")
+}
+
+func (uc *TriggerPredictionsUseCase) ExecuteForModel(ctx context.Context, horizonDays int, modelVersion string) (*PredictionRunOutputDTO, error) {
+	return uc.execute(ctx, horizonDays, nil, false, modelVersion)
 }
 
 func (uc *TriggerPredictionsUseCase) ExecuteExperiment(ctx context.Context, threshold float64) (*PredictionRunOutputDTO, error) {
@@ -190,10 +194,10 @@ func (uc *TriggerPredictionsUseCase) ExecuteExperiment(ctx context.Context, thre
 	if math.Abs(threshold*100-math.Round(threshold*100)) > 1e-9 {
 		return nil, domain.ErrInvalidConfig
 	}
-	return uc.execute(ctx, 7, &threshold, true)
+	return uc.execute(ctx, 7, &threshold, true, "")
 }
 
-func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays int, customThreshold *float64, experiment bool) (*PredictionRunOutputDTO, error) {
+func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays int, customThreshold *float64, experiment bool, expectedModelVersion string) (*PredictionRunOutputDTO, error) {
 	horizonDays = 7
 	threshold := customThreshold
 	if threshold == nil {
@@ -223,6 +227,14 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 	predictionBatch, err := uc.mlClient.PredictBatch(ctx, doors)
 	if err != nil {
 		return nil, err
+	}
+	if expectedModelVersion != "" && predictionBatch.ModelVersion != expectedModelVersion {
+		return nil, fmt.Errorf(
+			"%w: servico de inferencia respondeu com o modelo %s, esperado %s",
+			domain.ErrInvalidConfig,
+			predictionBatch.ModelVersion,
+			expectedModelVersion,
+		)
 	}
 	predictedItems := predictionBatch.Predictions
 	applyPredictionThreshold(predictedItems, threshold)

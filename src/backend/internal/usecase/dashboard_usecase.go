@@ -48,6 +48,10 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 	return uc.triggerPredUC.Execute(ctx, horizonDays)
 }
 
+func (uc *DashboardUseCase) TriggerPredictionsForModel(ctx context.Context, horizonDays int, modelVersion string) (*PredictionRunOutputDTO, error) {
+	return uc.triggerPredUC.ExecuteForModel(ctx, horizonDays, modelVersion)
+}
+
 func (uc *DashboardUseCase) SetMLOpsRepository(repo port.MLOpsRepository) {
 	if uc.triggerPredUC != nil {
 		uc.triggerPredUC.SetMLOpsRepository(repo)

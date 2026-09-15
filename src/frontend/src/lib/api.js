@@ -502,15 +502,6 @@ export const api = {
   getMLConfig() {
     return request('/api/v1/ml/config').then((result) => result.data)
   },
-  updateMLConfig(threshold, defaultHorizonDays) {
-    return request('/api/v1/ml/config', {
-      method: 'PUT',
-      body: {
-        threshold: Number(threshold),
-        default_horizon_days: Number(defaultHorizonDays),
-      },
-    }).then((result) => result.data)
-  },
   getActiveModel() {
     return request('/api/v1/ml/model/active').then((result) => result.data)
   },

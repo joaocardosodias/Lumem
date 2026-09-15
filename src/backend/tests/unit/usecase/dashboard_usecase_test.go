@@ -327,6 +327,25 @@ func TestDashboardUseCase_TriggerPredictions_WithUnitOfWork(t *testing.T) {
 	}
 }
 
+func TestDashboardUseCase_TriggerPredictionsForModelRejectsStaleInferenceService(t *testing.T) {
+	dashRepo := &mockDashboardRepo{}
+	predRepo := &mockPredictionRepo{
+		doors: []domain.Door{{ID: 7, StationCode: "FAL", Platform: "P1", DoorNumber: 7}},
+	}
+	uow := &mockUnitOfWork{
+		store: &mockUOWStore{predRepo: predRepo, insRepo: newMockInspectionRepo()},
+	}
+	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, &mockMLClient{}, &mockEventBus{}, uow)
+
+	run, err := uc.TriggerPredictionsForModel(context.Background(), 7, "v2.0.0")
+	if run != nil || !errors.Is(err, domain.ErrInvalidConfig) {
+		t.Fatalf("esperava rejeitar resposta do modelo anterior, rodada=%+v erro=%v", run, err)
+	}
+	if uow.called {
+		t.Fatal("rodada inconsistente nao deveria ser persistida")
+	}
+}
+
 type failingInspectionRepo struct {
 	port.InspectionRepository
 }

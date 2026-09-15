@@ -81,7 +81,6 @@ function Engenharia() {
   const [activeTab, setActiveTab] = useState('model')
   const [loading, setLoading] = useState(true)
   const [runningExperiment, setRunningExperiment] = useState(false)
-  const [savingConfig, setSavingConfig] = useState(false)
   const [promotingExperiment, setPromotingExperiment] = useState('')
   const [retraining, setRetraining] = useState(false)
   const [trainingJob, setTrainingJob] = useState(null)
@@ -133,40 +132,6 @@ function Engenharia() {
     }
     loadData()
   }, [])
-
-  async function handleSaveThreshold() {
-    try {
-      setSavingConfig(true)
-      const updatedConfig = await api.updateMLConfig(selectedThreshold, 7)
-      setConfig((current) => ({
-        ...current,
-        threshold: updatedConfig.threshold ?? selectedThreshold,
-        default_horizon_days: updatedConfig.default_horizon_days ?? 7,
-        updated_at: updatedConfig.updated_at ?? new Date().toISOString(),
-      }))
-
-      let newRun = null
-      try {
-        newRun = await api.triggerPredictions(7)
-        if (newRun) {
-          setOfficialRun(newRun)
-        }
-      } catch {
-        newRun = null
-      }
-
-      invalidateApplicationCache()
-      if (newRun) {
-        toast.success(`Limiar ${Number(selectedThreshold).toFixed(2)} salvo e aplicado à operação com sucesso.`)
-      } else {
-        toast.success(`Limiar ${Number(selectedThreshold).toFixed(2)} salvo nas configurações.`)
-      }
-    } catch (err) {
-      toast.error('Falha ao salvar limiar: ' + errorMessage(err))
-    } finally {
-      setSavingConfig(false)
-    }
-  }
 
   async function handleRunExperiment(e) {
     e.preventDefault()
@@ -231,11 +196,13 @@ function Engenharia() {
   async function handlePromoteModel(version) {
     try {
       setPromotingModel(version)
-      const active = await api.promoteModel(version)
+      const result = await api.promoteModel(version)
       const models = await api.getModelHistory(20)
-      setModel(active)
+      setModel(result.model)
+      setOfficialRun(result.prediction_run)
       setHistory(models || [])
-      toast.success(`Modelo ${version} promovido para produção.`)
+      invalidateApplicationCache()
+      toast.success(`Modelo ${version} promovido e nova rodada oficial publicada.`)
     } catch (err) {
       toast.error('Falha ao promover modelo: ' + errorMessage(err))
     } finally {
@@ -500,17 +467,9 @@ function Engenharia() {
                 <div className="lab-control-actions">
                   <Button
                     type="submit"
-                    disabled={savingConfig || runningExperiment}
+                    disabled={runningExperiment}
                   >
                     {runningExperiment ? 'Executando cenário…' : 'Executar cenário'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleSaveThreshold}
-                    disabled={runningExperiment || savingConfig}
-                  >
-                    {savingConfig ? 'Salvando…' : 'Salvar como oficial'}
                   </Button>
                 </div>
               </div>
@@ -665,7 +624,7 @@ function Engenharia() {
                       <td>{decimal(run.test_metrics?.roc_auc)}</td>
                       <td><code>{run.artifact_uri || run.artifact_path || 'Indisponível'}</code></td>
                       <td><span className={`badge-tag ${run.status === 'production' ? 'is-active' : ''}`}>{trainingStatusLabel(run.status)}</span></td>
-                      <td>{run.status !== 'production' ? <button type="button" onClick={() => handlePromoteModel(run.version)} disabled={Boolean(promotingModel)}>{promotingModel === run.version ? 'Promovendo…' : run.status === 'retired' ? 'Reverter' : 'Promover'}</button> : '—'}</td>
+                      <td>{run.status !== 'production' ? <button type="button" onClick={() => handlePromoteModel(run.version)} disabled={Boolean(promotingModel)}>{promotingModel === run.version ? 'Promovendo e publicando…' : run.status === 'retired' ? 'Reverter' : 'Promover'}</button> : '—'}</td>
                     </tr>
                   )) : <tr><td className="table-empty" colSpan="9">Nenhuma versão registrada.</td></tr>}
                 </tbody>
@@ -673,7 +632,7 @@ function Engenharia() {
             </div>
 
             <footer className="engenharia-card__footer">
-              <span>Cada versão referencia um artefato imutável, hashes do modelo e do dataset e sua avaliação temporal.</span>
+              <span>Ao promover uma versão, o backend ativa o artefato e publica automaticamente uma nova rodada oficial com o threshold operacional vigente.</span>
             </footer>
           </article>
 

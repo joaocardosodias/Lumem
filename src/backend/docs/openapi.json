@@ -750,14 +750,14 @@
     },
     "/api/v1/ml/models/{version}/promote": {
       "post": {
-        "summary": "Promover ou restaurar uma versão validada",
-        "description": "Valida o artefato no serviço Python antes de trocar atomicamente o estado no PostgreSQL. Restrito a engenharia.",
+        "summary": "Promover uma versão e publicar a rodada oficial",
+        "description": "Valida e ativa o artefato no serviço Python, troca o estado no PostgreSQL e executa uma nova rodada oficial com o threshold operacional vigente. Se a rodada falhar, tenta restaurar o modelo anterior. Restrito a engenharia.",
         "security": [{ "BearerAuth": [] }],
         "parameters": [{ "name": "version", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": {
           "200": {
-            "description": "Versão ativa após a promoção",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLModelRun" } } }
+            "description": "Versão ativa e rodada oficial publicada após a promoção",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelPromotionResult" } } }
           }
         }
       }
@@ -1088,6 +1088,14 @@
           "test_metrics": { "type": "object", "additionalProperties": true },
           "feature_importance": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
           "threshold_metrics": { "type": "array", "items": { "$ref": "#/components/schemas/ThresholdMetric" } }
+        }
+      },
+      "ModelPromotionResult": {
+        "type": "object",
+        "required": ["model", "prediction_run"],
+        "properties": {
+          "model": { "$ref": "#/components/schemas/MLModelRun" },
+          "prediction_run": { "$ref": "#/components/schemas/PredictionRunOutput" }
         }
       },
       "MLTrainingJob": {

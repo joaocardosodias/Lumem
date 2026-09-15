@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -14,11 +15,17 @@ type UpdateMLConfigRequest struct {
 }
 
 type MLOpsHandler struct {
-	mlopsUC *usecase.MLOpsUseCase
+	mlopsUC   *usecase.MLOpsUseCase
+	promoteUC *usecase.PromoteModelAndPublishUseCase
 }
 
-func NewMLOpsHandler(mlopsUC *usecase.MLOpsUseCase) *MLOpsHandler {
-	return &MLOpsHandler{mlopsUC: mlopsUC}
+type PromoteModelResponse struct {
+	Model         *domain.MLModelRun    `json:"model"`
+	PredictionRun PredictionRunResponse `json:"prediction_run"`
+}
+
+func NewMLOpsHandler(mlopsUC *usecase.MLOpsUseCase, promoteUC *usecase.PromoteModelAndPublishUseCase) *MLOpsHandler {
+	return &MLOpsHandler{mlopsUC: mlopsUC, promoteUC: promoteUC}
 }
 
 func (h *MLOpsHandler) GetConfig(c *gin.Context) {
@@ -114,12 +121,15 @@ func (h *MLOpsHandler) ListTrainingJobs(c *gin.Context) {
 }
 
 func (h *MLOpsHandler) PromoteModel(c *gin.Context) {
-	model, err := h.mlopsUC.PromoteModel(c.Request.Context(), c.Param("version"), c.GetString("userID"))
+	result, err := h.promoteUC.Execute(c.Request.Context(), c.Param("version"), c.GetString("userID"))
 	if err != nil {
 		RespondDomainError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, model)
+	c.JSON(http.StatusOK, PromoteModelResponse{
+		Model:         result.Model,
+		PredictionRun: toPredictionRunResponse(result.PredictionRun),
+	})
 }
 
 func (h *MLOpsHandler) GetProductionPerformance(c *gin.Context) {

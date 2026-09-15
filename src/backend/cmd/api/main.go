@@ -386,6 +386,7 @@ func main() {
 	dashUC.SetMLOpsRepository(mlopsRepo)
 	mlopsUC := usecase.NewMLOpsUseCase(mlopsRepo, mlClient)
 	mlopsUC.SetPredictionOutcomeRepository(outcomeRepo)
+	promoteModelUC := usecase.NewPromoteModelAndPublishUseCase(mlopsUC, dashUC)
 	reconcilerCtx, stopReconciler := context.WithCancel(context.Background())
 	defer stopReconciler()
 	go usecase.RunTrainingJobReconciler(reconcilerCtx, mlopsUC, 30*time.Second, logger)
@@ -404,7 +405,7 @@ func main() {
 		dash:      httpAdapter.NewDashboardHandler(dashUC),
 		health:    httpAdapter.NewHealthHandler(db),
 		docs:      httpAdapter.NewDocsHandler("docs/openapi.json"),
-		mlops:     httpAdapter.NewMLOpsHandler(mlopsUC),
+		mlops:     httpAdapter.NewMLOpsHandler(mlopsUC, promoteModelUC),
 		jwtSecret: cfg.JWTSecret,
 	}
 
