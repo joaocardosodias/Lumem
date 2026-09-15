@@ -5,12 +5,14 @@ services:
     restart: unless-stopped
     expose:
       - "8000"
-    ports:
-      - "8000:8000"
     env_file:
       - ../backend/.env
+    environment:
+      TRAINING_JOB_DIR: /var/lib/g04/training-jobs
+    volumes:
+      - ml-training-jobs:/var/lib/g04/training-jobs
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 15s
       timeout: 3s
       retries: 3
@@ -27,3 +29,6 @@ networks:
   default:
     name: backend-network
     external: true
+
+volumes:
+  ml-training-jobs:

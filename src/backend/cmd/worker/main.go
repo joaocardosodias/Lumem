@@ -141,6 +141,8 @@ func main() {
 
 	runCtx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopSignals()
+	outcomeUC := usecase.NewEvaluatePredictionOutcomesUseCase(repository.NewPostgresPredictionOutcomeRepository(db))
+	go usecase.RunPredictionOutcomeScheduler(runCtx, outcomeUC, 24*time.Hour, logger)
 	if err := client.Start(runCtx); err != nil {
 		logger.Error("falha ao iniciar worker River", slog.String("error", err.Error()))
 		os.Exit(1)

@@ -1,0 +1,214 @@
+openapi: 3.1.0
+info:
+  title: G04 ML Inference API
+  version: 1.0.0
+paths:
+  /health/live:
+    get:
+      responses:
+        '200': {description: Processo ativo}
+  /health/ready:
+    get:
+      responses:
+        '200': {description: Artefato carregado e verificado}
+        '503': {description: Artefato indisponível}
+  /v1/predictions:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [doors]
+              properties:
+                doors:
+                  type: array
+                  maxItems: 2000
+                  items:
+                    $ref: '#/components/schemas/Door'
+      responses:
+        '200':
+          description: Probabilidades calculadas pelo modelo carregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionBatch'
+        '400': {description: Contrato inválido}
+        '503': {description: Inferência indisponível}
+  /v1/models/active:
+    get:
+      responses:
+        '200':
+          description: Manifest do modelo ativo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ModelManifest'}
+  /v1/models/{version}/metrics:
+    get:
+      parameters:
+        - in: path
+          name: version
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Curva de thresholds e procedência
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ModelMetrics'}
+        '404': {description: Versão não encontrada}
+  /v1/models/{version}/drift:
+    get:
+      parameters:
+        - in: path
+          name: version
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Drift calculado contra o snapshot de referência
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DriftReport'}
+  /v1/models/{version}/activate:
+    post:
+      parameters:
+        - in: path
+          name: version
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Ponteiro ativo atualizado após validação do artefato}
+        '404': {description: Candidato não encontrado}
+        '409': {description: Hash ou manifest inválido}
+  /v1/training-jobs:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                requested_by: {type: string}
+      responses:
+        '202':
+          description: Treinamento enfileirado
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TrainingJob'}
+        '409': {description: Já existe um treinamento em execução}
+  /v1/training-jobs/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Estado real do treinamento
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TrainingJob'}
+        '404': {description: Job não encontrado}
+components:
+  schemas:
+    Door:
+      type: object
+      additionalProperties: false
+      required: [station_code, platform, door_number]
+      properties:
+        station_code: {type: string, minLength: 1}
+        platform: {type: string, minLength: 1}
+        door_number: {type: integer, minimum: 1}
+    Prediction:
+      allOf:
+        - $ref: '#/components/schemas/Door'
+        - type: object
+          required: [probability]
+          properties:
+            probability: {type: number, minimum: 0, maximum: 1}
+    PredictionBatch:
+      type: object
+      required: [model_version, predictions]
+      properties:
+        model_version: {type: string, minLength: 1}
+        reference_date: {type: string, format: date}
+        predictions:
+          type: array
+          items: {$ref: '#/components/schemas/Prediction'}
+    ThresholdMetric:
+      type: object
+      required: [threshold, true_positives, false_positives, false_negatives, true_negatives, precision, recall, f1_score, alert_count, alert_rate]
+      properties:
+        threshold: {type: number, minimum: 0, maximum: 1}
+        true_positives: {type: integer, minimum: 0}
+        false_positives: {type: integer, minimum: 0}
+        false_negatives: {type: integer, minimum: 0}
+        true_negatives: {type: integer, minimum: 0}
+        precision: {type: number, minimum: 0, maximum: 1}
+        recall: {type: number, minimum: 0, maximum: 1}
+        f1_score: {type: number, minimum: 0, maximum: 1}
+        alert_count: {type: integer, minimum: 0}
+        alert_rate: {type: number, minimum: 0, maximum: 1}
+    ModelManifest:
+      type: object
+      required: [model_version, model_sha256, dataset_sha256, artifact_uri, features, threshold_metrics]
+      properties:
+        model_version: {type: string}
+        model_sha256: {type: string, minLength: 64, maxLength: 64}
+        dataset_sha256: {type: string, minLength: 64, maxLength: 64}
+        artifact_uri: {type: string}
+        target: {type: string}
+        features: {type: array, items: {type: string}}
+        threshold_metrics:
+          type: array
+          items: {$ref: '#/components/schemas/ThresholdMetric'}
+    ModelMetrics:
+      type: object
+      required: [model_version, model_sha256, dataset_sha256, threshold_metrics]
+      properties:
+        model_version: {type: string}
+        model_sha256: {type: string, minLength: 64, maxLength: 64}
+        dataset_sha256: {type: string, minLength: 64, maxLength: 64}
+        target: {type: string}
+        train_end: {type: string, format: date}
+        test_start: {type: string, format: date}
+        test_end: {type: string, format: date}
+        test_rows: {type: integer, minimum: 1}
+        positive_rows: {type: integer, minimum: 0}
+        threshold_metrics:
+          type: array
+          items: {$ref: '#/components/schemas/ThresholdMetric'}
+    TrainingJob:
+      type: object
+      required: [id, version, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        version: {type: string}
+        status: {type: string, enum: [queued, running, completed, failed]}
+        requested_by: {type: string}
+        parameters: {type: object, additionalProperties: true}
+        manifest: {type: object, additionalProperties: true, nullable: true}
+        error: {type: string, nullable: true}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time, nullable: true}
+        finished_at: {type: string, format: date-time, nullable: true}
+    DriftReport:
+      type: object
+      required: [status, model_version, evaluated_at, features_monitored, features_drift]
+      properties:
+        status: {type: string, enum: [healthy, warning, critical, unavailable]}
+        data_drift_detected: {type: boolean, nullable: true}
+        model_version: {type: string}
+        reference_dataset_sha256: {type: string, nullable: true}
+        psi_score: {type: number, nullable: true}
+        ks_statistic: {type: number, nullable: true}
+        evaluated_at: {type: string, format: date-time}
+        features_monitored: {type: integer, minimum: 0}
+        features_drift:
+          type: array
+          items: {type: object, additionalProperties: true}

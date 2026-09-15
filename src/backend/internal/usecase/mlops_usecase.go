@@ -2,20 +2,32 @@ package usecase
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/g04/backend/internal/domain"
 	"github.com/g04/backend/internal/usecase/port"
-	"github.com/google/uuid"
 )
 
 type MLOpsUseCase struct {
-	repo port.MLOpsRepository
+	repo     port.MLOpsRepository
+	client   port.MLOpsClient
+	outcomes port.PredictionOutcomeRepository
 }
 
-func NewMLOpsUseCase(repo port.MLOpsRepository) *MLOpsUseCase {
-	return &MLOpsUseCase{repo: repo}
+func (uc *MLOpsUseCase) SetPredictionOutcomeRepository(repository port.PredictionOutcomeRepository) {
+	uc.outcomes = repository
+}
+
+func NewMLOpsUseCase(repo port.MLOpsRepository, clients ...port.MLOpsClient) *MLOpsUseCase {
+	var client port.MLOpsClient
+	if len(clients) > 0 {
+		client = clients[0]
+	}
+	return &MLOpsUseCase{repo: repo, client: client}
 }
 
 func (uc *MLOpsUseCase) GetConfig(ctx context.Context) (*domain.MLConfig, error) {
@@ -26,11 +38,21 @@ func (uc *MLOpsUseCase) UpdateConfig(ctx context.Context, threshold float64, hor
 	if threshold < 0.05 || threshold > 0.95 {
 		return nil, fmt.Errorf("%w: threshold deve estar entre 0.05 e 0.95", domain.ErrInvalidConfig)
 	}
+	if math.Abs(threshold*100-math.Round(threshold*100)) > 1e-9 {
+		return nil, fmt.Errorf("%w: threshold deve usar incrementos de 0.01", domain.ErrInvalidConfig)
+	}
 	if horizon != 7 {
 		return nil, fmt.Errorf("%w: o modelo ativo suporta apenas o horizonte de 7 dias", domain.ErrInvalidConfig)
 	}
-
-	cfg := &domain.MLConfig{
+	active, err := uc.repo.GetActiveModel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	metric, err := uc.repo.GetThresholdMetric(ctx, active.Version, threshold)
+	if err != nil || metric == nil || math.Abs(metric.Threshold-threshold) > 1e-6 {
+		return nil, fmt.Errorf("%w: modelo ativo sem avaliacao para o threshold informado", domain.ErrInvalidConfig)
+	}
+	config := &domain.MLConfig{
 		ID:                 "active",
 		Threshold:          threshold,
 		DefaultHorizonDays: horizon,
@@ -38,11 +60,10 @@ func (uc *MLOpsUseCase) UpdateConfig(ctx context.Context, threshold float64, hor
 		UpdatedAt:          time.Now(),
 		UpdatedBy:          userID,
 	}
-
-	if err := uc.repo.UpdateConfig(ctx, cfg); err != nil {
+	if err := uc.repo.UpdateConfig(ctx, config); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return config, nil
 }
 
 func (uc *MLOpsUseCase) GetActiveModel(ctx context.Context) (*domain.MLModelRun, error) {
@@ -53,71 +74,397 @@ func (uc *MLOpsUseCase) ListModelRuns(ctx context.Context, limit int) ([]domain.
 	return uc.repo.ListModelRuns(ctx, limit)
 }
 
-func (uc *MLOpsUseCase) TriggerRetrain(ctx context.Context, userID string) (*domain.MLModelRun, error) {
-	now := time.Now()
-	runID := "run_" + uuid.New().String()[:8]
-	run := &domain.MLModelRun{
-		ID:        runID,
-		Version:   fmt.Sprintf("v1.%d.0", now.Unix()%1000),
-		Algorithm: "RandomForestClassifier (n_estimators=400, max_depth=14)",
-		Status:    "completed",
-		TrainMetrics: map[string]any{
-			"recall":    0.612,
-			"precision": 0.185,
-			"f1":        0.284,
-			"roc_auc":   0.724,
-		},
-		TestMetrics: map[string]any{
-			"recall":    0.578,
-			"precision": 0.167,
-			"f1":        0.259,
-			"roc_auc":   0.704,
-			"pr_auc":    0.192,
-			"confusion_matrix": map[string]any{
-				"tp": 3585,
-				"fp": 17880,
-				"fn": 2617,
-				"tn": 47102,
-			},
-		},
-		FeatureImportance: []map[string]any{
-			{"feature": "n_corretivas_historico_total", "importance": 0.0392, "group": "Degradação Acumulada"},
-			{"feature": "dur_max_30d", "importance": 0.0335, "group": "Duração de Alarmes"},
-			{"feature": "dur_max_7d", "importance": 0.0178, "group": "Duração Recente"},
-			{"feature": "intervalo_medio_zm01", "importance": 0.0142, "group": "Ciclo ZM01"},
-			{"feature": "dias_desde_zm01", "importance": 0.0128, "group": "Histórico de Falhas"},
-		},
-		ArtifactPath: "artifacts/modelo_5.joblib",
-		StartedAt:    now.Add(-3 * time.Minute),
-		FinishedAt:   now,
-		CreatedBy:    userID,
+func (uc *MLOpsUseCase) GetThresholdMetrics(ctx context.Context, version string) ([]domain.ThresholdMetric, error) {
+	if version == "" {
+		return nil, domain.ErrModelNotFound
 	}
+	return uc.repo.GetThresholdMetrics(ctx, version)
+}
 
-	if err := uc.repo.SaveModelRun(ctx, run); err != nil {
+func (uc *MLOpsUseCase) TriggerRetrain(ctx context.Context, userID string) (*domain.MLTrainingJob, error) {
+	if uc.client == nil {
+		return nil, domain.ErrPredictionServiceUnavailable
+	}
+	job, err := uc.client.StartTraining(ctx, userID)
+	if err != nil {
 		return nil, err
 	}
-	return run, nil
+	if job.CreatedAt.IsZero() {
+		job.CreatedAt = time.Now()
+	}
+	job.RequestedBy = userID
+	if job.Parameters == nil {
+		job.Parameters = map[string]any{}
+	}
+	if err := uc.repo.SaveTrainingJob(ctx, job); err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
+	stored, err := uc.repo.GetTrainingJob(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if stored.Status == "completed" {
+		if err := uc.ensureCompletedTrainingRegistered(ctx, stored); err != nil {
+			return nil, err
+		}
+		return stored, nil
+	}
+	if stored.Status == "failed" || uc.client == nil {
+		return stored, nil
+	}
+	current, err := uc.client.GetTrainingJob(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	current.RequestedBy = stored.RequestedBy
+	current.Parameters = stored.Parameters
+	if current.CreatedAt.IsZero() {
+		current.CreatedAt = stored.CreatedAt
+	}
+	if err := uc.repo.SaveTrainingJob(ctx, current); err != nil {
+		return nil, err
+	}
+	if current.Status == "completed" {
+		if err := uc.ensureCompletedTrainingRegistered(ctx, current); err != nil {
+			return nil, err
+		}
+	}
+	return current, nil
+}
+
+func (uc *MLOpsUseCase) ListTrainingJobs(ctx context.Context, limit int) ([]domain.MLTrainingJob, error) {
+	return uc.repo.ListTrainingJobs(ctx, limit)
+}
+
+func (uc *MLOpsUseCase) ensureCompletedTrainingRegistered(ctx context.Context, job *domain.MLTrainingJob) error {
+	version := stringValue(job.Manifest, "model_version")
+	if version != "" {
+		model, err := uc.repo.GetModelByVersion(ctx, version)
+		if err == nil && model.ArtifactSHA256 == stringValue(job.Manifest, "model_sha256") && len(model.ThresholdMetrics) > 0 {
+			return nil
+		}
+		if err != nil && !errors.Is(err, domain.ErrModelNotFound) {
+			return err
+		}
+	}
+	return uc.registerCompletedTraining(ctx, job)
+}
+
+func number(value any) (float64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		return typed, true
+	case float32:
+		return float64(typed), true
+	case int:
+		return float64(typed), true
+	case int64:
+		return float64(typed), true
+	default:
+		return 0, false
+	}
+}
+
+func integer(value any) (int, bool) {
+	numberValue, ok := number(value)
+	if !ok || numberValue < 0 || numberValue != math.Trunc(numberValue) {
+		return 0, false
+	}
+	return int(numberValue), true
+}
+
+func stringValue(values map[string]any, key string) string {
+	value, _ := values[key].(string)
+	return value
+}
+
+func mapValue(values map[string]any, key string) map[string]any {
+	value, _ := values[key].(map[string]any)
+	if value == nil {
+		return map[string]any{}
+	}
+	return value
+}
+
+func parseDate(value string) *time.Time {
+	parsed, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return nil
+	}
+	return &parsed
+}
+
+func validSHA256(value string) bool {
+	if len(value) != 64 {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && len(decoded) == 32
+}
+
+func parseThresholdMetrics(manifest map[string]any) ([]domain.ThresholdMetric, error) {
+	raw, ok := manifest["threshold_metrics"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil, fmt.Errorf("%w: manifest sem curva de thresholds", domain.ErrInvalidConfig)
+	}
+	metrics := make([]domain.ThresholdMetric, 0, len(raw))
+	seen := make(map[float64]struct{}, len(raw))
+	for _, item := range raw {
+		values, ok := item.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%w: ponto da curva invalido", domain.ErrInvalidConfig)
+		}
+		threshold, thresholdOK := number(values["threshold"])
+		precision, precisionOK := number(values["precision"])
+		recall, recallOK := number(values["recall"])
+		f1, f1OK := number(values["f1_score"])
+		alertRate, alertRateOK := number(values["alert_rate"])
+		tp, tpOK := integer(values["true_positives"])
+		fp, fpOK := integer(values["false_positives"])
+		fn, fnOK := integer(values["false_negatives"])
+		tn, tnOK := integer(values["true_negatives"])
+		alerts, alertsOK := integer(values["alert_count"])
+		if !thresholdOK || !precisionOK || !recallOK || !f1OK || !alertRateOK ||
+			!tpOK || !fpOK || !fnOK || !tnOK || !alertsOK || threshold < 0 || threshold > 1 ||
+			precision < 0 || precision > 1 || recall < 0 || recall > 1 || f1 < 0 || f1 > 1 ||
+			alertRate < 0 || alertRate > 1 {
+			return nil, fmt.Errorf("%w: valores invalidos na curva de thresholds", domain.ErrInvalidConfig)
+		}
+		if _, duplicated := seen[threshold]; duplicated {
+			return nil, fmt.Errorf("%w: threshold duplicado na curva", domain.ErrInvalidConfig)
+		}
+		seen[threshold] = struct{}{}
+		expectedPrecision := 0.0
+		if tp+fp > 0 {
+			expectedPrecision = float64(tp) / float64(tp+fp)
+		}
+		expectedRecall := 0.0
+		if tp+fn > 0 {
+			expectedRecall = float64(tp) / float64(tp+fn)
+		}
+		expectedF1 := 0.0
+		if expectedPrecision+expectedRecall > 0 {
+			expectedF1 = 2 * expectedPrecision * expectedRecall / (expectedPrecision + expectedRecall)
+		}
+		total := tp + fp + fn + tn
+		expectedAlertRate := 0.0
+		if total > 0 {
+			expectedAlertRate = float64(alerts) / float64(total)
+		}
+		if total == 0 || math.Abs(precision-expectedPrecision) > 1e-6 || math.Abs(recall-expectedRecall) > 1e-6 ||
+			math.Abs(f1-expectedF1) > 1e-6 || alerts != tp+fp || math.Abs(alertRate-expectedAlertRate) > 1e-6 {
+			return nil, fmt.Errorf("%w: metricas divergentes da matriz de confusao", domain.ErrInvalidConfig)
+		}
+		metrics = append(metrics, domain.ThresholdMetric{
+			Threshold: threshold, TruePositives: tp, FalsePositives: fp,
+			FalseNegatives: fn, TrueNegatives: tn, Precision: precision,
+			Recall: recall, F1Score: f1, AlertCount: alerts, AlertRate: alertRate,
+		})
+	}
+	if len(metrics) != 91 {
+		return nil, fmt.Errorf("%w: curva deve conter 91 thresholds", domain.ErrInvalidConfig)
+	}
+	for step := 5; step <= 95; step++ {
+		expected := float64(step) / 100
+		found := false
+		for _, metric := range metrics {
+			if math.Abs(metric.Threshold-expected) <= 1e-6 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("%w: curva sem o threshold %.2f", domain.ErrInvalidConfig, expected)
+		}
+	}
+	return metrics, nil
+}
+
+func (uc *MLOpsUseCase) registerCompletedTraining(ctx context.Context, job *domain.MLTrainingJob) error {
+	manifest := job.Manifest
+	version := stringValue(manifest, "model_version")
+	artifactURI := stringValue(manifest, "artifact_uri")
+	artifactSHA := stringValue(manifest, "model_sha256")
+	datasetSHA := stringValue(manifest, "dataset_sha256")
+	algorithm := stringValue(manifest, "algorithm")
+	target := stringValue(manifest, "target")
+	trainEnd := parseDate(stringValue(manifest, "train_end"))
+	testStart := parseDate(stringValue(manifest, "test_start"))
+	testEnd := parseDate(stringValue(manifest, "test_end"))
+	features, featuresOK := manifest["features"].([]any)
+	if version == "" || artifactURI == "" || !validSHA256(artifactSHA) || !validSHA256(datasetSHA) ||
+		algorithm == "" || target == "" || trainEnd == nil || testStart == nil || testEnd == nil ||
+		!featuresOK || len(features) == 0 {
+		return fmt.Errorf("%w: manifest sem versao, URI ou hashes validos", domain.ErrInvalidConfig)
+	}
+	featureNames := make(map[string]struct{}, len(features))
+	for _, rawFeature := range features {
+		feature, ok := rawFeature.(string)
+		if !ok || feature == "" {
+			return fmt.Errorf("%w: lista de features invalida", domain.ErrInvalidConfig)
+		}
+		if _, duplicated := featureNames[feature]; duplicated {
+			return fmt.Errorf("%w: feature duplicada no manifest", domain.ErrInvalidConfig)
+		}
+		featureNames[feature] = struct{}{}
+	}
+	if !trainEnd.Before(*testStart) || testStart.After(*testEnd) {
+		return fmt.Errorf("%w: periodos de treino e teste invalidos", domain.ErrInvalidConfig)
+	}
+	metrics, err := parseThresholdMetrics(manifest)
+	if err != nil {
+		return err
+	}
+	startedAt := job.CreatedAt
+	if job.StartedAt != nil {
+		startedAt = *job.StartedAt
+	}
+	finishedAt := time.Now()
+	if job.FinishedAt != nil {
+		finishedAt = *job.FinishedAt
+	}
+	recommended, recommendedOK := number(manifest["recommended_threshold"])
+	testRows, testRowsOK := integer(manifest["test_rows"])
+	positiveRows, positiveRowsOK := integer(manifest["positive_rows"])
+	if !recommendedOK || recommended < 0.05 || recommended > 0.95 || !testRowsOK || testRows == 0 ||
+		!positiveRowsOK || positiveRows > testRows {
+		return fmt.Errorf("%w: procedencia da avaliacao incompleta", domain.ErrInvalidConfig)
+	}
+	recommendedFound := false
+	for _, metric := range metrics {
+		if math.Abs(metric.Threshold-recommended) <= 1e-6 {
+			recommendedFound = true
+			break
+		}
+	}
+	if !recommendedFound {
+		return fmt.Errorf("%w: threshold recomendado ausente da curva", domain.ErrInvalidConfig)
+	}
+	for _, metric := range metrics {
+		if metric.TruePositives+metric.FalsePositives+metric.FalseNegatives+metric.TrueNegatives != testRows ||
+			metric.TruePositives+metric.FalseNegatives != positiveRows {
+			return fmt.Errorf("%w: curva pertence a outro conjunto de teste", domain.ErrInvalidConfig)
+		}
+	}
+	featureImportance := make([]map[string]any, 0)
+	if raw, ok := manifest["feature_importance"].([]any); ok {
+		for _, item := range raw {
+			if value, ok := item.(map[string]any); ok {
+				featureImportance = append(featureImportance, value)
+			}
+		}
+	}
+	run := &domain.MLModelRun{
+		ID:                   "run_" + job.ID,
+		Version:              version,
+		Algorithm:            algorithm,
+		Status:               "candidate",
+		TrainMetrics:         mapValue(manifest, "train_metrics"),
+		TestMetrics:          mapValue(manifest, "test_metrics"),
+		FeatureImportance:    featureImportance,
+		ArtifactURI:          artifactURI,
+		ArtifactSHA256:       artifactSHA,
+		DatasetSHA256:        datasetSHA,
+		TargetName:           target,
+		TrainEnd:             trainEnd,
+		TestStart:            testStart,
+		TestEnd:              testEnd,
+		TestRows:             testRows,
+		PositiveRows:         positiveRows,
+		RecommendedThreshold: &recommended,
+		Manifest:             manifest,
+		StartedAt:            startedAt,
+		FinishedAt:           finishedAt,
+		CreatedBy:            job.RequestedBy,
+	}
+	if err := uc.repo.SaveModelRun(ctx, run); err != nil {
+		return err
+	}
+	stored, err := uc.repo.GetModelByVersion(ctx, run.Version)
+	if err != nil {
+		return err
+	}
+	return uc.repo.SaveThresholdMetrics(ctx, stored.ID, metrics)
+}
+
+func (uc *MLOpsUseCase) SyncActiveModel(ctx context.Context) error {
+	if uc.client == nil {
+		return domain.ErrPredictionServiceUnavailable
+	}
+	manifest, err := uc.client.GetActiveModelMetadata(ctx)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	job := &domain.MLTrainingJob{
+		ID:         "sync-" + stringValue(manifest, "model_version"),
+		Status:     "completed",
+		Manifest:   manifest,
+		CreatedAt:  now,
+		StartedAt:  &now,
+		FinishedAt: &now,
+	}
+	if err := uc.registerCompletedTraining(ctx, job); err != nil {
+		return err
+	}
+	return uc.repo.PromoteModel(ctx, stringValue(manifest, "model_version"), "")
 }
 
 func (uc *MLOpsUseCase) GetDrift(ctx context.Context) (*domain.MLDriftReport, error) {
-	return &domain.MLDriftReport{
-		Status:            "healthy",
-		DataDriftDetected: false,
-		PSIScore:          0.084,
-		KSStatistic:       0.042,
-		EvaluatedAt:       time.Now().Format("2006-01-02 15:04:05"),
-		FeaturesMonitored: 10,
-		FeaturesDrift: []map[string]any{
-			{"feature": "n_total_7d", "psi": 0.062, "status": "stable"},
-			{"feature": "dias_desde_zm01", "psi": 0.071, "status": "stable"},
-			{"feature": "frac_tecnicos_30d", "psi": 0.054, "status": "stable"},
-			{"feature": "razao_7d_30d", "psi": 0.091, "status": "stable"},
-			{"feature": "rampa_7d", "psi": 0.045, "status": "stable"},
-		},
-		SensorHealth: map[string]any{
-			"active_sensors": 264,
-			"silent_sensors": 0,
-			"noisy_sensors":  2,
-		},
-	}, nil
+	if uc.client == nil {
+		return nil, domain.ErrPredictionServiceUnavailable
+	}
+	model, err := uc.repo.GetActiveModel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report, err := uc.client.GetDrift(ctx, model.Version)
+	if err != nil {
+		return nil, err
+	}
+	if report.ModelVersion != model.Version {
+		return nil, fmt.Errorf("%w: relatorio pertence a outra versao do modelo", domain.ErrInvalidConfig)
+	}
+	if err := uc.repo.SaveDriftReport(ctx, report); err != nil {
+		return nil, err
+	}
+	return report, nil
+}
+
+func (uc *MLOpsUseCase) PromoteModel(ctx context.Context, version, userID string) (*domain.MLModelRun, error) {
+	if uc.client == nil {
+		return nil, domain.ErrPredictionServiceUnavailable
+	}
+	target, err := uc.repo.GetModelByVersion(ctx, version)
+	if err != nil {
+		return nil, err
+	}
+	if !validSHA256(target.ArtifactSHA256) || len(target.ThresholdMetrics) == 0 {
+		return nil, fmt.Errorf("%w: modelo candidato sem artefato ou curva validos", domain.ErrInvalidConfig)
+	}
+	previous, err := uc.repo.GetActiveModel(ctx)
+	if err != nil && err != domain.ErrModelNotFound {
+		return nil, err
+	}
+	if err := uc.client.ActivateModel(ctx, version); err != nil {
+		return nil, err
+	}
+	if err := uc.repo.PromoteModel(ctx, version, userID); err != nil {
+		if previous != nil && previous.Version != "" {
+			_ = uc.client.ActivateModel(context.WithoutCancel(ctx), previous.Version)
+		}
+		return nil, err
+	}
+	return uc.repo.GetActiveModel(ctx)
+}
+
+func (uc *MLOpsUseCase) GetProductionPerformance(ctx context.Context) (*domain.ProductionPerformance, error) {
+	if uc.outcomes == nil {
+		return nil, domain.ErrNoPredictions
+	}
+	return uc.outcomes.GetProductionPerformance(ctx)
 }

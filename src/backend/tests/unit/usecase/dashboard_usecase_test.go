@@ -105,18 +105,16 @@ func (m *mockPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domai
 }
 
 type mockMLClient struct {
-	items         []domain.PredictionItem
-	err           error
-	lastThreshold *float64
+	items []domain.PredictionItem
+	err   error
 }
 
-func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
-	m.lastThreshold = threshold
+func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door) (*port.MLPredictionBatch, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if m.items != nil {
-		return m.items, nil
+		return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: m.items}, nil
 	}
 	items := make([]domain.PredictionItem, len(doors))
 	for i, d := range doors {
@@ -129,7 +127,7 @@ func (m *mockMLClient) PredictBatch(ctx context.Context, doors []domain.Door, th
 			WillFail:    d.DoorNumber%7 == 0,
 		}
 	}
-	return items, nil
+	return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: items}, nil
 }
 
 type mockUOWStore struct {
@@ -596,7 +594,7 @@ func TestTriggerPredictionsUseCase_Errors(t *testing.T) {
 	}
 }
 
-func TestDashboardUseCase_TriggerPredictions_CustomThreshold(t *testing.T) {
+func TestDashboardUseCase_TriggerPredictions_FixedHorizon(t *testing.T) {
 	doors := []domain.Door{
 		{ID: 1, StationID: 1, StationCode: "FAL", Platform: "P1", DoorNumber: 1, Status: "active"},
 	}
@@ -608,16 +606,15 @@ func TestDashboardUseCase_TriggerPredictions_CustomThreshold(t *testing.T) {
 	}
 
 	uc := usecase.NewDashboardUseCase(dashRepo, predRepo, ml, nil, uow)
-	thresholdVal := 0.35
-	run, err := uc.TriggerPredictionsWithThreshold(context.Background(), 14, &thresholdVal)
+	run, err := uc.TriggerPredictions(context.Background(), 14)
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
 	if run == nil || run.HorizonDays != 7 {
 		t.Fatalf("expected fixed horizon 7, got %+v", run)
 	}
-	if ml.lastThreshold == nil || *ml.lastThreshold != 0.35 {
-		t.Fatalf("expected threshold 0.35, got %v", ml.lastThreshold)
+	if run.ThresholdUsed == nil || *run.ThresholdUsed != 0.5 {
+		t.Fatalf("expected fallback threshold 0.5 without MLOps repository, got %v", run.ThresholdUsed)
 	}
 }
 
@@ -648,8 +645,8 @@ func TestDashboardUseCase_PredictionExperimentIsIsolatedUntilPromotion(t *testin
 	if run.AverageProbability == nil || math.Abs(*run.AverageProbability-0.4) > 0.000001 {
 		t.Fatalf("expected original probability 0.4, got %v", run.AverageProbability)
 	}
-	if run.EstimatedPrecision == nil || *run.EstimatedPrecision <= 0 || run.EstimatedRecall == nil || *run.EstimatedRecall <= 0 {
-		t.Fatalf("unexpected estimated metrics: precision=%v recall=%v", run.EstimatedPrecision, run.EstimatedRecall)
+	if run.EstimatedPrecision != nil || run.EstimatedRecall != nil || run.EstimatedF1 != nil {
+		t.Fatalf("metrics without model provenance must stay unavailable: precision=%v recall=%v", run.EstimatedPrecision, run.EstimatedRecall)
 	}
 	inspections, _ := insRepo.List(context.Background(), 10, 0, "")
 	if len(inspections) != 0 {

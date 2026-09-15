@@ -60,8 +60,12 @@ func (r *PostgresPredictionRepository) SaveRun(ctx context.Context, run *domain.
 	}
 
 	query := `
-		INSERT INTO prediction_runs (id, horizon_days, threshold_used, model_version, is_experiment, published_at, total_doors_evaluated, total_doors_at_risk, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO prediction_runs (
+			id, horizon_days, threshold_used, model_version, is_experiment, published_at,
+			total_doors_evaluated, total_doors_at_risk, created_at,
+			validation_precision, validation_recall, validation_f1, validation_source
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		run.ID,
@@ -73,6 +77,10 @@ func (r *PostgresPredictionRepository) SaveRun(ctx context.Context, run *domain.
 		run.TotalDoorsEvaluated,
 		run.TotalDoorsAtRisk,
 		now,
+		run.EstimatedPrecision,
+		run.EstimatedRecall,
+		run.EstimatedF1,
+		run.ValidationSource,
 	)
 	if err != nil {
 		return err
@@ -121,12 +129,16 @@ func (r *PostgresPredictionRepository) GetLatestRun(ctx context.Context) (*domai
 	var createdAt time.Time
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, horizon_days, threshold_used, model_version, is_experiment, published_at, total_doors_evaluated, total_doors_at_risk, created_at
+		SELECT id, horizon_days, threshold_used, model_version, is_experiment, published_at,
+		       total_doors_evaluated, total_doors_at_risk, created_at,
+		       validation_precision, validation_recall, validation_f1, validation_source
 		FROM prediction_runs
 		WHERE is_experiment = FALSE AND published_at IS NOT NULL
 		ORDER BY published_at DESC
 		LIMIT 1
-	`).Scan(&run.ID, &run.HorizonDays, &run.ThresholdUsed, &run.ModelVersion, &run.IsExperiment, &run.PublishedAt, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &createdAt)
+	`).Scan(&run.ID, &run.HorizonDays, &run.ThresholdUsed, &run.ModelVersion, &run.IsExperiment,
+		&run.PublishedAt, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &createdAt,
+		&run.EstimatedPrecision, &run.EstimatedRecall, &run.EstimatedF1, &run.ValidationSource)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrNoPredictions
@@ -158,10 +170,12 @@ func (r *PostgresPredictionRepository) GetRunByID(ctx context.Context, id string
 	var run domain.PredictionRun
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, horizon_days, threshold_used, model_version, is_experiment, published_at,
-		       total_doors_evaluated, total_doors_at_risk, created_at
+		       total_doors_evaluated, total_doors_at_risk, created_at,
+		       validation_precision, validation_recall, validation_f1, validation_source
 		FROM prediction_runs WHERE id = $1
 	`, id).Scan(&run.ID, &run.HorizonDays, &run.ThresholdUsed, &run.ModelVersion, &run.IsExperiment,
-		&run.PublishedAt, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &run.CreatedAt)
+		&run.PublishedAt, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &run.CreatedAt,
+		&run.EstimatedPrecision, &run.EstimatedRecall, &run.EstimatedF1, &run.ValidationSource)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrExperimentNotFound
 	}
@@ -198,8 +212,7 @@ func (r *PostgresPredictionRepository) ListExperiments(ctx context.Context, limi
 		       AVG(p.probability),
 		       PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY p.probability),
 		       MAX(p.probability),
-		       COALESCE(AVG(p.probability) FILTER (WHERE p.will_fail), 0),
-		       COALESCE(SUM(p.probability) FILTER (WHERE p.will_fail), 0) / NULLIF(SUM(p.probability), 0)
+		       pr.validation_precision, pr.validation_recall, pr.validation_f1, pr.validation_source
 		FROM prediction_runs pr
 		LEFT JOIN predictions p ON p.run_id = pr.id AND p.probability IS NOT NULL
 		WHERE pr.is_experiment = TRUE
@@ -217,17 +230,9 @@ func (r *PostgresPredictionRepository) ListExperiments(ctx context.Context, limi
 		if err := rows.Scan(&run.ID, &run.HorizonDays, &run.ThresholdUsed, &run.ModelVersion, &run.IsExperiment,
 			&run.PublishedAt, &run.TotalDoorsEvaluated, &run.TotalDoorsAtRisk, &run.CreatedAt,
 			&run.AverageProbability, &run.P95Probability, &run.MaximumProbability,
-			&run.EstimatedPrecision, &run.EstimatedRecall); err != nil {
+			&run.EstimatedPrecision, &run.EstimatedRecall, &run.EstimatedF1, &run.ValidationSource); err != nil {
 			return nil, err
 		}
-		var thresholdVal float64 = 0.48
-		if run.ThresholdUsed != nil {
-			thresholdVal = *run.ThresholdUsed
-		}
-		prec, rec, f1Val := domain.GetThresholdCalibrationMetrics(thresholdVal)
-		run.EstimatedPrecision = &prec
-		run.EstimatedRecall = &rec
-		run.EstimatedF1 = &f1Val
 		runs = append(runs, run)
 	}
 	return runs, rows.Err()

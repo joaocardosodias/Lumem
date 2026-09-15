@@ -6,6 +6,7 @@ venv/
 catboost_info/
 __pycache__/
 *.pyc
+src/modelo/artifacts/models/*/model.joblib
 
 # Go and Backend
 src/backend/.env

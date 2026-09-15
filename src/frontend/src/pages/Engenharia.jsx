@@ -4,7 +4,6 @@ import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { api, errorMessage } from '../lib/api'
 import { invalidateApplicationCache } from '../lib/appPrefetch'
-import { getThresholdMetrics } from '../data/calibration'
 import { ThresholdComparisonCharts } from '../components/ThresholdComparisonCharts'
 import './Engenharia.css'
 
@@ -29,9 +28,31 @@ function trainingStatusLabel(status) {
     failed: 'Falhou',
     production: 'Produção',
     running: 'Em execução',
+    queued: 'Na fila',
+    candidate: 'Candidato',
+    retired: 'Arquivado',
   }
 
   return labels[status] || status || 'Desconhecido'
+}
+
+function percent(value) {
+  return Number.isFinite(Number(value)) ? `${(Number(value) * 100).toFixed(1)}%` : 'Indisponível'
+}
+
+function decimal(value, digits = 3) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : 'Indisponível'
+}
+
+function integer(value) {
+  return Number.isFinite(Number(value)) ? Number(value).toLocaleString('pt-BR') : '—'
+}
+
+function nearestThresholdMetric(metrics, threshold) {
+  if (!Array.isArray(metrics) || metrics.length === 0) return null
+  return metrics.reduce((nearest, item) => (
+    Math.abs(Number(item.threshold) - threshold) < Math.abs(Number(nearest.threshold) - threshold) ? item : nearest
+  ))
 }
 
 function thresholdProfile(value) {
@@ -63,9 +84,12 @@ function Engenharia() {
   const [savingConfig, setSavingConfig] = useState(false)
   const [promotingExperiment, setPromotingExperiment] = useState('')
   const [retraining, setRetraining] = useState(false)
+  const [trainingJob, setTrainingJob] = useState(null)
+  const [trainingHistory, setTrainingHistory] = useState([])
+  const [promotingModel, setPromotingModel] = useState('')
 
   const [config, setConfig] = useState({
-    threshold: 0.48,
+    threshold: 0.5,
     default_horizon_days: 7,
     auto_retrain_enabled: false,
     updated_at: '',
@@ -75,29 +99,34 @@ function Engenharia() {
   const [drift, setDrift] = useState(null)
   const [experiments, setExperiments] = useState([])
   const [officialRun, setOfficialRun] = useState(null)
+  const [productionPerformance, setProductionPerformance] = useState(null)
 
-  const [selectedThreshold, setSelectedThreshold] = useState(0.48)
+  const [selectedThreshold, setSelectedThreshold] = useState(0.5)
   const selectedProfile = thresholdProfile(selectedThreshold)
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
-        const [cfgData, modelData, histData, driftData, experimentData, officialData] = await Promise.all([
-          api.getMLConfig().catch(() => ({ threshold: 0.48, default_horizon_days: 7 })),
+        const [cfgData, modelData, histData, driftData, experimentData, officialData, performanceData, trainingData] = await Promise.all([
+          api.getMLConfig().catch(() => ({ threshold: 0.5, default_horizon_days: 7 })),
           api.getActiveModel().catch(() => null),
           api.getModelHistory(5).catch(() => []),
           api.getMLDrift().catch(() => null),
           api.predictionExperiments(20).catch(() => []),
           api.predictionsLatest().catch(() => null),
+          api.getMLProductionPerformance().catch(() => null),
+          api.getTrainingJobs(20).catch(() => []),
         ])
         setConfig(cfgData)
-        setSelectedThreshold(cfgData.threshold || 0.48)
+        setSelectedThreshold(cfgData.threshold ?? 0.5)
         setModel(modelData)
         setHistory(histData || [])
         setDrift(driftData)
         setExperiments(experimentData || [])
         setOfficialRun(officialData)
+        setProductionPerformance(performanceData)
+        setTrainingHistory(trainingData || [])
       } finally {
         setLoading(false)
       }
@@ -118,7 +147,7 @@ function Engenharia() {
 
       let newRun = null
       try {
-        newRun = await api.triggerPredictions(7, selectedThreshold)
+        newRun = await api.triggerPredictions(7)
         if (newRun) {
           setOfficialRun(newRun)
         }
@@ -173,13 +202,44 @@ function Engenharia() {
   async function handleTriggerRetrain() {
     try {
       setRetraining(true)
-      const newRun = await api.triggerRetrain()
-      setHistory((prev) => [newRun, ...prev])
-      toast.success('Retreinamento finalizado. O novo candidato foi registrado no histórico.')
+      let job = await api.triggerRetrain()
+      setTrainingJob(job)
+      setTrainingHistory((current) => [job, ...current.filter((item) => item.id !== job.id)])
+      toast.success('Retreinamento enfileirado. O status será atualizado nesta tela.')
+      for (let attempt = 0; attempt < 120 && !['completed', 'failed'].includes(job.status); attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 3000))
+        job = await api.getTrainingJob(job.id)
+        setTrainingJob(job)
+        setTrainingHistory((current) => current.map((item) => item.id === job.id ? job : item))
+      }
+      if (job.status === 'completed') {
+        const [models, active, jobs] = await Promise.all([api.getModelHistory(20), api.getActiveModel(), api.getTrainingJobs(20)])
+        setHistory(models || [])
+        setModel(active)
+        setTrainingHistory(jobs || [])
+        toast.success('Retreinamento concluído. A nova versão está disponível como candidata.')
+      } else if (job.status === 'failed') {
+        toast.error(`Retreinamento falhou: ${job.error || 'consulte o log do job.'}`)
+      }
     } catch (err) {
       toast.error('Erro no retreinamento: ' + errorMessage(err))
     } finally {
       setRetraining(false)
+    }
+  }
+
+  async function handlePromoteModel(version) {
+    try {
+      setPromotingModel(version)
+      const active = await api.promoteModel(version)
+      const models = await api.getModelHistory(20)
+      setModel(active)
+      setHistory(models || [])
+      toast.success(`Modelo ${version} promovido para produção.`)
+    } catch (err) {
+      toast.error('Falha ao promover modelo: ' + errorMessage(err))
+    } finally {
+      setPromotingModel('')
     }
   }
 
@@ -196,6 +256,17 @@ function Engenharia() {
     setActiveTab(nextTab)
     requestAnimationFrame(() => document.getElementById(`engineering-tab-${nextTab}`)?.focus())
   }
+
+  const activeThreshold = Number(config?.threshold ?? model?.recommended_threshold ?? 0.5)
+  const thresholdMetrics = model?.threshold_metrics || []
+  const activeMetric = nearestThresholdMetric(thresholdMetrics, activeThreshold)
+  const confusion = activeMetric || {}
+  const testMetrics = model?.test_metrics || {}
+  const testRows = Number(model?.test_rows) || 0
+  const positiveRows = Number(model?.positive_rows) || 0
+  const negativeRows = Math.max(0, testRows - positiveRows)
+  const featureImportance = Array.isArray(model?.feature_importance) ? model.feature_importance.slice(0, 8) : []
+  const maxImportance = Math.max(0, ...featureImportance.map((item) => Number(item.importance) || 0))
 
   if (user?.role !== 'enginner') {
     return (
@@ -227,11 +298,11 @@ function Engenharia() {
         <div className="page-head__actions">
           <div className="engenharia-model-state">
             <span className="engenharia-status-dot" aria-hidden="true" />
-            <span><small>Modelo em produção</small><strong>{model?.version || 'v1.0.0'}</strong></span>
+            <span><small>Modelo em produção</small><strong>{model?.version || 'Indisponível'}</strong></span>
           </div>
           <div className="engenharia-model-state">
             <span className="engenharia-status-dot" aria-hidden="true" />
-            <span><small>Limiar operacional</small><strong>{Number(config?.threshold || 0.48).toFixed(2)}</strong></span>
+            <span><small>Limiar operacional</small><strong>{Number(config?.threshold ?? 0.5).toFixed(2)}</strong></span>
           </div>
         </div>
       </div>
@@ -262,7 +333,7 @@ function Engenharia() {
             <div>
               <span className="lab-eyebrow">Benchmark de teste · Avaliação walk-forward</span>
               <p>
-                Métricas avaliadas sobre 71.184 registros de teste com o <strong>limiar base de referência 0.48</strong>. O limiar ativo na operação é <strong>{Number(config?.threshold || 0.48).toFixed(2)}</strong>.
+                Métricas históricas do artefato <strong>{model?.version || 'indisponível'}</strong>, calculadas em {integer(testRows)} registros do conjunto temporal de teste. O limiar ativo na operação é <strong>{activeThreshold.toFixed(2)}</strong>.
               </p>
             </div>
           </div>
@@ -270,28 +341,28 @@ function Engenharia() {
           <div className="engenharia-metrics">
             <div className="engenharia-metric engenharia-metric--version">
               <span>Modelo ativo</span>
-              <strong>{model?.version || 'v1.0.0'}</strong>
-              <small>Random Forest (modelo-5) · corte base 0.48</small>
+              <strong>{model?.version || 'Indisponível'}</strong>
+              <small>{model?.algorithm || 'Manifest não carregado'}</small>
             </div>
             <div className="engenharia-metric">
               <span>Recall de falhas</span>
-              <strong>{((model?.test_metrics?.recall ?? 0.553) * 100).toFixed(1)}%</strong>
-              <small>3.432 de 6.202 falhas (limiar 0.48)</small>
+              <strong>{percent(activeMetric?.recall)}</strong>
+              <small>{integer(confusion.true_positives)} de {integer(positiveRows)} falhas · threshold {activeMetric ? Number(activeMetric.threshold).toFixed(2) : '—'}</small>
             </div>
             <div className="engenharia-metric">
               <span>ROC-AUC</span>
-              <strong>{Number(model?.test_metrics?.roc_auc ?? 0.697).toFixed(3)}</strong>
+              <strong>{decimal(testMetrics.roc_auc)}</strong>
               <small>Separação entre classes</small>
             </div>
             <div className="engenharia-metric">
               <span>F1-Score</span>
-              <strong>{((model?.test_metrics?.f1 ?? 0.247) * 100).toFixed(1)}%</strong>
-              <small>Limiar base de teste (0.48)</small>
+              <strong>{percent(activeMetric?.f1_score)}</strong>
+              <small>Validação histórica versionada</small>
             </div>
             <div className="engenharia-metric">
               <span>Precisão</span>
-              <strong>{((model?.test_metrics?.precision ?? 0.159) * 100).toFixed(1)}%</strong>
-              <small>3.432 acertos em 21.564 alertas (limiar 0.48)</small>
+              <strong>{percent(activeMetric?.precision)}</strong>
+              <small>{integer(confusion.true_positives)} acertos em {integer(confusion.alert_count)} alertas</small>
             </div>
           </div>
 
@@ -299,7 +370,7 @@ function Engenharia() {
             <article className="engenharia-card">
               <header className="engenharia-card__head">
                 <h2>Matriz de confusão · teste walk-forward</h2>
-                <span className="engenharia-tag">Limiar de corte 0.48 · 71.184 registros</span>
+                <span className="engenharia-tag">Threshold {activeMetric ? Number(activeMetric.threshold).toFixed(2) : 'indisponível'} · {integer(testRows)} registros</span>
               </header>
 
               <div className="engenharia-card__body">
@@ -315,74 +386,66 @@ function Engenharia() {
                   </div>
 
                   <div className="confusion-box is-title">
-                    <span>Falha real (6.202)</span>
+                    <span>Falha real ({integer(positiveRows)})</span>
                   </div>
                   <div className="confusion-box is-tp">
-                    <strong>3.432</strong>
+                    <strong>{integer(confusion.true_positives)}</strong>
                     <small>Verdadeiros positivos (TP)</small>
                   </div>
                   <div className="confusion-box is-fn">
-                    <strong>2.770</strong>
+                    <strong>{integer(confusion.false_negatives)}</strong>
                     <small>Falsos negativos (FN)</small>
                   </div>
 
                   <div className="confusion-box is-title">
-                    <span>Normal real (64.982)</span>
+                    <span>Normal real ({integer(negativeRows)})</span>
                   </div>
                   <div className="confusion-box is-fp">
-                    <strong>18.132</strong>
+                    <strong>{integer(confusion.false_positives)}</strong>
                     <small>Falsos positivos (FP)</small>
                   </div>
                   <div className="confusion-box is-tn">
-                    <strong>46.850</strong>
+                    <strong>{integer(confusion.true_negatives)}</strong>
                     <small>Verdadeiros negativos (TN)</small>
                   </div>
                 </div>
               </div>
 
               <footer className="engenharia-card__footer">
-                <span>Avaliação walk-forward sobre 71.184 registros porta-dia no período de teste (maio a junho/2025) com limiar de referência 0.48.</span>
-                <span>Taxa de falha real no teste: 8.71%</span>
+                <span>Período de teste: {model?.test_start ? new Date(model.test_start).toLocaleDateString('pt-BR') : '—'} a {model?.test_end ? new Date(model.test_end).toLocaleDateString('pt-BR') : '—'}.</span>
+                <span>Dataset {model?.dataset_sha256 ? `${model.dataset_sha256.slice(0, 12)}…` : 'sem hash legado'}</span>
               </footer>
             </article>
 
             <article className="engenharia-card">
               <header className="engenharia-card__head">
-                <h2>Atributos com maior impacto (SHAP)</h2>
-                <span className="engenharia-tag">TreeExplainer</span>
+                <h2>Atributos com maior importância</h2>
+                <span className="engenharia-tag">{model?.algorithm || 'Manifest'}</span>
               </header>
 
               <div className="engenharia-card__body">
                 <div className="feature-bars">
-                  {[
-                    { feature: 'n_corretivas_historico_total', score: '38.6%', group: 'Degradação Acumulada', pct: 98 },
-                    { feature: 'dur_max_30d', score: '33.0%', group: 'Duração de Alarmes', pct: 85 },
-                    { feature: 'dur_max_7d', score: '17.5%', group: 'Duração Recente', pct: 54 },
-                    { feature: 'intervalo_medio_zm01', score: '14.0%', group: 'Ciclo ZM01', pct: 45 },
-                    { feature: 'dias_desde_zm01', score: '12.6%', group: 'Histórico Falhas', pct: 40 },
-                    { feature: 'dias_desde_ultima_corretiva', score: '12.4%', group: 'Recência Corretiva', pct: 39 },
-                    { feature: 'zm01_90d', score: '9.8%', group: 'Volume Trimestral', pct: 32 },
-                    { feature: 'frac_tecnicos_30d', score: '9.4%', group: 'Severidade Técnica', pct: 30 },
-                  ].map((item) => (
+                  {featureImportance.map((item) => (
                     <div key={item.feature} className="feature-bar-row">
                       <div className="feature-bar-row__top">
                         <span className="feature-bar-row__tag">{item.feature}</span>
                         <div>
-                          <span className="feature-bar-row__category">{item.group}</span>
-                          <span className="feature-bar-row__score">{item.score}</span>
+                          <span className="feature-bar-row__category">{item.group || 'Feature do modelo'}</span>
+                          <span className="feature-bar-row__score">{percent(item.importance)}</span>
                         </div>
                       </div>
                       <div className="feature-bar-track">
-                        <div className="feature-bar-fill" style={{ width: `${item.pct}%` }} />
+                        <div className="feature-bar-fill" style={{ width: `${maxImportance ? (Number(item.importance) / maxImportance) * 100 : 0}%` }} />
                       </div>
                     </div>
                   ))}
+                  {!featureImportance.length ? <p className="lab-empty">Importância das features indisponível no manifest deste modelo.</p> : null}
                 </div>
               </div>
 
               <footer className="engenharia-card__footer">
-                <span>Impacto médio absoluto calculado sobre o teste temporal através do TreeExplainer.</span>
-                <span>72 features mantidas</span>
+                <span>Importâncias registradas no manifest do mesmo artefato exibido acima.</span>
+                <span>{model?.manifest?.features?.length ?? model?.manifest?.features_count ?? '—'} features mantidas</span>
               </footer>
             </article>
           </div>
@@ -398,8 +461,8 @@ function Engenharia() {
               <p>Esta é a rodada que alimenta Dashboard, Predições e a abertura de inspeções preventivas.</p>
             </div>
             <dl>
-              <div><dt>Modelo</dt><dd>{officialRun?.model_version || model?.version || 'v1.0.0'}</dd></div>
-              <div><dt>Threshold</dt><dd>{Number(officialRun?.threshold_used ?? config.threshold ?? 0.48).toFixed(2)}</dd></div>
+              <div><dt>Modelo</dt><dd>{officialRun?.model_version || model?.version || 'Indisponível'}</dd></div>
+              <div><dt>Threshold</dt><dd>{Number(officialRun?.threshold_used ?? config.threshold ?? 0.5).toFixed(2)}</dd></div>
               <div><dt>Portas em risco</dt><dd>{officialRun?.total_doors_at_risk ?? '—'}</dd></div>
               <div><dt>Última publicação</dt><dd className="lab-official__date">{officialRun?.published_at ? new Date(officialRun.published_at).toLocaleDateString('pt-BR') : '—'}</dd></div>
             </dl>
@@ -455,18 +518,19 @@ function Engenharia() {
 
             <ThresholdComparisonCharts
               selectedThreshold={selectedThreshold}
-              officialThreshold={Number(officialRun?.threshold_used ?? config.threshold ?? 0.48)}
+              officialThreshold={Number(officialRun?.threshold_used ?? config.threshold ?? 0.5)}
               officialRun={officialRun}
               experiments={experiments}
+              thresholdMetrics={thresholdMetrics}
               onSelectThreshold={setSelectedThreshold}
             />
 
             <div className="lab-results">
               <header>
                 <div>
-                  <span className="lab-eyebrow">Resultados reais</span>
-                  <h2>Cenários disponíveis</h2>
-                  <p>Compare o impacto operacional e o desempenho histórico antes de escolher a configuração oficial.</p>
+                  <span className="lab-eyebrow">Frota atual</span>
+                  <h2>Cenários executados na frota atual</h2>
+                  <p>As contagens vêm das probabilidades persistidas em cada execução. As métricas históricas pertencem ao artefato indicado.</p>
                 </div>
                 <span className="lab-results__count">{experiments.length} {experiments.length === 1 ? 'execução' : 'execuções'}</span>
               </header>
@@ -493,8 +557,6 @@ function Engenharia() {
                         const risk = Number(run.total_doors_at_risk) || 0
                         const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
                         const delta = risk - officialRisk
-                        const percent = (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'
-                        const calibrated = getThresholdMetrics(run.threshold_used)
                         return (
                           <tr key={run.id}>
                             <td className="lab-scenarios-table__identity">
@@ -506,9 +568,9 @@ function Engenharia() {
                             <td><span className="lab-scenario__kind">{thresholdProfile(run.threshold_used).label}</span></td>
                             <td><strong>{risk}</strong><small>{delta > 0 ? '+' : ''}{delta} versus o oficial</small></td>
                             <td><strong>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</strong><small>{risk} de {total} portas</small></td>
-                            <td title="Precisão calculada sobre o conjunto de teste real histórico">{percent(calibrated.precision)}</td>
-                            <td title="Recall de falhas reais capturadas no teste histórico">{percent(calibrated.recall)}</td>
-                            <td title="Média harmônica F1 no teste histórico">{percent(calibrated.f1)}</td>
+                            <td title="Precisão do teste histórico da versão informada">{percent(run.estimated_precision)}</td>
+                            <td title="Recall do teste histórico da versão informada">{percent(run.estimated_recall)}</td>
+                            <td title="F1 do teste histórico da versão informada">{percent(run.estimated_f1)}</td>
                             <td>{percent(run.maximum_probability)}</td>
                             <td className="lab-scenarios-table__action">
                               <button type="button" onClick={() => handlePromoteExperiment(run)} disabled={Boolean(promotingExperiment)}>{promotingExperiment === run.id ? 'Publicando…' : 'Usar na operação'}</button>
@@ -520,7 +582,24 @@ function Engenharia() {
                   </table>
                 </div>
               ) : <p className="lab-empty">Nenhum cenário foi executado. Escolha um threshold e rode a primeira comparação.</p>}
-              <footer>Métricas de desempenho (Recall, Precisão e F1-Score) avaliadas sobre o conjunto de teste real histórico (71.184 registros porta-dia) para o limiar selecionado.</footer>
+              <footer>Validação histórica do modelo {model?.version || 'indisponível'} · {integer(testRows)} registros · {model?.test_start ? new Date(model.test_start).toLocaleDateString('pt-BR') : 'período indisponível'} a {model?.test_end ? new Date(model.test_end).toLocaleDateString('pt-BR') : '—'}.</footer>
+            </div>
+
+            <div className="lab-results">
+              <header>
+                <div>
+                  <span className="lab-eyebrow">Após o horizonte</span>
+                  <h2>Desempenho observado em produção</h2>
+                  <p>Somente previsões com a janela completa de sete dias entram nesta avaliação.</p>
+                </div>
+                <span className="lab-results__count">{productionPerformance?.mature_runs ?? 0} rodadas maduras</span>
+              </header>
+              <div className="engenharia-metrics">
+                <div className="engenharia-metric"><span>Cobertura de rótulos</span><strong>{percent(productionPerformance?.label_coverage)}</strong><small>{integer(productionPerformance?.evaluated_predictions)} de {integer(productionPerformance?.total_predictions)} previsões</small></div>
+                <div className="engenharia-metric"><span>Precisão observada</span><strong>{percent(productionPerformance?.precision)}</strong><small>TP {integer(productionPerformance?.true_positives)} · FP {integer(productionPerformance?.false_positives)}</small></div>
+                <div className="engenharia-metric"><span>Recall observado</span><strong>{percent(productionPerformance?.recall)}</strong><small>TP {integer(productionPerformance?.true_positives)} · FN {integer(productionPerformance?.false_negatives)}</small></div>
+                <div className="engenharia-metric"><span>F1 observado</span><strong>{percent(productionPerformance?.f1_score)}</strong><small>{productionPerformance?.failure_definition || 'Rótulo ainda não avaliado'}</small></div>
+              </div>
             </div>
           </section>
         </div>
@@ -540,14 +619,24 @@ function Engenharia() {
               disabled={retraining}
             >
               <TriggerIcon />
-              <span>{retraining ? 'Executando pipeline…' : 'Iniciar retreinamento'}</span>
+              <span>{retraining ? 'Acompanhando pipeline…' : 'Iniciar retreinamento'}</span>
             </button>
           </div>
 
+          {trainingJob ? (
+            <div className="drift-status-banner">
+              <span className="engenharia-status-dot" aria-hidden="true" />
+              <div>
+                <strong>Treinamento {trainingStatusLabel(trainingJob.status)}</strong>
+                <p>Job {trainingJob.id} · versão solicitada {trainingJob.version || 'em definição'}{trainingJob.error ? ` · ${trainingJob.error}` : ''}</p>
+              </div>
+            </div>
+          ) : null}
+
           <article className="engenharia-card">
             <header className="engenharia-card__head">
-              <h2>Versões do Random Forest (.joblib)</h2>
-              <span className="engenharia-tag">modelo_5.joblib</span>
+              <h2>Versões registradas</h2>
+              <span className="engenharia-tag">Artefatos versionados</span>
             </header>
 
             <div className="table-responsive">
@@ -562,41 +651,35 @@ function Engenharia() {
                     <th>ROC-AUC</th>
                     <th>Artefato serializado</th>
                     <th>Status</th>
+                    <th>Ação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td><strong>v1.0.0</strong></td>
-                    <td>Random Forest Classifier (n=400, depth=14)</td>
-                    <td><strong>55.3%</strong></td>
-                    <td>15.9%</td>
-                    <td><strong>24.7%</strong></td>
-                    <td>0.697</td>
-                    <td><code>modelo_5.joblib</code></td>
-                    <td><span className="badge-tag is-active">Produção</span></td>
-                  </tr>
-                  <tr>
-                    <td><strong>v1.1.0-cand</strong></td>
-                    <td>Random Forest Classifier (n=400, depth=14)</td>
-                    <td><strong>57.8%</strong></td>
-                    <td>16.7%</td>
-                    <td><strong>25.9%</strong></td>
-                    <td>0.704</td>
-                    <td><code>modelo_5_candidato.joblib</code></td>
-                    <td><span className="badge-tag">Candidato</span></td>
-                  </tr>
+                  {history.length ? history.map((run) => (
+                    <tr key={run.id}>
+                      <td><strong>{run.version}</strong></td>
+                      <td>{run.algorithm || 'Indisponível'}</td>
+                      <td><strong>{percent(run.test_metrics?.recall)}</strong></td>
+                      <td>{percent(run.test_metrics?.precision)}</td>
+                      <td><strong>{percent(run.test_metrics?.f1_score ?? run.test_metrics?.f1)}</strong></td>
+                      <td>{decimal(run.test_metrics?.roc_auc)}</td>
+                      <td><code>{run.artifact_uri || run.artifact_path || 'Indisponível'}</code></td>
+                      <td><span className={`badge-tag ${run.status === 'production' ? 'is-active' : ''}`}>{trainingStatusLabel(run.status)}</span></td>
+                      <td>{run.status !== 'production' ? <button type="button" onClick={() => handlePromoteModel(run.version)} disabled={Boolean(promotingModel)}>{promotingModel === run.version ? 'Promovendo…' : run.status === 'retired' ? 'Reverter' : 'Promover'}</button> : '—'}</td>
+                    </tr>
+                  )) : <tr><td className="table-empty" colSpan="9">Nenhuma versão registrada.</td></tr>}
                 </tbody>
               </table>
             </div>
 
             <footer className="engenharia-card__footer">
-              <span>O Random Forest é o único modelo serializado em artefato .joblib e em operação no serviço preditivo da Linha 4 (métricas avaliadas com limiar de teste 0.48).</span>
+              <span>Cada versão referencia um artefato imutável, hashes do modelo e do dataset e sua avaliação temporal.</span>
             </footer>
           </article>
 
           <article className="engenharia-card">
             <header className="engenharia-card__head">
-              <h2>Histórico de execuções de treinamento (Random Forest)</h2>
+              <h2>Histórico de execuções de treinamento</h2>
               <span className="engenharia-tag">Registro de execuções</span>
             </header>
 
@@ -605,29 +688,31 @@ function Engenharia() {
                 <thead>
                   <tr>
                     <th>ID da execução</th>
-                    <th>Versão</th>
-                    <th>Algoritmo</th>
+                    <th>Versão solicitada</th>
                     <th>Status</th>
-                    <th>Recall</th>
-                    <th>F1-Score</th>
+                    <th>Solicitado em</th>
+                    <th>Iniciado em</th>
+                    <th>Finalizado em</th>
+                    <th>Resultado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {history.length ? history.map((run) => (
-                      <tr key={run.id}>
-                        <td><code>{run.id?.slice(0, 14)}</code></td>
-                        <td><strong>{run.version}</strong></td>
-                        <td>{run.algorithm || 'Random Forest Classifier'}</td>
+                  {trainingHistory.length ? trainingHistory.map((job) => (
+                      <tr key={job.id}>
+                        <td><code>{job.id?.slice(0, 14)}</code></td>
+                        <td><strong>{job.version || 'Em definição'}</strong></td>
                         <td>
-                          <span className={`badge-tag is-${run.status || 'stable'}`}>
-                            {trainingStatusLabel(run.status)}
+                          <span className={`badge-tag is-${job.status || 'stable'}`}>
+                            {trainingStatusLabel(job.status)}
                           </span>
                         </td>
-                        <td><strong>{((run.test_metrics?.recall || 0.553) * 100).toFixed(1)}%</strong></td>
-                        <td><strong>{((run.test_metrics?.f1 || 0.247) * 100).toFixed(1)}%</strong></td>
+                        <td>{job.created_at ? new Date(job.created_at).toLocaleString('pt-BR') : '—'}</td>
+                        <td>{job.started_at ? new Date(job.started_at).toLocaleString('pt-BR') : '—'}</td>
+                        <td>{job.finished_at ? new Date(job.finished_at).toLocaleString('pt-BR') : '—'}</td>
+                        <td>{job.error || (job.status === 'completed' ? 'Manifest registrado' : '—')}</td>
                       </tr>
                     )) : (
-                      <tr><td className="table-empty" colSpan="6">Nenhuma execução de treinamento registrada.</td></tr>
+                      <tr><td className="table-empty" colSpan="7">Nenhuma execução de treinamento registrada.</td></tr>
                     )}
                 </tbody>
               </table>
@@ -643,10 +728,10 @@ function Engenharia() {
       {!loading && activeTab === 'drift' ? (
         <div className="engenharia-panel-full" id="engineering-panel-drift" role="tabpanel" aria-labelledby="engineering-tab-drift">
           <div className="drift-status-banner">
-            <span className="engenharia-status-dot engenharia-status-dot--stable" aria-hidden="true" />
+            <span className={`engenharia-status-dot ${drift?.status === 'healthy' ? 'engenharia-status-dot--stable' : ''}`} aria-hidden="true" />
             <div>
-              <strong>Distribuição de telemetria estável</strong>
-              <p>PSI geral: {drift?.psi_score ?? '0.084'} · Limite de atenção: 0,100. As variáveis dos últimos 30 dias permanecem alinhadas ao treino.</p>
+              <strong>{drift?.status === 'unavailable' ? 'Drift indisponível para este artefato' : drift?.data_drift_detected ? 'Mudança de distribuição detectada' : 'Distribuição de telemetria estável'}</strong>
+              <p>{drift?.message || `PSI máximo: ${decimal(drift?.psi_score)} · limite de atenção: 0,100 · ${drift?.features_monitored ?? 0} features avaliadas.`}</p>
             </div>
           </div>
 
@@ -654,7 +739,7 @@ function Engenharia() {
             <article className="engenharia-card">
               <header className="engenharia-card__head">
                 <h2>Estabilidade por atributo (PSI)</h2>
-                <span className="engenharia-tag">Últimos 30 dias</span>
+                <span className="engenharia-tag">Snapshot atual</span>
               </header>
 
               <div className="table-responsive">
@@ -667,51 +752,46 @@ function Engenharia() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(drift?.features_drift || [
-                      { feature: 'n_total_7d', psi: 0.062, status: 'stable' },
-                      { feature: 'dias_desde_zm01', psi: 0.071, status: 'stable' },
-                      { feature: 'frac_tecnicos_30d', psi: 0.054, status: 'stable' },
-                      { feature: 'razao_7d_30d', psi: 0.091, status: 'stable' },
-                      { feature: 'rampa_7d', psi: 0.045, status: 'stable' },
-                    ]).map((item) => (
+                    {(drift?.features_drift || []).map((item) => (
                       <tr key={item.feature}>
                         <td><code>{item.feature}</code></td>
-                        <td><strong>{item.psi.toFixed(3)}</strong></td>
-                        <td><span className="badge-tag">Estável</span></td>
+                        <td><strong>{decimal(item.psi)}</strong></td>
+                        <td><span className="badge-tag">{item.status === 'stable' ? 'Estável' : item.status === 'warning' ? 'Atenção' : 'Crítico'}</span></td>
                       </tr>
                     ))}
+                    {!drift?.features_drift?.length ? <tr><td className="table-empty" colSpan="3">Nenhuma distribuição de referência disponível.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
 
               <footer className="engenharia-card__footer">
-                <span>Population Stability Index computado sobre a janela deslizante de 30 dias.</span>
+                <span>Distribuição das features atuais comparada à referência registrada no treinamento.</span>
               </footer>
             </article>
 
             <article className="engenharia-card">
               <header className="engenharia-card__head">
-                <h2>Saúde dos sensores das portas</h2>
-                <span className="engenharia-tag">11 estações</span>
+                <h2>Procedência da comparação</h2>
+                <span className="engenharia-tag">Modelo {drift?.model_version || model?.version || '—'}</span>
               </header>
 
               <div className="engenharia-card__body">
                 <div className="engenharia-sensor-metrics">
                   <div className="engenharia-sensor-metric">
-                    <span>Sensores ativos</span>
-                    <strong>264</strong>
-                    <small>Portas transmitindo normalmente</small>
+                    <span>Dataset de referência</span>
+                    <strong>{drift?.reference_dataset_sha256 ? `${drift.reference_dataset_sha256.slice(0, 12)}…` : 'Indisponível'}</strong>
+                    <small>Hash do snapshot usado no treinamento</small>
                   </div>
                   <div className="engenharia-sensor-metric">
-                    <span>Sensores silenciosos</span>
-                    <strong>0</strong>
-                    <small>Sem perda de sinal &gt; 15 dias</small>
+                    <span>Última avaliação</span>
+                    <strong>{drift?.evaluated_at ? new Date(drift.evaluated_at).toLocaleDateString('pt-BR') : 'Indisponível'}</strong>
+                    <small>Distribuição atual contra o baseline versionado</small>
                   </div>
                 </div>
               </div>
 
               <footer className="engenharia-card__footer">
-                <span>Monitoramento contínuo de conectividade e telemetria da Linha 4 Amarela.</span>
+                <span>O status é derivado dos PSI calculados; valores ausentes não recebem substituição fictícia.</span>
               </footer>
             </article>
           </div>

@@ -48,6 +48,7 @@ type PredictionRun struct {
 	EstimatedPrecision  *float64
 	EstimatedRecall     *float64
 	EstimatedF1         *float64
+	ValidationSource    string
 	CreatedAt           time.Time
 	Predictions         []PredictionItem
 }

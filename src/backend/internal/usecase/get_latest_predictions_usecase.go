@@ -20,7 +20,6 @@ func (uc *GetLatestPredictionsUseCase) Execute(ctx context.Context) (*Prediction
 		return nil, err
 	}
 	run.AverageProbability, run.P95Probability, run.MaximumProbability = calculatePredictionMetrics(run.Predictions)
-	run.EstimatedPrecision, run.EstimatedRecall, run.EstimatedF1 = calculateClassificationMetrics(run.ThresholdUsed)
 
 	itemsDTO := make([]PredictionItemOutputDTO, 0, len(run.Predictions))
 	for _, p := range run.Predictions {
@@ -50,6 +49,7 @@ func (uc *GetLatestPredictionsUseCase) Execute(ctx context.Context) (*Prediction
 		EstimatedPrecision:  run.EstimatedPrecision,
 		EstimatedRecall:     run.EstimatedRecall,
 		EstimatedF1:         run.EstimatedF1,
+		ValidationSource:    run.ValidationSource,
 		CreatedAt:           run.CreatedAt,
 		Predictions:         itemsDTO,
 	}, nil

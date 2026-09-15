@@ -48,10 +48,6 @@ func (uc *DashboardUseCase) TriggerPredictions(ctx context.Context, horizonDays 
 	return uc.triggerPredUC.Execute(ctx, horizonDays)
 }
 
-func (uc *DashboardUseCase) TriggerPredictionsWithThreshold(ctx context.Context, horizonDays int, threshold *float64) (*PredictionRunOutputDTO, error) {
-	return uc.triggerPredUC.ExecuteWithThreshold(ctx, horizonDays, threshold)
-}
-
 func (uc *DashboardUseCase) SetMLOpsRepository(repo port.MLOpsRepository) {
 	if uc.triggerPredUC != nil {
 		uc.triggerPredUC.SetMLOpsRepository(repo)

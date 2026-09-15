@@ -13,7 +13,7 @@ import (
 
 func TestMLClient_PredictBatch_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/predict" {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/predictions" {
 			http.NotFound(w, r)
 			return
 		}
@@ -22,14 +22,14 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		resps := []mlclient.PredictionResponse{
-			{
+		resps := mlclient.BatchPredictionResponse{
+			ModelVersion: "v1.0.0",
+			Predictions: []mlclient.PredictionResponse{{
 				StationCode: reqBody.Doors[0].StationCode,
 				Platform:    reqBody.Doors[0].Platform,
 				DoorNumber:  reqBody.Doors[0].DoorNumber,
-				WillFail:    true,
 				Probability: 0.72,
-			},
+			}},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resps)
@@ -41,15 +41,18 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 		{StationCode: "FAL", Platform: "P1", DoorNumber: 4},
 	}
 
-	items, err := client.PredictBatch(context.Background(), doors, nil)
+	batch, err := client.PredictBatch(context.Background(), doors)
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
-	if len(items) != 1 || !items[0].WillFail {
-		t.Fatalf("unexpected items: %+v", items)
+	if batch.ModelVersion != "v1.0.0" || len(batch.Predictions) != 1 {
+		t.Fatalf("unexpected batch: %+v", batch)
 	}
-	if items[0].Probability == nil || *items[0].Probability != 0.72 {
-		t.Fatalf("expected probability to be preserved, got %+v", items[0])
+	if batch.Predictions[0].WillFail {
+		t.Fatalf("the ML client must not classify the probability")
+	}
+	if batch.Predictions[0].Probability == nil || *batch.Predictions[0].Probability != 0.72 {
+		t.Fatalf("expected probability to be preserved, got %+v", batch.Predictions[0])
 	}
 	if client.CircuitState() != mlclient.StateClosed {
 		t.Fatalf("expected closed circuit state")
@@ -67,7 +70,7 @@ func TestMLClient_PredictBatch_NonOKStatus(t *testing.T) {
 		{StationCode: "PIN", Platform: "P2", DoorNumber: 8},
 	}
 
-	_, err := client.PredictBatch(context.Background(), doors, nil)
+	_, err := client.PredictBatch(context.Background(), doors)
 	if err != domain.ErrPredictionServiceUnavailable {
 		t.Fatalf("expected ErrPredictionServiceUnavailable, got %v", err)
 	}
@@ -85,7 +88,7 @@ func TestMLClient_PredictBatch_BadJSON(t *testing.T) {
 		{StationCode: "PIN", Platform: "P2", DoorNumber: 8},
 	}
 
-	_, err := client.PredictBatch(context.Background(), doors, nil)
+	_, err := client.PredictBatch(context.Background(), doors)
 	if err != domain.ErrPredictionServiceUnavailable {
 		t.Fatalf("expected ErrPredictionServiceUnavailable on bad json, got %v", err)
 	}
@@ -97,7 +100,7 @@ func TestMLClient_PredictBatch_NetworkError(t *testing.T) {
 		{StationCode: "PIN", Platform: "P2", DoorNumber: 8},
 	}
 
-	_, err := client.PredictBatch(context.Background(), doors, nil)
+	_, err := client.PredictBatch(context.Background(), doors)
 	if err != domain.ErrPredictionServiceUnavailable {
 		t.Fatalf("expected ErrPredictionServiceUnavailable on network error, got %v", err)
 	}
@@ -109,7 +112,7 @@ func TestMLClient_PredictBatch_InvalidURL(t *testing.T) {
 		{StationCode: "PIN", Platform: "P2", DoorNumber: 8},
 	}
 
-	_, err := client.PredictBatch(context.Background(), doors, nil)
+	_, err := client.PredictBatch(context.Background(), doors)
 	if err != domain.ErrPredictionServiceUnavailable {
 		t.Fatalf("expected ErrPredictionServiceUnavailable on invalid url, got %v", err)
 	}

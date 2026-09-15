@@ -66,6 +66,15 @@ func (h *MLOpsHandler) ListModelHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, runs)
 }
 
+func (h *MLOpsHandler) GetThresholdMetrics(c *gin.Context) {
+	metrics, err := h.mlopsUC.GetThresholdMetrics(c.Request.Context(), c.Param("version"))
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, metrics)
+}
+
 func (h *MLOpsHandler) TriggerRetrain(c *gin.Context) {
 	userID := c.GetString("userID")
 	run, err := h.mlopsUC.TriggerRetrain(c.Request.Context(), userID)
@@ -83,4 +92,41 @@ func (h *MLOpsHandler) GetDrift(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, drift)
+}
+
+func (h *MLOpsHandler) GetTrainingJob(c *gin.Context) {
+	job, err := h.mlopsUC.GetTrainingJob(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, job)
+}
+
+func (h *MLOpsHandler) ListTrainingJobs(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	jobs, err := h.mlopsUC.ListTrainingJobs(c.Request.Context(), limit)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, jobs)
+}
+
+func (h *MLOpsHandler) PromoteModel(c *gin.Context) {
+	model, err := h.mlopsUC.PromoteModel(c.Request.Context(), c.Param("version"), c.GetString("userID"))
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, model)
+}
+
+func (h *MLOpsHandler) GetProductionPerformance(c *gin.Context) {
+	performance, err := h.mlopsUC.GetProductionPerformance(c.Request.Context())
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, performance)
 }

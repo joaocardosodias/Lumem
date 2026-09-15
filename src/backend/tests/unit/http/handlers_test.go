@@ -473,11 +473,11 @@ type mockMLClientForHTTP struct {
 	err   error
 }
 
-func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
+func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door) (*port.MLPredictionBatch, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.preds, nil
+	return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: m.preds}, nil
 }
 
 type mockUOWStoreForHTTP struct {

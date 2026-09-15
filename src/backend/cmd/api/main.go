@@ -179,8 +179,13 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.PUT("/ml/config", httpAdapter.RequireRole("enginner"), h.mlops.UpdateConfig)
 		protected.GET("/ml/model/active", h.mlops.GetActiveModel)
 		protected.GET("/ml/model/history", httpAdapter.RequireRole("enginner"), h.mlops.ListModelHistory)
+		protected.GET("/ml/models/:version/metrics", httpAdapter.RequireRole("enginner"), h.mlops.GetThresholdMetrics)
+		protected.POST("/ml/models/:version/promote", httpAdapter.RequireRole("enginner"), h.mlops.PromoteModel)
 		protected.POST("/ml/retrain", httpAdapter.RequireRole("enginner"), h.mlops.TriggerRetrain)
+		protected.GET("/ml/training-jobs", httpAdapter.RequireRole("enginner"), h.mlops.ListTrainingJobs)
+		protected.GET("/ml/training-jobs/:id", httpAdapter.RequireRole("enginner"), h.mlops.GetTrainingJob)
 		protected.GET("/ml/drift", httpAdapter.RequireRole("enginner"), h.mlops.GetDrift)
+		protected.GET("/ml/performance", httpAdapter.RequireRole("enginner"), h.mlops.GetProductionPerformance)
 
 		protected.GET("/auth/me", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -369,6 +374,7 @@ func main() {
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
 	mlopsRepo := repository.NewPostgresMLOpsRepository(db)
+	outcomeRepo := repository.NewPostgresPredictionOutcomeRepository(db)
 
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCaseWithQueue(alarmRepo, alarmRepo, ingestionStorage, alarmParser, ingestionQueue, uow, logger)
@@ -378,7 +384,16 @@ func main() {
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
 	dashUC.SetMLOpsRepository(mlopsRepo)
-	mlopsUC := usecase.NewMLOpsUseCase(mlopsRepo)
+	mlopsUC := usecase.NewMLOpsUseCase(mlopsRepo, mlClient)
+	mlopsUC.SetPredictionOutcomeRepository(outcomeRepo)
+	reconcilerCtx, stopReconciler := context.WithCancel(context.Background())
+	defer stopReconciler()
+	go usecase.RunTrainingJobReconciler(reconcilerCtx, mlopsUC, 30*time.Second, logger)
+	syncCtx, syncCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	if err := mlopsUC.SyncActiveModel(syncCtx); err != nil {
+		logger.Warn("nao foi possivel sincronizar o manifest ativo do servico de ML", slog.String("error", err.Error()))
+	}
+	syncCancel()
 
 	handlers := appHandlers{
 		auth:      httpAdapter.NewAuthHandler(loginUC),

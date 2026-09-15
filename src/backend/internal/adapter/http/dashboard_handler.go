@@ -100,6 +100,7 @@ type PredictionRunResponse struct {
 	EstimatedPrecision  *float64                 `json:"estimated_precision,omitempty"`
 	EstimatedRecall     *float64                 `json:"estimated_recall,omitempty"`
 	EstimatedF1         *float64                 `json:"estimated_f1,omitempty"`
+	ValidationSource    string                   `json:"validation_source,omitempty"`
 	CreatedAt           string                   `json:"created_at"`
 	Predictions         []PredictionItemResponse `json:"predictions,omitempty"`
 }
@@ -242,6 +243,7 @@ func toPredictionRunResponse(r *usecase.PredictionRunOutputDTO) PredictionRunRes
 		EstimatedPrecision:  r.EstimatedPrecision,
 		EstimatedRecall:     r.EstimatedRecall,
 		EstimatedF1:         r.EstimatedF1,
+		ValidationSource:    r.ValidationSource,
 		CreatedAt:           r.CreatedAt.Format(defaultDateTimeLayout),
 		Predictions:         items,
 	}
@@ -341,12 +343,11 @@ func (h *DashboardHandler) GetStationDoorsStatus(c *gin.Context) {
 
 func (h *DashboardHandler) TriggerPredictions(c *gin.Context) {
 	var input struct {
-		HorizonDays int      `json:"horizon_days"`
-		Threshold   *float64 `json:"threshold,omitempty"`
+		HorizonDays int `json:"horizon_days"`
 	}
 	_ = c.ShouldBindJSON(&input)
 
-	run, err := h.uc.TriggerPredictionsWithThreshold(c.Request.Context(), input.HorizonDays, input.Threshold)
+	run, err := h.uc.TriggerPredictions(c.Request.Context(), input.HorizonDays)
 	if err != nil {
 		RespondDomainError(c, err)
 		return

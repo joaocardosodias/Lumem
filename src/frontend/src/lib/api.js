@@ -478,11 +478,8 @@ export const api = {
   doorPredictionHistory(doorId, limit = 30) {
     return request(`/api/v1/doors/${doorId}/predictions${queryString({ limit })}`).then((result) => result.data)
   },
-  triggerPredictions(horizonDays = 7, threshold = null) {
+  triggerPredictions(horizonDays = 7) {
     const body = { horizon_days: Number(horizonDays) || 7 }
-    if (threshold !== null && threshold !== undefined) {
-      body.threshold = Number(threshold)
-    }
     return request('/api/v1/predictions/trigger', {
       method: 'POST',
       body,
@@ -520,13 +517,30 @@ export const api = {
   getModelHistory(limit = 10) {
     return request(`/api/v1/ml/model/history${queryString({ limit })}`).then((result) => result.data)
   },
+  getModelThresholdMetrics(version) {
+    return request(`/api/v1/ml/models/${encodeURIComponent(version)}/metrics`).then((result) => result.data)
+  },
+  promoteModel(version) {
+    return request(`/api/v1/ml/models/${encodeURIComponent(version)}/promote`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
   triggerRetrain() {
     return request('/api/v1/ml/retrain', {
       method: 'POST',
     }).then((result) => result.data)
   },
+  getTrainingJob(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}`).then((result) => result.data)
+  },
+  getTrainingJobs(limit = 20) {
+    return request(`/api/v1/ml/training-jobs${queryString({ limit })}`).then((result) => result.data)
+  },
   getMLDrift() {
     return request('/api/v1/ml/drift').then((result) => result.data)
+  },
+  getMLProductionPerformance() {
+    return request('/api/v1/ml/performance').then((result) => result.data)
   },
   alarms(limit = 50, offset = 0, filters = {}) {
     const query = typeof limit === 'object' ? limit : { limit, offset, ...filters }

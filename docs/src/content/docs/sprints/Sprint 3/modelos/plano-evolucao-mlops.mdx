@@ -1,0 +1,502 @@
+---
+title: "Plano de Evolução do MLOps"
+description: "Plano técnico para desacoplar o serviço de Machine Learning, tornar as métricas reproduzíveis e implantar governança real de modelos."
+---
+
+## 1. Objetivo
+
+Este plano descreve como evoluir o MLOps da plataforma para que cada versão do modelo seja reproduzível, auditável e independente dos detalhes internos do backend. A mudança também corrige a forma como o laboratório apresenta precisão, recall e F1-Score.
+
+O resultado esperado é que o engenheiro consiga responder, com evidências:
+
+- qual artefato produziu determinada predição;
+- quais dados foram usados para avaliar esse artefato;
+- como cada threshold alterou TP, FP, FN, TN, precisão, recall e F1;
+- por que uma versão foi promovida para produção;
+- qual desempenho foi estimado antes da publicação;
+- qual desempenho foi observado depois dos sete dias do horizonte preditivo;
+- quando houve drift e quais variáveis foram afetadas.
+
+## Estado da implementação
+
+O plano foi aplicado ao código em 14 de setembro de 2026. O fluxo deixou de usar métricas fixas e simulações no backend. A versão atual foi reavaliada sobre o conjunto temporal de teste e produziu um manifest verificável com 91 pontos de threshold.
+
+| Entrega | Situação | Evidência principal |
+|---|---|---|
+| Curva reproduzível e manifest | Implementada | `exportar_modelo.py` e `validate_manifest.py` |
+| Fonte única de métricas | Implementada | `ml_threshold_metrics` e endpoint por versão |
+| Threshold aplicado somente no Go | Implementada | `/v1/predictions` devolve apenas probabilidades |
+| Camadas e views versionadas no Python | Implementada | `ml_service/` e views `ml_*_v1` |
+| Registry local/S3 com hash e rollback | Implementado | `ModelRegistry`, cache local e ponteiro ativo |
+| Treinamento e drift reais | Implementados | jobs assíncronos persistentes e PSI/KS por feature |
+| Contrato OpenAPI v1 | Implementado | `src/modelo/openapi.yaml` |
+| Semântica do laboratório | Implementada | validação histórica, impacto atual e produção separados |
+| Avaliação posterior a sete dias | Implementada | `prediction_outcomes` e avaliador diário no worker |
+
+Na conferência do artefato `v1.0.0`, o threshold escolhido na validação permaneceu em `0,48`. No teste temporal, ele resultou em precisão de `15,12%`, recall de `60,05%` e F1 de `24,16%`, com 3.724 TP, 20.898 FP, 2.478 FN e 44.084 TN. O maior F1 observado no teste ocorreu em `0,52`, com F1 de `25,50%`; ele não substitui automaticamente o threshold escolhido na validação, pois isso usaria o conjunto de teste para tomar a decisão que ele deveria apenas avaliar.
+
+O código de publicação para o bucket privado está pronto. A carga externa do binário, do manifest e da curva exige a execução explícita do comando de publicação no ambiente que possui as credenciais do registry.
+
+## 2. Diagnóstico que originou o plano
+
+Os problemas abaixo descrevem o estado encontrado antes desta implementação. Eles são mantidos aqui para registrar as razões de cada decisão e os riscos que o trabalho precisava eliminar.
+
+| Problema | Consequência atual | Prioridade |
+|---|---|---|
+| O serviço Python consulta as tabelas operacionais diretamente | Mudanças no schema do backend podem interromper as predições | Alta |
+| Retreinamento e drift são simulados no backend Go | A interface mostra execuções e indicadores que não representam processamento real | Crítica |
+| Métricas e metadados estão duplicados em Go, Python e JavaScript | Uma mesma versão pode apresentar valores diferentes dependendo da tela | Crítica |
+| O threshold é aplicado no Python e novamente no Go | A responsabilidade da classificação está duplicada e pode gerar divergência | Alta |
+| O `.joblib` está preso ao filesystem da imagem Docker | Atualizar ou reverter um modelo exige trocar a imagem do serviço | Alta |
+| O contrato de inferência usa `/predict` sem versão | Mudanças no payload podem quebrar o backend sem transição controlada | Média |
+| A curva de thresholds não é gerada pelo script de treinamento | Não há prova reproduzível de onde vieram os valores exibidos no laboratório | Crítica |
+| O laboratório mistura dados atuais e métricas históricas | O usuário pode interpretar métricas estimadas como desempenho real da rodada | Alta |
+| Não existe avaliação automática após o horizonte de sete dias | O desempenho real em produção não é conhecido | Alta |
+
+## 3. Arquitetura desejada
+
+O backend Go continuará sendo responsável pelas regras operacionais. O serviço Python ficará responsável pelo processamento das features e pelo cálculo das probabilidades. O threshold oficial será aplicado somente pelo backend.
+
+```text
+Dados operacionais
+      │
+      ▼
+Views versionadas de ML ──► Serviço Python ──► probabilidades
+                                  │
+                                  ▼
+                         Artefato versionado no S3
+                                  │
+                                  ▼
+Frontend ◄── Backend Go ◄── contrato HTTP interno /v1
+               │
+               ├── aplica o threshold
+               ├── registra a rodada
+               ├── cria inspeções
+               └── avalia resultados após sete dias
+```
+
+As responsabilidades ficarão divididas assim:
+
+| Componente | Responsabilidade final |
+|---|---|
+| Pipeline de treinamento | Treinar, avaliar, gerar a curva de thresholds e publicar o artefato |
+| Serviço Python | Carregar uma versão e retornar probabilidades por porta |
+| Backend Go | Escolher modelo e threshold, classificar riscos e executar regras operacionais |
+| PostgreSQL | Guardar configurações, versões, execuções, métricas e auditoria |
+| S3 | Guardar artefatos e manifests imutáveis |
+| Frontend | Exibir dados fornecidos pelo backend sem manter métricas próprias |
+
+## 4. Etapa 1 — Tornar as métricas reproduzíveis
+
+Esta é a primeira etapa porque todas as decisões posteriores dependem de métricas confiáveis.
+
+### 4.1. Gerar a curva no treinamento
+
+Depois de treinar o modelo final, `exportar_modelo.py` deverá executar o artefato sobre o conjunto temporal de teste, que não participou do ajuste do modelo nem da escolha de hiperparâmetros.
+
+Para cada threshold entre `0.05` e `0.95`, o pipeline deverá calcular:
+
+- verdadeiros positivos (TP);
+- falsos positivos (FP);
+- falsos negativos (FN);
+- verdadeiros negativos (TN);
+- precisão;
+- recall;
+- F1-Score;
+- quantidade e taxa de alertas.
+
+O cálculo deverá usar as funções oficiais do scikit-learn e `zero_division=0`. A escolha do threshold pode continuar sendo feita no conjunto de validação, mas a métrica apresentada como desempenho final deverá vir do conjunto de teste intocado.
+
+### 4.2. Registrar a procedência da avaliação
+
+O resultado deverá incluir:
+
+```json
+{
+  "model_version": "v1.0.0",
+  "model_sha256": "...",
+  "dataset_sha256": "...",
+  "target": "falha_nos_proximos_7_dias",
+  "train_end": "2025-04-23",
+  "test_start": "2025-05-01",
+  "test_end": "2025-06-30",
+  "test_rows": 71184,
+  "positive_rows": 6202,
+  "generated_at": "...",
+  "threshold_metrics": []
+}
+```
+
+O hash do dataset e o hash do modelo permitem provar que as métricas pertencem exatamente aos dados e ao artefato informados.
+
+### 4.3. Resolver a inconsistência atual
+
+Antes de publicar uma nova versão, será necessário regenerar a curva do `modelo_5.joblib` atual e responder:
+
+- o threshold recomendado é `0.48`, `0.52` ou outro valor;
+- quais são as métricas exatas nesse threshold;
+- qual conjunto produziu os valores `15,9%`, `55,3%` e `24,7%` atualmente exibidos;
+- por que esses valores diferem dos existentes na curva do laboratório.
+
+Até essa conferência terminar, a documentação e a interface não deverão chamar `0.48` de ponto ótimo.
+
+### Critérios de aceite
+
+- Um único comando reproduz o treinamento, o artefato e a curva.
+- A curva é gerada pelo modelo atual, sem números digitados manualmente.
+- Cada ponto possui TP, FP, FN e TN, além das métricas derivadas.
+- Executar o pipeline duas vezes com a mesma seed e os mesmos dados produz os mesmos resultados.
+
+## 5. Etapa 2 — Criar uma única fonte de verdade
+
+O frontend e o backend não deverão possuir tabelas estáticas de calibração.
+
+### Mudanças planejadas
+
+1. Adicionar à persistência uma estrutura `ml_threshold_metrics`, relacionada à versão do modelo.
+2. Persistir a curva gerada durante o registro da versão.
+3. Fazer o backend devolver a curva através de um endpoint de leitura.
+4. Remover `calibration.js` do frontend.
+5. Remover `CalibrationPoints` do domínio Go.
+6. Fazer gráficos, tabela de cenários e comparações consumirem as métricas devolvidas pela API.
+
+Estrutura sugerida:
+
+```text
+ml_threshold_metrics
+  model_run_id
+  threshold
+  true_positives
+  false_positives
+  false_negatives
+  true_negatives
+  precision
+  recall
+  f1_score
+  alert_count
+  alert_rate
+```
+
+A chave única será `(model_run_id, threshold)`. Dessa forma, duas versões podem ter curvas diferentes sem sobrescrever o histórico.
+
+### Critérios de aceite
+
+- Não existem valores fixos de precision, recall ou F1 no Go ou no JavaScript.
+- Toda métrica exibida possui uma versão de modelo associada.
+- O frontend não recalcula métricas de classificação.
+- A API e o artefato apresentam os mesmos valores para todos os thresholds.
+
+## 6. Etapa 3 — Definir um único responsável pelo threshold
+
+O serviço Python deverá retornar somente a probabilidade calculada pelo modelo. O backend Go será o único responsável por comparar essa probabilidade com o threshold.
+
+Resposta planejada do serviço:
+
+```json
+{
+  "model_version": "v1.0.0",
+  "predictions": [
+    {
+      "station_code": "BUT",
+      "platform": "P1",
+      "door_number": 2,
+      "probability": 0.517
+    }
+  ]
+}
+```
+
+O backend executará:
+
+```text
+will_fail = probability >= threshold_oficial
+```
+
+Essa decisão mantém no backend a regra que cria inspeções e altera o estado operacional. O modelo permanece responsável apenas pela inferência matemática.
+
+Uma execução experimental também poderá reutilizar as mesmas probabilidades para comparar vários thresholds. Caso modelo, features e instante de referência não mudem, não será necessário executar o Random Forest novamente para cada threshold.
+
+### Critérios de aceite
+
+- O payload enviado ao Python não contém threshold.
+- O Python não retorna `will_fail`.
+- Todas as classificações são produzidas no caso de uso Go.
+- Aplicar thresholds diferentes sobre o mesmo snapshot preserva exatamente as mesmas probabilidades.
+
+## 7. Etapa 4 — Desacoplar o modelo do schema operacional
+
+O núcleo do pipeline Python não deverá executar SQL nem conhecer tabelas mantidas pelo backend.
+
+### Refatoração interna
+
+O serviço Python será separado em:
+
+```text
+domain/
+  feature_builder.py
+  predictor.py
+application/
+  predict_use_case.py
+  train_use_case.py
+ports/
+  feature_repository.py
+  model_registry.py
+adapters/
+  postgres_feature_repository.py
+  s3_model_registry.py
+  flask_api.py
+```
+
+O caso de uso dependerá de `FeatureRepository` e `ModelRegistry`. Pandas, SQLAlchemy, PostgreSQL, S3 e Flask permanecerão nos adaptadores.
+
+### Contrato de dados
+
+Como transição, serão criadas views SQL versionadas, por exemplo:
+
+- `ml_telemetry_v1`;
+- `ml_maintenance_v1`;
+- `ml_active_doors_v1`.
+
+O adaptador Python consultará essas views com um usuário PostgreSQL somente leitura. Mudanças nas tabelas físicas poderão ser absorvidas pelas views sem alterar o modelo.
+
+Em uma evolução posterior, o pipeline de dados poderá materializar snapshots de features no S3 em Parquet. O modelo passará a consumir um snapshot identificado, eliminando a dependência de leitura do banco operacional durante o treinamento.
+
+### Critérios de aceite
+
+- Arquivos de domínio e aplicação do Python não importam SQLAlchemy ou Flask.
+- Apenas o adaptador PostgreSQL conhece nomes de views e colunas.
+- O usuário de banco do serviço de ML não possui permissão de escrita.
+- Testes de contrato garantem o schema das views versionadas.
+- Falhas de banco são retornadas explicitamente; não são silenciosamente substituídas pela data atual.
+
+## 8. Etapa 5 — Versionar artefatos no S3
+
+O artefato deixará de ser identificado apenas como `artifacts/modelo_5.joblib` dentro da imagem Docker.
+
+Estrutura sugerida no bucket privado:
+
+```text
+models/random-forest/v1.0.0/model.joblib
+models/random-forest/v1.0.0/manifest.json
+models/random-forest/v1.0.0/threshold-metrics.json
+models/random-forest/v1.1.0/model.joblib
+```
+
+O registro da versão no PostgreSQL deverá guardar:
+
+- URI imutável do artefato;
+- SHA-256;
+- versão;
+- algoritmo e hiperparâmetros;
+- lista e ordem das features;
+- período e hash do dataset;
+- métricas de treino, validação e teste;
+- status `candidate`, `production`, `retired` ou `failed`;
+- usuário e instante da promoção.
+
+Na inicialização, o serviço Python baixa a versão ativa para um cache local, verifica o hash e só depois disponibiliza o healthcheck como saudável. A versão anterior continuará disponível para rollback.
+
+### Critérios de aceite
+
+- Atualizar um modelo não exige reconstruir a imagem do serviço Python.
+- Artefatos publicados são imutáveis e privados.
+- Um hash inválido impede o carregamento.
+- A troca de versão possui rollback para a versão anterior.
+- Toda resposta de inferência informa a versão realmente carregada.
+
+## 9. Etapa 6 — Implementar retreinamento e drift reais
+
+Os valores simulados serão removidos de `MLOpsUseCase`.
+
+### Retreinamento
+
+O retreinamento será assíncrono:
+
+1. O backend cria um job com status `queued`.
+2. Um worker solicita a execução do pipeline de treinamento.
+3. O pipeline registra início, dataset e parâmetros.
+4. O modelo é treinado e avaliado.
+5. Artefato, manifest e curva são enviados ao S3.
+6. A versão é registrada como `candidate`.
+7. O engenheiro compara a candidata com a versão oficial.
+8. A promoção altera apenas o ponteiro da versão ativa.
+
+O River já utilizado pelo backend pode orquestrar o pedido, as retentativas e a persistência do status. A execução pesada continuará no ambiente Python.
+
+### Drift
+
+O relatório deverá comparar a distribuição das features atuais com a distribuição de referência registrada no treinamento. Para cada feature serão persistidos:
+
+- PSI;
+- estatística KS e valor-p quando aplicável;
+- proporção de valores ausentes;
+- intervalo observado;
+- quantidade de registros;
+- severidade e limite utilizado.
+
+O status geral será derivado das features, sem valores fixos no código.
+
+### Critérios de aceite
+
+- `/retrain` não devolve sucesso antes de um treinamento real terminar.
+- É possível acompanhar `queued`, `running`, `completed` e `failed`.
+- Uma falha preserva mensagem, timestamps e parâmetros da execução.
+- Drift é calculado sobre dados reais e identifica o snapshot de referência.
+- O backend não contém métricas fictícias ou metadados fixos do Random Forest.
+
+## 10. Etapa 7 — Versionar o contrato HTTP
+
+O serviço interno deverá adotar endpoints versionados:
+
+```text
+POST /v1/predictions
+GET  /v1/models/active
+GET  /v1/models/{version}/metrics
+POST /v1/training-jobs
+GET  /v1/training-jobs/{id}
+GET  /v1/models/{version}/drift
+GET  /health/live
+GET  /health/ready
+```
+
+O contrato deverá ser descrito em OpenAPI e validado por testes dos dois lados. Durante a migração, `/predict` poderá continuar disponível como rota depreciada, delegando internamente para `/v1/predictions`.
+
+### Critérios de aceite
+
+- O backend usa somente rotas `/v1`.
+- O schema rejeita campos ausentes, tipos inválidos e probabilidades fora de `[0,1]`.
+- Backend e serviço Python executam o mesmo teste de contrato no CI.
+- Alterações incompatíveis exigem uma nova versão da rota.
+
+## 11. Etapa 8 — Corrigir a semântica do laboratório
+
+O laboratório deverá separar três grupos.
+
+### Desempenho histórico do modelo
+
+Valores calculados no conjunto de teste rotulado:
+
+- precisão;
+- recall;
+- F1-Score;
+- TP, FP, FN e TN;
+- tamanho e prevalência do conjunto;
+- intervalo temporal da avaliação.
+
+### Impacto sobre a frota atual
+
+Valores calculados nas probabilidades atuais:
+
+- portas em risco;
+- taxa de alerta;
+- probabilidade média;
+- percentil 95;
+- maior probabilidade;
+- diferença de carga operacional em relação ao threshold oficial.
+
+### Desempenho observado em produção
+
+Valores calculados somente para rodadas cujo horizonte de sete dias já terminou:
+
+- falhas previstas que ocorreram;
+- alertas sem falha observada;
+- falhas que não foram previstas;
+- precision, recall e F1 observados;
+- cobertura de rótulos e quantidade de rodadas maduras.
+
+Os títulos deverão indicar a procedência. “Resultados reais” será substituído por “Cenários executados na frota atual”, enquanto precision, recall e F1 aparecerão sob “Validação histórica do modelo”.
+
+### Critérios de aceite
+
+- A interface nunca chama uma estimativa histórica de resultado da rodada atual.
+- Cada métrica apresenta versão, origem dos dados e período de avaliação.
+- Cenários ainda não executados são identificados como simulação.
+- Cenários executados usam contagens reais das probabilidades persistidas.
+- Valores indisponíveis aparecem como indisponíveis, sem fallback inventado.
+
+## 12. Etapa 9 — Avaliar o desempenho após sete dias
+
+Será criado um processo diário para avaliar rodadas maduras.
+
+1. Selecionar predições cujo `created_at + 7 dias` já passou.
+2. Buscar o rótulo real definido para a porta e a janela correspondente.
+3. Registrar TP, FP, FN ou TN por predição.
+4. Agregar métricas por versão, threshold e período.
+5. Exibir cobertura de rótulos para evitar conclusões com dados incompletos.
+
+Antes da implementação, o parceiro deverá validar formalmente o evento que representa uma falha real. Por exemplo, deve ser decidido se o rótulo será uma ordem ZM01, uma combinação de ZM01/ZM02 ou outro evento operacional.
+
+Estrutura sugerida:
+
+```text
+prediction_outcomes
+  prediction_id
+  window_started_at
+  window_ended_at
+  failure_observed
+  failure_source
+  evaluated_at
+  outcome
+```
+
+### Critérios de aceite
+
+- Uma predição não é avaliada antes do fim do horizonte.
+- Cada resultado pode ser rastreado até o evento operacional usado como rótulo.
+- Reprocessar a avaliação é idempotente.
+- O painel informa quantas previsões já possuem rótulo disponível.
+
+## 13. Migração sem interromper a operação
+
+| Fase | Entrega | Compatibilidade |
+|---|---|---|
+| 1 | Regenerar métricas do artefato atual | Não altera produção |
+| 2 | Persistir manifest e curva por versão | Mantém leitura antiga temporariamente |
+| 3 | Criar `/v1` retornando probabilidades | `/predict` continua funcionando |
+| 4 | Backend passa a aplicar o threshold sozinho | Comparação em modo sombra antes da troca |
+| 5 | Frontend passa a consumir métricas da API | Fallback antigo removido depois da validação |
+| 6 | Publicar artefatos no S3 e habilitar rollback | Artefato local permanece como contingência inicial |
+| 7 | Ativar retreinamento e drift reais | Recursos simulados são removidos |
+| 8 | Ativar avaliação pós-horizonte | Começa sem alterar decisões operacionais |
+
+No modo sombra, o sistema executará o fluxo antigo e o novo para o mesmo conjunto de portas, sem criar inspeções duplicadas. A promoção ocorrerá apenas depois de confirmar que as probabilidades e classificações esperadas são equivalentes.
+
+## 14. Testes e Quality Gates
+
+O CI deverá impedir a publicação quando ocorrer qualquer uma destas condições:
+
+- manifest sem versão ou hash;
+- artefato cujo SHA-256 difere do manifest;
+- curva sem matriz de confusão;
+- métrica fora do intervalo `[0,1]`;
+- F1 diferente do valor recalculado a partir de precision e recall;
+- feature ausente ou em ordem diferente da esperada pelo modelo;
+- contrato OpenAPI incompatível com o cliente Go;
+- queda de desempenho acima do limite acordado;
+- tentativa de promover uma versão sem avaliação aprovada;
+- acesso de escrita ao banco pelo usuário do serviço de inferência.
+
+Também serão necessários testes de integração para:
+
+- baixar e validar um artefato do storage;
+- executar uma inferência com versão conhecida;
+- comparar vários thresholds sobre as mesmas probabilidades;
+- promover e reverter uma versão;
+- recuperar uma falha de retreinamento;
+- calcular drift com uma distribuição controlada;
+- avaliar uma rodada depois do horizonte.
+
+## 15. Ordem recomendada
+
+1. Regenerar e conferir a curva atual.
+2. Persistir métricas e manifest por versão.
+3. Remover métricas duplicadas do frontend e do domínio Go.
+4. Tornar o Go o único responsável pelo threshold.
+5. Versionar o contrato HTTP.
+6. Refatorar o serviço Python com portas e adaptadores.
+7. Criar views versionadas e credencial somente leitura.
+8. Mover os artefatos para o S3.
+9. Implementar retreinamento e drift reais.
+10. Implementar avaliação pós-horizonte.
+
+Essa ordem corrige primeiro a confiabilidade das informações apresentadas ao engenheiro. Depois, reduz o acoplamento técnico e, por último, automatiza o ciclo completo de vida do modelo.

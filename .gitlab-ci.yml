@@ -100,6 +100,7 @@ test_modelo:
     - cd src/modelo
     - pip install --no-cache-dir -r requirements.txt pytest
   script:
+    - python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib
     - python -m pytest tests/ -v
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

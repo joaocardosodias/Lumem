@@ -66,3 +66,8 @@ type PredictionRepository interface {
 	GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error)
 	ListDoorsForInference(ctx context.Context) ([]domain.Door, error)
 }
+
+type PredictionOutcomeRepository interface {
+	EvaluateMaturePredictions(ctx context.Context) (int64, error)
+	GetProductionPerformance(ctx context.Context) (*domain.ProductionPerformance, error)
+}

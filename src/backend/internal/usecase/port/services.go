@@ -9,7 +9,20 @@ import (
 )
 
 type MLClient interface {
-	PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error)
+	PredictBatch(ctx context.Context, doors []domain.Door) (*MLPredictionBatch, error)
+}
+
+type MLPredictionBatch struct {
+	ModelVersion string
+	Predictions  []domain.PredictionItem
+}
+
+type MLOpsClient interface {
+	GetActiveModelMetadata(ctx context.Context) (map[string]any, error)
+	StartTraining(ctx context.Context, requestedBy string) (*domain.MLTrainingJob, error)
+	GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error)
+	GetDrift(ctx context.Context, version string) (*domain.MLDriftReport, error)
+	ActivateModel(ctx context.Context, version string) error
 }
 
 type EventHandler func(ctx context.Context, event domain.Event) error

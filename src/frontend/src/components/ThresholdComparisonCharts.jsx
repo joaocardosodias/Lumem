@@ -1,6 +1,26 @@
 import { useMemo, useState } from 'react'
-import { calibrationPoints, getThresholdMetrics } from '../data/calibration'
 import './ThresholdComparisonCharts.css'
+
+function normalizeThresholdMetrics(metrics) {
+  if (!Array.isArray(metrics)) return []
+  return metrics
+    .map((item) => ({
+      ...item,
+      threshold: Number(item.threshold),
+      precision: Number(item.precision),
+      recall: Number(item.recall),
+      f1: Number(item.f1_score),
+    }))
+    .filter((item) => [item.threshold, item.precision, item.recall, item.f1].every(Number.isFinite))
+    .sort((a, b) => a.threshold - b.threshold)
+}
+
+function nearestThresholdMetric(metrics, threshold) {
+  if (!metrics.length) return null
+  return metrics.reduce((nearest, item) => (
+    Math.abs(item.threshold - threshold) < Math.abs(nearest.threshold - threshold) ? item : nearest
+  ))
+}
 
 function formatPercent(value) {
   if (value == null || !Number.isFinite(Number(value))) return '—'
@@ -8,6 +28,7 @@ function formatPercent(value) {
 }
 
 function formatDelta(value, isPercent = true) {
+  if (value == null) return '—'
   const num = Number(value)
   if (!Number.isFinite(num)) return '0'
   const sign = num > 0 ? '+' : ''
@@ -17,9 +38,10 @@ function formatDelta(value, isPercent = true) {
   return `${sign}${Math.round(num)}`
 }
 
-function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThreshold }) {
+function TradeoffCurveChart({ selectedThreshold, officialThreshold, thresholdMetrics, onSelectThreshold }) {
   const [hoverTh, setHoverTh] = useState(null)
   const activeTh = hoverTh ?? selectedThreshold
+  const calibrationPoints = useMemo(() => normalizeThresholdMetrics(thresholdMetrics), [thresholdMetrics])
 
   const width = 760
   const height = 300
@@ -34,7 +56,8 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
   const precisionPolyline = calibrationPoints.map((p) => `${x(p.threshold).toFixed(1)},${y(p.precision).toFixed(1)}`).join(' ')
   const f1Polyline = calibrationPoints.map((p) => `${x(p.threshold).toFixed(1)},${y(p.f1).toFixed(1)}`).join(' ')
 
-  const activeMetrics = getThresholdMetrics(activeTh)
+  const activeMetrics = nearestThresholdMetric(calibrationPoints, activeTh)
+  const bestMetric = calibrationPoints.reduce((best, item) => (!best || item.f1 > best.f1 ? item : best), null)
 
   const activeX = x(activeTh)
   const officialX = x(officialThreshold)
@@ -67,7 +90,7 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
   }
 
   const yTicks = [0, 0.25, 0.50, 0.75, 1.0]
-  const xTicks = [0.10, 0.30, 0.48, 0.70, 0.90]
+  const xTicks = [...new Set([0.10, 0.30, Number(officialThreshold.toFixed(2)), 0.70, 0.90])].sort((a, b) => a - b)
 
   return (
     <article className="threshold-chart-card">
@@ -79,15 +102,15 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
         <div className="threshold-chart-legend">
           <span className="legend-chip is-recall">
             <span className="legend-chip__dot" />
-            Recall: <strong>{formatPercent(activeMetrics.recall)}</strong>
+            Recall: <strong>{formatPercent(activeMetrics?.recall)}</strong>
           </span>
           <span className="legend-chip is-precision">
             <span className="legend-chip__dot" />
-            Precisão: <strong>{formatPercent(activeMetrics.precision)}</strong>
+            Precisão: <strong>{formatPercent(activeMetrics?.precision)}</strong>
           </span>
           <span className="legend-chip is-f1">
             <span className="legend-chip__dot" />
-            F1: <strong>{formatPercent(activeMetrics.f1)}</strong>
+            F1: <strong>{formatPercent(activeMetrics?.f1)}</strong>
           </span>
         </div>
       </header>
@@ -137,9 +160,9 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
             Operação ({officialThreshold.toFixed(2)})
           </text>
 
-          <polyline points={recallPolyline} className="threshold-line is-recall" />
-          <polyline points={precisionPolyline} className="threshold-line is-precision" />
-          <polyline points={f1Polyline} className="threshold-line is-f1" />
+          {calibrationPoints.length ? <polyline points={recallPolyline} className="threshold-line is-recall" /> : null}
+          {calibrationPoints.length ? <polyline points={precisionPolyline} className="threshold-line is-precision" /> : null}
+          {calibrationPoints.length ? <polyline points={f1Polyline} className="threshold-line is-f1" /> : null}
 
           <line
             x1={activeX}
@@ -149,9 +172,9 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
             className="threshold-cursor-line"
           />
 
-          <circle cx={activeX} cy={y(activeMetrics.recall)} r="6" className="threshold-point is-recall" />
-          <circle cx={activeX} cy={y(activeMetrics.precision)} r="6" className="threshold-point is-precision" />
-          <circle cx={activeX} cy={y(activeMetrics.f1)} r="6" className="threshold-point is-f1" />
+          {activeMetrics ? <circle cx={activeX} cy={y(activeMetrics.recall)} r="6" className="threshold-point is-recall" /> : null}
+          {activeMetrics ? <circle cx={activeX} cy={y(activeMetrics.precision)} r="6" className="threshold-point is-precision" /> : null}
+          {activeMetrics ? <circle cx={activeX} cy={y(activeMetrics.f1)} r="6" className="threshold-point is-f1" /> : null}
 
           <g transform={`translate(${activeX}, ${height - inset.bottom})`}>
             <rect x="-23" y="6" width="46" height="22" rx="4" className="threshold-badge-bg" />
@@ -163,7 +186,7 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, onSelectThre
       </div>
 
       <footer className="threshold-chart-card__footer">
-        <span>Ponto ótimo de equilíbrio F1: <strong>0.48</strong> (F1: 24.7%, Recall: 55.3%, Precisão: 15.9%).</span>
+        <span>{bestMetric ? <>Maior F1 no teste: <strong>{bestMetric.threshold.toFixed(2)}</strong> (F1: {formatPercent(bestMetric.f1)}, Recall: {formatPercent(bestMetric.recall)}, Precisão: {formatPercent(bestMetric.precision)}).</> : 'Curva indisponível para este artefato legado.'}</span>
         <span>Mova o cursor para explorar. Clique para selecionar.</span>
       </footer>
     </article>
@@ -180,8 +203,8 @@ function OperationalImpactChart({
   const comparisonItems = useMemo(() => {
     const map = new Map()
 
-    const offRisk = Number(officialRun?.total_doors_at_risk) || 1
-    const offTotal = Number(officialRun?.total_doors_evaluated) || 528
+    const offRisk = Number(officialRun?.total_doors_at_risk) || 0
+    const offTotal = Number(officialRun?.total_doors_evaluated) || 0
     const offTh = Number(officialRun?.threshold_used ?? officialThreshold)
     map.set(Number(offTh.toFixed(2)), {
       threshold: offTh,
@@ -197,7 +220,7 @@ function OperationalImpactChart({
         const th = Number(Number(run.threshold_used).toFixed(2))
         if (!Number.isFinite(th)) return
         const risk = Number(run.total_doors_at_risk) || 0
-        const total = Number(run.total_doors_evaluated) || 528
+        const total = Number(run.total_doors_evaluated) || 0
         const existing = map.get(th)
         if (!existing || (!existing.isOfficial && !existing.isCurrentSelection)) {
           map.set(th, {
@@ -209,22 +232,6 @@ function OperationalImpactChart({
             runId: run.id,
           })
         }
-      })
-    }
-
-    const selTh = Number(Number(selectedThreshold).toFixed(2))
-    if (!map.has(selTh)) {
-      const calibrated = getThresholdMetrics(selTh)
-      const estimatedRiskRate = (calibrated.recall * 0.087126) / Math.max(0.01, calibrated.precision)
-      const estimatedDoors = Math.max(0, Math.min(528, Math.round(528 * estimatedRiskRate * 0.015)))
-      map.set(selTh, {
-        threshold: selTh,
-        doorsAtRisk: Math.max(1, estimatedDoors),
-        totalDoors: 528,
-        isOfficial: false,
-        isSimulated: true,
-        label: 'Simulação atual',
-        runId: 'simulated',
       })
     }
 
@@ -245,9 +252,10 @@ function OperationalImpactChart({
   const maxDoors = Math.max(
     5,
     ...comparisonItems.map((item) => item.doorsAtRisk),
-    Number(officialRun?.total_doors_at_risk) || 1
+    Number(officialRun?.total_doors_at_risk) || 0
   )
-  const officialDoors = Number(officialRun?.total_doors_at_risk) || 1
+  const officialDoors = Number(officialRun?.total_doors_at_risk) || 0
+  const officialTotal = Number(officialRun?.total_doors_evaluated) || 0
 
   return (
     <article className="threshold-chart-card">
@@ -294,26 +302,27 @@ function OperationalImpactChart({
       </div>
 
       <footer className="threshold-chart-card__footer">
-        <span>Linha de referência: operação atual com <strong>{officialDoors}</strong> portas em risco de 528 portas monitoradas.</span>
+        <span>Linha de referência: operação atual com <strong>{officialDoors}</strong> portas em risco de {officialTotal || '—'} portas avaliadas.</span>
         <span>Clique em uma linha para carregar o threshold correspondente.</span>
       </footer>
     </article>
   )
 }
 
-function DeltaCard({ selectedThreshold, officialThreshold, officialRun, experiments }) {
-  const selectedMetrics = getThresholdMetrics(selectedThreshold)
-  const officialMetrics = getThresholdMetrics(officialThreshold)
+function DeltaCard({ selectedThreshold, officialThreshold, officialRun, experiments, thresholdMetrics }) {
+  const metrics = normalizeThresholdMetrics(thresholdMetrics)
+  const selectedMetrics = nearestThresholdMetric(metrics, selectedThreshold)
+  const officialMetrics = nearestThresholdMetric(metrics, officialThreshold)
 
-  const deltaRecall = selectedMetrics.recall - officialMetrics.recall
-  const deltaPrecision = selectedMetrics.precision - officialMetrics.precision
-  const deltaF1 = selectedMetrics.f1 - officialMetrics.f1
+  const deltaRecall = selectedMetrics && officialMetrics ? selectedMetrics.recall - officialMetrics.recall : null
+  const deltaPrecision = selectedMetrics && officialMetrics ? selectedMetrics.precision - officialMetrics.precision : null
+  const deltaF1 = selectedMetrics && officialMetrics ? selectedMetrics.f1 - officialMetrics.f1 : null
 
   const matchingRun = Array.isArray(experiments)
     ? experiments.find((run) => Math.abs(Number(run.threshold_used) - selectedThreshold) < 0.005)
     : null
 
-  const officialRisk = Number(officialRun?.total_doors_at_risk) || 1
+  const officialRisk = Number(officialRun?.total_doors_at_risk) || 0
   const selectedRisk = matchingRun ? Number(matchingRun.total_doors_at_risk) || 0 : null
   const deltaDoors = selectedRisk !== null ? selectedRisk - officialRisk : null
 
@@ -327,26 +336,26 @@ function DeltaCard({ selectedThreshold, officialThreshold, officialRun, experime
 
       <div className="threshold-delta-item">
         <span className="threshold-delta-label">Variação de Recall</span>
-        <strong className={`threshold-delta-value ${deltaRecall >= 0 ? 'is-positive' : 'is-negative'}`}>
+        <strong className={`threshold-delta-value ${deltaRecall != null && deltaRecall >= 0 ? 'is-positive' : 'is-negative'}`}>
           {formatDelta(deltaRecall)}
         </strong>
-        <small>{formatPercent(selectedMetrics.recall)} vs {formatPercent(officialMetrics.recall)}</small>
+        <small>{formatPercent(selectedMetrics?.recall)} vs {formatPercent(officialMetrics?.recall)}</small>
       </div>
 
       <div className="threshold-delta-item">
         <span className="threshold-delta-label">Variação de Precisão</span>
-        <strong className={`threshold-delta-value ${deltaPrecision >= 0 ? 'is-positive' : 'is-warning'}`}>
+        <strong className={`threshold-delta-value ${deltaPrecision != null && deltaPrecision >= 0 ? 'is-positive' : 'is-warning'}`}>
           {formatDelta(deltaPrecision)}
         </strong>
-        <small>{formatPercent(selectedMetrics.precision)} vs {formatPercent(officialMetrics.precision)}</small>
+        <small>{formatPercent(selectedMetrics?.precision)} vs {formatPercent(officialMetrics?.precision)}</small>
       </div>
 
       <div className="threshold-delta-item">
         <span className="threshold-delta-label">Variação de F1-Score</span>
-        <strong className={`threshold-delta-value ${deltaF1 >= 0 ? 'is-positive' : 'is-neutral'}`}>
+        <strong className={`threshold-delta-value ${deltaF1 != null && deltaF1 >= 0 ? 'is-positive' : 'is-neutral'}`}>
           {formatDelta(deltaF1)}
         </strong>
-        <small>{formatPercent(selectedMetrics.f1)} vs {formatPercent(officialMetrics.f1)}</small>
+        <small>{formatPercent(selectedMetrics?.f1)} vs {formatPercent(officialMetrics?.f1)}</small>
       </div>
 
       <div className="threshold-delta-item">
@@ -369,6 +378,7 @@ export function ThresholdComparisonCharts({
   officialThreshold,
   officialRun,
   experiments,
+  thresholdMetrics,
   onSelectThreshold,
 }) {
   return (
@@ -384,12 +394,14 @@ export function ThresholdComparisonCharts({
         officialThreshold={officialThreshold}
         officialRun={officialRun}
         experiments={experiments}
+        thresholdMetrics={thresholdMetrics}
       />
 
       <div className="threshold-comparison-grid">
         <TradeoffCurveChart
           selectedThreshold={selectedThreshold}
           officialThreshold={officialThreshold}
+          thresholdMetrics={thresholdMetrics}
           onSelectThreshold={onSelectThreshold}
         />
 

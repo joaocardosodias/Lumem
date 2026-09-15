@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -80,13 +81,21 @@ func calculatePredictionMetrics(items []domain.PredictionItem) (average, p95, ma
 	return &averageValue, &p95Value, &maximumValue
 }
 
-func calculateClassificationMetrics(threshold *float64) (precision, recall, f1 *float64) {
-	t := 0.48
-	if threshold != nil {
-		t = *threshold
+func (uc *TriggerPredictionsUseCase) classificationMetrics(ctx context.Context, version string, threshold float64) (precision, recall, f1 *float64, source string, err error) {
+	if uc.mlopsRepo == nil || version == "" {
+		return nil, nil, nil, "", nil
 	}
-	p, r, f := domain.GetThresholdCalibrationMetrics(t)
-	return &p, &r, &f
+	metric, err := uc.mlopsRepo.GetThresholdMetric(ctx, version, threshold)
+	if err != nil || metric == nil {
+		if err != nil {
+			return nil, nil, nil, "", err
+		}
+		return nil, nil, nil, "", domain.ErrModelNotFound
+	}
+	if math.Abs(metric.Threshold-threshold) > 1e-6 {
+		return nil, nil, nil, "", domain.ErrInvalidConfig
+	}
+	return &metric.Precision, &metric.Recall, &metric.F1Score, "historical_test", nil
 }
 
 func assignItemRunIDs(items []domain.PredictionItem, runID string) {
@@ -174,12 +183,11 @@ func (uc *TriggerPredictionsUseCase) Execute(ctx context.Context, horizonDays in
 	return uc.execute(ctx, horizonDays, nil, false)
 }
 
-func (uc *TriggerPredictionsUseCase) ExecuteWithThreshold(ctx context.Context, horizonDays int, customThreshold *float64) (*PredictionRunOutputDTO, error) {
-	return uc.execute(ctx, horizonDays, customThreshold, false)
-}
-
 func (uc *TriggerPredictionsUseCase) ExecuteExperiment(ctx context.Context, threshold float64) (*PredictionRunOutputDTO, error) {
 	if threshold < 0.05 || threshold > 0.95 {
+		return nil, domain.ErrInvalidConfig
+	}
+	if math.Abs(threshold*100-math.Round(threshold*100)) > 1e-9 {
 		return nil, domain.ErrInvalidConfig
 	}
 	return uc.execute(ctx, 7, &threshold, true)
@@ -188,16 +196,19 @@ func (uc *TriggerPredictionsUseCase) ExecuteExperiment(ctx context.Context, thre
 func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays int, customThreshold *float64, experiment bool) (*PredictionRunOutputDTO, error) {
 	horizonDays = 7
 	threshold := customThreshold
-	modelVersion := ""
-	if !experiment && threshold == nil && uc.mlopsRepo != nil {
-		if cfg, err := uc.mlopsRepo.GetConfig(ctx); err == nil && cfg != nil {
-			threshold = &cfg.Threshold
-		}
+	if threshold == nil {
+		fallback := 0.5
+		threshold = &fallback
 	}
-	if uc.mlopsRepo != nil {
-		if model, err := uc.mlopsRepo.GetActiveModel(ctx); err == nil && model != nil {
-			modelVersion = model.Version
+	if !experiment && customThreshold == nil && uc.mlopsRepo != nil {
+		cfg, err := uc.mlopsRepo.GetConfig(ctx)
+		if err != nil {
+			return nil, err
 		}
+		if cfg == nil {
+			return nil, domain.ErrInvalidConfig
+		}
+		threshold = &cfg.Threshold
 	}
 
 	doors, err := uc.predRepo.ListDoorsForInference(ctx)
@@ -209,13 +220,17 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 		return nil, domain.ErrNoActiveDoors
 	}
 
-	predictedItems, err := uc.mlClient.PredictBatch(ctx, doors, threshold)
+	predictionBatch, err := uc.mlClient.PredictBatch(ctx, doors)
 	if err != nil {
 		return nil, err
 	}
+	predictedItems := predictionBatch.Predictions
 	applyPredictionThreshold(predictedItems, threshold)
 	averageProbability, p95Probability, maximumProbability := calculatePredictionMetrics(predictedItems)
-	estimatedPrecision, estimatedRecall, estimatedF1 := calculateClassificationMetrics(threshold)
+	estimatedPrecision, estimatedRecall, estimatedF1, validationSource, err := uc.classificationMetrics(ctx, predictionBatch.ModelVersion, *threshold)
+	if err != nil {
+		return nil, err
+	}
 
 	now := time.Now()
 	var publishedAt *time.Time
@@ -227,7 +242,7 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 		ID:                  runID,
 		HorizonDays:         horizonDays,
 		ThresholdUsed:       threshold,
-		ModelVersion:        modelVersion,
+		ModelVersion:        predictionBatch.ModelVersion,
 		IsExperiment:        experiment,
 		PublishedAt:         publishedAt,
 		TotalDoorsEvaluated: len(doors),
@@ -238,6 +253,7 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 		EstimatedPrecision:  estimatedPrecision,
 		EstimatedRecall:     estimatedRecall,
 		EstimatedF1:         estimatedF1,
+		ValidationSource:    validationSource,
 		CreatedAt:           now,
 	}
 
@@ -274,6 +290,7 @@ func (uc *TriggerPredictionsUseCase) execute(ctx context.Context, horizonDays in
 		EstimatedPrecision:  run.EstimatedPrecision,
 		EstimatedRecall:     run.EstimatedRecall,
 		EstimatedF1:         run.EstimatedF1,
+		ValidationSource:    run.ValidationSource,
 		CreatedAt:           now,
 		Predictions:         toPredictionItemDTOs(predictedItems),
 	}, nil
@@ -300,6 +317,7 @@ func (uc *TriggerPredictionsUseCase) ListExperiments(ctx context.Context, limit 
 			EstimatedPrecision:  run.EstimatedPrecision,
 			EstimatedRecall:     run.EstimatedRecall,
 			EstimatedF1:         run.EstimatedF1,
+			ValidationSource:    run.ValidationSource,
 			CreatedAt:           run.CreatedAt,
 		})
 	}
@@ -316,8 +334,16 @@ func (uc *TriggerPredictionsUseCase) PromoteExperiment(ctx context.Context, id, 
 		if !run.IsExperiment {
 			return domain.ErrExperimentNotFound
 		}
+		if uc.mlopsRepo != nil {
+			active, err := uc.mlopsRepo.GetActiveModel(ctx)
+			if err != nil {
+				return err
+			}
+			if active.Version != run.ModelVersion {
+				return fmt.Errorf("%w: o experimento pertence a outra versao do modelo", domain.ErrInvalidConfig)
+			}
+		}
 		run.AverageProbability, run.P95Probability, run.MaximumProbability = calculatePredictionMetrics(run.Predictions)
-		run.EstimatedPrecision, run.EstimatedRecall, run.EstimatedF1 = calculateClassificationMetrics(run.ThresholdUsed)
 		if err := store.Predictions().PromoteExperiment(ctx, id, userID); err != nil {
 			return err
 		}
@@ -352,6 +378,7 @@ func (uc *TriggerPredictionsUseCase) PromoteExperiment(ctx context.Context, id, 
 		EstimatedPrecision:  promoted.EstimatedPrecision,
 		EstimatedRecall:     promoted.EstimatedRecall,
 		EstimatedF1:         promoted.EstimatedF1,
+		ValidationSource:    promoted.ValidationSource,
 		CreatedAt:           promoted.CreatedAt,
 		Predictions:         toPredictionItemDTOs(promoted.Predictions),
 	}, nil

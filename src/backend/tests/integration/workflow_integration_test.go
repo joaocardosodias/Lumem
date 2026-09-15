@@ -456,7 +456,7 @@ func (r *intPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain
 
 type intMLClient struct{}
 
-func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door, threshold *float64) ([]domain.PredictionItem, error) {
+func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) (*port.MLPredictionBatch, error) {
 	items := make([]domain.PredictionItem, 0, len(doors))
 	for _, d := range doors {
 		willFail := (d.StationCode == "FAL" && d.Platform == "P1" && d.DoorNumber == 4)
@@ -467,7 +467,7 @@ func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door, thr
 			WillFail:    willFail,
 		})
 	}
-	return items, nil
+	return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: items}, nil
 }
 
 type intUOWStore struct {
