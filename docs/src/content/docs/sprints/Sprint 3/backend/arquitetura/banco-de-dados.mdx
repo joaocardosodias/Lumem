@@ -5,7 +5,7 @@ description: Arquitetura de persistência relacional no PostgreSQL 16, diagrama 
 
 A camada de persistência do backend foi desenhada para atender aos requisitos de alta integridade, rastreabilidade operacional e baixa latência de consulta exigidos pelo monitoramento preditivo das portas de plataforma (PSD) da Linha 4-Amarela do Metrô de São Paulo.
 
-O sistema adota o **PostgreSQL 16** como banco de dados relacional principal. A instância gerenciada é hospedada no **Supabase** em ambiente de produção (conectada via connection pooler com suporte a SSL) e instanciada em contêiner Docker oficial nos ambientes de desenvolvimento e testes de integração.
+O sistema adota o **PostgreSQL 16 do Supabase** como banco relacional principal em produção. API, Worker e ML conectam-se por TLS ao pooler gerenciado. As migrations constroem o schema e criam os usuários iniciais quando o banco está vazio; não é necessário importar dados de uma instalação anterior.
 
 ---
 
@@ -19,7 +19,7 @@ O ciclo de vida das conexões é controlado de forma determinística na iniciali
 
 | Parâmetro | Valor Configurado | Justificativa de Engenharia |
 |---|---|---|
-| `SetMaxOpenConns` | 20 conexões | Impede a exaustão de conexões no pooler do Supabase sob picos de tráfego concorrente |
+| `SetMaxOpenConns` | 5 conexões | Evita esgotar o limite de conexões do pooler gerenciado |
 | `SetMaxIdleConns` | 5 conexões | Mantém conexões quentes prontas para atender requisições sem sobrecarregar a memória |
 | `SetConnMaxLifetime` | 10 minutos | Renova periodicamente as conexões para evitar timeouts silenciosos impostos por firewalls intermediários |
 

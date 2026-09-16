@@ -74,7 +74,7 @@ func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger
 		return fmt.Errorf("conexao inicial com postgres indisponivel: %w", err)
 	}
 
-	logger.Info("conexao com supabase postgres estabelecida com sucesso")
+	logger.Info("conexao com postgres estabelecida com sucesso")
 	if !cfg.RunMigrations {
 		logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
 		return nil
@@ -91,7 +91,7 @@ func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger
 func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("falha ao conectar no postgres/supabase", slog.String("error", err.Error()))
+		logger.Error("falha ao conectar no postgres", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -390,7 +390,7 @@ func main() {
 	reconcilerCtx, stopReconciler := context.WithCancel(context.Background())
 	defer stopReconciler()
 	go usecase.RunTrainingJobReconciler(reconcilerCtx, mlopsUC, 30*time.Second, logger)
-	syncCtx, syncCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	syncCtx, syncCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	if err := mlopsUC.SyncActiveModel(syncCtx); err != nil {
 		logger.Warn("nao foi possivel sincronizar o manifest ativo do servico de ML", slog.String("error", err.Error()))
 	}

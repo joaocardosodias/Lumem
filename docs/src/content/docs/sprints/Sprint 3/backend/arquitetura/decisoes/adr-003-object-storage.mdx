@@ -1,6 +1,6 @@
 ---
 title: ADR 003 — Armazenamento S3
-description: Registro formal da decisão de utilizar bucket privado compatível com S3 no Supabase Storage para desacoplar API e Worker e eliminar dependências de discos locais.
+description: Registro da decisão de utilizar MinIO privado e compatível com S3 para desacoplar API, Worker e serviço de ML.
 ---
 
 ## 1. Contexto e Forças de Decisão
@@ -14,7 +14,7 @@ A opção de salvar os arquivos recebidos no diretório local `/tmp` do contêin
 
 ## 2. Decisão Arquitetural
 
-Adotar o **Supabase Storage através da API compatível com Amazon S3** para armazenamento compartilhado de arquivos de ingestão. A API e o Worker utilizam a biblioteca oficial **AWS SDK for Go v2** configurada com endpoint customizado e `UsePathStyle = true`.
+Adotar o **MinIO autocontido através da API compatível com Amazon S3** para armazenar ingestões, datasets e modelos. API, Worker e ML utilizam os SDKs S3 com endpoint interno `http://minio:9000`; o conteúdo permanece em volume Docker persistente.
 
 ### Padrão de ciclo de vida do objeto
 1. **Nomeação determinística sem colisão:** a chave do objeto utiliza prefixo fixo e UUID v4 gerado pela API (ex: `ingestion/3b5d8434-d02d-45bf-a6d1-ec92ef943391.csv`), impossibilitando sobrescrita de arquivos com nomes idênticos;
@@ -28,17 +28,17 @@ Adotar o **Supabase Storage através da API compatível com Amazon S3** para arm
 | **Disco Local (`/tmp`)** | Sem latência de rede; custo zero de infraestrutura | Isolado por contêiner; volátil; impede separação de API e Worker | **Rejeitada:** incompatível com arquitetura multi-processos |
 | **Volumes Docker Compartilhados (NFS / Bind Mounts)** | Acessível por múltiplos contêineres no mesmo host | Acopla fortemente a execução a um mesmo nó físico; permissões complexas de UID/GID | **Rejeitada:** limita escalabilidade e portabilidade em nuvem |
 | **Coluna Binária (`BYTEA`) no PostgreSQL** | Atomicidade total com as tabelas de banco; transação única | Causa inchaço massivo do banco (bloat); satura cache de memória RAM do PostgreSQL | **Rejeitada:** anti-padrão grave para planilhas de dezenas de megabytes |
-| **Object Storage S3 (Supabase Storage)** | **Desacoplamento físico total; durabilidade em nuvem; API padrão de mercado; suporte nativo a streaming** | Latência de rede para upload e download; necessidade de expurgo de objetos | **Aprovada:** solução de padrão industrial para sistemas distribuídos |
+| **Object Storage S3 (MinIO)** | **API padrão, streaming, isolamento entre contêineres e ausência de cobrança externa** | A equipe assume backups, capacidade de disco e disponibilidade da VPS | **Aprovada:** mantém a abstração S3 com operação autocontida |
 
 ## 4. Consequências da Decisão
 
 ### Consequências Positivas
-- **Independência física:** API e Worker podem rodar em contêineres diferentes, servidores diferentes ou provedores diferentes sem perda de interoperabilidade;
-- **Compatibilidade com testes:** a porta `IngestionStorage` permitiu criar o adaptador `LocalTempStorage` para suítes de teste locais sem necessidade de credenciais de nuvem;
+- **Independência entre processos:** API, Worker e ML usam objetos por chave e não dependem do filesystem efêmero uns dos outros;
+- **Compatibilidade com testes:** a porta `IngestionStorage` permite usar `LocalTempStorage` sem iniciar o MinIO nas suítes unitárias;
 - **Consumo previsível de RAM:** CSV é lido por linha; XLSX usa arquivo temporário, `OpenFile` e o iterador `Rows`. O caso de uso converte e grava lotes de até 500 registros.
 
 ### Trade-offs e Custos Aceitos
-- Dependência da disponibilidade da API de storage do Supabase para aceitação de novos uploads;
+- Dependência da disponibilidade do contêiner MinIO e do disco da VPS para aceitar uploads, treinar e carregar modelos;
 - A exclusão é eventual e depende de PostgreSQL e do consumidor da fila `ingestion_cleanup`. Falhas após registrar o job são repetidas automaticamente. Objetos criados antes de qualquer registro no banco continuam sujeitos à janela entre S3 e PostgreSQL, exigindo reconciliação em caso de queda nesse intervalo.
 
 

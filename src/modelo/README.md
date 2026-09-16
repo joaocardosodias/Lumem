@@ -54,19 +54,19 @@ Para criar uma candidata sem alterar a versão ativa:
 python exportar_modelo.py --version v1.1.0
 ```
 
-Em `MODEL_REGISTRY_DRIVER=s3`, a candidata é publicada automaticamente no prefixo imutável `models/random-forest/<versão>/`. A promoção posterior valida o manifest e o SHA-256 do binário antes de atualizar `models/random-forest/active/manifest.json`.
+Em `MODEL_REGISTRY_DRIVER=s3`, a candidata é publicada no bucket privado `artefacts`, sob o prefixo imutável `models/random-forest/<versão>/`. A promoção valida o manifest e o SHA-256 antes de atualizar `models/random-forest/active/manifest.json`.
 
 ## Dados de treinamento
 
-No repositório local, o pipeline lê `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx`. Esses arquivos não entram na imagem. Os arquivos Compose os montam como somente leitura nos caminhos padrão de `/app/training-data`. Se o ambiente de produção não possuir o checkout completo, configure `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY`; o download será feito para `MODEL_TRAINING_CACHE_DIR` antes do treinamento.
+No primeiro boot, `model-registry-init` envia `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` ao bucket `training-data`. O treinamento baixa as chaves configuradas por `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY` para `MODEL_TRAINING_CACHE_DIR`. O mesmo inicializador publica o modelo `v1.0.0`, seu manifest e a curva de thresholds em `artefacts` caso ainda não exista um ponteiro ativo.
 
-Os jobs ficam em `/var/lib/g04/training-jobs`, e o registry local fica em `/app/artifacts`; ambos usam volumes persistentes nos arquivos Compose. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
+Os jobs ficam em `/var/lib/g04/training-jobs`, enquanto modelos e datasets persistem no MinIO. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
 
 ## Execução local
 
 ```bash
 pip install -r requirements.txt
-export ML_DATABASE_URL=postgresql://ml_reader:senha@host:5432/postgres
+export ML_DATABASE_URL='postgresql://postgres.PROJECT_REF:senha@pooler.supabase.com:6543/postgres?sslmode=require&default_query_exec_mode=simple_protocol'
 gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 4 app:app
 ```
 

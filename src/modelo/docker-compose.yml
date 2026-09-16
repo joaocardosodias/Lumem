@@ -1,4 +1,30 @@
 services:
+  model-registry-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: model-registry-init-linha4
+    restart: "no"
+    env_file:
+      - ../backend/.env
+    environment: &ml-environment
+      MINIO_ROOT_USER: ""
+      MINIO_ROOT_PASSWORD: ""
+      MODEL_REGISTRY_DRIVER: s3
+      MODEL_S3_ENDPOINT: http://minio:9000
+      MODEL_S3_REGION: us-east-1
+      MODEL_S3_BUCKET: artefacts
+      MODEL_S3_PREFIX: models/random-forest
+      MODEL_MANIFEST_KEY: models/random-forest/active/manifest.json
+      MODEL_TRAINING_BUCKET: training-data
+      MODEL_PANEL_S3_KEY: datasets/current/painel.parquet
+      MODEL_MAINTENANCE_S3_KEY: datasets/current/ZM01_limpa.xlsx
+    command: ["python", "seed_local_registry.py"]
+    volumes:
+      - ml-model-artifacts:/app/artifacts
+      - ../../models/modelo-5/painel.parquet:/bootstrap-training/painel.parquet:ro
+      - ../../data/Corretiva Emergencial/processados/ZM01_limpa.xlsx:/bootstrap-training/ZM01_limpa.xlsx:ro
+
   ml-service:
     build:
       context: .
@@ -10,12 +36,14 @@ services:
     env_file:
       - ../backend/.env
     environment:
+      <<: *ml-environment
       TRAINING_JOB_DIR: /var/lib/g04/training-jobs
     volumes:
       - ml-training-jobs:/var/lib/g04/training-jobs
       - ml-model-artifacts:/app/artifacts
-      - ../../models/modelo-5/painel.parquet:/app/training-data/painel.parquet:ro
-      - ../../data/Corretiva Emergencial/processados/ZM01_limpa.xlsx:/app/training-data/ZM01_limpa.xlsx:ro
+    depends_on:
+      model-registry-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 15s

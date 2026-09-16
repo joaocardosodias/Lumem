@@ -34,7 +34,7 @@ Serão explicados quatro camadas, cada uma com um diagrama:
 O operador nunca se comunica com o modelo diretamente. Ele aciona o backend em Go (por enquanto), que decide quais portas avaliar e delega o cálculo de risco pro microsserviço em Python — que por sua vez consulta o mesmo banco de dados, mas só a parte de telemetria.
 
 <div style="margin: 2rem 0; text-align: center;">
-  <Image src={diagramaContexto} alt="Diagrama de contexto: Operador aciona o Backend Go, que chama o Serviço de ML via POST /predict; os dois consultam e gravam no mesmo PostgreSQL (Supabase), dentro da rede Docker da VM Azure" width={900} format="png" />
+  <Image src={diagramaContexto} alt="Diagrama de contexto: Operador aciona o Backend Go, que chama o Serviço de ML; ambos consultam o PostgreSQL gerenciado no Supabase, enquanto os objetos permanecem no MinIO da VM Azure" width={900} format="png" />
 </div>
 
 ---
@@ -44,10 +44,10 @@ O operador nunca se comunica com o modelo diretamente. Ele aciona o backend em G
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Topologia de Deploy</h2>
 </div>
 
-Backend e serviço de ML rodam na mesma VM, cada um no seu container, ligados por uma rede Docker interna (`backend-network`), nenhum dos dois é publicado direto pra internet, só o Nginx é. O PostgreSQL não roda na VM: é um serviço gerenciado (Supabase), acessado pela rede pelos dois containers.
+Backend, serviço de ML e MinIO rodam na mesma VM em contêineres separados e ligados pela rede Docker interna `backend-network`. O PostgreSQL permanece gerenciado no Supabase e é acessado por TLS; somente o Nginx recebe tráfego público da aplicação.
 
 <div style="margin: 2rem 0; text-align: center;">
-  <Image src={diagramaDeploy} alt="Diagrama de deploy: nginx, backend-linha4, worker-linha4 e ml-linha4 rodando na mesma VM Azure, ligados pela rede backend-network; PostgreSQL gerenciado (Supabase) fora da VM; Azure Container Registry alimentando o Watchtower" width={900} format="png" />
+  <Image src={diagramaDeploy} alt="Diagrama de deploy: Nginx, backend, Worker, ML e MinIO na VM Azure; PostgreSQL permanece gerenciado no Supabase e o Azure Container Registry alimenta o Watchtower" width={900} format="png" />
 </div>
 
 ---
