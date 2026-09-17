@@ -20,6 +20,7 @@ type MLPredictionBatch struct {
 type MLOpsClient interface {
 	GetActiveModelMetadata(ctx context.Context) (map[string]any, error)
 	StartTraining(ctx context.Context, requestedBy string) (*domain.MLTrainingJob, error)
+	ResumeTraining(ctx context.Context, id, requestedBy string) (*domain.MLTrainingJob, error)
 	GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error)
 	GetDrift(ctx context.Context, version string) (*domain.MLDriftReport, error)
 	ActivateModel(ctx context.Context, version string) error

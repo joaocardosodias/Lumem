@@ -123,6 +123,19 @@ func (m *mockMLOpsClient) StartTraining(ctx context.Context, requestedBy string)
 	return &domain.MLTrainingJob{ID: "job-1", RequestedVersion: "v2", Status: "queued", CreatedAt: time.Now()}, nil
 }
 
+func (m *mockMLOpsClient) ResumeTraining(ctx context.Context, id, requestedBy string) (*domain.MLTrainingJob, error) {
+	return &domain.MLTrainingJob{
+		ID:               "job-resumed",
+		RequestedVersion: "v2",
+		Status:           "queued",
+		RequestedBy:      requestedBy,
+		CreatedAt:        time.Now(),
+		Parameters: map[string]any{
+			"resumed_from_job_id": id,
+		},
+	}, nil
+}
+
 func (m *mockMLOpsClient) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
 	return &domain.MLTrainingJob{ID: id, RequestedVersion: "v2", Status: "running", CreatedAt: time.Now()}, nil
 }
@@ -199,6 +212,30 @@ func TestMLOpsUseCase_TriggerRetrainAndDrift(t *testing.T) {
 	}
 	if len(repo.driftReports) != 1 || repo.driftReports[0].ModelVersion != "v1.0.0" {
 		t.Fatalf("esperava auditoria persistida para v1.0.0, obteve %+v", repo.driftReports)
+	}
+}
+
+func TestMLOpsUseCase_ResumeTrainingFromFailedStage(t *testing.T) {
+	repo := &mockMLOpsRepo{trainingJobs: map[string]domain.MLTrainingJob{
+		"job-failed": {
+			ID:               "job-failed",
+			RequestedVersion: "v2",
+			Status:           "failed",
+			CreatedAt:        time.Now(),
+			Progress: domain.MLTrainingProgress{Stages: []domain.MLTrainingStage{
+				{Key: "snapshot_acquisition", Status: "completed"},
+				{Key: "data_loading", Status: "failed"},
+			}},
+		},
+	}}
+	uc := usecase.NewMLOpsUseCase(repo, &mockMLOpsClient{})
+
+	resumed, err := uc.ResumeTraining(context.Background(), "job-failed", "usr_engineer_01")
+	if err != nil {
+		t.Fatalf("esperava sucesso ao retomar treinamento: %v", err)
+	}
+	if resumed.Status != "queued" || resumed.Parameters["resumed_from_job_id"] != "job-failed" {
+		t.Fatalf("job retomado incorreto: %+v", resumed)
 	}
 }
 

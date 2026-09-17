@@ -10,6 +10,7 @@ from ml_service.application.training_progress import (
     ProgressReporter,
     fail_current_stage,
     initial_progress,
+    resume_progress,
 )
 
 
@@ -46,3 +47,18 @@ def test_etapas_opcionais_podem_ser_marcadas_como_ignoradas(tmp_path):
     assert reporter.progress['completed_steps'] == 2
     assert reporter.progress['stages'][4]['status'] == 'skipped'
     assert reporter.progress['stages'][5]['status'] == 'skipped'
+
+
+def test_retomada_preserva_antecessoras_e_reabre_etapa_com_falha():
+    previous = initial_progress()
+    for index in range(5):
+        previous['stages'][index]['status'] = 'completed'
+    previous['stages'][5]['status'] = 'failed'
+    previous['current_stage'] = 'feature_selection'
+
+    resumed = resume_progress(previous, 'feature_selection')
+
+    assert resumed['completed_steps'] == 5
+    assert all(stage['status'] == 'completed' for stage in resumed['stages'][:5])
+    assert resumed['stages'][5]['status'] == 'pending'
+    assert resumed['stages'][6]['status'] == 'pending'

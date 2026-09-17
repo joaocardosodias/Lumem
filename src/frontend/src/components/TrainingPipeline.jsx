@@ -63,6 +63,15 @@ function TriggerIcon() {
   )
 }
 
+function ReloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6v5h-5" />
+      <path d="M18.5 15a8 8 0 1 1-1.9-8.3L20 11" />
+    </svg>
+  )
+}
+
 function StageGlyph({ stageKey }) {
   if (stageKey === 'snapshot_acquisition') {
     return (
@@ -218,7 +227,7 @@ function normalizedStages(job) {
   }))
 }
 
-export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) {
+export default function TrainingPipeline({ job, retraining, onTriggerRetrain, onResumeTraining }) {
   const [now, setNow] = useState(0)
   const stages = useMemo(() => normalizedStages(job), [job])
   const actualCompletedPrefix = useMemo(() => {
@@ -228,6 +237,8 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) 
     return firstOpenStage === -1 ? stages.length : firstOpenStage
   }, [stages])
   const currentJobID = job?.id || null
+  const isResumedJob = Boolean(job?.parameters?.resumed_from_job_id)
+  const resumedCheckpointProgress = isResumedJob ? actualCompletedPrefix : 0
   const [visualProgress, setVisualProgress] = useState(() => ({
     initialized: Boolean(currentJobID),
     jobID: currentJobID,
@@ -237,7 +248,7 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) 
   const visualCompleted = !visualProgress.initialized
     ? actualCompletedPrefix
     : visualProgress.jobID !== currentJobID
-    ? 0
+    ? resumedCheckpointProgress
     : Math.min(visualProgress.completed, actualCompletedPrefix)
   const isVisualPlayback = visualCompleted < actualCompletedPrefix
 
@@ -253,7 +264,11 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) 
 
     if (visualProgress.jobID !== currentJobID) {
       const timer = window.setTimeout(() => {
-        setVisualProgress({ initialized: true, jobID: currentJobID, completed: 0 })
+        setVisualProgress({
+          initialized: true,
+          jobID: currentJobID,
+          completed: resumedCheckpointProgress,
+        })
       }, 0)
       return () => window.clearTimeout(timer)
     }
@@ -277,7 +292,7 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) 
     }
 
     return undefined
-  }, [actualCompletedPrefix, currentJobID, visualProgress])
+  }, [actualCompletedPrefix, currentJobID, resumedCheckpointProgress, visualProgress])
 
   const visibleStages = useMemo(() => {
     if (!isVisualPlayback) return stages
@@ -329,48 +344,63 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain }) 
     const incomingDirection = stageIndex === 5 ? 'top' : stageIndex > 5 ? 'right' : 'left'
 
     return (
-      <button
-        key={stage.key}
-        type="button"
-        className={`pipeline-flow-card is-${stage.status} flow-from-${incomingDirection} ${hasIncomingFlow ? 'has-incoming-flow' : ''} ${isSelected ? 'is-selected' : ''}`}
-        onClick={() => setSelectedStageKey(stage.key)}
-        aria-label={`${stage.title}: ${STATUS_LABELS[stage.status] || stage.status}`}
-      >
-        <svg
-          className="pipeline-flow-card__trace"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden="true"
+      <div className="pipeline-flow-card-shell">
+        <button
+          key={stage.key}
+          type="button"
+          className={`pipeline-flow-card is-${stage.status} flow-from-${incomingDirection} ${hasIncomingFlow ? 'has-incoming-flow' : ''} ${isSelected ? 'is-selected' : ''}`}
+          onClick={() => setSelectedStageKey(stage.key)}
+          aria-label={`${stage.title}: ${STATUS_LABELS[stage.status] || stage.status}`}
         >
-          {CARD_BORDER_PATHS[incomingDirection].map((path) => (
-            <path
-              key={path}
-              d={path}
-              ref={(node) => {
-                if (node && !node.style.getPropertyValue('--path-len')) {
-                  const svg = node.ownerSVGElement
-                  if (svg) {
-                    const rect = svg.getBoundingClientRect()
-                    const screenLen = Math.ceil(rect.width + rect.height + 20)
-                    if (screenLen > 20) {
-                      node.style.setProperty('--path-len', `${screenLen}px`)
+          <svg
+            className="pipeline-flow-card__trace"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {CARD_BORDER_PATHS[incomingDirection].map((path) => (
+              <path
+                key={path}
+                d={path}
+                ref={(node) => {
+                  if (node && !node.style.getPropertyValue('--path-len')) {
+                    const svg = node.ownerSVGElement
+                    if (svg) {
+                      const rect = svg.getBoundingClientRect()
+                      const screenLen = Math.ceil(rect.width + rect.height + 20)
+                      if (screenLen > 20) {
+                        node.style.setProperty('--path-len', `${screenLen}px`)
+                      }
                     }
                   }
-                }
-              }}
-            />
-          ))}
-        </svg>
-        <span className="pipeline-flow-card__fill" aria-hidden="true" />
-        <div className="pipeline-flow-card__center">
-          <div className="pipeline-flow-card__icon-box">
-            <StageGlyph stageKey={stage.key} />
+                }}
+              />
+            ))}
+          </svg>
+          <span className="pipeline-flow-card__fill" aria-hidden="true" />
+          <div className="pipeline-flow-card__center">
+            <div className="pipeline-flow-card__icon-box">
+              <StageGlyph stageKey={stage.key} />
+            </div>
+            <div className="pipeline-flow-card__titles">
+              <strong className="pipeline-flow-card__title">{stage.title}</strong>
+            </div>
           </div>
-          <div className="pipeline-flow-card__titles">
-            <strong className="pipeline-flow-card__title">{stage.title}</strong>
-          </div>
-        </div>
-      </button>
+        </button>
+
+        {stage.status === 'failed' && onResumeTraining ? (
+          <button
+            type="button"
+            className={`pipeline-flow-card__retry ${retraining ? 'is-loading' : ''}`}
+            onClick={onResumeTraining}
+            disabled={retraining}
+            aria-label={`Reexecutar ${stage.title} a partir do último checkpoint`}
+            title="Reexecutar etapa"
+          >
+            <ReloadIcon />
+          </button>
+        ) : null}
+      </div>
     )
   }
 

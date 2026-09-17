@@ -465,6 +465,27 @@ function Engenharia() {
     }
   }
 
+  async function handleResumeTraining() {
+    if (!trainingJob?.id) return
+    try {
+      setRetraining(true)
+      const resumed = await api.resumeTraining(trainingJob.id)
+      setTrainingJob(resumed)
+      setTrainingHistory((current) => [resumed, ...current.filter((item) => item.id !== resumed.id)])
+      if (resumed.status === 'completed') {
+        const models = await api.getModelHistory(20)
+        setHistory(models || [])
+        setRetraining(false)
+        toast.success('Registro retomado e concluído a partir da etapa interrompida.')
+        return
+      }
+      toast.success('Treinamento retomado a partir do último checkpoint válido.')
+    } catch (err) {
+      toast.error('Erro ao retomar treinamento: ' + errorMessage(err))
+      setRetraining(false)
+    }
+  }
+
   async function handlePromoteModel(version) {
     try {
       setPromotingModel(version)
@@ -830,6 +851,7 @@ function Engenharia() {
             job={trainingJob}
             retraining={retraining}
             onTriggerRetrain={handleTriggerRetrain}
+            onResumeTraining={handleResumeTraining}
           />
 
           <article className="engenharia-card">

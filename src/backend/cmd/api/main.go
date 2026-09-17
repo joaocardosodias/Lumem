@@ -184,6 +184,7 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.POST("/ml/retrain", httpAdapter.RequireRole("enginner"), h.mlops.TriggerRetrain)
 		protected.GET("/ml/training-jobs", httpAdapter.RequireRole("enginner"), h.mlops.ListTrainingJobs)
 		protected.GET("/ml/training-jobs/:id", httpAdapter.RequireRole("enginner"), h.mlops.GetTrainingJob)
+		protected.POST("/ml/training-jobs/:id/resume", httpAdapter.RequireRole("enginner"), h.mlops.ResumeTraining)
 		protected.GET("/ml/drift", httpAdapter.RequireRole("enginner"), h.mlops.GetDrift)
 		protected.GET("/ml/performance", httpAdapter.RequireRole("enginner"), h.mlops.GetProductionPerformance)
 

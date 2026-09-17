@@ -102,6 +102,60 @@ func (uc *MLOpsUseCase) TriggerRetrain(ctx context.Context, userID string) (*dom
 	return job, nil
 }
 
+func (uc *MLOpsUseCase) ResumeTraining(ctx context.Context, id, userID string) (*domain.MLTrainingJob, error) {
+	stored, err := uc.repo.GetTrainingJob(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if stored.Status != "failed" {
+		return nil, domain.ErrInvalidConfig
+	}
+	failedStage := ""
+	for index := range stored.Progress.Stages {
+		if stored.Progress.Stages[index].Status == "failed" {
+			failedStage = stored.Progress.Stages[index].Key
+			break
+		}
+	}
+	if failedStage == "" {
+		return nil, domain.ErrInvalidConfig
+	}
+
+	if failedStage == "catalog_registration" {
+		if err := uc.ensureCompletedTrainingRegistered(ctx, stored); err != nil {
+			return nil, err
+		}
+		stored.Status = "completed"
+		stored.ErrorMessage = ""
+		now := time.Now().UTC()
+		stored.FinishedAt = &now
+		completeTrainingRegistration(stored)
+		if err := uc.repo.SaveTrainingJob(ctx, stored); err != nil {
+			return nil, err
+		}
+		return stored, nil
+	}
+
+	if uc.client == nil {
+		return nil, domain.ErrPredictionServiceUnavailable
+	}
+	job, err := uc.client.ResumeTraining(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	if job.CreatedAt.IsZero() {
+		job.CreatedAt = time.Now().UTC()
+	}
+	job.RequestedBy = userID
+	if job.Parameters == nil {
+		job.Parameters = map[string]any{}
+	}
+	if err := uc.repo.SaveTrainingJob(ctx, job); err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
 func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
 	stored, err := uc.repo.GetTrainingJob(ctx, id)
 	if err != nil {

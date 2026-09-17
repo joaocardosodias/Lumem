@@ -43,6 +43,33 @@ def initial_progress() -> dict:
     }
 
 
+def resume_progress(previous: dict, failed_stage: str) -> dict:
+    """Build a fresh progress document that preserves only successful predecessors."""
+    progress = initial_progress()
+    previous_by_key = {
+        stage.get('key'): stage
+        for stage in (previous.get('stages') or [])
+        if stage.get('key')
+    }
+    stage_keys = [key for key, _ in STAGE_DEFINITIONS]
+    if failed_stage not in stage_keys:
+        raise KeyError(f'checkpoint de retomada desconhecido: {failed_stage}')
+
+    resume_index = stage_keys.index(failed_stage)
+    for index, stage in enumerate(progress['stages']):
+        if index >= resume_index:
+            continue
+        previous_stage = previous_by_key.get(stage['key']) or {}
+        if previous_stage.get('status') not in {'completed', 'skipped'}:
+            raise ValueError(f'a etapa anterior {stage["key"]} não possui checkpoint concluído')
+        stage.update(previous_stage)
+        stage['status'] = 'completed'
+        stage['detail'] = 'Checkpoint reutilizado na retomada.'
+
+    progress['current_stage'] = 'queued'
+    return refresh_summary(progress)
+
+
 def _parse_time(value: str | None):
     if not value:
         return None
@@ -97,8 +124,17 @@ def fail_current_stage(progress: dict, detail: str) -> dict:
 class ProgressReporter:
     def __init__(self, path: str | None):
         self.path = Path(path) if path else None
-        self.progress = initial_progress()
+        self.progress = self._load_existing() or initial_progress()
         self._write()
+
+    def _load_existing(self) -> dict | None:
+        if self.path is None or not self.path.is_file():
+            return None
+        try:
+            loaded = json.loads(self.path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return None
+        return loaded if isinstance(loaded.get('stages'), list) else None
 
     def _write(self) -> None:
         if self.path is None:
@@ -115,6 +151,12 @@ class ProgressReporter:
                 (item for item in self.progress['stages'] if item.get('key') == current),
                 None,
             )
+            if current == key and active and active.get('status') == 'running':
+                if detail is not None:
+                    active['detail'] = detail
+                    refresh_summary(self.progress)
+                self._write()
+                return
             if active and active.get('status') == 'running':
                 update_stage(self.progress, current, 'completed')
         update_stage(self.progress, key, 'running', detail)

@@ -114,6 +114,29 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TrainingJob'}
         '404': {description: Job não encontrado}
+  /v1/training-jobs/{id}/resume:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                requested_by: {type: string}
+      responses:
+        '202':
+          description: Novo job retomado a partir do checkpoint da etapa com falha
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TrainingJob'}
+        '404': {description: Job original não encontrado}
+        '409': {description: Job não pode ser retomado ou já existe treinamento ativo}
 components:
   schemas:
     Door:

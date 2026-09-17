@@ -65,6 +65,63 @@ ARGS = parse_args()
 VERSION_DIR = ARTIFACTS / 'models' / ARGS.version
 SAIDA = VERSION_DIR / 'model.joblib'
 PROGRESS = ProgressReporter(os.getenv('MODEL_TRAIN_PROGRESS_PATH'))
+CHECKPOINT_DIR = Path(os.getenv('MODEL_TRAIN_CHECKPOINT_DIR', VERSION_DIR / 'checkpoints'))
+CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+STAGE_ORDER = [
+    'snapshot_acquisition',
+    'data_loading',
+    'feature_engineering',
+    'temporal_split',
+    'initial_training',
+    'feature_selection',
+    'final_training',
+    'evaluation',
+    'artifact_publish',
+]
+RESUME_FROM = os.getenv('MODEL_TRAIN_RESUME_FROM', '').strip()
+if RESUME_FROM and RESUME_FROM not in STAGE_ORDER:
+    raise ValueError(f'etapa de retomada inválida: {RESUME_FROM}')
+RESUME_INDEX = STAGE_ORDER.index(RESUME_FROM) if RESUME_FROM else 0
+
+
+def checkpoint_path(filename):
+    return CHECKPOINT_DIR / filename
+
+
+def load_checkpoint(filename):
+    path = checkpoint_path(filename)
+    if not path.is_file():
+        raise FileNotFoundError(f'checkpoint necessário para retomada não encontrado: {path}')
+    return path
+
+
+def write_json_checkpoint(filename, payload):
+    path = checkpoint_path(filename)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+    temporary.replace(path)
+
+
+def write_parquet_checkpoint(filename, frame):
+    path = checkpoint_path(filename)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    frame.to_parquet(temporary, index=False)
+    temporary.replace(path)
+
+
+def write_joblib_checkpoint(path, payload):
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    joblib.dump(payload, temporary)
+    temporary.replace(path)
+
+
+def completed_before(stage):
+    return STAGE_ORDER.index(stage) < RESUME_INDEX
+
+
+if RESUME_FROM:
+    PROGRESS.advance(RESUME_FROM, 'Retomada iniciada a partir do último checkpoint válido.')
 
 
 def log(msg):
@@ -101,19 +158,35 @@ def materialize_training_input(path_variable, default_path, key_variable, filena
     return target
 
 
-PROGRESS.advance('snapshot_acquisition')
-PAINEL = materialize_training_input(
-    'MODEL_PANEL_PATH', DEFAULT_PANEL, 'MODEL_PANEL_S3_KEY', 'painel.parquet'
-)
-ZM01_PATH = materialize_training_input(
-    'MODEL_MAINTENANCE_PATH', DEFAULT_MAINTENANCE, 'MODEL_MAINTENANCE_S3_KEY', 'ZM01_limpa.xlsx'
-)
+if completed_before('snapshot_acquisition'):
+    snapshot = json.loads(load_checkpoint('snapshot.json').read_text(encoding='utf-8'))
+    PAINEL = Path(snapshot['panel_path'])
+    ZM01_PATH = Path(snapshot['maintenance_path'])
+    needs_source_snapshots = RESUME_INDEX <= STAGE_ORDER.index('feature_engineering')
+    if needs_source_snapshots and (not PAINEL.is_file() or not ZM01_PATH.is_file()):
+        raise FileNotFoundError('os snapshots referenciados pelo checkpoint não estão mais disponíveis')
+else:
+    PROGRESS.advance('snapshot_acquisition')
+    PAINEL = materialize_training_input(
+        'MODEL_PANEL_PATH', DEFAULT_PANEL, 'MODEL_PANEL_S3_KEY', 'painel.parquet'
+    )
+    ZM01_PATH = materialize_training_input(
+        'MODEL_MAINTENANCE_PATH', DEFAULT_MAINTENANCE, 'MODEL_MAINTENANCE_S3_KEY', 'ZM01_limpa.xlsx'
+    )
+    write_json_checkpoint('snapshot.json', {
+        'panel_path': str(PAINEL),
+        'maintenance_path': str(ZM01_PATH),
+    })
 
 
-PROGRESS.advance('data_loading')
-log('lendo painel...')
-painel = pd.read_parquet(PAINEL)
-painel['Data'] = pd.to_datetime(painel['Data']).astype('datetime64[ns]')
+if completed_before('data_loading'):
+    painel = pd.read_parquet(load_checkpoint('loaded-panel.parquet'))
+else:
+    PROGRESS.advance('data_loading')
+    log('lendo painel...')
+    painel = pd.read_parquet(PAINEL)
+    painel['Data'] = pd.to_datetime(painel['Data']).astype('datetime64[ns]')
+    write_parquet_checkpoint('loaded-panel.parquet', painel)
 
 PAT_LOC = re.compile(r'^SP04-6-PSD-([A-Z]{3})(?:-PLT(\d)|-P(\d)S\d)?(?:-PP(\d{2})(PDM|PFX|PSE))?')
 
@@ -131,41 +204,53 @@ def carrega_ordens(caminho, aba):
     return df
 
 
-PROGRESS.advance('feature_engineering')
-log('recarregando zm01 pras features de ciclo...')
-zm01 = carrega_ordens(ZM01_PATH, 'ZM01_limpa')
+if completed_before('feature_engineering'):
+    painel = pd.read_parquet(load_checkpoint('engineered-panel.parquet'))
+    feature_metadata = json.loads(load_checkpoint('feature-metadata.json').read_text(encoding='utf-8'))
+    EST_CATEGORIAS = feature_metadata['station_categories']
+    FEATS = feature_metadata['features']
+else:
+    PROGRESS.advance('feature_engineering')
+    log('recarregando zm01 pras features de ciclo...')
+    zm01 = carrega_ordens(ZM01_PATH, 'ZM01_limpa')
 
-ev = zm01[['id_porta', 'Data']].dropna().drop_duplicates().sort_values(['id_porta', 'Data']).reset_index(drop=True)
-ev['ordem'] = ev.groupby('id_porta').cumcount() + 1
-ev['diff'] = ev.groupby('id_porta')['Data'].diff().dt.days
-ev['intervalo_medio_ate_aqui'] = ev.groupby('id_porta')['diff'] \
-    .apply(lambda s: s.expanding().mean()).reset_index(level=0, drop=True)
+    ev = zm01[['id_porta', 'Data']].dropna().drop_duplicates().sort_values(['id_porta', 'Data']).reset_index(drop=True)
+    ev['ordem'] = ev.groupby('id_porta').cumcount() + 1
+    ev['diff'] = ev.groupby('id_porta')['Data'].diff().dt.days
+    ev['intervalo_medio_ate_aqui'] = ev.groupby('id_porta')['diff'] \
+        .apply(lambda s: s.expanding().mean()).reset_index(level=0, drop=True)
 
-p = painel[['id_porta', 'Data']].copy()
-p['_idx'] = painel.index
-m = pd.merge_asof(p.sort_values('Data'),
-                   ev[['id_porta', 'Data', 'ordem', 'intervalo_medio_ate_aqui']].sort_values('Data'),
-                   on='Data', by='id_porta', direction='backward', allow_exact_matches=False)
-painel['n_corretivas_historico_total'] = pd.Series(m['ordem'].values, index=m['_idx'].values) \
-    .reindex(painel.index).fillna(0)
-_interv = pd.Series(m['intervalo_medio_ate_aqui'].values, index=m['_idx'].values).reindex(painel.index)
-painel['intervalo_medio_zm01'] = _interv.fillna(_interv.median())
-painel['razao_atraso_zm01'] = painel['dias_desde_zm01'] / painel['intervalo_medio_zm01']
-painel['dias_desde_ultima_corretiva'] = painel[['dias_desde_zm01', 'dias_desde_zm02']].min(axis=1)
+    p = painel[['id_porta', 'Data']].copy()
+    p['_idx'] = painel.index
+    m = pd.merge_asof(p.sort_values('Data'),
+                       ev[['id_porta', 'Data', 'ordem', 'intervalo_medio_ate_aqui']].sort_values('Data'),
+                       on='Data', by='id_porta', direction='backward', allow_exact_matches=False)
+    painel['n_corretivas_historico_total'] = pd.Series(m['ordem'].values, index=m['_idx'].values) \
+        .reindex(painel.index).fillna(0)
+    _interv = pd.Series(m['intervalo_medio_ate_aqui'].values, index=m['_idx'].values).reindex(painel.index)
+    painel['intervalo_medio_zm01'] = _interv.fillna(_interv.median())
+    painel['razao_atraso_zm01'] = painel['dias_desde_zm01'] / painel['intervalo_medio_zm01']
+    painel['dias_desde_ultima_corretiva'] = painel[['dias_desde_zm01', 'dias_desde_zm02']].min(axis=1)
 
-painel['rampa_7d'] = painel['n_total_7d'] - (painel['n_total_14d'] - painel['n_total_7d'])
-painel['razao_7d_30d'] = painel['n_total_7d'] / (painel['n_total_30d'] / 4 + 1)
-painel['frac_tecnicos_30d'] = painel['n_tecnicos_30d'] / (painel['n_total_30d'] + 1)
-painel['est'] = painel['est'].astype('category')
-painel['est_cod'] = painel['est'].cat.codes
-painel['via_cod'] = painel['via'].astype(int)
-EST_CATEGORIAS = painel['est'].cat.categories.tolist()
+    painel['rampa_7d'] = painel['n_total_7d'] - (painel['n_total_14d'] - painel['n_total_7d'])
+    painel['razao_7d_30d'] = painel['n_total_7d'] / (painel['n_total_30d'] / 4 + 1)
+    painel['frac_tecnicos_30d'] = painel['n_tecnicos_30d'] / (painel['n_total_30d'] + 1)
+    painel['est'] = painel['est'].astype('category')
+    painel['est_cod'] = painel['est'].cat.codes
+    painel['via_cod'] = painel['via'].astype(int)
+    EST_CATEGORIAS = painel['est'].cat.categories.tolist()
 
-EXCLUI = {'id_porta', 'Data', 'est', 'via', 'id_plat', 'y', 'n_falhas_7d_futuro', 'cobertura_30d', 'mes'}
-FEATS = [c for c in painel.columns if c not in EXCLUI]
+    EXCLUI = {'id_porta', 'Data', 'est', 'via', 'id_plat', 'y', 'n_falhas_7d_futuro', 'cobertura_30d', 'mes'}
+    FEATS = [c for c in painel.columns if c not in EXCLUI]
+    write_parquet_checkpoint('engineered-panel.parquet', painel)
+    write_json_checkpoint('feature-metadata.json', {
+        'station_categories': EST_CATEGORIAS,
+        'features': FEATS,
+    })
 log(f'{len(FEATS)} features candidatas')
 
-PROGRESS.advance('temporal_split')
+if not completed_before('temporal_split'):
+    PROGRESS.advance('temporal_split')
 FIM_TREINO, INI_TESTE, INI_VALID = (pd.Timestamp('2025-04-23'), pd.Timestamp('2025-05-01'),
                                      pd.Timestamp('2025-01-31'))
 treino = painel[painel['Data'] <= FIM_TREINO]
@@ -333,84 +418,121 @@ if ARGS.evaluate_existing:
     shutil.copyfile(source_artifact, SAIDA)
     log(f'avaliando artefato existente com {len(mantidas)} features e limiar {lim_final:.4f}')
 else:
-    import shap
+    mod_full = None
+    if completed_before('initial_training'):
+        if RESUME_INDEX <= STAGE_ORDER.index('feature_selection'):
+            mod_full = joblib.load(load_checkpoint('initial-model.joblib'))
+    else:
+        PROGRESS.advance('initial_training')
+        log('treinando com todas as features...')
+        mod_full, _ = treina_avalia(FEATS)
+        write_joblib_checkpoint(checkpoint_path('initial-model.joblib'), mod_full)
 
-    PROGRESS.advance('initial_training')
-    log('treinando com todas as features...')
-    mod_full, _ = treina_avalia(FEATS)
+    if completed_before('feature_selection'):
+        selected = json.loads(load_checkpoint('selected-features.json').read_text(encoding='utf-8'))
+        mantidas = selected['features']
+    else:
+        import shap
 
-    PROGRESS.advance('feature_selection')
-    log('calculando SHAP (TreeExplainer, amostra de 4000 linhas do teste)...')
-    amostra = teste.sample(n=4000, random_state=42)
-    explainer = shap.TreeExplainer(mod_full)
-    sv = explainer.shap_values(amostra[FEATS])
-    if isinstance(sv, list):
-        sv = sv[1]
-    if sv.ndim == 3:
-        sv = sv[:, :, 1]
+        PROGRESS.advance('feature_selection')
+        log('calculando SHAP (TreeExplainer, amostra de 4000 linhas do teste)...')
+        amostra = teste.sample(n=4000, random_state=42)
+        explainer = shap.TreeExplainer(mod_full)
+        sv = explainer.shap_values(amostra[FEATS])
+        if isinstance(sv, list):
+            sv = sv[1]
+        if sv.ndim == 3:
+            sv = sv[:, :, 1]
 
-    imp = pd.DataFrame({'feature': FEATS, 'shap_abs_medio': np.abs(sv).mean(axis=0)}) \
-        .sort_values('shap_abs_medio', ascending=False).reset_index(drop=True)
-    limiar_corte = imp['shap_abs_medio'].iloc[0] * 0.01
-    mantidas = imp[imp['shap_abs_medio'] >= limiar_corte]['feature'].tolist()
-    log(f'mantidas: {len(mantidas)} de {len(FEATS)} (corte SHAP em {limiar_corte:.5f})')
+        imp = pd.DataFrame({'feature': FEATS, 'shap_abs_medio': np.abs(sv).mean(axis=0)}) \
+            .sort_values('shap_abs_medio', ascending=False).reset_index(drop=True)
+        limiar_corte = imp['shap_abs_medio'].iloc[0] * 0.01
+        mantidas = imp[imp['shap_abs_medio'] >= limiar_corte]['feature'].tolist()
+        write_json_checkpoint('selected-features.json', {'features': mantidas})
+        log(f'mantidas: {len(mantidas)} de {len(FEATS)} (corte SHAP em {limiar_corte:.5f})')
 
-    PROGRESS.advance('final_training')
-    log('treinando modelo final com as features selecionadas...')
-    mod_final, lim_final = treina_avalia(mantidas)
-    log(f'limiar final: {lim_final:.4f}')
-    joblib.dump({'model': mod_final, 'features': mantidas, 'threshold': float(lim_final),
-                 'est_categorias': EST_CATEGORIAS, 'version': ARGS.version}, SAIDA)
+    if completed_before('final_training'):
+        if not SAIDA.is_file():
+            raise FileNotFoundError(f'checkpoint do modelo final não encontrado: {SAIDA}')
+        bundle = joblib.load(SAIDA)
+        mod_final = bundle['model']
+        mantidas = list(bundle['features'])
+        lim_final = float(bundle['threshold'])
+    else:
+        PROGRESS.advance('final_training')
+        log('treinando modelo final com as features selecionadas...')
+        mod_final, lim_final = treina_avalia(mantidas)
+        log(f'limiar final: {lim_final:.4f}')
+        write_joblib_checkpoint(
+            SAIDA,
+            {
+                'model': mod_final,
+                'features': mantidas,
+                'threshold': float(lim_final),
+                'est_categorias': EST_CATEGORIAS,
+                'version': ARGS.version,
+            },
+        )
 
-PROGRESS.advance('evaluation')
-test_probabilities = mod_final.predict_proba(teste[mantidas])[:, 1]
-train_probabilities = mod_final.predict_proba(treino[mantidas])[:, 1]
-threshold_metrics = [
-    metricas_classificacao(teste['y'].to_numpy(), test_probabilities, threshold)
-    for threshold in np.round(np.arange(0.05, 0.951, 0.01), 2)
-]
-recommended = min(threshold_metrics, key=lambda item: abs(item['threshold'] - lim_final))
-model_sha256 = hash_file(SAIDA)
-dataset_columns = ['Data', 'y', *mantidas]
-dataset_sha256 = hash_dataframe(teste[dataset_columns])
-feature_importance = []
-if hasattr(mod_final, 'feature_importances_'):
-    for feature, importance in sorted(
-        zip(mantidas, mod_final.feature_importances_), key=lambda item: item[1], reverse=True
-    ):
-        feature_importance.append({'feature': feature, 'importance': float(importance)})
+if completed_before('evaluation'):
+    evaluation_checkpoint = json.loads(load_checkpoint('evaluation.json').read_text(encoding='utf-8'))
+    manifest = evaluation_checkpoint['manifest']
+    threshold_metrics = evaluation_checkpoint['threshold_metrics']
+    model_sha256 = manifest['model_sha256']
+else:
+    PROGRESS.advance('evaluation')
+    test_probabilities = mod_final.predict_proba(teste[mantidas])[:, 1]
+    train_probabilities = mod_final.predict_proba(treino[mantidas])[:, 1]
+    threshold_metrics = [
+        metricas_classificacao(teste['y'].to_numpy(), test_probabilities, threshold)
+        for threshold in np.round(np.arange(0.05, 0.951, 0.01), 2)
+    ]
+    recommended = min(threshold_metrics, key=lambda item: abs(item['threshold'] - lim_final))
+    model_sha256 = hash_file(SAIDA)
+    dataset_columns = ['Data', 'y', *mantidas]
+    dataset_sha256 = hash_dataframe(teste[dataset_columns])
+    feature_importance = []
+    if hasattr(mod_final, 'feature_importances_'):
+        for feature, importance in sorted(
+            zip(mantidas, mod_final.feature_importances_), key=lambda item: item[1], reverse=True
+        ):
+            feature_importance.append({'feature': feature, 'importance': float(importance)})
 
-manifest = {
-    'schema_version': 1,
-    'model_version': ARGS.version,
-    'model_sha256': model_sha256,
-    'dataset_sha256': dataset_sha256,
-    'artifact_uri': f'local://artifacts/models/{ARGS.version}/model.joblib',
-    'algorithm': 'RandomForestClassifier',
-    'hyperparameters': mod_final.get_params(),
-    'features': mantidas,
-    'target': 'falha_nos_proximos_7_dias',
-    'train_end': str(FIM_TREINO.date()),
-    'test_start': str(teste['Data'].min().date()),
-    'test_end': str(teste['Data'].max().date()),
-    'test_rows': int(len(teste)),
-    'positive_rows': int(teste['y'].sum()),
-    'generated_at': datetime.now(timezone.utc).isoformat(),
-    'recommended_threshold': float(recommended['threshold']),
-    'train_metrics': {
-        'roc_auc': float(roc_auc_score(treino['y'], train_probabilities)),
-        'pr_auc': float(average_precision_score(treino['y'], train_probabilities)),
-        **metricas_classificacao(treino['y'].to_numpy(), train_probabilities, lim_final),
-    },
-    'test_metrics': {
-        'roc_auc': float(roc_auc_score(teste['y'], test_probabilities)),
-        'pr_auc': float(average_precision_score(teste['y'], test_probabilities)),
-        **recommended,
-    },
-    'threshold_metrics': threshold_metrics,
-    'feature_importance': feature_importance,
-    'reference_distribution': reference_distribution(treino[mantidas]),
-}
+    manifest = {
+        'schema_version': 1,
+        'model_version': ARGS.version,
+        'model_sha256': model_sha256,
+        'dataset_sha256': dataset_sha256,
+        'artifact_uri': f'local://artifacts/models/{ARGS.version}/model.joblib',
+        'algorithm': 'RandomForestClassifier',
+        'hyperparameters': mod_final.get_params(),
+        'features': mantidas,
+        'target': 'falha_nos_proximos_7_dias',
+        'train_end': str(FIM_TREINO.date()),
+        'test_start': str(teste['Data'].min().date()),
+        'test_end': str(teste['Data'].max().date()),
+        'test_rows': int(len(teste)),
+        'positive_rows': int(teste['y'].sum()),
+        'generated_at': datetime.now(timezone.utc).isoformat(),
+        'recommended_threshold': float(recommended['threshold']),
+        'train_metrics': {
+            'roc_auc': float(roc_auc_score(treino['y'], train_probabilities)),
+            'pr_auc': float(average_precision_score(treino['y'], train_probabilities)),
+            **metricas_classificacao(treino['y'].to_numpy(), train_probabilities, lim_final),
+        },
+        'test_metrics': {
+            'roc_auc': float(roc_auc_score(teste['y'], test_probabilities)),
+            'pr_auc': float(average_precision_score(teste['y'], test_probabilities)),
+            **recommended,
+        },
+        'threshold_metrics': threshold_metrics,
+        'feature_importance': feature_importance,
+        'reference_distribution': reference_distribution(treino[mantidas]),
+    }
+    write_json_checkpoint('evaluation.json', {
+        'manifest': manifest,
+        'threshold_metrics': threshold_metrics,
+    })
 
 PROGRESS.advance('artifact_publish')
 metrics_path = VERSION_DIR / 'threshold-metrics.json'

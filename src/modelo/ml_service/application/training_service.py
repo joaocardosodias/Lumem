@@ -12,6 +12,7 @@ from pathlib import Path
 from ml_service.application.training_progress import (
     fail_current_stage,
     initial_progress,
+    resume_progress,
 )
 
 
@@ -85,7 +86,11 @@ class TrainingService:
                 'version': version,
                 'status': 'queued',
                 'requested_by': requested_by,
-                'parameters': {'random_state': 42, 'evaluation_horizon_days': 7},
+                'parameters': {
+                    'random_state': 42,
+                    'evaluation_horizon_days': 7,
+                    'checkpoint_job_id': job_id,
+                },
                 'created_at': _now(),
                 'started_at': None,
                 'finished_at': None,
@@ -94,13 +99,66 @@ class TrainingService:
                 'progress': initial_progress(),
             }
             self.store.save(job)
-            threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
+            threading.Thread(target=self._run, args=(job_id, None), daemon=True).start()
+        return job
+
+    def resume(self, source_job_id: str, requested_by: str = '') -> dict:
+        with self._start_lock:
+            if self._has_active_job():
+                raise RuntimeError('já existe um treinamento em execução')
+            source = self.store.get(source_job_id)
+            if source.get('status') != 'failed':
+                raise ValueError('somente treinamentos com falha podem ser retomados')
+
+            failed_stage = next(
+                (
+                    stage.get('key')
+                    for stage in source.get('progress', {}).get('stages', [])
+                    if stage.get('status') == 'failed'
+                ),
+                None,
+            )
+            if not failed_stage:
+                raise ValueError('o treinamento não informa a etapa que falhou')
+
+            job_id = str(uuid.uuid4())
+            parameters = dict(source.get('parameters') or {})
+            parameters.update({
+                'resume_from_stage': failed_stage,
+                'resumed_from_job_id': source_job_id,
+                'checkpoint_job_id': parameters.get('checkpoint_job_id') or source_job_id,
+            })
+            job = {
+                'id': job_id,
+                'version': source['version'],
+                'status': 'queued',
+                'requested_by': requested_by,
+                'parameters': parameters,
+                'created_at': _now(),
+                'started_at': None,
+                'finished_at': None,
+                'error': None,
+                'manifest': None,
+                'progress': resume_progress(source.get('progress') or {}, failed_stage),
+            }
+            self.store.save(job)
+            progress_dir = self.store.root / 'progress'
+            progress_dir.mkdir(parents=True, exist_ok=True)
+            (progress_dir / f'{job_id}.json').write_text(
+                json.dumps(job['progress'], ensure_ascii=False),
+                encoding='utf-8',
+            )
+            threading.Thread(
+                target=self._run,
+                args=(job_id, source_job_id),
+                daemon=True,
+            ).start()
         return job
 
     def get(self, job_id: str) -> dict:
         return self.store.get(job_id)
 
-    def _run(self, job_id: str) -> None:
+    def _run(self, job_id: str, resume_source_job_id: str | None) -> None:
         job = self.store.get(job_id)
         job['status'] = 'running'
         job['started_at'] = _now()
@@ -120,6 +178,13 @@ class TrainingService:
             command = [part.format(version=job['version'], job_id=job_id) for part in shlex.split(template)]
             environment = os.environ.copy()
             environment['MODEL_TRAIN_PROGRESS_PATH'] = str(progress_path)
+            checkpoint_job_id = job.get('parameters', {}).get('checkpoint_job_id') or resume_source_job_id or job_id
+            checkpoint_dir = self.store.root / 'checkpoints' / checkpoint_job_id
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            environment['MODEL_TRAIN_CHECKPOINT_DIR'] = str(checkpoint_dir)
+            if resume_source_job_id:
+                environment['MODEL_TRAIN_RESUME_FROM'] = str(job['parameters']['resume_from_stage'])
+                environment['MODEL_TRAIN_RESUMED_FROM_JOB_ID'] = resume_source_job_id
             timeout_seconds = int(os.getenv('MODEL_TRAIN_TIMEOUT_SECONDS', '3600'))
             deadline = time.monotonic() + timeout_seconds
 

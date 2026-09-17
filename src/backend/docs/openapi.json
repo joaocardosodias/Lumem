@@ -800,6 +800,20 @@
         }
       }
     },
+    "/api/v1/ml/training-jobs/{id}/resume": {
+      "post": {
+        "summary": "Retomar treinamento a partir da etapa com falha",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "202": {
+            "description": "Novo job criado com reaproveitamento dos checkpoints concluídos",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          },
+          "409": { "description": "Job não pode ser retomado" }
+        }
+      }
+    },
     "/api/v1/ml/drift": {
       "get": {
         "summary": "Calcular e auditar drift da versão ativa",

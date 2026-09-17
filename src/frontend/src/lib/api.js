@@ -524,6 +524,11 @@ export const api = {
   getTrainingJob(id) {
     return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}`).then((result) => result.data)
   },
+  resumeTraining(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}/resume`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
   getTrainingJobs(limit = 20) {
     return request(`/api/v1/ml/training-jobs${queryString({ limit })}`).then((result) => result.data)
   },

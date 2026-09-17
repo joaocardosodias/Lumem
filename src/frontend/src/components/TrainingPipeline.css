@@ -93,6 +93,11 @@
   min-width: 0;
 }
 
+.pipeline-flow-card-shell {
+  position: relative;
+  width: 100%;
+}
+
 .pipeline-flow-card {
   position: relative;
   z-index: 1;
@@ -262,6 +267,50 @@
 
 .pipeline-flow-card.is-failed .pipeline-flow-card__title {
   color: #991b1b;
+}
+
+.pipeline-flow-card__retry {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #ef4444;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #dc2626;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(127, 29, 29, 0.12);
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.pipeline-flow-card__retry:hover:not(:disabled) {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.pipeline-flow-card__retry:focus-visible {
+  outline: 3px solid rgba(220, 38, 38, 0.2);
+  outline-offset: 2px;
+}
+
+.pipeline-flow-card__retry:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.pipeline-flow-card__retry svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pipeline-flow-card__retry.is-loading svg {
+  animation: pipeline-retry-spin 800ms linear infinite;
 }
 
 .pipeline-flow-card.is-completed .pipeline-flow-card__icon-box {
@@ -502,6 +551,7 @@
   font-size: 12px;
   line-height: 1.45;
 }
+
 @keyframes pipeline-edge-fill-x {
   to { transform: scaleX(1); }
 }
@@ -512,6 +562,10 @@
 
 @keyframes pipeline-card-trace {
   to { stroke-dashoffset: 0; }
+}
+
+@keyframes pipeline-retry-spin {
+  to { transform: rotate(-360deg); }
 }
 
 @keyframes pipeline-card-fill-x {

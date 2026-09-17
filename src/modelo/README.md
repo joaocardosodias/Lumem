@@ -26,6 +26,7 @@ O backend usa exclusivamente as rotas versionadas descritas em `openapi.yaml`:
 - `GET /v1/models/{version}/metrics`: devolve a curva de thresholds produzida no teste temporal.
 - `POST /v1/models/{version}/activate`: valida o candidato e altera o ponteiro ativo.
 - `POST /v1/training-jobs` e `GET /v1/training-jobs/{id}`: iniciam e acompanham treinamento real assíncrono. A resposta inclui `progress.stages`, com checkpoints, horários, durações e a etapa exata de uma eventual falha.
+- `POST /v1/training-jobs/{id}/resume`: cria uma nova tentativa para um job com falha, reutiliza as saídas persistidas das etapas anteriores e recomeça exatamente na etapa interrompida.
 - `GET /v1/models/{version}/drift`: compara as features atuais com a distribuição de referência do treinamento.
 - `GET /health/live` e `GET /health/ready`: distinguem processo vivo de modelo realmente carregado.
 
@@ -60,7 +61,7 @@ Em `MODEL_REGISTRY_DRIVER=s3`, a candidata é publicada no bucket privado `artef
 
 No primeiro boot, `model-registry-init` envia `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` ao bucket `training-data`. O treinamento baixa as chaves configuradas por `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY` para `MODEL_TRAINING_CACHE_DIR`. O mesmo inicializador publica o modelo `v1.0.0`, seu manifest e a curva de thresholds em `artefacts` caso ainda não exista um ponteiro ativo.
 
-Os jobs ficam em `/var/lib/g04/training-jobs`, enquanto modelos e datasets persistem no MinIO. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
+Os jobs e seus checkpoints intermediários ficam no volume persistente montado em `/var/lib/g04/training-jobs`, enquanto modelos e datasets persistem no MinIO. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. A retomada reaproveita snapshots, painéis processados, seleção de features, modelos e avaliação já concluídos; somente a etapa com falha e as posteriores são executadas novamente. Retomadas sucessivas mantêm a mesma raiz de checkpoints. Apenas um treinamento pode ser executado por instância de serviço.
 
 ## Execução local
 

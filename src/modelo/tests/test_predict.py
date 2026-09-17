@@ -53,6 +53,17 @@ class FakeTrainingService:
             raise LookupError('não encontrado')
         return {'id': job_id, 'version': 'v2', 'status': 'running'}
 
+    def resume(self, job_id, requested_by=''):
+        if job_id != 'job-1':
+            raise LookupError('não encontrado')
+        return {
+            'id': 'job-2',
+            'version': 'v2',
+            'status': 'queued',
+            'requested_by': requested_by,
+            'parameters': {'resumed_from_job_id': job_id},
+        }
+
 
 artifact = MODEL_ROOT / 'artifacts' / 'modelo_5.joblib'
 app = create_app(
@@ -125,6 +136,12 @@ def test_training_job_retorna_estado_real_do_executor():
     assert created.status_code == 202
     assert created.get_json()['status'] == 'queued'
     assert client.get('/v1/training-jobs/job-1').get_json()['status'] == 'running'
+
+
+def test_training_job_pode_ser_retomado_do_checkpoint():
+    response = client.post('/v1/training-jobs/job-1/resume', json={'requested_by': 'engineer'})
+    assert response.status_code == 202
+    assert response.get_json()['parameters']['resumed_from_job_id'] == 'job-1'
 
 
 def test_endpoint_legado_marca_depreciacao():

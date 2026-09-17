@@ -92,6 +92,16 @@ func (h *MLOpsHandler) TriggerRetrain(c *gin.Context) {
 	c.JSON(http.StatusAccepted, run)
 }
 
+func (h *MLOpsHandler) ResumeTraining(c *gin.Context) {
+	userID := c.GetString("userID")
+	run, err := h.mlopsUC.ResumeTraining(c.Request.Context(), c.Param("id"), userID)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, run)
+}
+
 func (h *MLOpsHandler) GetDrift(c *gin.Context) {
 	drift, err := h.mlopsUC.GetDrift(c.Request.Context())
 	if err != nil {
