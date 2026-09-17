@@ -293,18 +293,19 @@ func (r *PostgresMLOpsRepository) SaveTrainingJob(ctx context.Context, job *doma
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO ml_training_jobs (
 			id, requested_version, status, requested_by, parameters, manifest,
-			error_message, created_at, started_at, finished_at, updated_at
-		) VALUES ($1, $2, $3, NULLIF($4, ''), $5::jsonb, $6::jsonb, NULLIF($7, ''), $8, $9, $10, CURRENT_TIMESTAMP)
+			progress, error_message, created_at, started_at, finished_at, updated_at
+		) VALUES ($1, $2, $3, NULLIF($4, ''), $5::jsonb, $6::jsonb, $7::jsonb, NULLIF($8, ''), $9, $10, $11, CURRENT_TIMESTAMP)
 		ON CONFLICT (id) DO UPDATE SET
 			requested_version = EXCLUDED.requested_version,
 			status = EXCLUDED.status,
 			manifest = EXCLUDED.manifest,
+			progress = EXCLUDED.progress,
 			error_message = EXCLUDED.error_message,
 			started_at = EXCLUDED.started_at,
 			finished_at = EXCLUDED.finished_at,
 			updated_at = CURRENT_TIMESTAMP
 	`, job.ID, job.RequestedVersion, job.Status, job.RequestedBy,
-		marshalJSON(job.Parameters, "{}"), marshalJSON(job.Manifest, "{}"), job.ErrorMessage,
+		marshalJSON(job.Parameters, "{}"), marshalJSON(job.Manifest, "{}"), marshalJSON(job.Progress, "{}"), job.ErrorMessage,
 		job.CreatedAt, job.StartedAt, job.FinishedAt)
 	return err
 }
@@ -312,7 +313,7 @@ func (r *PostgresMLOpsRepository) SaveTrainingJob(ctx context.Context, job *doma
 func (r *PostgresMLOpsRepository) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
 	job, err := scanTrainingJob(r.db.QueryRowContext(ctx, `
 		SELECT id, requested_version, status, COALESCE(requested_by, ''), parameters,
-		       manifest, COALESCE(error_message, ''), created_at, started_at, finished_at
+		       manifest, progress, COALESCE(error_message, ''), created_at, started_at, finished_at
 		FROM ml_training_jobs WHERE id = $1
 	`, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -323,9 +324,9 @@ func (r *PostgresMLOpsRepository) GetTrainingJob(ctx context.Context, id string)
 
 func scanTrainingJob(row scanner) (*domain.MLTrainingJob, error) {
 	var job domain.MLTrainingJob
-	var parametersJSON, manifestJSON []byte
+	var parametersJSON, manifestJSON, progressJSON []byte
 	err := row.Scan(&job.ID, &job.RequestedVersion, &job.Status, &job.RequestedBy,
-		&parametersJSON, &manifestJSON, &job.ErrorMessage, &job.CreatedAt, &job.StartedAt, &job.FinishedAt)
+		&parametersJSON, &manifestJSON, &progressJSON, &job.ErrorMessage, &job.CreatedAt, &job.StartedAt, &job.FinishedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +334,9 @@ func scanTrainingJob(row scanner) (*domain.MLTrainingJob, error) {
 		return nil, err
 	}
 	if err := json.Unmarshal(manifestJSON, &job.Manifest); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(progressJSON, &job.Progress); err != nil {
 		return nil, err
 	}
 	return &job, nil
@@ -344,7 +348,7 @@ func (r *PostgresMLOpsRepository) ListTrainingJobs(ctx context.Context, limit in
 	}
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, requested_version, status, COALESCE(requested_by, ''), parameters,
-		       manifest, COALESCE(error_message, ''), created_at, started_at, finished_at
+		       manifest, progress, COALESCE(error_message, ''), created_at, started_at, finished_at
 		FROM ml_training_jobs
 		ORDER BY created_at DESC
 		LIMIT $1

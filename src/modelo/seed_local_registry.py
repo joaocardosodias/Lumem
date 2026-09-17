@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError, EndpointConnectionError
 
 
@@ -25,18 +26,33 @@ def client_from_environment():
         region_name=os.getenv('MODEL_S3_REGION', 'us-east-1'),
         aws_access_key_id=os.environ['MODEL_S3_ACCESS_KEY_ID'],
         aws_secret_access_key=os.environ['MODEL_S3_SECRET_ACCESS_KEY'],
+        config=Config(
+            connect_timeout=2,
+            read_timeout=5,
+            retries={'max_attempts': 1, 'mode': 'standard'},
+        ),
     )
 
 
-def wait_for_storage(client, bucket: str, attempts: int = 60) -> None:
+def wait_for_storage(client, bucket: str, attempts: int = 20) -> None:
+    print(f'aguardando object storage e bucket {bucket}...', flush=True)
+    last_error = None
     for attempt in range(attempts):
         try:
             client.head_bucket(Bucket=bucket)
+            print('object storage disponível', flush=True)
             return
-        except (ClientError, EndpointConnectionError):
+        except (ClientError, EndpointConnectionError) as error:
+            last_error = error
             if attempt == attempts - 1:
-                raise
+                break
+            if attempt and attempt % 5 == 0:
+                print(f'object storage ainda indisponível ({attempt + 1}/{attempts})', flush=True)
             time.sleep(2)
+    raise RuntimeError(
+        'object storage indisponível em MODEL_S3_ENDPOINT; '
+        'inicie minio e minio-init antes do serviço de ML'
+    ) from last_error
 
 
 def object_exists(client, bucket: str, key: str) -> bool:
@@ -53,7 +69,9 @@ def object_exists(client, bucket: str, key: str) -> bool:
 
 def upload_if_missing(client, bucket: str, key: str, source: Path, content_type: str) -> None:
     if object_exists(client, bucket, key):
+        print(f's3://{bucket}/{key} já existe', flush=True)
         return
+    print(f'enviando {source.name} para s3://{bucket}/{key}...', flush=True)
     client.upload_file(
         str(source),
         bucket,
@@ -63,6 +81,7 @@ def upload_if_missing(client, bucket: str, key: str, source: Path, content_type:
             'Metadata': {'sha256': sha256_file(source)},
         },
     )
+    print(f's3://{bucket}/{key} enviado', flush=True)
 
 
 def seed_training_data(client) -> None:
@@ -165,8 +184,11 @@ def seed_candidates(client) -> None:
 def main() -> None:
     client = client_from_environment()
     wait_for_storage(client, os.getenv('MODEL_S3_BUCKET', 'artefacts'))
+    print('verificando snapshots de treinamento...', flush=True)
     seed_training_data(client)
+    print('verificando modelo ativo...', flush=True)
     seed_active_model(client)
+    print('verificando modelos candidatos...', flush=True)
     seed_candidates(client)
     print('registry local e snapshots inicializados com sucesso', flush=True)
 

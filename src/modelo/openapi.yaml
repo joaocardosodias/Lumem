@@ -185,7 +185,7 @@ components:
           items: {$ref: '#/components/schemas/ThresholdMetric'}
     TrainingJob:
       type: object
-      required: [id, version, status, created_at]
+      required: [id, version, status, created_at, progress]
       properties:
         id: {type: string, format: uuid}
         version: {type: string}
@@ -193,10 +193,34 @@ components:
         requested_by: {type: string}
         parameters: {type: object, additionalProperties: true}
         manifest: {type: object, additionalProperties: true, nullable: true}
+        progress: {$ref: '#/components/schemas/TrainingProgress'}
         error: {type: string, nullable: true}
         created_at: {type: string, format: date-time}
         started_at: {type: string, format: date-time, nullable: true}
         finished_at: {type: string, format: date-time, nullable: true}
+    TrainingProgress:
+      type: object
+      required: [current_stage, completed_steps, total_steps, percent, stages]
+      properties:
+        current_stage: {type: string}
+        completed_steps: {type: integer, minimum: 0}
+        total_steps: {type: integer, minimum: 0}
+        percent: {type: integer, minimum: 0, maximum: 100}
+        updated_at: {type: string, format: date-time}
+        stages:
+          type: array
+          items: {$ref: '#/components/schemas/TrainingStage'}
+    TrainingStage:
+      type: object
+      required: [key, label, status]
+      properties:
+        key: {type: string}
+        label: {type: string}
+        status: {type: string, enum: [pending, running, completed, failed, skipped]}
+        started_at: {type: string, format: date-time, nullable: true}
+        finished_at: {type: string, format: date-time, nullable: true}
+        duration_ms: {type: integer, minimum: 0, nullable: true}
+        detail: {type: string, nullable: true}
     DriftReport:
       type: object
       required: [status, model_version, evaluated_at, features_monitored, features_drift]

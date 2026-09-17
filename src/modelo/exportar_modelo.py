@@ -21,6 +21,8 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
+from ml_service.application.training_progress import ProgressReporter
+
 
 def load_local_environment():
     env_path = Path(__file__).resolve().parent.parent / 'backend' / '.env'
@@ -62,6 +64,7 @@ def parse_args():
 ARGS = parse_args()
 VERSION_DIR = ARTIFACTS / 'models' / ARGS.version
 SAIDA = VERSION_DIR / 'model.joblib'
+PROGRESS = ProgressReporter(os.getenv('MODEL_TRAIN_PROGRESS_PATH'))
 
 
 def log(msg):
@@ -98,6 +101,7 @@ def materialize_training_input(path_variable, default_path, key_variable, filena
     return target
 
 
+PROGRESS.advance('snapshot_acquisition')
 PAINEL = materialize_training_input(
     'MODEL_PANEL_PATH', DEFAULT_PANEL, 'MODEL_PANEL_S3_KEY', 'painel.parquet'
 )
@@ -106,6 +110,7 @@ ZM01_PATH = materialize_training_input(
 )
 
 
+PROGRESS.advance('data_loading')
 log('lendo painel...')
 painel = pd.read_parquet(PAINEL)
 painel['Data'] = pd.to_datetime(painel['Data']).astype('datetime64[ns]')
@@ -126,6 +131,7 @@ def carrega_ordens(caminho, aba):
     return df
 
 
+PROGRESS.advance('feature_engineering')
 log('recarregando zm01 pras features de ciclo...')
 zm01 = carrega_ordens(ZM01_PATH, 'ZM01_limpa')
 
@@ -159,6 +165,7 @@ EXCLUI = {'id_porta', 'Data', 'est', 'via', 'id_plat', 'y', 'n_falhas_7d_futuro'
 FEATS = [c for c in painel.columns if c not in EXCLUI]
 log(f'{len(FEATS)} features candidatas')
 
+PROGRESS.advance('temporal_split')
 FIM_TREINO, INI_TESTE, INI_VALID = (pd.Timestamp('2025-04-23'), pd.Timestamp('2025-05-01'),
                                      pd.Timestamp('2025-01-31'))
 treino = painel[painel['Data'] <= FIM_TREINO]
@@ -313,6 +320,11 @@ def publish_to_s3(manifest, metrics_path):
 
 VERSION_DIR.mkdir(parents=True, exist_ok=True)
 if ARGS.evaluate_existing:
+    PROGRESS.advance('initial_training')
+    PROGRESS.skip(
+        ['initial_training', 'feature_selection', 'final_training'],
+        'Avaliação solicitada para um artefato já treinado.',
+    )
     source_artifact = ARTIFACTS / 'modelo_5.joblib'
     bundle = joblib.load(source_artifact)
     mod_final = bundle['model']
@@ -323,9 +335,11 @@ if ARGS.evaluate_existing:
 else:
     import shap
 
+    PROGRESS.advance('initial_training')
     log('treinando com todas as features...')
     mod_full, _ = treina_avalia(FEATS)
 
+    PROGRESS.advance('feature_selection')
     log('calculando SHAP (TreeExplainer, amostra de 4000 linhas do teste)...')
     amostra = teste.sample(n=4000, random_state=42)
     explainer = shap.TreeExplainer(mod_full)
@@ -341,12 +355,14 @@ else:
     mantidas = imp[imp['shap_abs_medio'] >= limiar_corte]['feature'].tolist()
     log(f'mantidas: {len(mantidas)} de {len(FEATS)} (corte SHAP em {limiar_corte:.5f})')
 
+    PROGRESS.advance('final_training')
     log('treinando modelo final com as features selecionadas...')
     mod_final, lim_final = treina_avalia(mantidas)
     log(f'limiar final: {lim_final:.4f}')
     joblib.dump({'model': mod_final, 'features': mantidas, 'threshold': float(lim_final),
                  'est_categorias': EST_CATEGORIAS, 'version': ARGS.version}, SAIDA)
 
+PROGRESS.advance('evaluation')
 test_probabilities = mod_final.predict_proba(teste[mantidas])[:, 1]
 train_probabilities = mod_final.predict_proba(treino[mantidas])[:, 1]
 threshold_metrics = [
@@ -396,6 +412,7 @@ manifest = {
     'reference_distribution': reference_distribution(treino[mantidas]),
 }
 
+PROGRESS.advance('artifact_publish')
 metrics_path = VERSION_DIR / 'threshold-metrics.json'
 metrics_path.write_text(json.dumps(threshold_metrics, indent=2), encoding='utf-8')
 manifest_path = VERSION_DIR / 'manifest.json'
@@ -416,3 +433,4 @@ if ARGS.publish or ARGS.activate_s3 or os.getenv('MODEL_REGISTRY_DRIVER', 'local
     publish_to_s3(manifest, metrics_path)
 log(f'bundle salvo em {SAIDA}')
 log(f"curva salva com {len(threshold_metrics)} thresholds; SHA-256 {model_sha256[:12]}…")
+PROGRESS.complete_current('Artefato e manifest disponíveis para registro.')

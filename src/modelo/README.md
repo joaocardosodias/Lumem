@@ -25,7 +25,7 @@ O backend usa exclusivamente as rotas versionadas descritas em `openapi.yaml`:
 - `GET /v1/models/active`: devolve o manifest da versão carregada.
 - `GET /v1/models/{version}/metrics`: devolve a curva de thresholds produzida no teste temporal.
 - `POST /v1/models/{version}/activate`: valida o candidato e altera o ponteiro ativo.
-- `POST /v1/training-jobs` e `GET /v1/training-jobs/{id}`: iniciam e acompanham treinamento real assíncrono.
+- `POST /v1/training-jobs` e `GET /v1/training-jobs/{id}`: iniciam e acompanham treinamento real assíncrono. A resposta inclui `progress.stages`, com checkpoints, horários, durações e a etapa exata de uma eventual falha.
 - `GET /v1/models/{version}/drift`: compara as features atuais com a distribuição de referência do treinamento.
 - `GET /health/live` e `GET /health/ready`: distinguem processo vivo de modelo realmente carregado.
 
@@ -63,6 +63,18 @@ No primeiro boot, `model-registry-init` envia `models/modelo-5/painel.parquet` e
 Os jobs ficam em `/var/lib/g04/training-jobs`, enquanto modelos e datasets persistem no MinIO. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. Apenas um treinamento pode ser executado por instância de serviço.
 
 ## Execução local
+
+O Compose do serviço de ML usa a rede e o MinIO da stack do backend. Inicie os buckets antes do serviço:
+
+```bash
+cd ../backend
+docker compose up -d minio minio-init
+
+cd ../modelo
+docker compose up -d --build
+```
+
+Se `model-registry-init` informar que o object storage está indisponível, confirme que `minio-linha4` está ativo na rede `backend-network`.
 
 ```bash
 pip install -r requirements.txt

@@ -1107,10 +1107,37 @@
           "requested_by": { "type": "string" },
           "parameters": { "type": "object", "additionalProperties": true },
           "manifest": { "type": "object", "additionalProperties": true },
+          "progress": { "$ref": "#/components/schemas/MLTrainingProgress" },
           "error": { "type": "string" },
           "created_at": { "type": "string", "format": "date-time" },
           "started_at": { "type": "string", "format": "date-time", "nullable": true },
           "finished_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "MLTrainingProgress": {
+        "type": "object",
+        "properties": {
+          "current_stage": { "type": "string" },
+          "completed_steps": { "type": "integer" },
+          "total_steps": { "type": "integer" },
+          "percent": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "stages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MLTrainingStage" }
+          }
+        }
+      },
+      "MLTrainingStage": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "label": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "skipped"] },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "finished_at": { "type": "string", "format": "date-time", "nullable": true },
+          "duration_ms": { "type": "integer", "nullable": true },
+          "detail": { "type": "string", "nullable": true }
         }
       },
       "MLDriftReport": {

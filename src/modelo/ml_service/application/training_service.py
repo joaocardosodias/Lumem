@@ -4,9 +4,15 @@ import shlex
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+from ml_service.application.training_progress import (
+    fail_current_stage,
+    initial_progress,
+)
 
 
 def _now() -> str:
@@ -29,6 +35,10 @@ class TrainingJobStore:
                 continue
             job['status'] = 'failed'
             job['error'] = 'o serviço de treinamento reiniciou antes da conclusão do processo'
+            job['progress'] = fail_current_stage(
+                job.get('progress') or initial_progress(),
+                job['error'],
+            )
             job['finished_at'] = _now()
             self.save(job)
 
@@ -81,6 +91,7 @@ class TrainingService:
                 'finished_at': None,
                 'error': None,
                 'manifest': None,
+                'progress': initial_progress(),
             }
             self.store.save(job)
             threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
@@ -96,19 +107,45 @@ class TrainingService:
         self.store.save(job)
         try:
             project_dir = Path(__file__).resolve().parents[2]
+            progress_dir = self.store.root / 'progress'
+            log_dir = self.store.root / 'logs'
+            progress_dir.mkdir(parents=True, exist_ok=True)
+            log_dir.mkdir(parents=True, exist_ok=True)
+            progress_path = progress_dir / f'{job_id}.json'
+            log_path = log_dir / f'{job_id}.log'
             template = os.getenv(
                 'MODEL_TRAIN_COMMAND',
                 f'{shlex.quote(sys.executable)} exportar_modelo.py --version {{version}}',
             )
             command = [part.format(version=job['version'], job_id=job_id) for part in shlex.split(template)]
-            result = subprocess.run(
-                command,
-                cwd=project_dir,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=int(os.getenv('MODEL_TRAIN_TIMEOUT_SECONDS', '3600')),
-            )
+            environment = os.environ.copy()
+            environment['MODEL_TRAIN_PROGRESS_PATH'] = str(progress_path)
+            timeout_seconds = int(os.getenv('MODEL_TRAIN_TIMEOUT_SECONDS', '3600'))
+            deadline = time.monotonic() + timeout_seconds
+
+            with log_path.open('w+', encoding='utf-8') as output:
+                process = subprocess.Popen(
+                    command,
+                    cwd=project_dir,
+                    env=environment,
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+                while process.poll() is None:
+                    self._sync_progress(job, progress_path)
+                    if time.monotonic() >= deadline:
+                        process.kill()
+                        process.wait()
+                        raise TimeoutError(f'treinamento excedeu o limite de {timeout_seconds} segundos')
+                    time.sleep(0.5)
+                self._sync_progress(job, progress_path)
+                output.flush()
+                output.seek(0)
+                output_tail = output.read()[-2000:]
+                if process.returncode != 0:
+                    raise RuntimeError(output_tail or f'treinamento terminou com código {process.returncode}')
+
             manifest_path = project_dir / 'artifacts' / 'models' / job['version'] / 'manifest.json'
             if not manifest_path.is_file():
                 raise RuntimeError('treinamento terminou sem gerar o manifest versionado')
@@ -116,14 +153,24 @@ class TrainingService:
             if job['manifest'].get('model_version') != job['version']:
                 raise RuntimeError('manifest gerado pertence a outra versão')
             job['status'] = 'completed'
-            job['output_tail'] = result.stdout[-2000:]
+            job['output_tail'] = output_tail
         except Exception as error:
             job['status'] = 'failed'
-            if isinstance(error, subprocess.CalledProcessError):
-                detail = (error.stderr or error.stdout or str(error))[-2000:]
-            else:
-                detail = str(error)
+            detail = str(error)[-2000:]
             job['error'] = detail
+            job['progress'] = fail_current_stage(job.get('progress') or initial_progress(), detail)
         finally:
             job['finished_at'] = _now()
             self.store.save(job)
+
+    def _sync_progress(self, job: dict, progress_path: Path) -> None:
+        if not progress_path.is_file():
+            return
+        try:
+            progress = json.loads(progress_path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return
+        if progress == job.get('progress'):
+            return
+        job['progress'] = progress
+        self.store.save(job)

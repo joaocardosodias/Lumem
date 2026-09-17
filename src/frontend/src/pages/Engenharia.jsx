@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import TrainingPipeline from '../components/TrainingPipeline'
 import Button from '../components/Button'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -7,10 +8,12 @@ import { invalidateApplicationCache } from '../lib/appPrefetch'
 import { ThresholdComparisonCharts } from '../components/ThresholdComparisonCharts'
 import './Engenharia.css'
 
-function TriggerIcon() {
+
+function PromoteIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <path d="M8 11.5v-7m0 0L5.25 7.25M8 4.5l2.75 2.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 11.5v1h9v-1" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -74,6 +77,223 @@ function EngineeringLoading() {
   )
 }
 
+function formatModelDate(value, withTime = false) {
+  if (!value) return 'Indisponível'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Indisponível'
+  return withTime ? date.toLocaleString('pt-BR') : date.toLocaleDateString('pt-BR')
+}
+
+function formatTargetName(target) {
+  if (!target) return 'Não informado'
+  if (target === 'falha_nos_proximos_7_dias') return 'Falha nos próximos 7 dias'
+  const normalized = String(target).replaceAll('_', ' ')
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+function formatParameterName(name) {
+  const labels = {
+    n_estimators: 'Número de árvores',
+    max_depth: 'Profundidade máxima',
+    min_samples_leaf: 'Amostras mínimas por folha',
+    min_samples_split: 'Amostras mínimas para divisão',
+    class_weight: 'Peso das classes',
+    random_state: 'Semente aleatória',
+    max_features: 'Features por divisão',
+    criterion: 'Critério de divisão',
+    bootstrap: 'Amostragem bootstrap',
+    n_jobs: 'Processamento paralelo',
+  }
+  return labels[name] || name.replaceAll('_', ' ')
+}
+
+function formatParameterValue(value) {
+  if (value === null || value === undefined) return 'Não definido'
+  if (typeof value === 'boolean') return value ? 'Ativado' : 'Desativado'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
+const modelCardSections = [
+  { id: 'purpose', index: '01', label: 'Finalidade' },
+  { id: 'governance', index: '02', label: 'Governança' },
+  { id: 'validation', index: '03', label: 'Validação' },
+  { id: 'lineage', index: '04', label: 'Rastreabilidade' },
+  { id: 'configuration', index: '05', label: 'Configuração' },
+]
+
+function ModelCard({ model, operationalThreshold, onClose }) {
+  const [activeSection, setActiveSection] = useState('purpose')
+  const manifest = model?.manifest || {}
+  const features = Array.isArray(manifest.features) ? manifest.features : []
+  const hyperparameters = Object.entries(manifest.hyperparameters || {})
+  const modelThreshold = Number(operationalThreshold ?? model?.recommended_threshold ?? 0.5)
+  const modelMetric = nearestThresholdMetric(model?.threshold_metrics || [], modelThreshold)
+  const metrics = model?.test_metrics || {}
+  const featureCount = features.length || manifest.features_count || model?.feature_importance?.length || 0
+
+  function handleTabKeyDown(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+
+    event.preventDefault()
+    const currentIndex = modelCardSections.findIndex((section) => section.id === activeSection)
+    let nextIndex = currentIndex
+
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = modelCardSections.length - 1
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + modelCardSections.length) % modelCardSections.length
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % modelCardSections.length
+
+    const nextSection = modelCardSections[nextIndex]
+    setActiveSection(nextSection.id)
+    requestAnimationFrame(() => document.getElementById(`model-card-tab-${nextSection.id}`)?.focus())
+  }
+
+  return (
+    <div className="model-card-backdrop" onClick={onClose}>
+      <article
+        className="model-card-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="model-card-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="model-card-head">
+          <div>
+            <span className="model-card-eyebrow">Model Card · Governança do artefato</span>
+            <div className="model-card-title-row">
+              <h2 id="model-card-title">{model?.version || 'Versão indisponível'}</h2>
+              <span className={`badge-tag is-${model?.status || 'candidate'}`}>{trainingStatusLabel(model?.status)}</span>
+            </div>
+            <p>{model?.algorithm || 'Algoritmo não informado'} · {formatTargetName(model?.target || manifest.target)}</p>
+          </div>
+          <button type="button" className="model-card-close" onClick={onClose} aria-label="Fechar Model Card" autoFocus>✕</button>
+        </header>
+
+        <div className="model-card-workspace">
+          <nav className="model-card-tabs" role="tablist" aria-label="Seções do Model Card" onKeyDown={handleTabKeyDown}>
+            <p>Conteúdo</p>
+            {modelCardSections.map((section) => (
+              <button
+                key={section.id}
+                id={`model-card-tab-${section.id}`}
+                type="button"
+                role="tab"
+                aria-selected={activeSection === section.id}
+                aria-controls={`model-card-panel-${section.id}`}
+                tabIndex={activeSection === section.id ? 0 : -1}
+                className={activeSection === section.id ? 'is-active' : ''}
+                onClick={() => setActiveSection(section.id)}
+              >
+                <span>{section.index}</span>
+                <strong>{section.label}</strong>
+              </button>
+            ))}
+          </nav>
+
+          <div className="model-card-body">
+          {activeSection === 'purpose' ? <section
+            id="model-card-panel-purpose"
+            className="model-card-purpose"
+            role="tabpanel"
+            aria-labelledby="model-card-tab-purpose"
+          >
+            <div>
+              <div>
+                <h3 id="model-card-purpose-title">Finalidade</h3>
+                <p>Estimar o risco de falha de cada porta da Linha 4 dentro da janela preditiva definida pelo artefato, apoiando a priorização de inspeções preventivas.</p>
+              </div>
+            </div>
+            <dl>
+              <div><dt>Variável-alvo</dt><dd>{formatTargetName(model?.target || manifest.target)}</dd></div>
+              <div><dt>Uso operacional</dt><dd>Priorização de portas para inspeção</dd></div>
+              <div><dt>Saída</dt><dd>Probabilidade e classificação binária</dd></div>
+            </dl>
+          </section> : null}
+
+          {activeSection === 'governance' ? <section
+            id="model-card-panel-governance"
+            className="model-card-section"
+            role="tabpanel"
+            aria-labelledby="model-card-tab-governance"
+          >
+            <header><div><h3 id="model-card-governance-title">Identidade e governança</h3><p>Versão, autoria e configuração usada para publicar decisões operacionais.</p></div></header>
+            <dl className="model-card-definition-grid">
+              <div><dt>Versão</dt><dd>{model?.version || 'Indisponível'}</dd></div>
+              <div><dt>Status</dt><dd>{trainingStatusLabel(model?.status)}</dd></div>
+              <div><dt>Threshold operacional</dt><dd>{modelThreshold.toFixed(2)}</dd></div>
+              <div><dt>Threshold recomendado</dt><dd>{Number.isFinite(Number(model?.recommended_threshold)) ? Number(model.recommended_threshold).toFixed(2) : 'Indisponível'}</dd></div>
+              <div><dt>Gerado em</dt><dd>{formatModelDate(manifest.generated_at || model?.finished_at, true)}</dd></div>
+              <div><dt>Ativado em</dt><dd>{formatModelDate(model?.activated_at, true)}</dd></div>
+              <div><dt>Responsável</dt><dd>{model?.created_by || 'Pipeline automatizado'}</dd></div>
+              <div><dt>Total de features</dt><dd>{integer(featureCount)}</dd></div>
+            </dl>
+          </section> : null}
+
+          {activeSection === 'validation' ? <section
+            id="model-card-panel-validation"
+            className="model-card-section"
+            role="tabpanel"
+            aria-labelledby="model-card-tab-validation"
+          >
+            <header><div><h3 id="model-card-validation-title">Validação temporal</h3><p>Métricas registradas no teste walk-forward do mesmo artefato.</p></div></header>
+            <div className="model-card-metrics">
+              <div><span>Recall</span><strong>{percent(modelMetric?.recall ?? metrics.recall)}</strong></div>
+              <div><span>Precisão</span><strong>{percent(modelMetric?.precision ?? metrics.precision)}</strong></div>
+              <div><span>F1-Score</span><strong>{percent(modelMetric?.f1_score ?? metrics.f1_score ?? metrics.f1)}</strong></div>
+              <div><span>ROC-AUC</span><strong>{decimal(metrics.roc_auc)}</strong></div>
+              <div><span>Registros de teste</span><strong>{integer(model?.test_rows)}</strong></div>
+              <div><span>Falhas no teste</span><strong>{integer(model?.positive_rows)}</strong></div>
+            </div>
+            <dl className="model-card-periods">
+              <div><dt>Treino até</dt><dd>{formatModelDate(model?.train_end || manifest.train_end)}</dd></div>
+              <div><dt>Teste de</dt><dd>{formatModelDate(model?.test_start || manifest.test_start)}</dd></div>
+              <div><dt>Teste até</dt><dd>{formatModelDate(model?.test_end || manifest.test_end)}</dd></div>
+            </dl>
+          </section> : null}
+
+          {activeSection === 'lineage' ? <section
+            id="model-card-panel-lineage"
+            className="model-card-section"
+            role="tabpanel"
+            aria-labelledby="model-card-tab-lineage"
+          >
+            <header><div><h3 id="model-card-lineage-title">Rastreabilidade</h3><p>Referências necessárias para reproduzir e verificar esta versão.</p></div></header>
+            <dl className="model-card-lineage">
+              <div><dt>Artefato</dt><dd><code>{model?.artifact_uri || model?.artifact_path || 'Indisponível'}</code></dd></div>
+              <div><dt>SHA-256 do artefato</dt><dd><code>{model?.artifact_sha256 || 'Indisponível'}</code></dd></div>
+              <div><dt>SHA-256 do dataset</dt><dd><code>{model?.dataset_sha256 || 'Indisponível'}</code></dd></div>
+            </dl>
+          </section> : null}
+
+          {activeSection === 'configuration' ? <div
+            id="model-card-panel-configuration"
+            className="model-card-configuration-panel"
+            role="tabpanel"
+            aria-labelledby="model-card-tab-configuration"
+          >
+            <section className="model-card-section" aria-labelledby="model-card-parameters-title">
+              <header><div><h3 id="model-card-parameters-title">Configuração técnica</h3><p>Hiperparâmetros persistidos no manifest versionado.</p></div></header>
+              {hyperparameters.length ? (
+                <dl className="model-card-parameters">
+                  {hyperparameters.map(([name, value]) => <div key={name}><dt>{formatParameterName(name)}</dt><dd>{formatParameterValue(value)}</dd></div>)}
+                </dl>
+              ) : <p className="model-card-empty">Hiperparâmetros indisponíveis para esta versão.</p>}
+            </section>
+
+            <details className="model-card-features">
+              <summary><span>Features do modelo</span><strong>{integer(featureCount)} atributos</strong></summary>
+              {features.length ? <div>{features.map((feature) => <code key={feature}>{feature}</code>)}</div> : <p>Lista de features indisponível no manifest.</p>}
+            </details>
+          </div> : null}
+          </div>
+        </div>
+      </article>
+    </div>
+  )
+}
+
 function Engenharia() {
   const { user } = useAuth()
   const toast = useToast()
@@ -86,6 +306,7 @@ function Engenharia() {
   const [trainingJob, setTrainingJob] = useState(null)
   const [trainingHistory, setTrainingHistory] = useState([])
   const [promotingModel, setPromotingModel] = useState('')
+  const [selectedModelCard, setSelectedModelCard] = useState(null)
 
   const [config, setConfig] = useState({
     threshold: 0.5,
@@ -98,23 +319,22 @@ function Engenharia() {
   const [drift, setDrift] = useState(null)
   const [experiments, setExperiments] = useState([])
   const [officialRun, setOfficialRun] = useState(null)
-  const [productionPerformance, setProductionPerformance] = useState(null)
 
   const [selectedThreshold, setSelectedThreshold] = useState(0.5)
   const selectedProfile = thresholdProfile(selectedThreshold)
+  const activeTrainingJobID = ['queued', 'running'].includes(trainingJob?.status) ? trainingJob.id : ''
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
-        const [cfgData, modelData, histData, driftData, experimentData, officialData, performanceData, trainingData] = await Promise.all([
+        const [cfgData, modelData, histData, driftData, experimentData, officialData, trainingData] = await Promise.all([
           api.getMLConfig().catch(() => ({ threshold: 0.5, default_horizon_days: 7 })),
           api.getActiveModel().catch(() => null),
           api.getModelHistory(5).catch(() => []),
           api.getMLDrift().catch(() => null),
           api.predictionExperiments(20).catch(() => []),
           api.predictionsLatest().catch(() => null),
-          api.getMLProductionPerformance().catch(() => null),
           api.getTrainingJobs(20).catch(() => []),
         ])
         setConfig(cfgData)
@@ -124,14 +344,82 @@ function Engenharia() {
         setDrift(driftData)
         setExperiments(experimentData || [])
         setOfficialRun(officialData)
-        setProductionPerformance(performanceData)
         setTrainingHistory(trainingData || [])
+        const latestTrainingJob = (trainingData || [])[0] || null
+        setTrainingJob(latestTrainingJob)
+        setRetraining(['queued', 'running'].includes(latestTrainingJob?.status))
       } finally {
         setLoading(false)
       }
     }
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (!selectedModelCard) return undefined
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setSelectedModelCard(null)
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [selectedModelCard])
+
+  useEffect(() => {
+    const jobID = activeTrainingJobID
+    if (!jobID) return undefined
+
+    let cancelled = false
+    let timer
+
+    async function pollTrainingJob() {
+      try {
+        const current = await api.getTrainingJob(jobID)
+        if (cancelled) return
+
+        if (current.status === 'completed') {
+          const [models, active, jobs] = await Promise.all([
+            api.getModelHistory(20),
+            api.getActiveModel(),
+            api.getTrainingJobs(20),
+          ])
+          if (cancelled) return
+          setTrainingJob(current)
+          setHistory(models || [])
+          setModel(active)
+          setTrainingHistory(jobs || [])
+          setRetraining(false)
+          toast.success('Retreinamento concluído. A nova versão está disponível como candidata.')
+          return
+        }
+
+        if (current.status === 'failed') {
+          setTrainingJob(current)
+          setTrainingHistory((items) => [current, ...items.filter((item) => item.id !== current.id)])
+          setRetraining(false)
+          toast.error(`Retreinamento falhou: ${current.error || 'consulte o checkpoint interrompido.'}`)
+          return
+        }
+
+        setTrainingJob(current)
+        setTrainingHistory((items) => [current, ...items.filter((item) => item.id !== current.id)])
+        timer = window.setTimeout(pollTrainingJob, 2500)
+      } catch {
+        if (cancelled) return
+        timer = window.setTimeout(pollTrainingJob, 5000)
+      }
+    }
+
+    timer = window.setTimeout(pollTrainingJob, 800)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [activeTrainingJobID, toast])
 
   async function handleRunExperiment(e) {
     e.preventDefault()
@@ -171,24 +459,8 @@ function Engenharia() {
       setTrainingJob(job)
       setTrainingHistory((current) => [job, ...current.filter((item) => item.id !== job.id)])
       toast.success('Retreinamento enfileirado. O status será atualizado nesta tela.')
-      for (let attempt = 0; attempt < 120 && !['completed', 'failed'].includes(job.status); attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 3000))
-        job = await api.getTrainingJob(job.id)
-        setTrainingJob(job)
-        setTrainingHistory((current) => current.map((item) => item.id === job.id ? job : item))
-      }
-      if (job.status === 'completed') {
-        const [models, active, jobs] = await Promise.all([api.getModelHistory(20), api.getActiveModel(), api.getTrainingJobs(20)])
-        setHistory(models || [])
-        setModel(active)
-        setTrainingHistory(jobs || [])
-        toast.success('Retreinamento concluído. A nova versão está disponível como candidata.')
-      } else if (job.status === 'failed') {
-        toast.error(`Retreinamento falhou: ${job.error || 'consulte o log do job.'}`)
-      }
     } catch (err) {
       toast.error('Erro no retreinamento: ' + errorMessage(err))
-    } finally {
       setRetraining(false)
     }
   }
@@ -303,6 +575,10 @@ function Engenharia() {
                 Métricas históricas do artefato <strong>{model?.version || 'indisponível'}</strong>, calculadas em {integer(testRows)} registros do conjunto temporal de teste. O limiar ativo na operação é <strong>{activeThreshold.toFixed(2)}</strong>.
               </p>
             </div>
+            <button type="button" className="engenharia-model-card-trigger" onClick={() => setSelectedModelCard(model)} disabled={!model}>
+              Ver Model Card
+              <span aria-hidden="true">↗</span>
+            </button>
           </div>
 
           <div className="engenharia-metrics">
@@ -544,53 +820,17 @@ function Engenharia() {
               <footer>Validação histórica do modelo {model?.version || 'indisponível'} · {integer(testRows)} registros · {model?.test_start ? new Date(model.test_start).toLocaleDateString('pt-BR') : 'período indisponível'} a {model?.test_end ? new Date(model.test_end).toLocaleDateString('pt-BR') : '—'}.</footer>
             </div>
 
-            <div className="lab-results">
-              <header>
-                <div>
-                  <span className="lab-eyebrow">Após o horizonte</span>
-                  <h2>Desempenho observado em produção</h2>
-                  <p>Somente previsões com a janela completa de sete dias entram nesta avaliação.</p>
-                </div>
-                <span className="lab-results__count">{productionPerformance?.mature_runs ?? 0} rodadas maduras</span>
-              </header>
-              <div className="engenharia-metrics">
-                <div className="engenharia-metric"><span>Cobertura de rótulos</span><strong>{percent(productionPerformance?.label_coverage)}</strong><small>{integer(productionPerformance?.evaluated_predictions)} de {integer(productionPerformance?.total_predictions)} previsões</small></div>
-                <div className="engenharia-metric"><span>Precisão observada</span><strong>{percent(productionPerformance?.precision)}</strong><small>TP {integer(productionPerformance?.true_positives)} · FP {integer(productionPerformance?.false_positives)}</small></div>
-                <div className="engenharia-metric"><span>Recall observado</span><strong>{percent(productionPerformance?.recall)}</strong><small>TP {integer(productionPerformance?.true_positives)} · FN {integer(productionPerformance?.false_negatives)}</small></div>
-                <div className="engenharia-metric"><span>F1 observado</span><strong>{percent(productionPerformance?.f1_score)}</strong><small>{productionPerformance?.failure_definition || 'Rótulo ainda não avaliado'}</small></div>
-              </div>
-            </div>
           </section>
         </div>
       ) : null}
 
       {!loading && activeTab === 'retrain' ? (
         <div className="engenharia-panel-full" id="engineering-panel-retrain" role="tabpanel" aria-labelledby="engineering-tab-retrain">
-          <div className="engenharia-banner">
-            <div className="engenharia-banner__content">
-              <strong>Pipeline de retreinamento contínuo</strong>
-              <span>Recomputa o pipeline temporal integrando novas telemetrias e ordens ZM01/ZM02/ZM03.</span>
-            </div>
-            <button
-              type="button"
-              className="engenharia-trigger-btn"
-              onClick={handleTriggerRetrain}
-              disabled={retraining}
-            >
-              <TriggerIcon />
-              <span>{retraining ? 'Acompanhando pipeline…' : 'Iniciar retreinamento'}</span>
-            </button>
-          </div>
-
-          {trainingJob ? (
-            <div className="drift-status-banner">
-              <span className="engenharia-status-dot" aria-hidden="true" />
-              <div>
-                <strong>Treinamento {trainingStatusLabel(trainingJob.status)}</strong>
-                <p>Job {trainingJob.id} · versão solicitada {trainingJob.version || 'em definição'}{trainingJob.error ? ` · ${trainingJob.error}` : ''}</p>
-              </div>
-            </div>
-          ) : null}
+          <TrainingPipeline
+            job={trainingJob}
+            retraining={retraining}
+            onTriggerRetrain={handleTriggerRetrain}
+          />
 
           <article className="engenharia-card">
             <header className="engenharia-card__head">
@@ -610,13 +850,17 @@ function Engenharia() {
                     <th>ROC-AUC</th>
                     <th>Artefato serializado</th>
                     <th>Status</th>
-                    <th>Ação</th>
+                    <th className="table-action-column">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.length ? history.map((run) => (
                     <tr key={run.id}>
-                      <td><strong>{run.version}</strong></td>
+                      <td>
+                        <button type="button" className="model-card-version-link" onClick={() => setSelectedModelCard(run)}>
+                          {run.version}
+                        </button>
+                      </td>
                       <td>{run.algorithm || 'Indisponível'}</td>
                       <td><strong>{percent(run.test_metrics?.recall)}</strong></td>
                       <td>{percent(run.test_metrics?.precision)}</td>
@@ -624,7 +868,20 @@ function Engenharia() {
                       <td>{decimal(run.test_metrics?.roc_auc)}</td>
                       <td><code>{run.artifact_uri || run.artifact_path || 'Indisponível'}</code></td>
                       <td><span className={`badge-tag ${run.status === 'production' ? 'is-active' : ''}`}>{trainingStatusLabel(run.status)}</span></td>
-                      <td>{run.status !== 'production' ? <button type="button" onClick={() => handlePromoteModel(run.version)} disabled={Boolean(promotingModel)}>{promotingModel === run.version ? 'Promovendo e publicando…' : run.status === 'retired' ? 'Reverter' : 'Promover'}</button> : '—'}</td>
+                      <td className="table-action-column">
+                        {run.status !== 'production' ? (
+                          <button
+                            type="button"
+                            className={`engenharia-promote-btn${run.status === 'retired' ? ' is-restore' : ''}`}
+                            onClick={() => handlePromoteModel(run.version)}
+                            disabled={Boolean(promotingModel)}
+                            aria-label={`${run.status === 'retired' ? 'Restaurar' : 'Promover'} modelo ${run.version} para produção`}
+                          >
+                            <PromoteIcon />
+                            <span>{promotingModel === run.version ? 'Publicando…' : run.status === 'retired' ? 'Restaurar' : 'Promover'}</span>
+                          </button>
+                        ) : <span className="engenharia-action-empty" aria-label="Modelo já está em produção">—</span>}
+                      </td>
                     </tr>
                   )) : <tr><td className="table-empty" colSpan="9">Nenhuma versão registrada.</td></tr>}
                 </tbody>
@@ -658,7 +915,11 @@ function Engenharia() {
                 <tbody>
                   {trainingHistory.length ? trainingHistory.map((job) => (
                       <tr key={job.id}>
-                        <td><code>{job.id?.slice(0, 14)}</code></td>
+                        <td>
+                          <button type="button" className="model-card-version-link" onClick={() => setTrainingJob(job)}>
+                            {job.id?.slice(0, 14)}
+                          </button>
+                        </td>
                         <td><strong>{job.version || 'Em definição'}</strong></td>
                         <td>
                           <span className={`badge-tag is-${job.status || 'stable'}`}>
@@ -755,6 +1016,14 @@ function Engenharia() {
             </article>
           </div>
         </div>
+      ) : null}
+
+      {selectedModelCard ? (
+        <ModelCard
+          model={selectedModelCard}
+          operationalThreshold={selectedModelCard.status === 'production' ? activeThreshold : selectedModelCard.recommended_threshold}
+          onClose={() => setSelectedModelCard(null)}
+        />
       ) : null}
     </section>
   )

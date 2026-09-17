@@ -60,16 +60,36 @@ type ThresholdMetric struct {
 }
 
 type MLTrainingJob struct {
-	ID               string         `json:"id"`
-	RequestedVersion string         `json:"version"`
-	Status           string         `json:"status"`
-	RequestedBy      string         `json:"requested_by"`
-	Parameters       map[string]any `json:"parameters"`
-	Manifest         map[string]any `json:"manifest,omitempty"`
-	ErrorMessage     string         `json:"error,omitempty"`
-	CreatedAt        time.Time      `json:"created_at"`
-	StartedAt        *time.Time     `json:"started_at,omitempty"`
-	FinishedAt       *time.Time     `json:"finished_at,omitempty"`
+	ID               string             `json:"id"`
+	RequestedVersion string             `json:"version"`
+	Status           string             `json:"status"`
+	RequestedBy      string             `json:"requested_by"`
+	Parameters       map[string]any     `json:"parameters"`
+	Manifest         map[string]any     `json:"manifest,omitempty"`
+	Progress         MLTrainingProgress `json:"progress"`
+	ErrorMessage     string             `json:"error,omitempty"`
+	CreatedAt        time.Time          `json:"created_at"`
+	StartedAt        *time.Time         `json:"started_at,omitempty"`
+	FinishedAt       *time.Time         `json:"finished_at,omitempty"`
+}
+
+type MLTrainingProgress struct {
+	CurrentStage   string            `json:"current_stage"`
+	CompletedSteps int               `json:"completed_steps"`
+	TotalSteps     int               `json:"total_steps"`
+	Percent        int               `json:"percent"`
+	UpdatedAt      string            `json:"updated_at"`
+	Stages         []MLTrainingStage `json:"stages"`
+}
+
+type MLTrainingStage struct {
+	Key        string `json:"key"`
+	Label      string `json:"label"`
+	Status     string `json:"status"`
+	StartedAt  string `json:"started_at,omitempty"`
+	FinishedAt string `json:"finished_at,omitempty"`
+	DurationMS *int64 `json:"duration_ms,omitempty"`
+	Detail     string `json:"detail,omitempty"`
 }
 
 type MLDriftReport struct {

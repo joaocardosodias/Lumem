@@ -111,6 +111,11 @@ func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.
 		if err := uc.ensureCompletedTrainingRegistered(ctx, stored); err != nil {
 			return nil, err
 		}
+		if completeTrainingRegistration(stored) {
+			if err := uc.repo.SaveTrainingJob(ctx, stored); err != nil {
+				return nil, err
+			}
+		}
 		return stored, nil
 	}
 	if stored.Status == "failed" || uc.client == nil {
@@ -125,15 +130,73 @@ func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.
 	if current.CreatedAt.IsZero() {
 		current.CreatedAt = stored.CreatedAt
 	}
+	if current.Status == "completed" {
+		if err := uc.ensureCompletedTrainingRegistered(ctx, current); err != nil {
+			current.Status = "failed"
+			current.ErrorMessage = "falha ao registrar modelo candidato: " + err.Error()
+			failTrainingRegistration(current, current.ErrorMessage)
+		} else {
+			completeTrainingRegistration(current)
+		}
+	}
 	if err := uc.repo.SaveTrainingJob(ctx, current); err != nil {
 		return nil, err
 	}
-	if current.Status == "completed" {
-		if err := uc.ensureCompletedTrainingRegistered(ctx, current); err != nil {
-			return nil, err
+	return current, nil
+}
+
+func completeTrainingRegistration(job *domain.MLTrainingJob) bool {
+	return updateTrainingRegistrationStage(job, "completed", "Modelo candidato registrado no catálogo.")
+}
+
+func failTrainingRegistration(job *domain.MLTrainingJob, detail string) {
+	updateTrainingRegistrationStage(job, "failed", detail)
+}
+
+func updateTrainingRegistrationStage(job *domain.MLTrainingJob, status, detail string) bool {
+	if len(job.Progress.Stages) == 0 {
+		return false
+	}
+	now := time.Now().UTC()
+	changed := false
+	for index := range job.Progress.Stages {
+		stage := &job.Progress.Stages[index]
+		if stage.Key != "catalog_registration" {
+			continue
+		}
+		if stage.Status == status && stage.Detail == detail {
+			return false
+		}
+		if stage.StartedAt == "" {
+			stage.StartedAt = now.Format(time.RFC3339Nano)
+		}
+		stage.Status = status
+		stage.Detail = detail
+		stage.FinishedAt = now.Format(time.RFC3339Nano)
+		if startedAt, err := time.Parse(time.RFC3339Nano, stage.StartedAt); err == nil {
+			duration := now.Sub(startedAt).Milliseconds()
+			stage.DurationMS = &duration
+		}
+		changed = true
+		break
+	}
+	if !changed {
+		return false
+	}
+	completed := 0
+	for index := range job.Progress.Stages {
+		if job.Progress.Stages[index].Status == "completed" || job.Progress.Stages[index].Status == "skipped" {
+			completed++
 		}
 	}
-	return current, nil
+	job.Progress.CurrentStage = "catalog_registration"
+	job.Progress.CompletedSteps = completed
+	job.Progress.TotalSteps = len(job.Progress.Stages)
+	if job.Progress.TotalSteps > 0 {
+		job.Progress.Percent = int(math.Round(float64(completed) * 100 / float64(job.Progress.TotalSteps)))
+	}
+	job.Progress.UpdatedAt = now.Format(time.RFC3339Nano)
+	return true
 }
 
 func (uc *MLOpsUseCase) ListTrainingJobs(ctx context.Context, limit int) ([]domain.MLTrainingJob, error) {

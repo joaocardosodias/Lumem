@@ -804,11 +804,15 @@ func testMLOpsGovernanceRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 		ID: uuid.NewString(), RequestedVersion: version, Status: "completed",
 		RequestedBy: "usr_engineer_01", Parameters: map[string]any{"random_state": 42},
 		Manifest: run.Manifest, CreatedAt: now, StartedAt: &now, FinishedAt: &now,
+		Progress: domain.MLTrainingProgress{
+			CurrentStage: "artifact_publish", CompletedSteps: 9, TotalSteps: 10, Percent: 90,
+			Stages: []domain.MLTrainingStage{{Key: "artifact_publish", Label: "Publicar artefato", Status: "completed"}},
+		},
 	}
 	if err := repo.SaveTrainingJob(ctx, job); err != nil {
 		t.Fatalf("SaveTrainingJob falhou: %v", err)
 	}
-	if restored, err := repo.GetTrainingJob(ctx, job.ID); err != nil || restored.Status != "completed" {
+	if restored, err := repo.GetTrainingJob(ctx, job.ID); err != nil || restored.Status != "completed" || restored.Progress.Percent != 90 {
 		t.Fatalf("job persistido inconsistente: job=%+v err=%v", restored, err)
 	}
 	if jobs, err := repo.ListTrainingJobs(ctx, 20); err != nil || len(jobs) == 0 || jobs[0].ID != job.ID {

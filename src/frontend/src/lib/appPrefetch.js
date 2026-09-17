@@ -143,4 +143,7 @@ export function invalidateApplicationCache() {
   invalidateInspections()
   invalidateMaintenance()
   invalidatePredictionCache()
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('motiva:cache-invalidated'))
+  }
 }

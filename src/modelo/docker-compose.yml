@@ -20,6 +20,8 @@ services:
       MODEL_PANEL_S3_KEY: datasets/current/painel.parquet
       MODEL_MAINTENANCE_S3_KEY: datasets/current/ZM01_limpa.xlsx
     command: ["python", "seed_local_registry.py"]
+    healthcheck:
+      disable: true
     volumes:
       - ml-model-artifacts:/app/artifacts
       - ../../models/modelo-5/painel.parquet:/bootstrap-training/painel.parquet:ro
