@@ -117,7 +117,7 @@ security_audit:
     - cd src/backend
     - go install golang.org/x/vuln/cmd/govulncheck@latest
   script:
-    - govulncheck ./...
+    - sh scripts/govulncheck.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
