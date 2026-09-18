@@ -502,6 +502,18 @@ export const api = {
   getMLConfig() {
     return request('/api/v1/ml/config').then((result) => result.data)
   },
+  getPredictionSchedule() {
+    return request('/api/v1/ml/prediction-schedule').then((result) => result.data)
+  },
+  updatePredictionSchedule(enabled, intervalMinutes) {
+    return request('/api/v1/ml/prediction-schedule', {
+      method: 'PUT',
+      body: {
+        enabled: Boolean(enabled),
+        interval_minutes: Number(intervalMinutes),
+      },
+    }).then((result) => result.data)
+  },
   getActiveModel() {
     return request('/api/v1/ml/model/active').then((result) => result.data)
   },
@@ -526,6 +538,11 @@ export const api = {
   },
   resumeTraining(id) {
     return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}/resume`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  cancelTraining(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}/cancel`, {
       method: 'POST',
     }).then((result) => result.data)
   },

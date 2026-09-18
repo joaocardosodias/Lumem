@@ -14,9 +14,32 @@ var _ port.MLOpsRepository = (*mockMLOpsRepo)(nil)
 
 type mockMLOpsRepo struct {
 	config       *domain.MLConfig
+	schedule     *domain.PredictionSchedule
 	runs         []domain.MLModelRun
 	trainingJobs map[string]domain.MLTrainingJob
 	driftReports []domain.MLDriftReport
+}
+
+func (m *mockMLOpsRepo) GetPredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error) {
+	if m.schedule == nil {
+		return &domain.PredictionSchedule{ID: "official", IntervalMinutes: 1440, LastStatus: "idle"}, nil
+	}
+	return m.schedule, nil
+}
+
+func (m *mockMLOpsRepo) UpdatePredictionSchedule(ctx context.Context, schedule *domain.PredictionSchedule) error {
+	next := time.Now().Add(time.Duration(schedule.IntervalMinutes) * time.Minute)
+	schedule.NextRunAt = &next
+	m.schedule = schedule
+	return nil
+}
+
+func (m *mockMLOpsRepo) ClaimDuePredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error) {
+	return nil, nil
+}
+
+func (m *mockMLOpsRepo) CompletePredictionScheduleRun(ctx context.Context, runID, status, errorMessage string) error {
+	return nil
 }
 
 func (m *mockMLOpsRepo) GetConfig(ctx context.Context) (*domain.MLConfig, error) {
@@ -136,6 +159,18 @@ func (m *mockMLOpsClient) ResumeTraining(ctx context.Context, id, requestedBy st
 	}, nil
 }
 
+func (m *mockMLOpsClient) CancelTraining(ctx context.Context, id, requestedBy string) (*domain.MLTrainingJob, error) {
+	now := time.Now()
+	return &domain.MLTrainingJob{
+		ID:               id,
+		RequestedVersion: "v2",
+		Status:           "cancelled",
+		RequestedBy:      requestedBy,
+		CreatedAt:        now,
+		FinishedAt:       &now,
+	}, nil
+}
+
 func (m *mockMLOpsClient) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
 	return &domain.MLTrainingJob{ID: id, RequestedVersion: "v2", Status: "running", CreatedAt: time.Now()}, nil
 }
@@ -180,6 +215,26 @@ func TestMLOpsUseCase_GetAndBuildConfig(t *testing.T) {
 	_, err = uc.UpdateConfig(context.Background(), 0.30, 14, "usr_engineer_01")
 	if err == nil {
 		t.Errorf("esperava erro para horizonte invalido")
+	}
+}
+
+func TestMLOpsUseCase_UpdatePredictionSchedule(t *testing.T) {
+	repo := &mockMLOpsRepo{}
+	uc := usecase.NewMLOpsUseCase(repo)
+
+	schedule, err := uc.UpdatePredictionSchedule(context.Background(), true, 360, "usr_engineer_01")
+	if err != nil {
+		t.Fatalf("esperava sucesso ao configurar agendamento: %v", err)
+	}
+	if !schedule.Enabled || schedule.IntervalMinutes != 360 || schedule.NextRunAt == nil {
+		t.Fatalf("agendamento atualizado incorretamente: %+v", schedule)
+	}
+
+	if _, err := uc.UpdatePredictionSchedule(context.Background(), true, 5, "usr_engineer_01"); err == nil {
+		t.Fatal("esperava rejeicao para intervalo menor que 15 minutos")
+	}
+	if _, err := uc.UpdatePredictionSchedule(context.Background(), true, 10081, "usr_engineer_01"); err == nil {
+		t.Fatal("esperava rejeicao para intervalo maior que 7 dias")
 	}
 }
 
@@ -236,6 +291,55 @@ func TestMLOpsUseCase_ResumeTrainingFromFailedStage(t *testing.T) {
 	}
 	if resumed.Status != "queued" || resumed.Parameters["resumed_from_job_id"] != "job-failed" {
 		t.Fatalf("job retomado incorreto: %+v", resumed)
+	}
+}
+
+func TestMLOpsUseCase_ResumeTrainingFromCancelledStage(t *testing.T) {
+	repo := &mockMLOpsRepo{trainingJobs: map[string]domain.MLTrainingJob{
+		"job-cancelled": {
+			ID:               "job-cancelled",
+			RequestedVersion: "v2",
+			Status:           "cancelled",
+			CreatedAt:        time.Now(),
+			Progress: domain.MLTrainingProgress{Stages: []domain.MLTrainingStage{
+				{Key: "snapshot_acquisition", Status: "completed"},
+				{Key: "data_loading", Status: "cancelled"},
+			}},
+		},
+	}}
+	uc := usecase.NewMLOpsUseCase(repo, &mockMLOpsClient{})
+
+	resumed, err := uc.ResumeTraining(context.Background(), "job-cancelled", "usr_engineer_01")
+	if err != nil {
+		t.Fatalf("esperava sucesso ao retomar treinamento cancelado: %v", err)
+	}
+	if resumed.Status != "queued" || resumed.Parameters["resumed_from_job_id"] != "job-cancelled" {
+		t.Fatalf("job cancelado nao foi retomado corretamente: %+v", resumed)
+	}
+}
+
+func TestMLOpsUseCase_CancelTrainingPersistsTerminalState(t *testing.T) {
+	repo := &mockMLOpsRepo{trainingJobs: map[string]domain.MLTrainingJob{
+		"job-running": {
+			ID:               "job-running",
+			RequestedVersion: "v2",
+			Status:           "running",
+			RequestedBy:      "usr_engineer_01",
+			CreatedAt:        time.Now(),
+			Parameters:       map[string]any{"checkpoint_job_id": "job-running"},
+		},
+	}}
+	uc := usecase.NewMLOpsUseCase(repo, &mockMLOpsClient{})
+
+	cancelled, err := uc.CancelTraining(context.Background(), "job-running", "usr_engineer_01")
+	if err != nil {
+		t.Fatalf("esperava sucesso ao cancelar treinamento: %v", err)
+	}
+	if cancelled.Status != "cancelled" || cancelled.FinishedAt == nil {
+		t.Fatalf("job cancelado incorreto: %+v", cancelled)
+	}
+	if repo.trainingJobs["job-running"].Status != "cancelled" {
+		t.Fatalf("estado terminal nao foi persistido: %+v", repo.trainingJobs["job-running"])
 	}
 }
 

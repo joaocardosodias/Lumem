@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/adapter/jobqueue"
+	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/adapter/storage"
@@ -143,6 +144,11 @@ func main() {
 	defer stopSignals()
 	outcomeUC := usecase.NewEvaluatePredictionOutcomesUseCase(repository.NewPostgresPredictionOutcomeRepository(db))
 	go usecase.RunPredictionOutcomeScheduler(runCtx, outcomeUC, 24*time.Hour, logger)
+	predictionRepo := repository.NewPostgresPredictionRepository(db)
+	mlopsRepo := repository.NewPostgresMLOpsRepository(db)
+	predictionUC := usecase.NewTriggerPredictionsUseCase(predictionRepo, mlclient.NewClient(cfg.VPSModelURL), nil, uow)
+	predictionUC.SetMLOpsRepository(mlopsRepo)
+	go usecase.RunPredictionScheduler(runCtx, mlopsRepo, predictionUC, 30*time.Second, logger)
 	if err := client.Start(runCtx); err != nil {
 		logger.Error("falha ao iniciar worker River", slog.String("error", err.Error()))
 		os.Exit(1)

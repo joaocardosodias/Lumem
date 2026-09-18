@@ -98,7 +98,7 @@ def update_stage(progress: dict, key: str, status: str, detail: str | None = Non
     now = _now()
     if status == 'running' and not stage.get('started_at'):
         stage['started_at'] = now
-    if status in {'completed', 'failed', 'skipped'}:
+    if status in {'completed', 'failed', 'skipped', 'cancelled'}:
         stage['started_at'] = stage.get('started_at') or now
         stage['finished_at'] = now
         started_at = _parse_time(stage.get('started_at'))
@@ -119,6 +119,16 @@ def fail_current_stage(progress: dict, detail: str) -> dict:
             return progress
         key = stages[0].get('key')
     return update_stage(progress, key, 'failed', detail)
+
+
+def cancel_current_stage(progress: dict, detail: str) -> dict:
+    key = progress.get('current_stage')
+    if not key or key == 'queued':
+        stages = progress.get('stages') or []
+        if not stages:
+            return progress
+        key = stages[0].get('key')
+    return update_stage(progress, key, 'cancelled', detail)
 
 
 class ProgressReporter:

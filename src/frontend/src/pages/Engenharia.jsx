@@ -18,6 +18,16 @@ function PromoteIcon() {
   )
 }
 
+function ScheduleIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M5.25 2.75v2.5M14.75 2.75v2.5M3.25 7.25h13.5" strokeLinecap="round" />
+      <rect x="3.25" y="4.25" width="13.5" height="12.5" rx="2" />
+      <path d="M10 9.25v3l2 1.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const engineeringTabs = [
   { id: 'model', label: 'Modelo e métricas' },
   { id: 'calibration', label: 'Laboratório' },
@@ -82,6 +92,16 @@ function formatModelDate(value, withTime = false) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Indisponível'
   return withTime ? date.toLocaleString('pt-BR') : date.toLocaleDateString('pt-BR')
+}
+
+function predictionScheduleStatusLabel(status) {
+  const labels = {
+    idle: 'Aguardando ativação',
+    running: 'Executando agora',
+    completed: 'Última execução concluída',
+    failed: 'Última execução falhou',
+  }
+  return labels[status] || 'Sem execução registrada'
 }
 
 function formatTargetName(target) {
@@ -303,10 +323,17 @@ function Engenharia() {
   const [runningExperiment, setRunningExperiment] = useState(false)
   const [promotingExperiment, setPromotingExperiment] = useState('')
   const [retraining, setRetraining] = useState(false)
+  const [cancellingTraining, setCancellingTraining] = useState(false)
   const [trainingJob, setTrainingJob] = useState(null)
   const [trainingHistory, setTrainingHistory] = useState([])
   const [promotingModel, setPromotingModel] = useState('')
   const [selectedModelCard, setSelectedModelCard] = useState(null)
+  const [savingSchedule, setSavingSchedule] = useState(false)
+  const [predictionSchedule, setPredictionSchedule] = useState({
+    enabled: false,
+    interval_minutes: 1440,
+    last_status: 'idle',
+  })
 
   const [config, setConfig] = useState({
     threshold: 0.5,
@@ -328,7 +355,7 @@ function Engenharia() {
     async function loadData() {
       try {
         setLoading(true)
-        const [cfgData, modelData, histData, driftData, experimentData, officialData, trainingData] = await Promise.all([
+        const [cfgData, modelData, histData, driftData, experimentData, officialData, trainingData, scheduleData] = await Promise.all([
           api.getMLConfig().catch(() => ({ threshold: 0.5, default_horizon_days: 7 })),
           api.getActiveModel().catch(() => null),
           api.getModelHistory(5).catch(() => []),
@@ -336,6 +363,7 @@ function Engenharia() {
           api.predictionExperiments(20).catch(() => []),
           api.predictionsLatest().catch(() => null),
           api.getTrainingJobs(20).catch(() => []),
+          api.getPredictionSchedule().catch(() => ({ enabled: false, interval_minutes: 1440, last_status: 'idle' })),
         ])
         setConfig(cfgData)
         setSelectedThreshold(cfgData.threshold ?? 0.5)
@@ -345,6 +373,7 @@ function Engenharia() {
         setExperiments(experimentData || [])
         setOfficialRun(officialData)
         setTrainingHistory(trainingData || [])
+        setPredictionSchedule(scheduleData)
         const latestTrainingJob = (trainingData || [])[0] || null
         setTrainingJob(latestTrainingJob)
         setRetraining(['queued', 'running'].includes(latestTrainingJob?.status))
@@ -402,6 +431,13 @@ function Engenharia() {
           setTrainingHistory((items) => [current, ...items.filter((item) => item.id !== current.id)])
           setRetraining(false)
           toast.error(`Retreinamento falhou: ${current.error || 'consulte o checkpoint interrompido.'}`)
+          return
+        }
+
+        if (current.status === 'cancelled') {
+          setTrainingJob(current)
+          setTrainingHistory((items) => [current, ...items.filter((item) => item.id !== current.id)])
+          setRetraining(false)
           return
         }
 
@@ -486,6 +522,22 @@ function Engenharia() {
     }
   }
 
+  async function handleCancelTraining() {
+    if (!trainingJob?.id || !['queued', 'running'].includes(trainingJob.status)) return
+    try {
+      setCancellingTraining(true)
+      const cancelled = await api.cancelTraining(trainingJob.id)
+      setTrainingJob(cancelled)
+      setTrainingHistory((current) => [cancelled, ...current.filter((item) => item.id !== cancelled.id)])
+      setRetraining(false)
+      toast.success('Treinamento cancelado. Os checkpoints concluídos foram preservados.')
+    } catch (err) {
+      toast.error('Erro ao cancelar treinamento: ' + errorMessage(err))
+    } finally {
+      setCancellingTraining(false)
+    }
+  }
+
   async function handlePromoteModel(version) {
     try {
       setPromotingModel(version)
@@ -500,6 +552,23 @@ function Engenharia() {
       toast.error('Falha ao promover modelo: ' + errorMessage(err))
     } finally {
       setPromotingModel('')
+    }
+  }
+
+  async function handleSavePredictionSchedule(event) {
+    event.preventDefault()
+    try {
+      setSavingSchedule(true)
+      const updated = await api.updatePredictionSchedule(
+        predictionSchedule.enabled,
+        predictionSchedule.interval_minutes,
+      )
+      setPredictionSchedule(updated)
+      toast.success(updated.enabled ? 'Execução automática configurada.' : 'Execução automática desativada.')
+    } catch (err) {
+      toast.error('Falha ao salvar agendamento: ' + errorMessage(err))
+    } finally {
+      setSavingSchedule(false)
     }
   }
 
@@ -601,6 +670,84 @@ function Engenharia() {
               <span aria-hidden="true">↗</span>
             </button>
           </div>
+
+          <form
+            className={`prediction-schedule-card${predictionSchedule.enabled ? ' is-enabled' : ''}${predictionSchedule.last_status === 'failed' ? ' is-failed' : ''}`}
+            onSubmit={handleSavePredictionSchedule}
+          >
+            <header className="prediction-schedule-card__header">
+              <div className="prediction-schedule-card__identity">
+                <span className="prediction-schedule-card__icon"><ScheduleIcon /></span>
+                <div className="prediction-schedule-card__copy">
+                  <span className="lab-eyebrow">Automação operacional</span>
+                  <h2>Agendamento de predições</h2>
+                  <p>Gera rodadas oficiais com o modelo e o threshold ativos no momento de cada execução.</p>
+                </div>
+              </div>
+
+              <div className="prediction-schedule-card__activation">
+                <div className="prediction-schedule-card__state" aria-live="polite">
+                  <i aria-hidden="true" />
+                  <span>{predictionScheduleStatusLabel(predictionSchedule.last_status)}</span>
+                </div>
+                <label className="prediction-schedule-toggle">
+                  <strong>{predictionSchedule.enabled ? 'Automação ativa' : 'Automação pausada'}</strong>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(predictionSchedule.enabled)}
+                    onChange={(event) => setPredictionSchedule((current) => ({ ...current, enabled: event.target.checked }))}
+                  />
+                  <span aria-hidden="true" />
+                </label>
+              </div>
+            </header>
+
+            <div className="prediction-schedule-card__controls">
+              <label className="prediction-schedule-field">
+                <span>Frequência</span>
+                <select
+                  value={predictionSchedule.interval_minutes}
+                  disabled={!predictionSchedule.enabled}
+                  onChange={(event) => setPredictionSchedule((current) => ({
+                    ...current,
+                    interval_minutes: Number(event.target.value),
+                  }))}
+                >
+                  <option value="15">A cada 15 minutos</option>
+                  <option value="30">A cada 30 minutos</option>
+                  <option value="60">A cada 1 hora</option>
+                  <option value="360">A cada 6 horas</option>
+                  <option value="720">A cada 12 horas</option>
+                  <option value="1440">A cada 24 horas</option>
+                  <option value="10080">A cada 7 dias</option>
+                </select>
+              </label>
+
+              <div className="prediction-schedule-card__detail">
+                <span>Próxima execução</span>
+                <strong>{predictionSchedule.enabled && predictionSchedule.next_run_at
+                  ? formatModelDate(predictionSchedule.next_run_at, true)
+                  : 'Não agendada'}</strong>
+                <small>{predictionSchedule.enabled ? 'Horário calculado pelo worker' : 'Ative a automação para programar'}</small>
+              </div>
+
+              <div className="prediction-schedule-card__detail">
+                <span>Última execução</span>
+                <strong>{predictionSchedule.last_completed_at
+                  ? formatModelDate(predictionSchedule.last_completed_at, true)
+                  : 'Ainda não executada'}</strong>
+                <small>{predictionScheduleStatusLabel(predictionSchedule.last_status)}</small>
+              </div>
+
+              <button type="submit" className="prediction-schedule-save" disabled={savingSchedule}>
+                {savingSchedule ? 'Salvando…' : 'Salvar agenda'}
+              </button>
+            </div>
+
+            {predictionSchedule.last_error ? (
+              <p className="prediction-schedule-card__error" role="alert">{predictionSchedule.last_error}</p>
+            ) : null}
+          </form>
 
           <div className="engenharia-metrics">
             <div className="engenharia-metric engenharia-metric--version">
@@ -850,8 +997,10 @@ function Engenharia() {
           <TrainingPipeline
             job={trainingJob}
             retraining={retraining}
+            cancelling={cancellingTraining}
             onTriggerRetrain={handleTriggerRetrain}
             onResumeTraining={handleResumeTraining}
+            onCancelTraining={handleCancelTraining}
           />
 
           <article className="engenharia-card">

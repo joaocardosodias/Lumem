@@ -131,12 +131,35 @@ paths:
                 requested_by: {type: string}
       responses:
         '202':
-          description: Novo job retomado a partir do checkpoint da etapa com falha
+          description: Novo job retomado a partir do checkpoint da etapa com falha ou cancelada
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TrainingJob'}
         '404': {description: Job original não encontrado}
         '409': {description: Job não pode ser retomado ou já existe treinamento ativo}
+  /v1/training-jobs/{id}/cancel:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                requested_by: {type: string}
+      responses:
+        '200':
+          description: Treinamento interrompido e checkpoints preservados
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TrainingJob'}
+        '404': {description: Job não encontrado}
+        '409': {description: Job já finalizado e não pode ser cancelado}
 components:
   schemas:
     Door:
@@ -212,7 +235,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         version: {type: string}
-        status: {type: string, enum: [queued, running, completed, failed]}
+        status: {type: string, enum: [queued, running, completed, failed, cancelled]}
         requested_by: {type: string}
         parameters: {type: object, additionalProperties: true}
         manifest: {type: object, additionalProperties: true, nullable: true}

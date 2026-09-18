@@ -9,6 +9,10 @@ import (
 type MLOpsRepository interface {
 	GetConfig(ctx context.Context) (*domain.MLConfig, error)
 	UpdateConfig(ctx context.Context, config *domain.MLConfig) error
+	GetPredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error)
+	UpdatePredictionSchedule(ctx context.Context, schedule *domain.PredictionSchedule) error
+	ClaimDuePredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error)
+	CompletePredictionScheduleRun(ctx context.Context, runID, status, errorMessage string) error
 	GetActiveModel(ctx context.Context) (*domain.MLModelRun, error)
 	GetModelByVersion(ctx context.Context, version string) (*domain.MLModelRun, error)
 	ListModelRuns(ctx context.Context, limit int) ([]domain.MLModelRun, error)

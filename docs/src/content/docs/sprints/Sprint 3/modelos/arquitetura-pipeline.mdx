@@ -6,9 +6,7 @@ description: "Visão de ponta a ponta de como uma predição acontece — do bac
 import { Image } from 'astro:assets';
 import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 import diagramaContexto from '../../../../../assets/sprints/sprint3/pipeline/diagrama-contexto-pipeline.png';
-import diagramaDeploy from '../../../../../assets/sprints/sprint3/pipeline/diagrama-deploy-pipeline.png';
 import diagramaSequencia from '../../../../../assets/sprints/sprint3/pipeline/diagrama-sequencia-predicao.png';
-import diagramaCicd from '../../../../../assets/sprints/sprint3/pipeline/diagrama-cicd-pipeline.png';
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -44,11 +42,16 @@ O operador nunca se comunica com o modelo diretamente. Ele aciona o backend em G
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Topologia de Deploy</h2>
 </div>
 
-Backend, serviço de ML e MinIO rodam na mesma VM em contêineres separados e ligados pela rede Docker interna `backend-network`. O PostgreSQL permanece gerenciado no Supabase e é acessado por TLS; somente o Nginx recebe tráfego público da aplicação.
+Frontend, backend, River, MinIO de ingestão e observabilidade rodam na VPS 1. A VPS 2 concentra API Python, worker de treinamento e MinIO de artefatos. As máquinas comunicam-se pela rede WireGuard `10.50.0.0/24`; a API de ML responde em `10.50.0.2:8000` e não fica exposta à internet. O PostgreSQL permanece gerenciado no Supabase e é acessado por TLS.
 
-<div style="margin: 2rem 0; text-align: center;">
-  <Image src={diagramaDeploy} alt="Diagrama de deploy: Nginx, backend, Worker, ML e MinIO na VM Azure; PostgreSQL permanece gerenciado no Supabase e o Azure Container Registry alimenta o Watchtower" width={900} format="png" />
-</div>
+```text
+VPS 1 (10.50.0.1)                         VPS 2 (10.50.0.2)
+Frontend · Go · River                     API Python · Training Worker
+MinIO de ingestão · Observabilidade  ←→   MinIO de modelos
+                    WireGuard criptografado
+                              │
+                       PostgreSQL Supabase
+```
 
 ---
 
@@ -79,15 +82,17 @@ Passo a passo do que acontece para o operador pedir uma predição e receber a r
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Pipeline de CI/CD</h2>
 </div>
 
-Um .gitlab-ci.yml único cobre os dois lados (Go e Python). Cada mudança passa pelas mesmas sete etapas antes de virar container rodando:
+Um `.gitlab-ci.yml` único cobre Go, Python e frontend. Cada mudança passa pelas etapas de validação antes de poder ser implantada:
 
-`lint → test → security → build → scan → publish → deploy`
+`lint → test → security → build → scan`
 
-O deploy em si não é automatizado (não existe um estágio que conecte na VM), publicar a imagem no Azure Container Registry é o último passo automático. Depois, o Watchtower (rodando na VM) detecta a imagem nova e reinicia o container sozinho.
+O deploy da aplicação é manual. Em cada VPS, o operador executa `git pull`, `docker compose build` e `docker compose up -d`. Não existe publicação em registry nem Watchtower; o estágio `deploy` do GitLab permanece reservado à documentação no GitLab Pages.
 
-<div style="margin: 2rem 0; text-align: center;">
-  <Image src={diagramaCicd} alt="Pipeline de CI/CD em sete etapas: Lint, Test, Security, Build, Scan, Publish e Deploy — as seis primeiras automatizadas pelo GitLab CI, a última (Deploy) manual via Watchtower" width={900} format="png" />
-</div>
+```text
+commit → lint → testes → segurança → build → Trivy
+                                             ↓
+                         deploy manual após aprovação
+```
 
 ---
 

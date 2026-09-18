@@ -34,6 +34,27 @@ func (uc *MLOpsUseCase) GetConfig(ctx context.Context) (*domain.MLConfig, error)
 	return uc.repo.GetConfig(ctx)
 }
 
+func (uc *MLOpsUseCase) GetPredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error) {
+	return uc.repo.GetPredictionSchedule(ctx)
+}
+
+func (uc *MLOpsUseCase) UpdatePredictionSchedule(ctx context.Context, enabled bool, intervalMinutes int, userID string) (*domain.PredictionSchedule, error) {
+	if intervalMinutes < 15 || intervalMinutes > 7*24*60 {
+		return nil, fmt.Errorf("%w: intervalo deve estar entre 15 minutos e 7 dias", domain.ErrInvalidConfig)
+	}
+	schedule := &domain.PredictionSchedule{
+		ID:              "official",
+		Enabled:         enabled,
+		IntervalMinutes: intervalMinutes,
+		UpdatedAt:       time.Now().UTC(),
+		UpdatedBy:       userID,
+	}
+	if err := uc.repo.UpdatePredictionSchedule(ctx, schedule); err != nil {
+		return nil, err
+	}
+	return uc.repo.GetPredictionSchedule(ctx)
+}
+
 func (uc *MLOpsUseCase) UpdateConfig(ctx context.Context, threshold float64, horizon int, userID string) (*domain.MLConfig, error) {
 	if threshold < 0.05 || threshold > 0.95 {
 		return nil, fmt.Errorf("%w: threshold deve estar entre 0.05 e 0.95", domain.ErrInvalidConfig)
@@ -107,21 +128,21 @@ func (uc *MLOpsUseCase) ResumeTraining(ctx context.Context, id, userID string) (
 	if err != nil {
 		return nil, err
 	}
-	if stored.Status != "failed" {
+	if stored.Status != "failed" && stored.Status != "cancelled" {
 		return nil, domain.ErrInvalidConfig
 	}
-	failedStage := ""
+	interruptedStage := ""
 	for index := range stored.Progress.Stages {
-		if stored.Progress.Stages[index].Status == "failed" {
-			failedStage = stored.Progress.Stages[index].Key
+		if stored.Progress.Stages[index].Status == "failed" || stored.Progress.Stages[index].Status == "cancelled" {
+			interruptedStage = stored.Progress.Stages[index].Key
 			break
 		}
 	}
-	if failedStage == "" {
+	if interruptedStage == "" {
 		return nil, domain.ErrInvalidConfig
 	}
 
-	if failedStage == "catalog_registration" {
+	if interruptedStage == "catalog_registration" {
 		if err := uc.ensureCompletedTrainingRegistered(ctx, stored); err != nil {
 			return nil, err
 		}
@@ -156,6 +177,33 @@ func (uc *MLOpsUseCase) ResumeTraining(ctx context.Context, id, userID string) (
 	return job, nil
 }
 
+func (uc *MLOpsUseCase) CancelTraining(ctx context.Context, id, userID string) (*domain.MLTrainingJob, error) {
+	stored, err := uc.repo.GetTrainingJob(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if stored.Status != "queued" && stored.Status != "running" {
+		return nil, domain.ErrInvalidConfig
+	}
+	if uc.client == nil {
+		return nil, domain.ErrPredictionServiceUnavailable
+	}
+
+	job, err := uc.client.CancelTraining(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	job.RequestedBy = stored.RequestedBy
+	job.Parameters = stored.Parameters
+	if job.CreatedAt.IsZero() {
+		job.CreatedAt = stored.CreatedAt
+	}
+	if err := uc.repo.SaveTrainingJob(ctx, job); err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
 func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.MLTrainingJob, error) {
 	stored, err := uc.repo.GetTrainingJob(ctx, id)
 	if err != nil {
@@ -172,7 +220,7 @@ func (uc *MLOpsUseCase) GetTrainingJob(ctx context.Context, id string) (*domain.
 		}
 		return stored, nil
 	}
-	if stored.Status == "failed" || uc.client == nil {
+	if stored.Status == "failed" || stored.Status == "cancelled" || uc.client == nil {
 		return stored, nil
 	}
 	current, err := uc.client.GetTrainingJob(ctx, id)

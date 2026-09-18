@@ -177,6 +177,8 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 
 		protected.GET("/ml/config", h.mlops.GetConfig)
 		protected.PUT("/ml/config", httpAdapter.RequireRole("enginner"), h.mlops.UpdateConfig)
+		protected.GET("/ml/prediction-schedule", httpAdapter.RequireRole("enginner"), h.mlops.GetPredictionSchedule)
+		protected.PUT("/ml/prediction-schedule", httpAdapter.RequireRole("enginner"), h.mlops.UpdatePredictionSchedule)
 		protected.GET("/ml/model/active", h.mlops.GetActiveModel)
 		protected.GET("/ml/model/history", httpAdapter.RequireRole("enginner"), h.mlops.ListModelHistory)
 		protected.GET("/ml/models/:version/metrics", httpAdapter.RequireRole("enginner"), h.mlops.GetThresholdMetrics)
@@ -185,6 +187,7 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.GET("/ml/training-jobs", httpAdapter.RequireRole("enginner"), h.mlops.ListTrainingJobs)
 		protected.GET("/ml/training-jobs/:id", httpAdapter.RequireRole("enginner"), h.mlops.GetTrainingJob)
 		protected.POST("/ml/training-jobs/:id/resume", httpAdapter.RequireRole("enginner"), h.mlops.ResumeTraining)
+		protected.POST("/ml/training-jobs/:id/cancel", httpAdapter.RequireRole("enginner"), h.mlops.CancelTraining)
 		protected.GET("/ml/drift", httpAdapter.RequireRole("enginner"), h.mlops.GetDrift)
 		protected.GET("/ml/performance", httpAdapter.RequireRole("enginner"), h.mlops.GetProductionPerformance)
 

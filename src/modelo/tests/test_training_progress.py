@@ -8,6 +8,7 @@ sys.path.insert(0, str(MODEL_ROOT))
 
 from ml_service.application.training_progress import (
     ProgressReporter,
+    cancel_current_stage,
     fail_current_stage,
     initial_progress,
     resume_progress,
@@ -38,6 +39,18 @@ def test_falha_fica_associada_ao_checkpoint_ativo():
 
     assert failed['stages'][5]['status'] == 'failed'
     assert failed['stages'][5]['detail'] == 'erro no SHAP'
+
+
+def test_cancelamento_fica_associado_ao_checkpoint_ativo():
+    progress = initial_progress()
+    progress['current_stage'] = 'final_training'
+    progress['stages'][6]['status'] = 'running'
+
+    cancelled = cancel_current_stage(progress, 'cancelado pelo usuário')
+
+    assert cancelled['stages'][6]['status'] == 'cancelled'
+    assert cancelled['stages'][6]['finished_at']
+    assert cancelled['stages'][6]['detail'] == 'cancelado pelo usuário'
 
 
 def test_etapas_opcionais_podem_ser_marcadas_como_ignoradas(tmp_path):

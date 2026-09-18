@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt 'msgpack>=1.2.1' && \
     pip uninstall -y setuptools wheel
 
-COPY app.py database.py pipeline.py exportar_modelo.py seed_local_registry.py ./
+COPY app.py database.py pipeline.py exportar_modelo.py seed_local_registry.py training_worker.py ./
 COPY ml_service ./ml_service
 COPY openapi.yaml ./openapi.yaml
 COPY artifacts ./artifacts

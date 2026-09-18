@@ -77,9 +77,9 @@ O bundle do modelo (artifacts/modelo_5.joblib) é gerado por `exportar_modelo.py
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Arquitetura de deploy</h2>
 </div>
 
-O serviço roda em container Docker próprio (`src/modelo/Dockerfile`), separado do container do backend. Cada um com seu `docker-compose.yml`, ligados pela mesma rede Docker compartilhada (`backend-network`), não por um compose único. Isso evita que as duas pessoas fiquem editando o mesmo arquivo de configuração.
+O serviço roda em container Docker próprio (`src/modelo/Dockerfile`), separado do backend. Em desenvolvimento, os Compose comunicam-se pela rede `backend-network`. Em produção, o modelo roda na VPS 2 e recebe chamadas da VPS 1 pelo WireGuard, no endereço privado `10.50.0.2:8000`.
 
-O .gitlab-ci.yml cobre o serviço inteiro: `pytest` → build da imagem → escaneamento de vulnerabilidade (Trivy) → publicação no Azure Container Registry a cada push na branch principal. Um Watchtower rodando na VM detecta a imagem nova e reinicia o container sozinho.
+O `.gitlab-ci.yml` executa `pytest`, build e Trivy. A imagem não é publicada: o código é atualizado manualmente na VPS e o Docker Compose constrói a imagem localmente.
 
 ---
 

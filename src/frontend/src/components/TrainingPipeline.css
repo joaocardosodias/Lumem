@@ -20,6 +20,49 @@
   gap: 12px;
 }
 
+.pipeline-cancel-btn {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid #d8a1aa;
+  border-radius: 7px;
+  background: #fff;
+  color: #a91e34;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.pipeline-cancel-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pipeline-cancel-btn:hover:not(:disabled) {
+  border-color: #b52539;
+  background: #fff5f6;
+  transform: translateY(-1px);
+}
+
+.pipeline-cancel-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pipeline-cancel-btn:focus-visible {
+  outline: 3px solid rgba(181, 37, 57, .16);
+  outline-offset: 2px;
+}
+
+.pipeline-cancel-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
 .pipeline-meta-pill-group {
   display: inline-flex;
   align-items: center;
@@ -150,6 +193,26 @@
 .pipeline-flow-card.is-failed {
   border-color: #ef4444;
   background: #fef2f2;
+}
+
+.pipeline-flow-card.is-cancelled {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.pipeline-flow-card.is-cancelled .pipeline-flow-card__icon-box {
+  background: #e8edf3;
+  color: #52647f;
+}
+
+.pipeline-flow-card.is-cancelled .pipeline-flow-card__title {
+  color: #40516a;
+}
+
+.training-pipeline-card .badge-tag.is-cancelled {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #52647f;
 }
 
 .pipeline-flow-card.is-selected {
@@ -292,6 +355,17 @@
 .pipeline-flow-card__retry:hover:not(:disabled) {
   background: #dc2626;
   color: #ffffff;
+}
+
+.pipeline-flow-card__retry.is-cancelled {
+  border-color: #8da0b8;
+  color: #40516a;
+}
+
+.pipeline-flow-card__retry.is-cancelled:hover:not(:disabled) {
+  border-color: var(--brand, #3f00ff);
+  background: #f1f3ff;
+  color: var(--brand, #3f00ff);
 }
 
 .pipeline-flow-card__retry:focus-visible {

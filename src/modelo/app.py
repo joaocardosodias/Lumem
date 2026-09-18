@@ -135,6 +135,18 @@ def create_app(feature_repository=None, model_registry=None, training_service=No
         except (RuntimeError, ValueError) as error:
             return _problem(409, 'Treinamento não retomado', str(error))
 
+    @flask_app.post('/v1/training-jobs/<job_id>/cancel')
+    def cancel_training(job_id):
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict) or set(payload).difference({'requested_by'}):
+            return _problem(400, 'Payload inválido', 'Somente requested_by pode ser informado.')
+        try:
+            return jsonify(training.cancel(job_id, str(payload.get('requested_by', '')))), 200
+        except LookupError as error:
+            return _problem(404, 'Treinamento não encontrado', str(error))
+        except ValueError as error:
+            return _problem(409, 'Treinamento não cancelado', str(error))
+
     @flask_app.get('/v1/models/<version>/drift')
     def model_drift(version):
         try:

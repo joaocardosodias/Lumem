@@ -58,6 +58,96 @@ func (r *PostgresMLOpsRepository) UpdateConfig(ctx context.Context, config *doma
 	return err
 }
 
+func scanPredictionSchedule(row scanner) (*domain.PredictionSchedule, error) {
+	var schedule domain.PredictionSchedule
+	err := row.Scan(
+		&schedule.ID,
+		&schedule.Enabled,
+		&schedule.IntervalMinutes,
+		&schedule.NextRunAt,
+		&schedule.LastStartedAt,
+		&schedule.LastCompletedAt,
+		&schedule.LastRunID,
+		&schedule.LastStatus,
+		&schedule.LastError,
+		&schedule.UpdatedAt,
+		&schedule.UpdatedBy,
+	)
+	return &schedule, err
+}
+
+const predictionScheduleColumns = `
+	id, enabled, interval_minutes, next_run_at, last_started_at, last_completed_at,
+	COALESCE(last_run_id, ''), last_status, last_error, updated_at, COALESCE(updated_by, '')
+`
+
+func (r *PostgresMLOpsRepository) GetPredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error) {
+	schedule, err := scanPredictionSchedule(r.db.QueryRowContext(ctx, `
+		SELECT `+predictionScheduleColumns+`
+		FROM prediction_schedules
+		WHERE id = 'official'
+	`))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: agendamento de predicao ausente", domain.ErrInvalidConfig)
+	}
+	return schedule, err
+}
+
+func (r *PostgresMLOpsRepository) UpdatePredictionSchedule(ctx context.Context, schedule *domain.PredictionSchedule) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO prediction_schedules (
+			id, enabled, interval_minutes, next_run_at, last_status, last_error, updated_at, updated_by
+		) VALUES (
+			'official', $1, $2,
+			CASE WHEN $1 THEN CURRENT_TIMESTAMP + ($2 * INTERVAL '1 minute') ELSE NULL END,
+			'idle', '', CURRENT_TIMESTAMP, NULLIF($3, '')
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			enabled = EXCLUDED.enabled,
+			interval_minutes = EXCLUDED.interval_minutes,
+			next_run_at = CASE
+				WHEN EXCLUDED.enabled THEN CURRENT_TIMESTAMP + (EXCLUDED.interval_minutes * INTERVAL '1 minute')
+				ELSE NULL
+			END,
+			last_status = CASE WHEN EXCLUDED.enabled THEN prediction_schedules.last_status ELSE 'idle' END,
+			last_error = CASE WHEN EXCLUDED.enabled THEN prediction_schedules.last_error ELSE '' END,
+			updated_at = CURRENT_TIMESTAMP,
+			updated_by = EXCLUDED.updated_by
+	`, schedule.Enabled, schedule.IntervalMinutes, schedule.UpdatedBy)
+	return err
+}
+
+func (r *PostgresMLOpsRepository) ClaimDuePredictionSchedule(ctx context.Context) (*domain.PredictionSchedule, error) {
+	schedule, err := scanPredictionSchedule(r.db.QueryRowContext(ctx, `
+		UPDATE prediction_schedules
+		SET next_run_at = CURRENT_TIMESTAMP + (interval_minutes * INTERVAL '1 minute'),
+			last_started_at = CURRENT_TIMESTAMP,
+			last_status = 'running',
+			last_error = ''
+		WHERE id = 'official'
+			AND enabled = TRUE
+			AND next_run_at IS NOT NULL
+			AND next_run_at <= CURRENT_TIMESTAMP
+		RETURNING `+predictionScheduleColumns+`
+	`))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return schedule, err
+}
+
+func (r *PostgresMLOpsRepository) CompletePredictionScheduleRun(ctx context.Context, runID, status, errorMessage string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE prediction_schedules
+		SET last_completed_at = CURRENT_TIMESTAMP,
+			last_run_id = NULLIF($1, ''),
+			last_status = $2,
+			last_error = $3
+		WHERE id = 'official'
+	`, runID, status, errorMessage)
+	return err
+}
+
 const modelColumns = `
 	id, version, algorithm, status, train_metrics, test_metrics, feature_importance,
 	artifact_path, artifact_uri, artifact_sha256, dataset_sha256, target_name,

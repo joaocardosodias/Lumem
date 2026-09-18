@@ -17,7 +17,7 @@ func RunTrainingJobReconciler(ctx context.Context, uc *MLOpsUseCase, interval ti
 			return
 		}
 		for index := range jobs {
-			if jobs[index].Status == "failed" {
+			if jobs[index].Status == "failed" || jobs[index].Status == "cancelled" {
 				continue
 			}
 			jobCtx, cancel := context.WithTimeout(ctx, 20*time.Second)

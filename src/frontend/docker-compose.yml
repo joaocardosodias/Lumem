@@ -10,7 +10,7 @@ services:
     expose:
       - "80"
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:80"
     env_file:
       - path: .env
         required: false

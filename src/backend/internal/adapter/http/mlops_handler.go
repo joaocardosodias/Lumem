@@ -14,6 +14,11 @@ type UpdateMLConfigRequest struct {
 	DefaultHorizonDays int     `json:"default_horizon_days"`
 }
 
+type UpdatePredictionScheduleRequest struct {
+	Enabled         bool `json:"enabled"`
+	IntervalMinutes int  `json:"interval_minutes"`
+}
+
 type MLOpsHandler struct {
 	mlopsUC   *usecase.MLOpsUseCase
 	promoteUC *usecase.PromoteModelAndPublishUseCase
@@ -51,6 +56,31 @@ func (h *MLOpsHandler) UpdateConfig(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, cfg)
+}
+
+func (h *MLOpsHandler) GetPredictionSchedule(c *gin.Context) {
+	schedule, err := h.mlopsUC.GetPredictionSchedule(c.Request.Context())
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, schedule)
+}
+
+func (h *MLOpsHandler) UpdatePredictionSchedule(c *gin.Context) {
+	var req UpdatePredictionScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Requisicao Invalida", "Informe se o agendamento esta ativo e o intervalo em minutos.")
+		return
+	}
+	schedule, err := h.mlopsUC.UpdatePredictionSchedule(
+		c.Request.Context(), req.Enabled, req.IntervalMinutes, c.GetString("userID"),
+	)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, schedule)
 }
 
 func (h *MLOpsHandler) GetActiveModel(c *gin.Context) {
@@ -100,6 +130,15 @@ func (h *MLOpsHandler) ResumeTraining(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusAccepted, run)
+}
+
+func (h *MLOpsHandler) CancelTraining(c *gin.Context) {
+	job, err := h.mlopsUC.CancelTraining(c.Request.Context(), c.Param("id"), c.GetString("userID"))
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, job)
 }
 
 func (h *MLOpsHandler) GetDrift(c *gin.Context) {

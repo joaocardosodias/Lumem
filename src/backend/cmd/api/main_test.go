@@ -173,6 +173,8 @@ func TestBuildRouter_AndRoutes(t *testing.T) {
 		{http.MethodGet, "/api/v1/stations/PIN/doors/status"},
 		{http.MethodPost, "/api/v1/predictions/trigger"},
 		{http.MethodGet, "/api/v1/predictions/latest"},
+		{http.MethodGet, "/api/v1/ml/prediction-schedule"},
+		{http.MethodPut, "/api/v1/ml/prediction-schedule"},
 		{http.MethodGet, "/api/v1/auth/me"},
 	}
 	for _, endpoint := range protectedEndpoints {

@@ -14,9 +14,6 @@ else
 fi
 
 COMPOSE_FILE="$BACKEND_DIR/docker-compose.yml"
-if [ -f "$BACKEND_DIR/docker-compose.prod.yml" ] && docker ps 2>/dev/null | grep -q "watchtower"; then
-  COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
-fi
 
 if [ "$MODE" = "on" ]; then
   sed -i 's/^LOAD_TEST=.*/LOAD_TEST=true/' "$ENV_FILE"

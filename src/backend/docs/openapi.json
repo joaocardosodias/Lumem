@@ -710,6 +710,46 @@
         }
       }
     },
+    "/api/v1/ml/prediction-schedule": {
+      "get": {
+        "summary": "Consultar agendamento das predições oficiais",
+        "description": "Retorna frequência, próxima execução e resultado da última rodada automática. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Agendamento atual",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionSchedule" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Configurar execução automática das predições",
+        "description": "Ativa ou desativa novas rodadas oficiais no worker. O intervalo aceito fica entre 15 minutos e 7 dias. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["enabled", "interval_minutes"],
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "interval_minutes": { "type": "integer", "minimum": 15, "maximum": 10080 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agendamento atualizado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionSchedule" } } }
+          },
+          "400": { "description": "Intervalo inválido" }
+        }
+      }
+    },
     "/api/v1/ml/model/active": {
       "get": {
         "summary": "Consultar versão ativa e sua procedência",
@@ -794,7 +834,7 @@
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "responses": {
           "200": {
-            "description": "Estado queued, running, completed ou failed",
+            "description": "Estado queued, running, completed, failed ou cancelled",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
           }
         }
@@ -802,15 +842,29 @@
     },
     "/api/v1/ml/training-jobs/{id}/resume": {
       "post": {
-        "summary": "Retomar treinamento a partir da etapa com falha",
+        "summary": "Retomar treinamento a partir da etapa com falha ou cancelada",
         "security": [{ "BearerAuth": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "responses": {
           "202": {
-            "description": "Novo job criado com reaproveitamento dos checkpoints concluídos",
+            "description": "Novo job criado com reaproveitamento dos checkpoints concluídos antes da falha ou do cancelamento",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
           },
           "409": { "description": "Job não pode ser retomado" }
+        }
+      }
+    },
+    "/api/v1/ml/training-jobs/{id}/cancel": {
+      "post": {
+        "summary": "Cancelar treinamento em fila ou execução",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "Treinamento interrompido e checkpoints anteriores preservados",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          },
+          "409": { "description": "Job já finalizado e não pode ser cancelado" }
         }
       }
     },
@@ -1068,6 +1122,22 @@
           "updated_by": { "type": "string" }
         }
       },
+      "PredictionSchedule": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "enum": ["official"] },
+          "enabled": { "type": "boolean" },
+          "interval_minutes": { "type": "integer", "minimum": 15, "maximum": 10080 },
+          "next_run_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_completed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_run_id": { "type": "string", "format": "uuid", "nullable": true },
+          "last_status": { "type": "string", "enum": ["idle", "running", "completed", "failed"] },
+          "last_error": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "updated_by": { "type": "string" }
+        }
+      },
       "ThresholdMetric": {
         "type": "object",
         "required": ["threshold", "true_positives", "false_positives", "false_negatives", "true_negatives", "precision", "recall", "f1_score", "alert_count", "alert_rate"],
@@ -1117,7 +1187,7 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "version": { "type": "string" },
-          "status": { "type": "string", "enum": ["queued", "running", "completed", "failed"] },
+          "status": { "type": "string", "enum": ["queued", "running", "completed", "failed", "cancelled"] },
           "requested_by": { "type": "string" },
           "parameters": { "type": "object", "additionalProperties": true },
           "manifest": { "type": "object", "additionalProperties": true },
@@ -1147,7 +1217,7 @@
         "properties": {
           "key": { "type": "string" },
           "label": { "type": "string" },
-          "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "skipped"] },
+          "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "cancelled", "skipped"] },
           "started_at": { "type": "string", "format": "date-time", "nullable": true },
           "finished_at": { "type": "string", "format": "date-time", "nullable": true },
           "duration_ms": { "type": "integer", "nullable": true },

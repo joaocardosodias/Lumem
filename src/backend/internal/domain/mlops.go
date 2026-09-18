@@ -19,6 +19,20 @@ type MLConfig struct {
 	UpdatedBy          string    `json:"updated_by"`
 }
 
+type PredictionSchedule struct {
+	ID              string     `json:"id"`
+	Enabled         bool       `json:"enabled"`
+	IntervalMinutes int        `json:"interval_minutes"`
+	NextRunAt       *time.Time `json:"next_run_at,omitempty"`
+	LastStartedAt   *time.Time `json:"last_started_at,omitempty"`
+	LastCompletedAt *time.Time `json:"last_completed_at,omitempty"`
+	LastRunID       string     `json:"last_run_id,omitempty"`
+	LastStatus      string     `json:"last_status"`
+	LastError       string     `json:"last_error,omitempty"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	UpdatedBy       string     `json:"updated_by"`
+}
+
 type MLModelRun struct {
 	ID                   string            `json:"id"`
 	Version              string            `json:"version"`

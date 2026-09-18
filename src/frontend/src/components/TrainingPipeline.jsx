@@ -28,6 +28,7 @@ const STATUS_LABELS = {
   failed: 'Falhou',
   pending: 'Pendente',
   skipped: 'Ignorado',
+  cancelled: 'Cancelado',
 }
 
 const CARD_BORDER_PATHS = {
@@ -68,6 +69,14 @@ function ReloadIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 6v5h-5" />
       <path d="M18.5 15a8 8 0 1 1-1.9-8.3L20 11" />
+    </svg>
+  )
+}
+
+function StopIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />
     </svg>
   )
 }
@@ -227,7 +236,7 @@ function normalizedStages(job) {
   }))
 }
 
-export default function TrainingPipeline({ job, retraining, onTriggerRetrain, onResumeTraining }) {
+export default function TrainingPipeline({ job, retraining, cancelling, onTriggerRetrain, onResumeTraining, onCancelTraining }) {
   const [now, setNow] = useState(0)
   const stages = useMemo(() => normalizedStages(job), [job])
   const actualCompletedPrefix = useMemo(() => {
@@ -309,6 +318,7 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain, on
 
   const activeStage = visibleStages.find((stage) => stage.status === 'running')
     || visibleStages.find((stage) => stage.status === 'failed')
+    || visibleStages.find((stage) => stage.status === 'cancelled')
     || (effectiveStatus === 'queued' ? visibleStages[0] : visibleStages.at(-1))
 
   const [selectedStageKey, setSelectedStageKey] = useState(null)
@@ -388,14 +398,14 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain, on
           </div>
         </button>
 
-        {stage.status === 'failed' && onResumeTraining ? (
+        {['failed', 'cancelled'].includes(stage.status) && onResumeTraining ? (
           <button
             type="button"
-            className={`pipeline-flow-card__retry ${retraining ? 'is-loading' : ''}`}
+            className={`pipeline-flow-card__retry ${stage.status === 'cancelled' ? 'is-cancelled' : ''} ${retraining ? 'is-loading' : ''}`}
             onClick={onResumeTraining}
             disabled={retraining}
-            aria-label={`Reexecutar ${stage.title} a partir do último checkpoint`}
-            title="Reexecutar etapa"
+            aria-label={`Retomar ${stage.title} a partir do último checkpoint`}
+            title="Retomar desta etapa"
           >
             <ReloadIcon />
           </button>
@@ -437,6 +447,18 @@ export default function TrainingPipeline({ job, retraining, onTriggerRetrain, on
             >
               <TriggerIcon />
               <span>{isActive ? 'Executando…' : 'Iniciar retreinamento'}</span>
+            </button>
+          ) : null}
+
+          {isActive && onCancelTraining ? (
+            <button
+              type="button"
+              className="pipeline-cancel-btn"
+              onClick={onCancelTraining}
+              disabled={cancelling}
+            >
+              <StopIcon />
+              <span>{cancelling ? 'Cancelando…' : 'Cancelar treinamento'}</span>
             </button>
           ) : null}
         </div>

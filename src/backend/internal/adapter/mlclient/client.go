@@ -164,6 +164,15 @@ func (c *Client) ResumeTraining(ctx context.Context, id, requestedBy string) (*d
 	return &job, nil
 }
 
+func (c *Client) CancelTraining(ctx context.Context, id, requestedBy string) (*domain.MLTrainingJob, error) {
+	var job domain.MLTrainingJob
+	path := "/v1/training-jobs/" + url.PathEscape(id) + "/cancel"
+	if err := c.doJSON(ctx, http.MethodPost, path, map[string]string{"requested_by": requestedBy}, &job); err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
 func (c *Client) GetActiveModelMetadata(ctx context.Context) (map[string]any, error) {
 	manifest := make(map[string]any)
 	if err := c.doJSON(ctx, http.MethodGet, "/v1/models/active", nil, &manifest); err != nil {
