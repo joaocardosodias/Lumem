@@ -2,6 +2,8 @@
 
 Este serviço executa o Modelo 5, um `RandomForestClassifier` treinado para estimar a probabilidade de uma porta apresentar falha nos próximos sete dias. Ele ficou responsável somente pela parte matemática do fluxo: montar as mesmas features do treinamento e devolver probabilidades. O backend Go escolhe o threshold, classifica as portas e executa as regras operacionais, como registrar a rodada e abrir inspeções.
 
+O RNN em `models/modelo-rnn-1/` permanece como experimento comparativo da Sprint 3. O Modelo 5 é o artefato servido em produção porque obteve PR-AUC de 0,184, contra 0,154 da RNN. Os números vêm dos artefatos reais de avaliação e estão detalhados na documentação `modelo-RNN.mdx`.
+
 ## Arquitetura
 
 O código foi separado em domínio, aplicação, portas e adaptadores:

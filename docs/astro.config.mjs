@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import mermaid from 'astro-mermaid';
 
 const backendSidebar = {
 	label: 'Backend',
@@ -50,14 +51,53 @@ const backendSidebar = {
 	],
 };
 
+const fallbackSite = 'https://graduacao.pages.git.inteli.edu.br';
+const fallbackBase = '/2026-2a/t16/g04';
+const pagesUrl = process.env.CI_PAGES_URL;
+const site = pagesUrl ? new URL(pagesUrl).origin : fallbackSite;
+const base = pagesUrl
+	? (new URL(pagesUrl).pathname.replace(/\/$/, '') || '/')
+	: fallbackBase;
+const readmePath = `${base === '/' ? '' : base}/readme`;
+const basePrefix = base === '/' ? '' : base.replace(/\/$/, '');
+
+/** Prefix site-root links (`/sprints/...`) with Astro `base` so GitLab Pages works. */
+function rehypePrefixBase() {
+	return (tree) => {
+		walk(tree);
+		function walk(node) {
+			if (node.type === 'element' && node.tagName === 'a' && typeof node.properties?.href === 'string') {
+				const href = node.properties.href;
+				if (
+					basePrefix &&
+					href.startsWith('/') &&
+					!href.startsWith('//') &&
+					href !== basePrefix &&
+					!href.startsWith(`${basePrefix}/`)
+				) {
+					node.properties.href = `${basePrefix}${href}`;
+				}
+			}
+			if (Array.isArray(node.children)) node.children.forEach(walk);
+		}
+	};
+}
+
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://graduacao.pages.git.inteli.edu.br',
-	base: '/2026-2a/t16/g04',
+	site,
+	base,
 	redirects: {
-		'/': '/2026-2a/t16/g04/readme',
+		'/': readmePath,
+	},
+	markdown: {
+		rehypePlugins: [rehypePrefixBase],
 	},
 	integrations: [
+		mermaid({
+			theme: 'neutral',
+			autoTheme: true,
+		}),
 		starlight({
 			title: 'Documentação',
 			locales: {
@@ -120,14 +160,25 @@ export default defineConfig({
 							label: 'Sprint 3',
 							collapsed: true,
 							items: [
+								{
+									label: 'Modelos Preditivos',
+									collapsed: true,
+									items: [
+										{ label: 'Pipeline Sequencial dos Modelos Preditivos', slug: 'sprints/sprint-3/modelos/pipeline-sequencial-modelos' },
+										{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } },
+									],
+								},
+								{ label: 'Arquitetura UML', slug: 'sprints/sprint-3/arquitetura-uml' },
+								{ label: 'Requisitos do Sistema', slug: 'sprints/sprint-3/requisitos' },
 								{ label: 'Protótipo de Alta Fidelidade', slug: 'sprints/sprint-3/prototipo-alta-fidelidade' },
 								{ label: 'Frontend', slug: 'sprints/sprint-3/frontend' },
 								backendSidebar,
 								{
-									label: 'Modelos Preditivos',
+									label: 'API de Predição',
 									collapsed: true,
-									items: [{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } }],
+									items: [{ autogenerate: { directory: 'sprints/Sprint 3/api' } }],
 								},
+								{ label: 'Análise Financeira', slug: 'sprints/sprint-3/analise_financeira_projeto_poc_implementacao' },
 							],
 						},
 						{
