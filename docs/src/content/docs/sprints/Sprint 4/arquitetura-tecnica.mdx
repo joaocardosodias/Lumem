@@ -61,3 +61,15 @@ flowchart TD
     class Retreino simulado
 ```
 
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Explicando cada caminho</h2>
+</div>
+
+**Enviar um arquivo novo**: O usuário manda uma planilha pela tela. O serviço de aplicação não processa esse arquivo na hora, ele passa pro serviço de processamento assíncrono, que guarda o arquivo original no armazenamento de objetos e, depois de ler e entender o conteúdo, grava as linhas já organizadas no armazenamento relacional. Esse passo a mais existe pra um arquivo grande não travar a tela de quem está usando a plataforma.
+
+**Pedir uma predição**: o serviço de aplicação passa a porta pro serviço de inferência. Esse serviço busca sozinho, no armazenamento relacional, o histórico que precisa daquela porta, calcula o risco, e devolve a resposta. Quem grava esse resultado de volta no banco é o serviço de aplicação, não o serviço de inferência.
+
+**Pedir um retreino (o que falta)**: o botão de retreino existe na tela e responde alguma coisa, mas por trás dele faltam as duas ligações desenhadas tracejadas no diagrama. Ele não lê o dado mais recente do armazenamento, e não existe nenhum caminho que leve um modelo novo até o serviço de inferência. Hoje, apertar esse botão devolve um resultado fixo, de demonstração, sem processar nenhum dado real.
