@@ -146,7 +146,7 @@ func (r *PostgresAlarmRepository) BatchInsertAlarms(ctx context.Context, alarms 
 		return nil
 	}
 
-	const chunkSize = 50
+	const chunkSize = 500
 	for i := 0; i < len(alarms); i += chunkSize {
 		end := i + chunkSize
 		if end > len(alarms) {
@@ -204,4 +204,94 @@ func (r *PostgresAlarmRepository) ReconcileStaleUploads(ctx context.Context) err
 	`
 	_, err := r.db.ExecContext(ctx, query)
 	return err
+}
+
+func (r *PostgresAlarmRepository) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	if filter.Limit <= 0 {
+		filter.Limit = 50
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+
+	query := `
+		SELECT id, COALESCE(upload_id, ''), tag, station_code,
+		       COALESCE(platform, ''), COALESCE(door_number, 0),
+		       alarm_type, duration_seconds, event_timestamp,
+		       COALESCE(normalization_timestamp, ''), source, created_at
+		FROM telemetry_alarms
+	`
+	var conditions []string
+	var args []any
+	argIdx := 1
+
+	if filter.StationCode != "" {
+		conditions = append(conditions, fmt.Sprintf("station_code = $%d", argIdx))
+		args = append(args, strings.ToUpper(filter.StationCode))
+		argIdx++
+	}
+	if filter.Platform != "" {
+		conditions = append(conditions, fmt.Sprintf("platform = $%d", argIdx))
+		args = append(args, strings.ToUpper(filter.Platform))
+		argIdx++
+	}
+	if filter.DoorNumber > 0 {
+		conditions = append(conditions, fmt.Sprintf("door_number = $%d", argIdx))
+		args = append(args, filter.DoorNumber)
+		argIdx++
+	}
+	if filter.AlarmType != "" {
+		conditions = append(conditions, fmt.Sprintf("alarm_type = $%d", argIdx))
+		args = append(args, filter.AlarmType)
+		argIdx++
+	}
+	if filter.Tag != "" {
+		conditions = append(conditions, fmt.Sprintf("tag ILIKE $%d", argIdx))
+		args = append(args, "%"+filter.Tag+"%")
+		argIdx++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += fmt.Sprintf(" ORDER BY event_timestamp DESC, created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, filter.Limit, filter.Offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var alarms []*domain.Alarm
+	for rows.Next() {
+		var a domain.Alarm
+		var dur float64
+		var createdAt time.Time
+
+		err := rows.Scan(
+			&a.ID,
+			&a.UploadID,
+			&a.Tag,
+			&a.StationCode,
+			&a.Platform,
+			&a.DoorNumber,
+			&a.AlarmType,
+			&dur,
+			&a.EventTimestamp,
+			&a.NormalizationTimestamp,
+			&a.Source,
+			&createdAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		a.DurationSeconds = int(dur)
+		a.CreatedAt = createdAt
+		alarms = append(alarms, &a)
+	}
+
+	return alarms, nil
 }

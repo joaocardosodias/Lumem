@@ -212,6 +212,74 @@
         }
       }
     },
+    "/api/v1/alarms": {
+      "get": {
+        "summary": "Listagem de Alarmes de Telemetria",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "station_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "door_number",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "alarm_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de alarmes de telemetria"
+          }
+        }
+      }
+    },
     "/api/v1/maintenance": {
       "get": {
         "summary": "Listagem de Eventos de Manutencao",
@@ -445,6 +513,47 @@
         }
       }
     },
+    "/api/v1/doors/{id}/predictions": {
+      "get": {
+        "summary": "Historico Preditivo da Porta",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 30, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rodadas preditivas da porta, da mais recente para a mais antiga",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "history": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/DoorPredictionHistoryOutput" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/stations/{code}/doors/status": {
       "get": {
         "summary": "Mapa Termico Visual de Portas da Estacao",
@@ -487,7 +596,9 @@
                 "properties": {
                   "horizon_days": {
                     "type": "integer",
-                    "default": 7
+                    "enum": [7],
+                    "default": 7,
+                    "description": "Horizonte fixo do artefato atualmente em producao"
                   }
                 }
               }
@@ -504,6 +615,280 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/experiments": {
+      "post": {
+        "summary": "Executar cenario isolado no laboratorio preditivo",
+        "description": "Executa inferencia real com outro threshold sem publicar a rodada, alterar dashboards ou abrir inspecoes. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["threshold"],
+                "properties": {
+                  "threshold": { "type": "number", "format": "double", "minimum": 0.05, "maximum": 0.95 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cenario executado e mantido isolado da operacao",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionRunOutput" } } }
+          }
+        }
+      },
+      "get": {
+        "summary": "Listar cenarios do laboratorio preditivo",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }],
+        "responses": {
+          "200": {
+            "description": "Cenarios ainda nao publicados",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PredictionRunOutput" } } } }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/experiments/{id}/promote": {
+      "post": {
+        "summary": "Adotar um cenario como predicao oficial",
+        "description": "Publica atomicamente a rodada, atualiza o threshold oficial e abre inspecoes para as portas classificadas em risco. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "Rodada promovida para a operacao",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionRunOutput" } } }
+          },
+          "404": { "description": "Experimento nao encontrado ou ja publicado" }
+        }
+      }
+    },
+    "/api/v1/ml/config": {
+      "get": {
+        "summary": "Consultar configuração operacional do modelo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Threshold oficial e horizonte suportado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLConfig" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Atualizar threshold oficial",
+        "description": "Mantém no backend Go a decisão operacional que transforma probabilidade em classificação. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["threshold", "default_horizon_days"],
+                "properties": {
+                  "threshold": { "type": "number", "minimum": 0.05, "maximum": 0.95 },
+                  "default_horizon_days": { "type": "integer", "enum": [7] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuração atualizada",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLConfig" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/prediction-schedule": {
+      "get": {
+        "summary": "Consultar agendamento das predições oficiais",
+        "description": "Retorna frequência, próxima execução e resultado da última rodada automática. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Agendamento atual",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionSchedule" } } }
+          }
+        }
+      },
+      "put": {
+        "summary": "Configurar execução automática das predições",
+        "description": "Ativa ou desativa novas rodadas oficiais no worker. O intervalo aceito fica entre 15 minutos e 7 dias. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["enabled", "interval_minutes"],
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "interval_minutes": { "type": "integer", "minimum": 15, "maximum": 10080 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agendamento atualizado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PredictionSchedule" } } }
+          },
+          "400": { "description": "Intervalo inválido" }
+        }
+      }
+    },
+    "/api/v1/ml/model/active": {
+      "get": {
+        "summary": "Consultar versão ativa e sua procedência",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Modelo em produção, hashes e métricas históricas",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLModelRun" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/model/history": {
+      "get": {
+        "summary": "Listar versões registradas do modelo",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 100 } }],
+        "responses": {
+          "200": {
+            "description": "Histórico de candidatas, produção e versões retiradas",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/MLModelRun" } } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/models/{version}/metrics": {
+      "get": {
+        "summary": "Consultar curva de thresholds de uma versão",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "version", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Métricas calculadas no teste temporal",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ThresholdMetric" } } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/models/{version}/promote": {
+      "post": {
+        "summary": "Promover uma versão e publicar a rodada oficial",
+        "description": "Valida e ativa o artefato no serviço Python, troca o estado no PostgreSQL e executa uma nova rodada oficial com o threshold operacional vigente. Se a rodada falhar, tenta restaurar o modelo anterior. Restrito a engenharia.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "version", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "Versão ativa e rodada oficial publicada após a promoção",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelPromotionResult" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/retrain": {
+      "post": {
+        "summary": "Iniciar treinamento assíncrono real",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "202": {
+            "description": "Job criado; o resultado deve ser acompanhado pelo identificador",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/training-jobs": {
+      "get": {
+        "summary": "Listar histórico real de treinamentos",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }],
+        "responses": {
+          "200": {
+            "description": "Jobs persistidos com parâmetros, timestamps e falhas",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/MLTrainingJob" } } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/training-jobs/{id}": {
+      "get": {
+        "summary": "Consultar estado de um treinamento",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "Estado queued, running, completed, failed ou cancelled",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/training-jobs/{id}/resume": {
+      "post": {
+        "summary": "Retomar treinamento a partir da etapa com falha ou cancelada",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "202": {
+            "description": "Novo job criado com reaproveitamento dos checkpoints concluídos antes da falha ou do cancelamento",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          },
+          "409": { "description": "Job não pode ser retomado" }
+        }
+      }
+    },
+    "/api/v1/ml/training-jobs/{id}/cancel": {
+      "post": {
+        "summary": "Cancelar treinamento em fila ou execução",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "Treinamento interrompido e checkpoints anteriores preservados",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLTrainingJob" } } }
+          },
+          "409": { "description": "Job já finalizado e não pode ser cancelado" }
+        }
+      }
+    },
+    "/api/v1/ml/drift": {
+      "get": {
+        "summary": "Calcular e auditar drift da versão ativa",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "PSI e KS calculados por feature sobre dados atuais",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MLDriftReport" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ml/performance": {
+      "get": {
+        "summary": "Consultar desempenho observado em produção",
+        "description": "Agrega somente previsões cujo horizonte de sete dias já terminou.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Matriz de confusão observada e cobertura dos rótulos",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductionPerformance" } } }
           }
         }
       }
@@ -617,8 +1002,6 @@
           "station_code": { "type": "string", "example": "FAL" },
           "platform": { "type": "string", "example": "P1" },
           "door_number": { "type": "string", "example": 4 },
-          "priority": { "type": "string", "enum": ["low", "normal", "high", "critical"], "default": "normal" },
-          "scheduled_for": { "type": "string", "example": "2026-09-04 09:00:00" },
           "notes": { "type": "string", "example": "Verificacao solicitada apos alerta preditivo" }
         }
       },
@@ -682,8 +1065,6 @@
           "station_code": { "type": "string" },
           "platform": { "type": "string" },
           "door_number": { "type": "integer" },
-          "scheduled_for": { "type": "string" },
-          "priority": { "type": "string" },
           "status": { "type": "string" },
           "notes": { "type": "string" },
           "completed_at": { "type": "string" },
@@ -699,7 +1080,8 @@
           "station_code": { "type": "string" },
           "platform": { "type": "string" },
           "door_number": { "type": "integer" },
-          "will_fail": { "type": "boolean" }
+          "will_fail": { "type": "boolean" },
+          "probability": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 }
         }
       },
       "PredictionRunOutput": {
@@ -707,8 +1089,19 @@
         "properties": {
           "id": { "type": "string" },
           "horizon_days": { "type": "integer" },
+          "threshold_used": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "model_version": { "type": "string" },
+          "is_experiment": { "type": "boolean" },
+          "published_at": { "type": "string", "format": "date-time", "nullable": true },
           "total_doors_evaluated": { "type": "integer" },
           "total_doors_at_risk": { "type": "integer" },
+          "average_probability": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "p95_probability": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "maximum_probability": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "estimated_precision": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "estimated_recall": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "estimated_f1": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "validation_source": { "type": "string", "description": "Origem histórica das métricas de validação" },
           "created_at": { "type": "string" },
           "predictions": {
             "type": "array",
@@ -716,6 +1109,169 @@
               "$ref": "#/components/schemas/PredictionItemOutput"
             }
           }
+        }
+      },
+      "MLConfig": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "threshold": { "type": "number", "minimum": 0.05, "maximum": 0.95 },
+          "default_horizon_days": { "type": "integer", "enum": [7] },
+          "auto_retrain_enabled": { "type": "boolean" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "updated_by": { "type": "string" }
+        }
+      },
+      "PredictionSchedule": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "enum": ["official"] },
+          "enabled": { "type": "boolean" },
+          "interval_minutes": { "type": "integer", "minimum": 15, "maximum": 10080 },
+          "next_run_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_completed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "last_run_id": { "type": "string", "format": "uuid", "nullable": true },
+          "last_status": { "type": "string", "enum": ["idle", "running", "completed", "failed"] },
+          "last_error": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "updated_by": { "type": "string" }
+        }
+      },
+      "ThresholdMetric": {
+        "type": "object",
+        "required": ["threshold", "true_positives", "false_positives", "false_negatives", "true_negatives", "precision", "recall", "f1_score", "alert_count", "alert_rate"],
+        "properties": {
+          "threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+          "true_positives": { "type": "integer", "minimum": 0 },
+          "false_positives": { "type": "integer", "minimum": 0 },
+          "false_negatives": { "type": "integer", "minimum": 0 },
+          "true_negatives": { "type": "integer", "minimum": 0 },
+          "precision": { "type": "number", "minimum": 0, "maximum": 1 },
+          "recall": { "type": "number", "minimum": 0, "maximum": 1 },
+          "f1_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "alert_count": { "type": "integer", "minimum": 0 },
+          "alert_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "MLModelRun": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": "string" },
+          "algorithm": { "type": "string" },
+          "status": { "type": "string", "enum": ["candidate", "production", "retired", "failed"] },
+          "artifact_uri": { "type": "string" },
+          "artifact_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+          "dataset_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+          "target": { "type": "string" },
+          "test_rows": { "type": "integer" },
+          "positive_rows": { "type": "integer" },
+          "recommended_threshold": { "type": "number" },
+          "train_metrics": { "type": "object", "additionalProperties": true },
+          "test_metrics": { "type": "object", "additionalProperties": true },
+          "feature_importance": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "threshold_metrics": { "type": "array", "items": { "$ref": "#/components/schemas/ThresholdMetric" } }
+        }
+      },
+      "ModelPromotionResult": {
+        "type": "object",
+        "required": ["model", "prediction_run"],
+        "properties": {
+          "model": { "$ref": "#/components/schemas/MLModelRun" },
+          "prediction_run": { "$ref": "#/components/schemas/PredictionRunOutput" }
+        }
+      },
+      "MLTrainingJob": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "version": { "type": "string" },
+          "status": { "type": "string", "enum": ["queued", "running", "completed", "failed", "cancelled"] },
+          "requested_by": { "type": "string" },
+          "parameters": { "type": "object", "additionalProperties": true },
+          "manifest": { "type": "object", "additionalProperties": true },
+          "progress": { "$ref": "#/components/schemas/MLTrainingProgress" },
+          "error": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "finished_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "MLTrainingProgress": {
+        "type": "object",
+        "properties": {
+          "current_stage": { "type": "string" },
+          "completed_steps": { "type": "integer" },
+          "total_steps": { "type": "integer" },
+          "percent": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "stages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MLTrainingStage" }
+          }
+        }
+      },
+      "MLTrainingStage": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "label": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "cancelled", "skipped"] },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "finished_at": { "type": "string", "format": "date-time", "nullable": true },
+          "duration_ms": { "type": "integer", "nullable": true },
+          "detail": { "type": "string", "nullable": true }
+        }
+      },
+      "MLDriftReport": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "data_drift_detected": { "type": "boolean", "nullable": true },
+          "model_version": { "type": "string" },
+          "reference_dataset_sha256": { "type": "string" },
+          "psi_score": { "type": "number", "nullable": true },
+          "ks_statistic": { "type": "number", "nullable": true },
+          "evaluated_at": { "type": "string", "format": "date-time" },
+          "features_monitored": { "type": "integer" },
+          "features_drift": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        }
+      },
+      "ProductionPerformance": {
+        "type": "object",
+        "properties": {
+          "model_version": { "type": "string" },
+          "threshold": { "type": "number", "nullable": true },
+          "mature_runs": { "type": "integer" },
+          "evaluated_predictions": { "type": "integer" },
+          "total_predictions": { "type": "integer" },
+          "label_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+          "true_positives": { "type": "integer" },
+          "false_positives": { "type": "integer" },
+          "false_negatives": { "type": "integer" },
+          "true_negatives": { "type": "integer" },
+          "precision": { "type": "number", "nullable": true },
+          "recall": { "type": "number", "nullable": true },
+          "f1_score": { "type": "number", "nullable": true },
+          "failure_definition": { "type": "string" }
+        }
+      },
+      "DoorPredictionHistoryOutput": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "run_id": { "type": "string" },
+          "station_code": { "type": "string" },
+          "platform": { "type": "string" },
+          "door_number": { "type": "integer" },
+          "will_fail": { "type": "boolean" },
+          "probability": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "horizon_days": { "type": "integer" },
+          "threshold_used": { "type": "number", "format": "double", "minimum": 0, "maximum": 1 },
+          "model_version": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "window_ends_at": { "type": "string", "format": "date-time" }
         }
       }
     }

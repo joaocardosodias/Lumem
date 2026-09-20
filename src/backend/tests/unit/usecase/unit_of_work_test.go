@@ -59,7 +59,6 @@ func TestUnitOfWork_CommitOnSuccess(t *testing.T) {
 			Platform:    "P1",
 			DoorNumber:  4,
 			Status:      "pending",
-			Priority:    "critical",
 		}
 		return s.Inspections().Create(context.Background(), ins)
 	})

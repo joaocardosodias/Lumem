@@ -131,14 +131,31 @@ func parseAlarmRow(row []string, cols alarmColumnIndices) port.RawAlarmRecord {
 
 func extractPlatform(row []string, tag string, platIdx int, hasPlat bool) string {
 	if hasPlat {
-		if plat := safeGetCell(row, platIdx); plat != "" {
+		if plat := normalizeAlarmPlatform(safeGetCell(row, platIdx)); plat != "" {
 			return plat
 		}
 	}
-	if strings.Contains(tag, "-P1-") || strings.Contains(tag, "-P1") {
+	upperTag := strings.ToUpper(tag)
+	if strings.Contains(upperTag, "-P1-") || strings.Contains(upperTag, "-P1") || strings.Contains(upperTag, "_P1_") {
 		return "P1"
 	}
-	if strings.Contains(tag, "-P2-") || strings.Contains(tag, "-P2") {
+	if strings.Contains(upperTag, "-P2-") || strings.Contains(upperTag, "-P2") || strings.Contains(upperTag, "_P2_") {
+		return "P2"
+	}
+	return ""
+}
+
+func normalizeAlarmPlatform(value string) string {
+	platform := strings.ToUpper(strings.TrimSpace(value))
+	if platform == "P1" || platform == "P2" {
+		return platform
+	}
+	// Consolidated telemetry exports identify the platform with the station
+	// prefix (for example FAL1 and LUZ2). The domain uses P1/P2.
+	if strings.HasSuffix(platform, "1") {
+		return "P1"
+	}
+	if strings.HasSuffix(platform, "2") {
 		return "P2"
 	}
 	return ""

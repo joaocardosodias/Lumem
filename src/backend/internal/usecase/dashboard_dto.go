@@ -36,12 +36,11 @@ type TimelineMaintenanceOutputDTO struct {
 }
 
 type TimelineInspectionOutputDTO struct {
-	ID           string
-	Status       string
-	Priority     string
-	Notes        string
-	ScheduledFor string
-	CompletedAt  *time.Time
+	ID          string
+	Status      string
+	Notes       string
+	CompletedAt *time.Time
+	CreatedAt   time.Time
 }
 
 type DoorTimelineOutputDTO struct {
@@ -74,13 +73,40 @@ type PredictionItemOutputDTO struct {
 	Platform    string
 	DoorNumber  int
 	WillFail    bool
+	Probability *float64
 }
 
 type PredictionRunOutputDTO struct {
 	ID                  string
 	HorizonDays         int
+	ThresholdUsed       *float64
+	ModelVersion        string
+	IsExperiment        bool
+	PublishedAt         *time.Time
 	TotalDoorsEvaluated int
 	TotalDoorsAtRisk    int
+	AverageProbability  *float64
+	P95Probability      *float64
+	MaximumProbability  *float64
+	EstimatedPrecision  *float64
+	EstimatedRecall     *float64
+	EstimatedF1         *float64
+	ValidationSource    string
 	CreatedAt           time.Time
 	Predictions         []PredictionItemOutputDTO
+}
+
+type DoorPredictionHistoryOutputDTO struct {
+	ID            string
+	RunID         string
+	StationCode   string
+	Platform      string
+	DoorNumber    int
+	WillFail      bool
+	Probability   *float64
+	HorizonDays   int
+	ThresholdUsed *float64
+	ModelVersion  string
+	CreatedAt     time.Time
+	WindowEndsAt  time.Time
 }

@@ -56,7 +56,7 @@ func TestConfigValidateStorage(t *testing.T) {
 
 	validS3 := &config.Config{
 		StorageDriver:     "s3",
-		S3Endpoint:        "https://project.storage.supabase.co/storage/v1/s3",
+		S3Endpoint:        "http://minio:9000",
 		S3Region:          "us-east-1",
 		S3Bucket:          "ingestion-uploads",
 		S3AccessKeyID:     "access-key",

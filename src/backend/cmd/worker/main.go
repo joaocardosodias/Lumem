@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/g04/backend/internal/adapter/jobqueue"
+	"github.com/g04/backend/internal/adapter/mlclient"
 	"github.com/g04/backend/internal/adapter/parser"
 	"github.com/g04/backend/internal/adapter/repository"
 	"github.com/g04/backend/internal/adapter/storage"
@@ -70,8 +71,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	db.SetMaxOpenConns(cfg.RiverMaxWorkers + 2)
-	db.SetMaxIdleConns(2)
+	db.SetMaxOpenConns(cfg.RiverMaxWorkers + 1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
 
 	startupCtx, startupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer startupCancel()
@@ -80,7 +83,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	riverPool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	riverPoolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("falha ao interpretar configuracao do pool River", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	riverPoolCfg.MaxConns = int32(cfg.RiverMaxWorkers + 2)
+	riverPoolCfg.MinConns = 1
+	riverPoolCfg.MaxConnLifetime = 10 * time.Minute
+	riverPoolCfg.MaxConnIdleTime = 2 * time.Minute
+
+	riverPool, err := pgxpool.NewWithConfig(context.Background(), riverPoolCfg)
 	if err != nil {
 		logger.Error("falha ao configurar pool River", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -129,6 +142,13 @@ func main() {
 
 	runCtx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopSignals()
+	outcomeUC := usecase.NewEvaluatePredictionOutcomesUseCase(repository.NewPostgresPredictionOutcomeRepository(db))
+	go usecase.RunPredictionOutcomeScheduler(runCtx, outcomeUC, 24*time.Hour, logger)
+	predictionRepo := repository.NewPostgresPredictionRepository(db)
+	mlopsRepo := repository.NewPostgresMLOpsRepository(db)
+	predictionUC := usecase.NewTriggerPredictionsUseCase(predictionRepo, mlclient.NewClient(cfg.VPSModelURL), nil, uow)
+	predictionUC.SetMLOpsRepository(mlopsRepo)
+	go usecase.RunPredictionScheduler(runCtx, mlopsRepo, predictionUC, 30*time.Second, logger)
 	if err := client.Start(runCtx); err != nil {
 		logger.Error("falha ao iniciar worker River", slog.String("error", err.Error()))
 		os.Exit(1)

@@ -34,7 +34,25 @@ Houve também um segundo modelo de RNN testado nesta sprint ([RNN-LSTM](/sprints
 [{"station_code": "VSO", "platform": "P1", "door_number": 8, "will_fail": true, "probability": 0.62}]
 ```
 
-A requisição só identifica as portas — nenhum dado de telemetria trafega pela rede, quem busca isso é a própria API. `probability` é um campo a mais: o backend, hoje, só lê `will_fail`.
+A requisição só identifica as portas — nenhum dado de telemetria trafega pela rede, quem busca isso é a própria API. O backend persiste tanto a classificação `will_fail` quanto a `probability`, preservando a intensidade do risco em cada rodada. Esse histórico alimenta o gráfico de evolução e o calendário de janelas de risco no dossiê de cada porta.
+
+O endpoint `GET /api/v1/doors/{id}/predictions` recupera até 30 avaliações anteriores da porta. Cada item inclui a probabilidade, o threshold aplicado, a versão do modelo, o horizonte e o término calculado da janela prevista. Rodadas antigas, criadas antes dessa evolução, continuam acessíveis com a classificação binária e são apresentadas sem inventar um percentual retroativo.
+
+### Separação entre laboratório e operação
+
+A interface de engenharia permite executar o mesmo modelo de sete dias com thresholds entre 0,05 e 0,95. Cada teste chama a inferência real e grava uma `prediction_run` marcada como experimento. Essa rodada não aparece no Dashboard, não altera a lista de Predições e não abre inspeções. Assim, explorar um limiar mais sensível não gera dezenas de ordens operacionais por engano.
+
+O fluxo foi reduzido a quatro decisões consecutivas: **escolher o threshold**, **executar o cenário**, **comparar o resultado** e **usar na operação**. Não existe um atalho para salvar diretamente o valor do controle deslizante, pois isso permitiria alterar a operação sem antes produzir e observar o cenário correspondente.
+
+O laboratório compara quantidade de portas em risco, taxa de alerta, risco máximo e diferença em relação à rodada oficial. Precisão, recall e F1 vêm da curva de avaliação temporal persistida para a versão do artefato e o threshold escolhido; elas não são inventadas a partir da frota atual. As métricas observadas em produção são calculadas separadamente, depois que os sete dias terminam e os rótulos reais ficam disponíveis.
+
+Quando o engenheiro seleciona **Usar na operação**, uma única transação PostgreSQL publica a rodada, atualiza o threshold ativo e cria as inspeções das portas em risco. Se qualquer etapa falhar, toda a promoção sofre rollback. A partir desse momento, a rodada passa a alimentar as telas usadas pelo operador e deixa a lista de experimentos.
+
+A promoção de uma nova versão do modelo também publica automaticamente uma rodada oficial. O backend ativa o artefato no serviço Python e executa a inferência das portas usando o threshold operacional vigente. A resposta só é aceita quando o Python confirma a mesma versão recém-ativada. Se a inferência ou a persistência falhar, o backend tenta restaurar o modelo anterior, evitando que a versão em produção e o diagnóstico exibido no Dashboard fiquem dessincronizados.
+
+O horizonte permanece fixo em sete dias porque ele faz parte do alvo usado no treinamento. O laboratório altera somente o threshold, que é uma regra de decisão aplicada depois que o modelo calcula a probabilidade. Outros horizontes só serão adicionados quando houver artefatos treinados e validados especificamente para essas janelas.
+
+Os endpoints de governança, restritos à role de engenharia, são `POST /api/v1/predictions/experiments`, `GET /api/v1/predictions/experiments` e `POST /api/v1/predictions/experiments/{id}/promote`.
 
 `GET /health` é usado pelo healthcheck do container.
 
@@ -48,7 +66,7 @@ A requisição só identifica as portas — nenhum dado de telemetria trafega pe
 1. É recebido uma lista de portas.
 2. É feito uma busca no Postgres dos alarmes dos últimos 60 dias (`telemetry_alarms`) e o histórico completo de ordens de manutenção (`maintenance_events`) das estações pedidas.
 3. É calculado ao vivo, as mesmas 83 features candidatas usadas no treino do Modelo 5 (janelas móveis de 1/3/7/14/30 dias, decaimento por recência, histórico de corretivas ZM01/ZM02/ZM03), a mesma matemática de construir_painel.py, só que reescrita pra rodar num instante só, não numa base histórica inteira.
-4. Seleciona as 72 features que o SHAP manteve no treino, roda o modelo e aplica o limiar salvo (0,4831).
+4. Seleciona as 72 features que o SHAP manteve no treino e devolve a probabilidade calculada pelo modelo. O backend Go aplica o threshold operacional ao persistir a rodada.
 
 O bundle do modelo (artifacts/modelo_5.joblib) é gerado por `exportar_modelo.py`, que reproduz as seções 1 a 6 do `modelo_5.ipynb`. É feito o mesmo split temporal, mesmos hiperparâmetros, mesma seleção de features por SHAP. O modelo é treinado com os dados fornecidos pelo parceiro (as mesmas planilhas de alarmes e ordens ZM01/ZM02/ZM03) e avaliado com as mesmas métricas definidas na documentação do Modelo 5 (precisão, recall, F1, PR-AUC, ROC-AUC).
 
@@ -59,9 +77,9 @@ O bundle do modelo (artifacts/modelo_5.joblib) é gerado por `exportar_modelo.py
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Arquitetura de deploy</h2>
 </div>
 
-O serviço roda em container Docker próprio (`src/modelo/Dockerfile`), separado do container do backend. Cada um com seu `docker-compose.yml`, ligados pela mesma rede Docker compartilhada (`backend-network`), não por um compose único. Isso evita que as duas pessoas fiquem editando o mesmo arquivo de configuração.
+O serviço roda em container Docker próprio (`src/modelo/Dockerfile`), separado do backend. Em desenvolvimento, os Compose comunicam-se pela rede `backend-network`. Em produção, o modelo roda na VPS 2 e recebe chamadas da VPS 1 pelo WireGuard, no endereço privado `10.50.0.2:8000`.
 
-O .gitlab-ci.yml cobre o serviço inteiro: `pytest` → build da imagem → escaneamento de vulnerabilidade (Trivy) → publicação no Azure Container Registry a cada push na branch principal. Um Watchtower rodando na VM detecta a imagem nova e reinicia o container sozinho.
+O `.gitlab-ci.yml` executa `pytest`, build e Trivy. A imagem não é publicada: o código é atualizado manualmente na VPS e o Docker Compose constrói a imagem localmente.
 
 ---
 

@@ -10,12 +10,19 @@ export function setUnauthorizedHandler(handler) {
 }
 
 export function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY)
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token) {
-  if (token) sessionStorage.setItem(TOKEN_KEY, token)
-  else sessionStorage.removeItem(TOKEN_KEY)
+  if (typeof window === 'undefined') return
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
+  }
 }
 
 export class ApiError extends Error {
@@ -249,16 +256,29 @@ export function mergeDashboard(dashboard, inspectionCounts) {
   }
 }
 
+function formatNameFromEmail(email) {
+  const clean = String(email || '').split('@')[0]
+  if (!clean) return 'Operador'
+  const parts = clean.split(/[._-]/).filter(Boolean)
+  if (!parts.length) return 'Operador'
+  return parts
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export function unwrapUser(payload) {
   const source = payload?.user && typeof payload.user === 'object' ? payload.user : payload
   if (!source || typeof source !== 'object') {
     return { id: '', name: 'Operador', email: '', role: '' }
   }
 
+  const email = source.email || ''
+  const name = source.name || formatNameFromEmail(email)
+
   return {
     id: String(source.id ?? ''),
-    name: source.name || source.email || 'Operador',
-    email: source.email || '',
+    name,
+    email,
     role: source.role || '',
   }
 }
@@ -278,8 +298,16 @@ export function uploadIdFrom(result) {
 }
 
 export function doorRisk(item) {
-  if (typeof item?.risk === 'number' && Number.isFinite(item.risk)) return item.risk
-  return item?.will_fail ? 0.82 : 0.22
+  if (typeof item?.probability === 'number' && Number.isFinite(item.probability)) {
+    return Math.max(0, Math.min(1, item.probability))
+  }
+  if (typeof item?.failure_probability === 'number' && Number.isFinite(item.failure_probability)) {
+    return Math.max(0, Math.min(1, item.failure_probability))
+  }
+  if (typeof item?.risk === 'number' && Number.isFinite(item.risk)) {
+    return Math.max(0, Math.min(1, item.risk))
+  }
+  return item?.will_fail ? 1.0 : 0.0
 }
 
 export function normalizeDoors(payload, stationCode, stationName) {
@@ -307,15 +335,13 @@ export function relatedMaintenances(items, door) {
   const list = (Array.isArray(items) ? items : asList(items)).map(normalizeMaintenance)
   const pad = String(door.door_number).padStart(2, '0')
   const platformDigit = String(door.platform || '').replace(/\D/g, '')
-  const byLocation = list.filter((item) => {
+  return list.filter((item) => {
     const location = String(item.installation_location || '')
     const sameStation = !item.station_code || item.station_code === door.station_code
     const matchesDoor = location.includes(`PP${pad}`)
     const matchesPlatform = !platformDigit || location.includes(`-P${platformDigit}-`)
     return sameStation && matchesDoor && matchesPlatform
   })
-  if (byLocation.length) return byLocation
-  return list.filter((item) => item.station_code === door.station_code).slice(0, 8)
 }
 
 function maintenanceKey(item) {
@@ -325,7 +351,7 @@ function maintenanceKey(item) {
 
 function inspectionKey(item) {
   if (item?.id != null && item.id !== '') return `id:${item.id}`
-  return `row:${item.station_code}|${item.platform}|${item.door_number}|${item.scheduled_for}|${item.status}|${item.notes}`
+  return `row:${item.station_code}|${item.platform}|${item.door_number}|${item.status}|${item.notes}`
 }
 
 function mergeInspectionLists(...lists) {
@@ -449,11 +475,89 @@ export const api = {
   predictionsLatest() {
     return request('/api/v1/predictions/latest').then((result) => result.data)
   },
-  triggerPredictions(horizonDays = '7') {
+  doorPredictionHistory(doorId, limit = 30) {
+    return request(`/api/v1/doors/${doorId}/predictions${queryString({ limit })}`).then((result) => result.data)
+  },
+  triggerPredictions(horizonDays = 7) {
+    const body = { horizon_days: Number(horizonDays) || 7 }
     return request('/api/v1/predictions/trigger', {
       method: 'POST',
-      body: { horizon_days: String(horizonDays) },
+      body,
     }).then((result) => result.data)
+  },
+  predictionExperiments(limit = 20) {
+    return request(`/api/v1/predictions/experiments${queryString({ limit })}`).then((result) => result.data)
+  },
+  runPredictionExperiment(threshold) {
+    return request('/api/v1/predictions/experiments', {
+      method: 'POST',
+      body: { threshold: Number(threshold) },
+    }).then((result) => result.data)
+  },
+  promotePredictionExperiment(id) {
+    return request(`/api/v1/predictions/experiments/${id}/promote`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  getMLConfig() {
+    return request('/api/v1/ml/config').then((result) => result.data)
+  },
+  getPredictionSchedule() {
+    return request('/api/v1/ml/prediction-schedule').then((result) => result.data)
+  },
+  updatePredictionSchedule(enabled, intervalMinutes) {
+    return request('/api/v1/ml/prediction-schedule', {
+      method: 'PUT',
+      body: {
+        enabled: Boolean(enabled),
+        interval_minutes: Number(intervalMinutes),
+      },
+    }).then((result) => result.data)
+  },
+  getActiveModel() {
+    return request('/api/v1/ml/model/active').then((result) => result.data)
+  },
+  getModelHistory(limit = 10) {
+    return request(`/api/v1/ml/model/history${queryString({ limit })}`).then((result) => result.data)
+  },
+  getModelThresholdMetrics(version) {
+    return request(`/api/v1/ml/models/${encodeURIComponent(version)}/metrics`).then((result) => result.data)
+  },
+  promoteModel(version) {
+    return request(`/api/v1/ml/models/${encodeURIComponent(version)}/promote`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  triggerRetrain() {
+    return request('/api/v1/ml/retrain', {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  getTrainingJob(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}`).then((result) => result.data)
+  },
+  resumeTraining(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}/resume`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  cancelTraining(id) {
+    return request(`/api/v1/ml/training-jobs/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+    }).then((result) => result.data)
+  },
+  getTrainingJobs(limit = 20) {
+    return request(`/api/v1/ml/training-jobs${queryString({ limit })}`).then((result) => result.data)
+  },
+  getMLDrift() {
+    return request('/api/v1/ml/drift').then((result) => result.data)
+  },
+  getMLProductionPerformance() {
+    return request('/api/v1/ml/performance').then((result) => result.data)
+  },
+  alarms(limit = 50, offset = 0, filters = {}) {
+    const query = typeof limit === 'object' ? limit : { limit, offset, ...filters }
+    return request(`/api/v1/alarms${queryString(query)}`).then((result) => result.data)
   },
   maintenance(limit = 50, offset = 0) {
     return request(`/api/v1/maintenance${queryString({ limit, offset })}`).then((result) => result.data)

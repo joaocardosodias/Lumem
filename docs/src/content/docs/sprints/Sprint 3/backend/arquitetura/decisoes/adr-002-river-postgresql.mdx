@@ -21,7 +21,7 @@ Adotar a biblioteca **River** (`github.com/riverqueue/river`) para prover mensag
 - **Identificador do job:** `process_ingestion_upload`;
 - **Unicidade de agendamento:** `UniqueOpts{ByArgs: true}` utilizando o `upload_id`, impedindo agendamentos duplicados concorrentes;
 - **Política de retentativas:** até 5 tentativas com backoff exponencial para falhas transitórias;
-- **Modo de consumo por polling (`RIVER_POLL_ONLY=true`):** em vez de conexões persistentes `LISTEN/NOTIFY` (incompatíveis com o modo transacional do PgBouncer no Supabase), os workers realizam polling ativo a cada 1 segundo;
+- **Modo de consumo por polling (`RIVER_POLL_ONLY=true`):** os workers consultam a fila em intervalos controlados, mantendo compatibilidade com o pooler transacional do Supabase e consumo previsível de conexões;
 - **Atomicidade transacional (Evitando Outbox Pattern complexo):** a chamada `riverClient.InsertTx(ctx, tx, args, ...)` é executada na mesma transação `sql.Tx` que grava a linha em `file_uploads`.
 
 ## 3. Matriz de Alternativas Avaliadas

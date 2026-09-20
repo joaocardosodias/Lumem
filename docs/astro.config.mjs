@@ -164,7 +164,7 @@ export default defineConfig({
 									label: 'Modelos Preditivos',
 									collapsed: true,
 									items: [
-										{ label: 'Pipeline Sequencial dos Modelos Preditivos', slug: 'sprints/sprint-3/pipeline-sequencial-modelos' },
+										{ label: 'Pipeline Sequencial dos Modelos Preditivos', slug: 'sprints/sprint-3/modelos/pipeline-sequencial-modelos' },
 										{ autogenerate: { directory: 'sprints/Sprint 3/modelos' } },
 									],
 								},

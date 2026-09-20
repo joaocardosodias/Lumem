@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/g04/backend/internal/usecase"
 	"github.com/gin-gonic/gin"
@@ -44,12 +45,11 @@ type TimelineMaintenanceResponse struct {
 }
 
 type TimelineInspectionResponse struct {
-	ID           string  `json:"id"`
-	Status       string  `json:"status"`
-	Priority     string  `json:"priority"`
-	Notes        string  `json:"notes,omitempty"`
-	ScheduledFor string  `json:"scheduled_for,omitempty"`
-	CompletedAt  *string `json:"completed_at,omitempty"`
+	ID          string  `json:"id"`
+	Status      string  `json:"status"`
+	Notes       string  `json:"notes,omitempty"`
+	CompletedAt *string `json:"completed_at,omitempty"`
+	CreatedAt   string  `json:"created_at"`
 }
 
 type DoorTimelineResponse struct {
@@ -76,21 +76,48 @@ type DoorStatusResponse struct {
 }
 
 type PredictionItemResponse struct {
-	ID          string `json:"id"`
-	RunID       string `json:"run_id"`
-	StationCode string `json:"station_code"`
-	Platform    string `json:"platform"`
-	DoorNumber  int    `json:"door_number"`
-	WillFail    bool   `json:"will_fail"`
+	ID          string   `json:"id"`
+	RunID       string   `json:"run_id"`
+	StationCode string   `json:"station_code"`
+	Platform    string   `json:"platform"`
+	DoorNumber  int      `json:"door_number"`
+	WillFail    bool     `json:"will_fail"`
+	Probability *float64 `json:"probability,omitempty"`
 }
 
 type PredictionRunResponse struct {
 	ID                  string                   `json:"id"`
 	HorizonDays         int                      `json:"horizon_days"`
+	ThresholdUsed       *float64                 `json:"threshold_used,omitempty"`
+	ModelVersion        string                   `json:"model_version,omitempty"`
+	IsExperiment        bool                     `json:"is_experiment"`
+	PublishedAt         *string                  `json:"published_at,omitempty"`
 	TotalDoorsEvaluated int                      `json:"total_doors_evaluated"`
 	TotalDoorsAtRisk    int                      `json:"total_doors_at_risk"`
+	AverageProbability  *float64                 `json:"average_probability,omitempty"`
+	P95Probability      *float64                 `json:"p95_probability,omitempty"`
+	MaximumProbability  *float64                 `json:"maximum_probability,omitempty"`
+	EstimatedPrecision  *float64                 `json:"estimated_precision,omitempty"`
+	EstimatedRecall     *float64                 `json:"estimated_recall,omitempty"`
+	EstimatedF1         *float64                 `json:"estimated_f1,omitempty"`
+	ValidationSource    string                   `json:"validation_source,omitempty"`
 	CreatedAt           string                   `json:"created_at"`
 	Predictions         []PredictionItemResponse `json:"predictions,omitempty"`
+}
+
+type DoorPredictionHistoryResponse struct {
+	ID            string   `json:"id"`
+	RunID         string   `json:"run_id"`
+	StationCode   string   `json:"station_code"`
+	Platform      string   `json:"platform"`
+	DoorNumber    int      `json:"door_number"`
+	WillFail      bool     `json:"will_fail"`
+	Probability   *float64 `json:"probability,omitempty"`
+	HorizonDays   int      `json:"horizon_days"`
+	ThresholdUsed *float64 `json:"threshold_used,omitempty"`
+	ModelVersion  string   `json:"model_version,omitempty"`
+	CreatedAt     string   `json:"created_at"`
+	WindowEndsAt  string   `json:"window_ends_at"`
 }
 
 type DashboardHandler struct {
@@ -159,12 +186,11 @@ func toDoorTimelineResponse(t *usecase.DoorTimelineOutputDTO) DoorTimelineRespon
 			compStr = &s
 		}
 		inspections = append(inspections, TimelineInspectionResponse{
-			ID:           i.ID,
-			Status:       i.Status,
-			Priority:     i.Priority,
-			Notes:        i.Notes,
-			ScheduledFor: i.ScheduledFor,
-			CompletedAt:  compStr,
+			ID:          i.ID,
+			Status:      i.Status,
+			Notes:       i.Notes,
+			CompletedAt: compStr,
+			CreatedAt:   i.CreatedAt.Format(defaultDateTimeLayout),
 		})
 	}
 
@@ -193,17 +219,73 @@ func toPredictionRunResponse(r *usecase.PredictionRunOutputDTO) PredictionRunRes
 			Platform:    p.Platform,
 			DoorNumber:  p.DoorNumber,
 			WillFail:    p.WillFail,
+			Probability: p.Probability,
 		})
 	}
 
+	var publishedAt *string
+	if r.PublishedAt != nil {
+		value := r.PublishedAt.Format(time.RFC3339)
+		publishedAt = &value
+	}
 	return PredictionRunResponse{
 		ID:                  r.ID,
 		HorizonDays:         r.HorizonDays,
+		ThresholdUsed:       r.ThresholdUsed,
+		ModelVersion:        r.ModelVersion,
+		IsExperiment:        r.IsExperiment,
+		PublishedAt:         publishedAt,
 		TotalDoorsEvaluated: r.TotalDoorsEvaluated,
 		TotalDoorsAtRisk:    r.TotalDoorsAtRisk,
+		AverageProbability:  r.AverageProbability,
+		P95Probability:      r.P95Probability,
+		MaximumProbability:  r.MaximumProbability,
+		EstimatedPrecision:  r.EstimatedPrecision,
+		EstimatedRecall:     r.EstimatedRecall,
+		EstimatedF1:         r.EstimatedF1,
+		ValidationSource:    r.ValidationSource,
 		CreatedAt:           r.CreatedAt.Format(defaultDateTimeLayout),
 		Predictions:         items,
 	}
+}
+
+func (h *DashboardHandler) RunPredictionExperiment(c *gin.Context) {
+	var input struct {
+		Threshold float64 `json:"threshold"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Requisicao Invalida", "Informe um threshold entre 0.05 e 0.95.")
+		return
+	}
+	run, err := h.uc.RunPredictionExperiment(c.Request.Context(), input.Threshold)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, toPredictionRunResponse(run))
+}
+
+func (h *DashboardHandler) ListPredictionExperiments(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	runs, err := h.uc.ListPredictionExperiments(c.Request.Context(), limit)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	response := make([]PredictionRunResponse, 0, len(runs))
+	for i := range runs {
+		response = append(response, toPredictionRunResponse(&runs[i]))
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *DashboardHandler) PromotePredictionExperiment(c *gin.Context) {
+	run, err := h.uc.PromotePredictionExperiment(c.Request.Context(), c.Param("id"), c.GetString("userID"))
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toPredictionRunResponse(run))
 }
 
 func (h *DashboardHandler) GetSummary(c *gin.Context) {
@@ -281,4 +363,38 @@ func (h *DashboardHandler) GetLatestPredictions(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, toPredictionRunResponse(run))
+}
+
+func (h *DashboardHandler) GetDoorPredictionHistory(c *gin.Context) {
+	doorID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || doorID <= 0 {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_ID", "ID Invalido", "O parametro ID da porta deve ser um numero inteiro positivo.")
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "30"))
+	items, err := h.uc.GetDoorPredictionHistory(c.Request.Context(), doorID, limit)
+	if err != nil {
+		RespondDomainError(c, err)
+		return
+	}
+
+	response := make([]DoorPredictionHistoryResponse, 0, len(items))
+	for _, item := range items {
+		response = append(response, DoorPredictionHistoryResponse{
+			ID:            item.ID,
+			RunID:         item.RunID,
+			StationCode:   item.StationCode,
+			Platform:      item.Platform,
+			DoorNumber:    item.DoorNumber,
+			WillFail:      item.WillFail,
+			Probability:   item.Probability,
+			HorizonDays:   item.HorizonDays,
+			ThresholdUsed: item.ThresholdUsed,
+			ModelVersion:  item.ModelVersion,
+			CreatedAt:     item.CreatedAt.Format(time.RFC3339),
+			WindowEndsAt:  item.WindowEndsAt.Format(time.RFC3339),
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"history": response})
 }
