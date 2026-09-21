@@ -1,6 +1,6 @@
 ---
 title: "Atualização do alinhamento com os ODS"
-description: "Levantamento do escopo atual do Lumem, dos ODS escolhidos na Sprint 1 e das diferenças entre a proposta inicial e as funcionalidades desenvolvidas."
+description: "Levantamento do escopo atual do Lumem e revisão fundamentada dos ODS 9, 11 e 12, com metas oficiais, evidências e correções das justificativas da Sprint 1."
 ---
 
 ## 1. Levantamento do projeto e dos ODS iniciais
@@ -45,7 +45,7 @@ O [Alinhamento ODS da Sprint 1](/sprints/sprint-1/alinhamento-ods) selecionou os
 | **ODS 11 — Cidades e Comunidades Sustentáveis** | Diagnóstico preventivo de falhas de travamento, abertura e fechamento das portas. | Aumentar a disponibilidade e a segurança das PSDs, evitar atrasos em cascata e favorecer um transporte público acessível, pontual e confiável. O texto também atribuía à solução a prevenção de acidentes no vão entre o trem e a plataforma. |
 | **ODS 12 — Consumo e Produção Responsáveis** | Modelo de estimativa de vida útil e otimização da substituição de componentes mecânicos e eletrônicos. | Evitar o descarte prematuro de peças e o desgaste de componentes associados a quebras, prolongar a vida útil dos equipamentos, otimizar a cadeia de suprimentos e contribuir para reduzir resíduos industriais e para a economia circular. |
 
-O documento inicial não identificou metas específicas para cada ODS. A relação entre essas metas e as evidências atuais será examinada na etapa de revisão das justificativas, assim como as decisões de manutenção, correção ou remoção de cada escolha.
+O documento inicial não identificou metas específicas para cada ODS. A seção 2 examina a relação entre essas metas e as evidências atuais e registra as decisões de manutenção, correção ou remoção de cada escolha.
 
 ### 1.4. Diferenças entre a proposta inicial e o projeto atual
 
@@ -68,25 +68,77 @@ O documento inicial não identificou metas específicas para cada ODS. A relaç�
 
 A [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao), especialmente a seção 5.12, também distingue cenários de retorno efetivo: a economia potencial não foi incorporada ao resultado consolidado porque parâmetros monetários ainda precisam ser confirmados. Portanto, as simulações financeiras não devem ser utilizadas como prova de economia realizada.
 
-Com esse levantamento, a revisão dos ODS passa a ter uma referência concreta: funcionalidades presentes, público atendido, alcance da implementação e resultados que ainda dependem de validação. As escolhas dos ODS 9, 11 e 12 permanecem registradas como ponto de partida para a análise crítica das próximas etapas.
+Com esse levantamento, a revisão dos ODS passa a ter uma referência concreta: funcionalidades presentes, público atendido, alcance da implementação e resultados que ainda dependem de validação. As escolhas dos ODS 9, 11 e 12 permanecem registradas como referência histórica para a análise crítica apresentada a seguir.
 
-## 2. Checklist da atualização
+## 2. Revisão dos ODS iniciais e atualização das justificativas
 
-Os três primeiros itens correspondem ao levantamento realizado nesta etapa. Os demais registram o trabalho necessário para concluir a revisão do alinhamento com os ODS.
+A revisão considera o valor entregue pelas funcionalidades identificadas na seção 1 e sua relação com metas específicas dos ODS. A existência dessa relação permite reconhecer uma contribuição do projeto, mas não comprova o cumprimento integral de uma meta nem resultados já obtidos na operação da Motiva. As relações descritas abaixo são conclusões da análise do grupo sobre o Lumem; as páginas da ONU fornecem a definição das metas.
+
+O critério aplicado aos três objetivos é identificar **qual funcionalidade implementada pode contribuir para qual aspecto da meta e por qual mecanismo**. A ausência de medição de impacto, comum ao estágio atual do projeto, limita as alegações de resultado. Já a ausência de uma funcionalidade ou de um processo que sustente a contribuição originalmente proposta exige corrigir ou retirar o alinhamento.
+
+### 2.1. ODS 9 — Manter com justificativa corrigida
+
+**Meta relacionada: 9.1.** A meta trata da qualidade e da confiabilidade da infraestrutura, de sua sustentabilidade e resiliência e de seu papel no desenvolvimento e no bem-estar, incluindo a preocupação com acesso equitativo e economicamente acessível. O recorte pertinente ao Lumem é o apoio à confiabilidade da infraestrutura de transporte existente. Fonte: [ONU Brasil — ODS 9, meta 9.1](https://brasil.un.org/pt-br/sdgs/9), consultada em **21 de setembro de 2026**.
+
+**Justificativa atualizada:** o Lumem mantém alinhamento com o ODS 9 porque implementa recursos de apoio à manutenção de um componente da infraestrutura metroviária: as portas de plataforma. A consolidação dos históricos de alarmes e manutenção, a estimativa de risco por porta em sete dias e a geração de inspeções permitem que a equipe organize a análise dos ativos com base em dados. Esse encadeamento entre informação, classificação de risco e inspeção oferece um meio concreto de apoiar a confiabilidade das PSDs, aspecto relacionado à meta 9.1.
+
+**Evidências do projeto:** o serviço descrito em `src/modelo/README.md` e o artefato `src/modelo/artifacts/manifest.json` sustentam a estimativa preditiva. O caso de uso `src/backend/internal/usecase/trigger_predictions_usecase.go` aplica o limiar, registra a rodada e cria inspeções para as portas classificadas em risco. A [API de Predição](/sprints/sprint-3/api/api-predicao) documenta a integração desse fluxo e seus limites.
+
+**Correções em relação à Sprint 1:** a justificativa passa a se concentrar na ferramenta desenvolvida para apoiar a manutenção. As afirmações de redução de paradas, custos e substituições prematuras e de prevenção de colapsos da rede deixam de ser apresentadas como efeitos já gerados. Também se corrige a abrangência: a interface atual está organizada para a Linha 4-Amarela, sem evidência equivalente de cobertura da Linha 5-Lilás. A plataforma não demonstra, nesta etapa, alterações de tarifa, ampliação de acesso ou atendimento integral da meta 9.1.
+
+**Limite da contribuição:** uma porta sinalizada em risco ainda precisa ser inspecionada e receber a intervenção adequada quando necessária. A comprovação de maior confiabilidade exige acompanhar as falhas e a indisponibilidade após o uso da solução, considerando os erros do modelo e a execução das ações de manutenção.
+
+### 2.2. ODS 11 — Manter com justificativa corrigida e contribuição indireta
+
+**Meta relacionada: 11.2.** A meta aborda o acesso universal a transportes seguros, sustentáveis e acessíveis, inclusive economicamente, com atenção às necessidades de grupos vulneráveis. O Lumem se relaciona ao apoio à manutenção das condições de funcionamento e segurança do transporte público existente. Fonte: [ONU Brasil — ODS 11, meta 11.2](https://brasil.un.org/pt-br/sdgs/11), consultada em **21 de setembro de 2026**.
+
+**Justificativa atualizada:** o Lumem mantém alinhamento com o ODS 11 por apoiar as equipes responsáveis pelas portas de plataforma utilizadas no transporte metroviário. O dossiê da porta, as estimativas de risco e o acompanhamento das inspeções organizam informações para identificar ativos que demandam atenção. Quando essas informações resultam em intervenções tecnicamente adequadas, podem contribuir para preservar as condições de funcionamento das PSDs e a continuidade do serviço. A contribuição à meta 11.2 é indireta: o produto atende aos profissionais de manutenção, e os passageiros podem ser beneficiados pelos efeitos das ações realizadas por esses profissionais.
+
+**Evidências do projeto:** `src/frontend/src/pages/Portas.jsx` apresenta o contexto de cada porta; `src/frontend/src/pages/Inspecoes.jsx` permite consultar e acompanhar inspeções; e `src/backend/internal/usecase/inspection_usecase.go` implementa sua gestão. Os [Requisitos do Sistema](/sprints/sprint-3/requisitos) delimitam a aplicação como suporte à decisão e à priorização de intervenções.
+
+**Correções em relação à Sprint 1:** a revisão retira a afirmação de que a plataforma previne acidentes fatais no vão entre trem e plataforma ou garante disponibilidade máxima. O sistema não detecta pessoas nesse espaço nem controla portas ou a partida dos trens. Também não foram demonstrados efeitos sobre a pontualidade, as tarifas, a expansão da rede ou a acessibilidade para pessoas com deficiência e outros grupos vulneráveis. Por isso, o alinhamento fica restrito ao apoio à manutenção, sem atribuir à solução todos os resultados previstos na meta 11.2.
+
+**Limite da contribuição:** a classificação de risco não constitui garantia de segurança. A relação com a meta depende da avaliação dos profissionais, da qualidade das intervenções e da verificação posterior dos efeitos sobre as portas e o serviço de transporte.
+
+### 2.3. ODS 12 — Remover do alinhamento sustentado pela entrega atual
+
+**Metas examinadas: 12.2 e 12.5.** A primeira trata da gestão dos recursos naturais e da eficiência de seu uso; a segunda busca diminuir a geração de resíduos mediante prevenção, redução, reciclagem e reúso. Essas metas são pertinentes à justificativa original de prolongar a vida útil de peças e evitar descarte. Fonte: [ONU Brasil — ODS 12, metas 12.2 e 12.5](https://brasil.un.org/pt-br/sdgs/12), consultada em **21 de setembro de 2026**.
+
+**Decisão e justificativa:** o ODS 12 é retirado do conjunto de objetivos sustentados pela implementação atual. Na Sprint 1, sua inclusão dependia de um modelo de estimativa de vida útil e de otimização das substituições de componentes. O modelo entregue estima o risco de uma porta receber uma corretiva emergencial ZM01 nos próximos sete dias. Essa saída não informa a vida útil restante de uma peça nem determina se ela deve ser conservada, reparada, reutilizada ou substituída. Assim, a funcionalidade central usada para justificar o ODS 12 na proposta inicial não corresponde ao que foi desenvolvido.
+
+**Evidências do projeto:** `models/modelo-5/construir_painel.py` define o alvo a partir da ocorrência futura de ZM01. O fluxo de `src/backend/internal/usecase/trigger_predictions_usecase.go` gera uma inspeção, sem emitir uma recomendação de gestão de materiais. As entidades `src/backend/internal/domain/maintenance.go` e `src/backend/internal/domain/inspection.go` registram informações sobre intervenções, observações e status, mas não estruturam o acompanhamento de quantidades de peças consumidas, vida útil ou destinação de resíduos. A seção 5.5.1 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao) reconhece que uma manutenção antecipada pode exigir a mesma substituição, apenas em regime programado.
+
+**Por que a decisão difere dos ODS 9 e 11:** a retirada não decorre somente da falta de indicadores ambientais medidos. Para os ODS 9 e 11, há um fluxo implementado de priorização e acompanhamento da manutenção de um ativo do transporte público, embora os efeitos finais ainda precisem de validação. Para o ODS 12, seria necessário demonstrar um passo adicional: como o uso da previsão modifica a decisão sobre materiais e evita consumo ou descarte desnecessário. Esse processo não está demonstrado no escopo atual. Planejar melhor a data de uma troca pode ter valor operacional sem reduzir a quantidade de peças utilizadas.
+
+**Condição para reconsideração:** o alinhamento poderá ser reavaliado caso o projeto incorpore ou demonstre, em conjunto com a equipe de manutenção, um processo de decisão que favoreça a conservação, o reparo ou o reúso de componentes quando tecnicamente apropriado. Registros das peças utilizadas, de sua condição e da destinação dos resíduos permitiriam verificar se esse processo contribui para as metas 12.2 e 12.5. Até lá, o benefício ambiental permanece uma hipótese de evolução, e não uma entrega atribuída ao Lumem. Esta retirada também não constitui conclusão sobre eventuais ameaças ao ODS 12, que pertencem à análise de impactos adversos.
+
+### 2.4. Comparação do alinhamento inicial com a revisão
+
+| ODS e meta examinada | Justificativa da Sprint 1 | Decisão | Justificativa atual | Evidências principais |
+| --- | --- | --- | --- | --- |
+| **ODS 9 — meta 9.1** | Modernização tecnológica associada à redução de paradas, custos e substituições e à resiliência do transporte. | **Manter e corrigir a justificativa.** | A plataforma implementa apoio à manutenção da infraestrutura por meio da análise de risco e da geração de inspeções. Melhorias de confiabilidade são esperadas e ainda precisam ser medidas. | Modelo 5 e `trigger_predictions_usecase.go`; [API de Predição](/sprints/sprint-3/api/api-predicao). |
+| **ODS 11 — meta 11.2** | Prevenção de acidentes e atrasos e garantia de transporte acessível, pontual e confiável. | **Manter e corrigir a justificativa, explicitando a contribuição indireta.** | A organização das inspeções pode apoiar as condições de funcionamento das portas e, por meio das intervenções técnicas, a continuidade do transporte. Não há comprovação de prevenção de acidentes nem de melhoria de acesso. | `Portas.jsx`, `Inspecoes.jsx` e `inspection_usecase.go`; [Requisitos do Sistema](/sprints/sprint-3/requisitos). |
+| **ODS 12 — metas 12.2 e 12.5** | Estimativa de vida útil, otimização de substituições e suprimentos, redução de resíduos e economia circular. | **Remover do alinhamento atual.** | A previsão de corretivas não estima vida útil nem demonstra um processo de redução de consumo ou descarte de materiais. A premissa funcional original não foi atendida. | Alvo em `construir_painel.py`, entidades de manutenção e inspeção e seção 5.5.1 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao). |
+
+O resultado desta etapa é a manutenção dos **ODS 9 e 11 com justificativas corrigidas** e a **retirada do ODS 12 do alinhamento atual**. O registro da Sprint 1 é preservado para tornar a mudança verificável. A avaliação de novos ODS e a análise de possíveis ameaças permanecem como etapas seguintes; esta tabela registra apenas a revisão das três escolhas iniciais.
+
+## 3. Checklist da atualização
+
+Os itens concluídos abrangem o levantamento do projeto, a consulta às metas oficiais dos ODS iniciais e a revisão dessas escolhas. Os demais registram o trabalho necessário para concluir o artefato.
 
 - [x] Registrar o alinhamento inicial da Sprint 1 com as ODS 9, 11 e 12 e suas justificativas, preservando essa referência para comparar com a revisão.
 - [x] Descrever o escopo atual do Lumem e o valor entregue pelas funcionalidades desenvolvidas, reunindo evidências no código, nos modelos, na interface e na documentação.
 - [x] Distinguir funcionalidades implementadas, benefícios esperados e impactos efetivamente medidos em operação.
-- [ ] Consultar os objetivos e as metas oficiais em https://brasil.un.org/pt-br/sdgs, registrando as fontes e as datas de acesso.
-- [ ] Reavaliar individualmente as ODS 9, 11 e 12 e decidir, com base no projeto desenvolvido, se cada escolha deve ser mantida, ter sua justificativa corrigida ou ser removida.
-- [ ] Justificar cada ODS mantida, relacionando suas metas ao valor entregue e apontando evidências concretas do projeto.
-- [ ] Justificar cada ODS removida, explicando qual premissa inicial deixou de se sustentar ou qual contribuição não corresponde ao escopo desenvolvido; caso nenhuma seja removida, registrar essa conclusão e sua fundamentação.
-- [ ] Revisar especialmente a justificativa da ODS 12, verificando se há suporte para alegações de aumento da vida útil, redução de descarte e otimização de peças, sem equiparar previsão de falhas a resultados ambientais comprovados.
+- [x] Consultar os objetivos e as metas oficiais em https://brasil.un.org/pt-br/sdgs, registrando as fontes e as datas de acesso.
+- [x] Reavaliar individualmente as ODS 9, 11 e 12 e decidir, com base no projeto desenvolvido, se cada escolha deve ser mantida, ter sua justificativa corrigida ou ser removida.
+- [x] Justificar cada ODS mantida, relacionando suas metas ao valor entregue e apontando evidências concretas do projeto.
+- [x] Justificar cada ODS removida, explicando qual premissa inicial deixou de se sustentar ou qual contribuição não corresponde ao escopo desenvolvido; caso nenhuma seja removida, registrar essa conclusão e sua fundamentação.
+- [x] Revisar especialmente a justificativa da ODS 12, verificando se há suporte para alegações de aumento da vida útil, redução de descarte e otimização de peças, sem equiparar previsão de falhas a resultados ambientais comprovados.
 - [ ] Avaliar a inclusão da ODS 8, considerando a produtividade da manutenção, a priorização de inspeções e as condições de trabalho, sem pressupor ganhos já comprovados.
 - [ ] Avaliar as ODS 4 e 17 como possíveis contribuições complementares, verificando as evidências de formação técnica e cooperação entre Inteli e Motiva e distinguindo-as do impacto operacional do produto.
 - [ ] Examinar outras candidatas, incluindo as ODS 3 e 13, e verificar se existe relação sustentada com suas metas específicas, evitando associações apenas temáticas.
 - [ ] Justificar cada nova ODS selecionada com a meta pertinente, a funcionalidade ou atividade que a sustenta, o benefício esperado e as limitações da evidência; caso nenhuma seja adicionada, justificar a decisão.
-- [ ] Comparar o alinhamento inicial e o revisado em uma tabela com ODS, justificativa anterior, decisão, justificativa atual e evidências, tornando explícitos os ajustes e as correções realizados.
+- [x] Comparar o alinhamento inicial e o revisado em uma tabela com ODS, justificativa anterior, decisão, justificativa atual e evidências, tornando explícitos os ajustes e as correções realizados.
 - [ ] Examinar os 17 objetivos para identificar se o desenvolvimento, a implantação ou o uso do Lumem pode ameaçar alguma ODS, inclusive objetivos que o próprio projeto pretende apoiar.
 - [ ] Analisar se falsos positivos podem gerar inspeções desnecessárias, sobrecarga de trabalho ou substituições prematuras de peças, avaliando possíveis conflitos com as ODS 8 e 12.
 - [ ] Analisar se falsos negativos, indisponibilidade do sistema ou confiança excessiva nas previsões podem prejudicar a segurança e a continuidade do transporte, identificando as ODS e metas pertinentes.
