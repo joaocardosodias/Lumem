@@ -4,7 +4,6 @@ stages:
   - security
   - build
   - scan
-  - publish
   - deploy
 
 variables:
@@ -100,6 +99,7 @@ test_modelo:
     - cd src/modelo
     - pip install --no-cache-dir -r requirements.txt pytest
   script:
+    - python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib
     - python -m pytest tests/ -v
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -117,7 +117,7 @@ security_audit:
     - cd src/backend
     - go install golang.org/x/vuln/cmd/govulncheck@latest
   script:
-    - govulncheck ./...
+    - sh scripts/govulncheck.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
@@ -248,87 +248,6 @@ trivy_scan_frontend:
       changes:
         - src/frontend/**/*
     - if: $CI_COMMIT_BRANCH
-      changes:
-        - src/frontend/**/*
-
-
-publish_container:
-  stage: publish
-  image: docker:24.0.5
-  services:
-    - docker:24.0.5-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  dependencies:
-    - build_container
-  script:
-    - docker load -i backend-api-image.tar
-    - docker load -i backend-worker-image.tar
-    - |
-      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
-        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
-        docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
-        docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
-        docker push "$ACR_REGISTRY/g04-backend-api:$CI_COMMIT_SHORT_SHA"
-        docker push "$ACR_REGISTRY/g04-backend-worker:$CI_COMMIT_SHORT_SHA"
-        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-          docker tag "backend-linha4-api:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-api:latest"
-          docker tag "backend-linha4-worker:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-backend-worker:latest"
-          docker push "$ACR_REGISTRY/g04-backend-api:latest"
-          docker push "$ACR_REGISTRY/g04-backend-worker:latest"
-        fi
-      fi
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
-
-publish_container_modelo:
-  stage: publish
-  image: docker:24.0.5
-  services:
-    - docker:24.0.5-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  dependencies: []
-  script:
-    - |
-      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
-        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
-        docker build -t "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA" src/modelo
-        docker push "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA"
-        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-          docker tag "$ACR_REGISTRY/g04-ml-service:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-ml-service:latest"
-          docker push "$ACR_REGISTRY/g04-ml-service:latest"
-        fi
-      fi
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
-      changes:
-        - src/modelo/**/*
-
-publish_container_frontend:
-  stage: publish
-  image: docker:24.0.5
-  services:
-    - docker:24.0.5-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  dependencies: []
-  script:
-    - |
-      if [ -n "$ACR_REGISTRY" ] && [ -n "$ACR_PASSWORD" ] && [ -n "$ACR_USERNAME" ]; then
-        echo "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" -u "$ACR_USERNAME" --password-stdin
-        docker build -t "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA" src/frontend
-        docker push "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA"
-        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-          docker tag "$ACR_REGISTRY/g04-frontend:$CI_COMMIT_SHORT_SHA" "$ACR_REGISTRY/g04-frontend:latest"
-          docker push "$ACR_REGISTRY/g04-frontend:latest"
-        fi
-      fi
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ACR_REGISTRY && $ACR_PASSWORD && $ACR_USERNAME'
       changes:
         - src/frontend/**/*
 

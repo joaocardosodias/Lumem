@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 80;
   overflow: hidden;
-  background: #1f03ff;
+  background: var(--brand, #3f00ff);
   color: var(--white);
   pointer-events: auto;
   opacity: 0;

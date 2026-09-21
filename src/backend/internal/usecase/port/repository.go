@@ -27,9 +27,20 @@ type MaintenanceRepository interface {
 	List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceEvent, error)
 }
 
+type AlarmFilter struct {
+	StationCode string
+	Platform    string
+	DoorNumber  int
+	AlarmType   string
+	Tag         string
+	Limit       int
+	Offset      int
+}
+
 type AlarmRepository interface {
 	BatchInsertAlarms(ctx context.Context, alarms []*domain.Alarm) error
 	DeleteByUploadID(ctx context.Context, uploadID string) error
+	List(ctx context.Context, filter AlarmFilter) ([]*domain.Alarm, error)
 }
 
 type UploadRepository interface {
@@ -49,5 +60,14 @@ type DashboardRepository interface {
 type PredictionRepository interface {
 	SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error
 	GetLatestRun(ctx context.Context) (*domain.PredictionRun, error)
+	GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error)
+	ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error)
+	PromoteExperiment(ctx context.Context, id, userID string) error
+	GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error)
 	ListDoorsForInference(ctx context.Context) ([]domain.Door, error)
+}
+
+type PredictionOutcomeRepository interface {
+	EvaluateMaturePredictions(ctx context.Context) (int64, error)
+	GetProductionPerformance(ctx context.Context) (*domain.ProductionPerformance, error)
 }

@@ -27,20 +27,36 @@ func (r *PostgresInspectionRepository) Create(ctx context.Context, ins *domain.I
 	}
 
 	query := `
-		INSERT INTO inspections (id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO inspections (id, prediction_id, station_code, platform, door_number, status, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (station_code, platform, door_number)
+			WHERE status IN ('pending', 'in_progress')
+		DO UPDATE SET updated_at = inspections.updated_at
+		RETURNING id, prediction_id, station_code, platform, door_number, status,
+		          COALESCE(notes, ''), completed_at, created_at, updated_at
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	var completedAt *time.Time
+	err := r.db.QueryRowContext(ctx, query,
 		ins.ID,
 		ins.PredictionID,
 		ins.StationCode,
 		ins.Platform,
 		ins.DoorNumber,
-		ins.ScheduledFor,
-		ins.Priority,
 		ins.Status,
 		ins.Notes,
+	).Scan(
+		&ins.ID,
+		&ins.PredictionID,
+		&ins.StationCode,
+		&ins.Platform,
+		&ins.DoorNumber,
+		&ins.Status,
+		&ins.Notes,
+		&completedAt,
+		&ins.CreatedAt,
+		&ins.UpdatedAt,
 	)
+	ins.CompletedAt = completedAt
 	return err
 }
 
@@ -63,14 +79,14 @@ func (r *PostgresInspectionRepository) UpdateStatus(ctx context.Context, id stri
 
 func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (*domain.Inspection, error) {
 	query := `
-		SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+		SELECT id, prediction_id, station_code, platform, door_number, status, notes, completed_at, created_at, updated_at
 		FROM inspections
 		WHERE id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var ins domain.Inspection
-	var schedStr, notesStr *string
+	var notesStr *string
 	var completedAt *time.Time
 	var createdAt, updatedAt time.Time
 
@@ -80,8 +96,6 @@ func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (
 		&ins.StationCode,
 		&ins.Platform,
 		&ins.DoorNumber,
-		&schedStr,
-		&ins.Priority,
 		&ins.Status,
 		&notesStr,
 		&completedAt,
@@ -95,9 +109,6 @@ func (r *PostgresInspectionRepository) GetByID(ctx context.Context, id string) (
 		return nil, err
 	}
 
-	if schedStr != nil {
-		ins.ScheduledFor = *schedStr
-	}
 	if notesStr != nil {
 		ins.Notes = *notesStr
 	}
@@ -121,7 +132,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 
 	if statusFilter != "" {
 		query = `
-			SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			SELECT id, prediction_id, station_code, platform, door_number, status, notes, completed_at, created_at, updated_at
 			FROM inspections
 			WHERE status = $1
 			ORDER BY created_at DESC LIMIT $2 OFFSET $3
@@ -129,7 +140,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 		args = []any{statusFilter, limit, offset}
 	} else {
 		query = `
-			SELECT id, prediction_id, station_code, platform, door_number, scheduled_for, priority, status, notes, completed_at, created_at, updated_at
+			SELECT id, prediction_id, station_code, platform, door_number, status, notes, completed_at, created_at, updated_at
 			FROM inspections
 			ORDER BY created_at DESC LIMIT $1 OFFSET $2
 		`
@@ -145,7 +156,7 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 	var list []*domain.Inspection
 	for rows.Next() {
 		var ins domain.Inspection
-		var schedStr, notesStr *string
+		var notesStr *string
 		var completedAt *time.Time
 		var createdAt, updatedAt time.Time
 
@@ -155,8 +166,6 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 			&ins.StationCode,
 			&ins.Platform,
 			&ins.DoorNumber,
-			&schedStr,
-			&ins.Priority,
 			&ins.Status,
 			&notesStr,
 			&completedAt,
@@ -167,9 +176,6 @@ func (r *PostgresInspectionRepository) List(ctx context.Context, limit, offset i
 			return nil, err
 		}
 
-		if schedStr != nil {
-			ins.ScheduledFor = *schedStr
-		}
 		if notesStr != nil {
 			ins.Notes = *notesStr
 		}

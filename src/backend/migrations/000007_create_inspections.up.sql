@@ -5,10 +5,7 @@ CREATE TABLE IF NOT EXISTS inspections (
     platform TEXT NOT NULL,
     door_number INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'in_progress', 'completed', 'canceled')),
-    priority TEXT NOT NULL DEFAULT 'high' CHECK(priority IN ('low', 'medium', 'high', 'critical')),
-    assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
     notes TEXT,
-    scheduled_for TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
