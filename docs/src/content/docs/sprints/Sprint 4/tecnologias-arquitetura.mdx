@@ -3,13 +3,7 @@ title: "Tecnologias Selecionadas e Justificativas da Arquitetura"
 description: "Detalhamento e justificativa técnica das tecnologias selecionadas para a arquitetura da plataforma de manutenção preditiva de PSDs, com base em critérios objetivos, impactos arquiteturais e mitigação de riscos."
 ---
 
-import { Image } from 'astro:assets';
-import Background from '../../../../assets/sprints/sprint1/background_title.png';
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução e Critérios Objetivos de Seleção</h2>
-</div>
+## 1. Introdução e critérios objetivos de seleção
 
 A plataforma foi construída para apoiar a manutenção preditiva das Portas de Plataforma (*Platform Screen Doors* ou PSDs) da Linha 4-Amarela. A escolha das tecnologias precisava caber no orçamento da POC, ser executável pela equipe e manter uma rota clara para uma implantação mais robusta. Por isso, a análise abaixo separa as metas definidas para o sistema dos resultados que foram medidos nos testes.
 
@@ -32,10 +26,7 @@ Para assegurar que as decisões técnicas fossem sustentáveis e livres de escol
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Visão Geral da Arquitetura Tecnológica por Camadas</h2>
-</div>
+## 2. Visão geral da arquitetura tecnológica por camadas
 
 A arquitetura da solução foi projetada de forma modular e desacoplada, distribuindo responsabilidades em camadas bem delimitadas para evitar gargalos de processamento e garantir manutenibilidade independente.
 
@@ -93,7 +84,7 @@ Em desenvolvimento, os serviços compartilham a rede Docker `backend-network`. N
 >
 > **Prompt para geração:**
 > ```text
-> Create a clean horizontal software architecture diagram for a railway platform-door predictive maintenance system. White background, Motiva-inspired electric blue and dark navy palette, flat editorial technical style, thin blue connectors, subtle gray containers, no gradients, no 3D glass effects. Show two large infrastructure zones: “VPS 1 Azure” with Nginx, React frontend, Go API, Go ingestion worker, PostgreSQL connection, Prometheus, Grafana, Loki and Tempo; and “VPS 2 AWS” with Python ML Service, training worker and private MinIO buckets for training-data and artefacts. Place Supabase PostgreSQL outside the VPS zones and connect it to Go and Python services. Draw a secure blue WireGuard tunnel between the two VPS zones. Include recognizable official logos for React, Go, Python, PostgreSQL, MinIO, Docker, Grafana, Prometheus, Loki, Tempo, AWS, Azure and WireGuard. Use short labels with generous spacing, clear arrow directions, high contrast, academic architecture documentation, 16:9, high resolution. Avoid decorative illustrations, neon, dark background and invented metrics. Leave enough empty space for labels to be corrected in post-production.
+> Crie um diagrama horizontal limpo de arquitetura de software para um sistema de manutenção preditiva de portas de plataforma ferroviária. Use fundo branco, paleta com azul elétrico inspirado na Motiva e azul-marinho escuro, estilo técnico editorial plano, conectores azuis finos e contêineres cinza discretos, sem gradientes nem efeitos de vidro 3D. Mostre duas zonas grandes de infraestrutura: “VPS 1 Azure”, com Nginx, frontend React, API Go, worker de ingestão Go, conexão com PostgreSQL, Prometheus, Grafana, Loki e Tempo; e “VPS 2 AWS”, com serviço de ML em Python, worker de treinamento e buckets privados do MinIO para `training-data` e `artefacts`. Posicione o PostgreSQL do Supabase fora das zonas das VPSs e conecte-o aos serviços Go e Python. Desenhe um túnel azul seguro do WireGuard entre as duas zonas. Inclua os logotipos oficiais reconhecíveis de React, Go, Python, PostgreSQL, MinIO, Docker, Grafana, Prometheus, Loki, Tempo, AWS, Azure e WireGuard. Use rótulos curtos, espaçamento generoso, setas com direção clara e alto contraste, em estilo de documentação acadêmica de arquitetura, proporção 16:9 e alta resolução. Evite ilustrações decorativas, neon, fundo escuro e métricas inventadas. Deixe espaço suficiente para corrigir os rótulos na pós-produção.
 > ```
 
 ---
@@ -118,7 +109,7 @@ A observabilidade foi separada em três sinais. Prometheus coleta métricas, Lok
 > **Imagem sugerida 7: fluxo de observabilidade**
 >
 > ```text
-> Create a precise white-background observability architecture diagram. Show Go API and Go worker on the left emitting metrics to Prometheus, structured logs to Promtail and Loki, and traces through OpenTelemetry Collector to Tempo. Place Grafana on the right connected to Prometheus, Loki and Tempo, with a visible trace_id correlation line from Tempo to Loki. Use official OpenTelemetry, Prometheus, Grafana, Loki and Tempo logos, electric blue connectors, navy labels, light gray containers, flat technical documentation style, no dark background, no neon, no fake dashboards, 16:9, high resolution. Leave labels editable in post-production.
+> Crie um diagrama preciso de arquitetura de observabilidade sobre fundo branco. Mostre a API Go e o worker Go à esquerda enviando métricas ao Prometheus, logs estruturados ao Promtail e ao Loki, e traces pelo OpenTelemetry Collector até o Tempo. Posicione o Grafana à direita, conectado ao Prometheus, Loki e Tempo, com uma linha visível de correlação `trace_id` do Tempo para o Loki. Use os logotipos oficiais de OpenTelemetry, Prometheus, Grafana, Loki e Tempo, conectores em azul elétrico, rótulos azul-marinho e contêineres cinza-claro, em estilo técnico plano de documentação. Sem fundo escuro, neon ou dashboards fictícios; use proporção 16:9 e alta resolução. Deixe os rótulos editáveis na pós-produção.
 > ```
 
 ### 3.7 Nuvem e rede: Azure, AWS EC2 e WireGuard
@@ -138,10 +129,7 @@ A distribuição em duas VPSs separa o tráfego operacional do processamento de 
 - **Confiabilidade:** O túnel tem keepalive e healthcheck, mas uma falha de qualquer VPS interrompe parte do fluxo.
 - **Risco:** latência, perda do túnel ou erro de atualização manual. **Mitigação:** monitorar o handshake, manter procedimento de rollback e testar o healthcheck antes de liberar uma versão.
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Detalhamento e Justificativa por Camada Tecnológica</h2>
-</div>
+## 3. Detalhamento e justificativa por camada tecnológica
 
 ### 3.1 Camada de Apresentação: React 19.2 + Vite 8 + CSS próprio
 
@@ -166,7 +154,7 @@ A interface atende o operador que acompanha estações, portas, alarmes, manuten
 > **Imagem sugerida 2: mapa de telas do frontend**
 >
 > ```text
-> Create a clean white-background product architecture board for a railway maintenance web application. Use Motiva-inspired electric blue, navy text and light gray surfaces. Show a browser frame containing five connected interface views: operational dashboard, station and door map, alarms table, predictions table and engineer MLOps laboratory. Use simple realistic UI blocks, consistent typography, no gradients, no neon, no random text and no decorative 3D elements. Add small React and Vite logos near the browser frame. Editorial product documentation style, generous whitespace, 16:9, high resolution. Leave labels editable in post-production.
+> Crie um painel limpo de arquitetura de produto sobre fundo branco para uma aplicação web de manutenção ferroviária. Use azul elétrico inspirado na Motiva, texto azul-marinho e superfícies cinza-claro. Mostre uma moldura de navegador com cinco telas conectadas: dashboard operacional, mapa de estações e portas, tabela de alarmes, tabela de predições e laboratório de MLOps do engenheiro. Use blocos de interface simples e realistas, tipografia consistente, sem gradientes, neon, textos aleatórios ou elementos 3D decorativos. Adicione pequenos logotipos do React e do Vite próximos à moldura. Estilo editorial de documentação de produto, com espaço em branco generoso, proporção 16:9 e alta resolução. Deixe os rótulos editáveis na pós-produção.
 > ```
 
 ---
@@ -194,7 +182,7 @@ O backend funciona como o núcleo operacional da plataforma, integrando a interf
 > **Imagem sugerida 3: Clean Architecture do backend**
 >
 > ```text
-> Create a precise clean architecture diagram on a pure white background for a Go backend. Use four concentric or layered blue outlines labeled Domain, Use Cases, Ports and Adapters, with dependency arrows pointing inward. Around the adapters show Gin HTTP, PostgreSQL/pgx, MinIO S3, River Queue, OpenTelemetry and Prometheus logos. Use navy typography, electric blue borders, light gray fills and a restrained Motiva corporate style. No dark background, no gradients, no invented code, no decorative 3D objects. Horizontal 16:9 technical documentation diagram, high resolution, leave labels editable in post-production.
+> Crie um diagrama preciso de Clean Architecture sobre fundo branco puro para um backend Go. Use quatro contornos azuis concêntricos ou em camadas, rotulados “Domínio”, “Casos de uso”, “Portas” e “Adaptadores”, com setas de dependência apontando para dentro. Ao redor dos adaptadores, mostre os logotipos de Gin HTTP, PostgreSQL/pgx, MinIO S3, River Queue, OpenTelemetry e Prometheus. Use tipografia azul-marinho, bordas em azul elétrico, preenchimentos cinza-claro e um estilo corporativo Motiva discreto. Sem fundo escuro, gradientes, código inventado ou objetos 3D decorativos. Diagrama técnico horizontal em 16:9, alta resolução, com rótulos editáveis na pós-produção.
 > ```
 
 ---
@@ -222,7 +210,7 @@ A camada analítica é responsável pela ingestão de logs de telemetria, tratam
 > **Imagem sugerida 4: ciclo de vida do modelo**
 >
 > ```text
-> Create a clean white-background MLOps lifecycle diagram for predictive maintenance of subway platform doors. Use a circular flow with six blue outlined stages: data snapshot, feature engineering, temporal validation, Random Forest training, model registry in private MinIO, and official prediction. Add a separate checkpoint and resume branch from training back to the failed stage. Show PostgreSQL for job status and model governance, MinIO S3 for datasets and joblib artifacts, and a Python logo near the training service. Use electric blue, navy and light gray only, clear arrows, generous spacing, no dark background, no neon, no fake metrics, 16:9 technical report style. Keep labels short and editable in post-production.
+> Crie um diagrama limpo do ciclo de vida de MLOps sobre fundo branco para manutenção preditiva de portas de plataforma metroferroviária. Use um fluxo circular com seis etapas contornadas em azul: snapshot dos dados, engenharia de atributos, validação temporal, treinamento do Random Forest, registro do modelo no MinIO privado e predição oficial. Adicione um ramo separado de checkpoint e retomada que saia do treinamento e volte para a etapa que falhou. Mostre o PostgreSQL para status dos jobs e governança do modelo, o MinIO S3 para datasets e artefatos `.joblib`, e um logotipo do Python próximo ao serviço de treinamento. Use apenas azul elétrico, azul-marinho e cinza-claro, setas claras e espaçamento generoso; sem fundo escuro, neon ou métricas falsas. Estilo de relatório técnico em 16:9, com rótulos curtos e editáveis na pós-produção.
 > ```
 
 ---
@@ -250,7 +238,7 @@ A persistência de uma plataforma preditiva ferroviária precisa conciliar dados
 > **Imagem sugerida 5: PostgreSQL, River e MinIO**
 >
 > ```text
-> Create a clean white-background data architecture diagram for a predictive maintenance platform. Show a PostgreSQL cylinder in the center, a River Queue job table inside the PostgreSQL boundary, and two private MinIO S3 buckets on the right: ingestion-uploads and artefacts/training-data. On the left show the Go API and ingestion worker. Draw one atomic transaction from upload registration to River job insertion, then a worker flow from the job to MinIO and back to PostgreSQL. Use blue lines for data flow, orange only for object storage, navy labels, official PostgreSQL, River, MinIO and Docker logos, flat technical style, no dark background, no gradients, no invented numbers, 16:9, high resolution. Leave labels editable in post-production.
+> Crie um diagrama limpo de arquitetura de dados sobre fundo branco para uma plataforma de manutenção preditiva. Mostre um cilindro PostgreSQL no centro, uma tabela de jobs River Queue dentro do limite do PostgreSQL e dois buckets privados MinIO S3 à direita: `ingestion-uploads` e `artefacts/training-data`. À esquerda, mostre a API Go e o worker de ingestão. Desenhe uma transação atômica desde o registro do upload até a inserção do job no River; depois, mostre o fluxo do worker para o MinIO e de volta ao PostgreSQL. Use linhas azuis para o fluxo de dados, laranja apenas para o armazenamento de objetos, rótulos azul-marinho e os logotipos oficiais de PostgreSQL, River, MinIO e Docker, em estilo técnico plano. Sem fundo escuro, gradientes ou números inventados; proporção 16:9 e alta resolução. Deixe os rótulos editáveis na pós-produção.
 > ```
 
 ---
@@ -277,15 +265,12 @@ Como a POC é executada em duas VPSs e também precisa funcionar localmente, a i
 > **Imagem sugerida 6: implantação nas duas VPSs**
 >
 > ```text
-> Create a white-background deployment architecture diagram with two large clean containers. Left container: “Azure VPS 1” with Nginx, React frontend, Go API, Go ingestion worker, Prometheus, Grafana, Loki and Tempo. Right container: “AWS VPS 2” with Python ML Service, training worker and private MinIO. Place Supabase PostgreSQL below both containers. Connect the VPSs with a blue WireGuard tunnel and show only the ML API crossing it. Use official Azure, AWS, Docker, Go, Python, PostgreSQL, MinIO, WireGuard and Grafana logos. Flat academic style, navy and electric blue palette, light gray boundaries, clear arrows, no dark background, no neon, no 3D, no fake IPs or metrics, 16:9, high resolution.
+> Crie um diagrama de implantação sobre fundo branco com dois contêineres grandes e limpos. No contêiner da esquerda, rotulado “VPS 1 Azure”, inclua Nginx, frontend React, API Go, worker de ingestão Go, Prometheus, Grafana, Loki e Tempo. No contêiner da direita, rotulado “VPS 2 AWS”, inclua o serviço de ML em Python, o worker de treinamento e o MinIO privado. Posicione o PostgreSQL do Supabase abaixo dos dois contêineres. Conecte as VPSs com um túnel azul do WireGuard e mostre somente a API de ML atravessando-o. Use os logotipos oficiais de Azure, AWS, Docker, Go, Python, PostgreSQL, MinIO, WireGuard e Grafana. Estilo acadêmico plano, paleta azul-marinho e azul elétrico, limites cinza-claro e setas claras. Sem fundo escuro, neon, 3D, IPs ou métricas fictícias; proporção 16:9 e alta resolução.
 > ```
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Matriz Comparativa de Trade-offs e Gestão de Riscos</h2>
-</div>
+## 4. Matriz comparativa de trade-offs e gestão de riscos
 
 Toda decisão arquitetural envolve concessões deliberadas (*trade-offs*). A tabela a seguir documenta os ganhos obtidos e os custos de oportunidade aceitos pelo grupo ao selecionar as tecnologias do projeto:
 
@@ -316,15 +301,12 @@ Toda decisão arquitetural envolve concessões deliberadas (*trade-offs*). A tab
 >
 > **Prompt para geração:**
 > ```text
-> Create a restrained white-background risk control infographic for a railway predictive maintenance software architecture. Show five numbered risks connected to five controls: OpenAPI contract tests, drift monitoring and model review, PostgreSQL queue cleanup, training checkpoints and resume, and user feedback sessions. Use electric blue lines, navy typography, light gray boxes and small official technology icons. Academic engineering report style, flat vector composition, no gradients, no dark background, no dramatic shield, no invented statistics, 16:9, high resolution. Keep all labels short and editable in post-production.
+> Crie um infográfico sóbrio de controles de risco sobre fundo branco para uma arquitetura de software de manutenção preditiva ferroviária. Mostre cinco riscos numerados ligados a cinco controles: testes de contrato OpenAPI, monitoramento de drift e revisão do modelo, limpeza da fila PostgreSQL, checkpoints e retomada do treinamento, e sessões de feedback com usuários. Use linhas em azul elétrico, tipografia azul-marinho, caixas cinza-claro e pequenos ícones oficiais de tecnologias. Estilo de relatório acadêmico de engenharia, composição vetorial plana, sem gradientes, fundo escuro, escudo dramático ou estatísticas inventadas; proporção 16:9 e alta resolução. Mantenha todos os rótulos curtos e editáveis na pós-produção.
 > ```
 
 ---
 
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Conclusão</h2>
-</div>
+## 5. Conclusão
 
 As decisões desta análise foram tomadas para atender ao escopo da POC com componentes que a equipe consegue operar e testar. Go concentra a API e os workers, enquanto Python fica responsável pelo treinamento e pela inferência. PostgreSQL, River e MinIO reduzem a quantidade de serviços necessários, mas exigem políticas de retenção, backup e acompanhamento de capacidade.
 
