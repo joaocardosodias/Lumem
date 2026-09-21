@@ -4,27 +4,18 @@ import { Image } from 'astro:assets';
 const { images = [], label = 'Galeria de imagens' } = Astro.props;
 ---
 
-<section
-  class="image-carousel"
+<div
+  class="simple-carousel"
   data-image-carousel
   role="region"
   aria-roledescription="carrossel"
   aria-label={label}
   tabindex="0"
 >
-  <div class="image-carousel__header">
-    <div>
-      <p class="image-carousel__eyebrow">Interface documentada</p>
-      <h3>{label}</h3>
-    </div>
-    <span class="image-carousel__counter" data-counter aria-live="polite">
-      1 / {images.length}
-    </span>
-  </div>
-
-  <div class="image-carousel__viewport">
+  <!-- Container exclusivo da imagem com as setas perfeitamente centralizadas verticalmente -->
+  <div class="simple-carousel__stage">
     {images.map((image, index) => (
-      <figure class="image-carousel__slide" data-slide={index} hidden={index !== 0}>
+      <div class="simple-carousel__slide" data-slide={index} hidden={index !== 0}>
         <Image
           src={image.src}
           alt={image.alt}
@@ -32,34 +23,59 @@ const { images = [], label = 'Galeria de imagens' } = Astro.props;
           format="png"
           loading={index === 0 ? 'eager' : 'lazy'}
         />
-        {image.caption && <figcaption>{image.caption}</figcaption>}
-      </figure>
+      </div>
+    ))}
+
+    <!-- Seta transparente esquerda -->
+    <button
+      type="button"
+      class="simple-carousel__arrow simple-carousel__arrow--prev"
+      data-prev
+      aria-label="Imagem anterior"
+    >
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+
+    <!-- Seta transparente direita -->
+    <button
+      type="button"
+      class="simple-carousel__arrow simple-carousel__arrow--next"
+      data-next
+      aria-label="Próxima imagem"
+    >
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Legenda discreta da imagem ativa -->
+  <div class="simple-carousel__caption-box">
+    {images.map((image, index) => (
+      image.caption ? (
+        <p class="simple-carousel__caption" data-caption={index} hidden={index !== 0}>
+          {image.caption}
+        </p>
+      ) : null
     ))}
   </div>
 
-  <div class="image-carousel__controls">
-    <button type="button" class="image-carousel__arrow" data-prev aria-label="Imagem anterior">
-      <span aria-hidden="true">←</span>
-    </button>
-
-    <div class="image-carousel__dots" role="tablist" aria-label="Selecionar imagem">
-      {images.map((image, index) => (
-        <button
-          type="button"
-          class="image-carousel__dot"
-          data-dot={index}
-          role="tab"
-          aria-label={`Ver imagem ${index + 1}`}
-          aria-selected={index === 0 ? 'true' : 'false'}
-        ></button>
-      ))}
-    </div>
-
-    <button type="button" class="image-carousel__arrow" data-next aria-label="Próxima imagem">
-      <span aria-hidden="true">→</span>
-    </button>
+  <!-- Bolinhas (indicadores) embaixo para visualizar quantidade e navegar -->
+  <div class="simple-carousel__dots" role="tablist" aria-label="Indicadores de imagens">
+    {images.map((_, index) => (
+      <button
+        type="button"
+        class="simple-carousel__dot"
+        data-dot={index}
+        role="tab"
+        aria-label={`Ir para imagem ${index + 1}`}
+        aria-selected={index === 0 ? 'true' : 'false'}
+      ></button>
+    ))}
   </div>
-</section>
+</div>
 
 <script>
   function initializeCarousels() {
@@ -67,8 +83,8 @@ const { images = [], label = 'Galeria de imagens' } = Astro.props;
       carousel.dataset.ready = 'true';
 
       const slides = Array.from(carousel.querySelectorAll('[data-slide]'));
+      const captions = Array.from(carousel.querySelectorAll('[data-caption]'));
       const dots = Array.from(carousel.querySelectorAll('[data-dot]'));
-      const counter = carousel.querySelector('[data-counter]');
       const previous = carousel.querySelector('[data-prev]');
       const next = carousel.querySelector('[data-next]');
       let current = 0;
@@ -82,16 +98,32 @@ const { images = [], label = 'Galeria de imagens' } = Astro.props;
           slide.setAttribute('aria-hidden', String(!active));
         });
 
+        captions.forEach((caption, captionIndex) => {
+          const active = captionIndex === current;
+          caption.hidden = !active;
+        });
+
         dots.forEach((dot, dotIndex) => {
           dot.setAttribute('aria-selected', String(dotIndex === current));
         });
-
-        if (counter) counter.textContent = `${current + 1} / ${slides.length}`;
       };
 
-      previous?.addEventListener('click', () => show(current - 1));
-      next?.addEventListener('click', () => show(current + 1));
-      dots.forEach((dot, index) => dot.addEventListener('click', () => show(index)));
+      previous?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        show(current - 1);
+      });
+
+      next?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        show(current + 1);
+      });
+
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          show(index);
+        });
+      });
 
       carousel.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowLeft') show(current - 1);
@@ -107,153 +139,155 @@ const { images = [], label = 'Galeria de imagens' } = Astro.props;
 </script>
 
 <style>
-  .image-carousel {
-    --carousel-blue: #155eef;
-    --carousel-ink: #172b4d;
-    --carousel-muted: #637083;
-    --carousel-border: #d9e2ef;
-    --carousel-surface: #f7f9fc;
+  .simple-carousel {
+    position: relative;
     margin: 2rem 0;
-    padding: 1.25rem;
-    border: 1px solid var(--carousel-border);
-    border-radius: 0.9rem;
-    background: var(--carousel-surface);
-    box-shadow: 0 0.75rem 2rem rgb(23 43 77 / 8%);
     outline: none;
   }
 
-  .image-carousel:focus-visible {
-    box-shadow: 0 0 0 3px rgb(21 94 239 / 24%), 0 0.75rem 2rem rgb(23 43 77 / 8%);
+  /* Palco da imagem: onde as setas flutuam centralizadas */
+  .simple-carousel__stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: #0f172a;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   }
 
-  .image-carousel__header,
-  .image-carousel__controls {
+  .simple-carousel__slide {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .image-carousel__header {
-    margin: 0 0 1rem;
-  }
-
-  .image-carousel__eyebrow {
-    margin: 0 0 0.2rem;
-    color: var(--carousel-blue);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .image-carousel h3 {
+    justify-content: center;
     margin: 0;
-    color: var(--carousel-ink);
-    font-size: 1.05rem;
+    padding: 0;
   }
 
-  .image-carousel__counter {
-    flex: 0 0 auto;
-    color: var(--carousel-muted);
-    font-size: 0.82rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .image-carousel__viewport {
-    display: grid;
-    min-height: clamp(16rem, 42vw, 34rem);
-    overflow: hidden;
-    place-items: center;
-    border: 1px solid var(--carousel-border);
-    border-radius: 0.65rem;
-    background: white;
-  }
-
-  .image-carousel__slide {
-    width: 100%;
-    margin: 0;
-    padding: 0.75rem;
-    text-align: center;
-  }
-
-  .image-carousel__slide[hidden] {
+  .simple-carousel__slide[hidden] {
     display: none;
   }
 
-  .image-carousel__slide img {
+  .simple-carousel__slide img {
     display: block;
     width: 100%;
-    max-height: min(65vh, 36rem);
-    margin: 0 auto;
+    height: auto;
+    max-height: 70vh;
     object-fit: contain;
+    border-radius: 0.75rem;
   }
 
-  .image-carousel__slide figcaption {
-    margin-top: 0.7rem;
-    color: var(--carousel-muted);
-    font-size: 0.84rem;
-  }
-
-  .image-carousel__controls {
-    justify-content: center;
-    margin-top: 1rem;
-  }
-
-  .image-carousel__arrow,
-  .image-carousel__dot {
-    border: 0;
-    cursor: pointer;
-  }
-
-  .image-carousel__arrow {
-    display: grid;
-    width: 2.25rem;
-    height: 2.25rem;
-    place-items: center;
-    border: 1px solid var(--carousel-border);
-    border-radius: 999px;
-    background: white;
-    color: var(--carousel-ink);
-    font-size: 1.15rem;
-    transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
-  }
-
-  .image-carousel__arrow:hover,
-  .image-carousel__arrow:focus-visible {
-    border-color: var(--carousel-blue);
-    color: var(--carousel-blue);
-    transform: translateY(-1px);
-  }
-
-  .image-carousel__dots {
+  /* Setas transparentes centralizadas verticalmente */
+  .simple-carousel__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    width: 3.25rem;
+    height: 3.25rem;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0.7;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
   }
 
-  .image-carousel__dot {
-    width: 0.48rem;
-    height: 0.48rem;
+  .simple-carousel__stage:hover .simple-carousel__arrow {
+    opacity: 0.95;
+  }
+
+  .simple-carousel__arrow:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.6);
+    transform: translateY(-50%) scale(1.08);
+  }
+
+  .simple-carousel__arrow:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  .simple-carousel__arrow--prev {
+    left: 1rem;
+  }
+
+  .simple-carousel__arrow--next {
+    right: 1rem;
+  }
+
+  /* Legenda centralizada */
+  .simple-carousel__caption-box {
+    margin-top: 0.75rem;
+    min-height: 1.5rem;
+    text-align: center;
+  }
+
+  .simple-carousel__caption {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--sl-color-gray-2, #94a3b8);
+  }
+
+  .simple-carousel__caption[hidden] {
+    display: none;
+  }
+
+  /* Bolinhas (dots) centralizadas embaixo */
+  .simple-carousel__dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .simple-carousel__dot {
+    width: 0.55rem;
+    height: 0.55rem;
     padding: 0;
+    border: 0;
     border-radius: 999px;
-    background: #b8c5d8;
-    transition: width 160ms ease, background-color 160ms ease;
+    background: var(--sl-color-gray-4, #94a3b8);
+    opacity: 0.45;
+    cursor: pointer;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease, opacity 0.2s ease;
   }
 
-  .image-carousel__dot[aria-selected='true'] {
-    width: 1.35rem;
-    background: var(--carousel-blue);
+  .simple-carousel__dot:hover {
+    opacity: 0.8;
+  }
+
+  .simple-carousel__dot[aria-selected='true'] {
+    width: 1.5rem;
+    background: var(--sl-color-accent, #155eef);
+    opacity: 1;
   }
 
   @media (max-width: 640px) {
-    .image-carousel {
-      padding: 0.85rem;
+    .simple-carousel__arrow {
+      width: 2.25rem;
+      height: 2.25rem;
+      opacity: 0.85;
     }
 
-    .image-carousel__viewport {
-      min-height: 13rem;
+    .simple-carousel__arrow svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .simple-carousel__arrow--prev {
+      left: 0.5rem;
+    }
+
+    .simple-carousel__arrow--next {
+      right: 0.5rem;
     }
   }
 </style>
