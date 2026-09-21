@@ -1,6 +1,82 @@
-﻿- [ ] Registrar o alinhamento inicial da Sprint 1 com as ODS 9, 11 e 12 e suas justificativas, preservando essa referência para comparar com a revisão.
-- [ ] Descrever o escopo atual do Lumem e o valor entregue pelas funcionalidades desenvolvidas, reunindo evidências no código, nos modelos, na interface e na documentação.
-- [ ] Distinguir funcionalidades implementadas, benefícios esperados e impactos efetivamente medidos em operação.
+---
+title: "Atualização do alinhamento com os ODS"
+description: "Levantamento do escopo atual do Lumem, dos ODS escolhidos na Sprint 1 e das diferenças entre a proposta inicial e as funcionalidades desenvolvidas."
+---
+
+## 1. Levantamento do projeto e dos ODS iniciais
+
+O Lumem é uma plataforma de apoio à manutenção preditiva de Portas de Plataforma (*Platform Screen Doors* — PSDs), desenvolvida em parceria com a Motiva. Este levantamento registra a situação do projeto a partir do código, dos artefatos de modelos e da documentação disponíveis no repositório em **21 de setembro de 2026**. Ele estabelece a base para revisar o alinhamento com os ODS apresentado na Sprint 1.
+
+### 1.1. Problema e público beneficiado
+
+O problema tratado pelo projeto é a dificuldade de transformar o histórico de alarmes das portas e os registros de manutenção em prioridades de inspeção. A análise dispersa dessas informações dificulta reconhecer recorrências e direcionar a equipe aos ativos que demandam maior atenção. Falhas nas PSDs podem comprometer a disponibilidade do transporte, enquanto a manutenção precisa aproveitar uma janela noturna reduzida, estimada em aproximadamente quatro horas na documentação das personas.
+
+O Lumem reúne esses registros, estima o risco por porta e apresenta informações para apoiar a decisão dos profissionais. Seu público está organizado em três grupos:
+
+- **Planejamento e Engenharia de Manutenção:** representados pela persona Marta, que precisa consultar históricos, identificar portas críticas e organizar as intervenções. É o público diretamente atendido pelos painéis, filtros e fluxos de acompanhamento da plataforma.
+- **Equipe técnica de campo:** representada pela persona Ronaldo, responsável pelas inspeções e manutenções. O valor esperado para esse grupo é receber prioridades e contexto sobre cada porta para orientar o trabalho dentro da janela disponível.
+- **Passageiros:** beneficiários indiretos de uma eventual melhoria da disponibilidade e da confiabilidade das portas, condicionada à qualidade das previsões e à execução das intervenções pela equipe responsável.
+
+Esse recorte se apoia na [Análise de Valor e da Solução](/sprints/sprint-1/analise-de-valor-e-da-solução), nas [Personas](/sprints/sprint-1/personas) e nos [Requisitos do Sistema](/sprints/sprint-3/requisitos). A aplicação oferece suporte à decisão; a avaliação técnica e a intervenção física continuam sob responsabilidade dos profissionais de manutenção.
+
+### 1.2. Escopo atual e funcionalidades desenvolvidas
+
+A solução evoluiu da proposta de análise de dados para uma aplicação com interface, backend, persistência e serviço de Machine Learning. O recorte da interface atual é a **Linha 4-Amarela**, conforme o catálogo de estações em `src/frontend/src/data/stations.js`. A referência inicial às Linhas 4-Amarela e 5-Lilás não comprova que ambas estejam cobertas pela implementação ou por validação operacional.
+
+Na tabela, uma funcionalidade implementada significa que existe código correspondente no repositório. Isso, por si só, não demonstra adoção pela concessionária nem melhoria medida na operação do metrô. Os caminhos de código são relativos à raiz do projeto.
+
+| Funcionalidade desenvolvida | Valor oferecido pela implementação | Evidências no repositório |
+| --- | --- | --- |
+| Importação de alarmes e registros de manutenção por planilhas, com processamento assíncrono, além de cadastro manual de manutenções. | Reúne dados antes consultados em fontes separadas e disponibiliza um histórico para análise. | `src/frontend/src/pages/Alarmes.jsx`, `src/frontend/src/pages/Manutencoes.jsx` e casos de uso `ingest_alarms_usecase.go` e `ingest_maintenance_usecase.go` em `src/backend/internal/usecase/`. |
+| Dashboard, consulta de alarmes e manutenções, mapa de estações e dossiê da porta com histórico de predições. | Permite localizar ativos, consultar ocorrências e visualizar a priorização produzida pelo modelo. | Páginas `Dashboard.jsx`, `Portas.jsx` e `Predicoes.jsx` em `src/frontend/src/pages/`, além de `src/backend/internal/usecase/get_door_prediction_history_usecase.go`. |
+| Estimativa de risco por porta com o Modelo 5, baseado em Random Forest, para um horizonte de sete dias. | Produz probabilidades que o backend converte em uma classificação de risco mediante um limiar de decisão. | `src/modelo/README.md`, `src/modelo/artifacts/manifest.json` e `src/backend/internal/usecase/trigger_predictions_usecase.go`. |
+| Criação de inspeções a partir das portas classificadas em risco, cadastro manual e atualização de status. | Conecta a análise preditiva à organização e ao acompanhamento das inspeções. | `src/backend/internal/usecase/trigger_predictions_usecase.go`, `src/backend/internal/usecase/inspection_usecase.go` e `src/frontend/src/pages/Inspecoes.jsx`. |
+| Área de engenharia com experimentos de limiar, gestão de versões, retreinamento e acompanhamento de mudanças na distribuição dos dados. | Permite avaliar e administrar o modelo, com separação entre rodadas experimentais e rodadas usadas no fluxo operacional da aplicação. | `src/frontend/src/pages/Engenharia.jsx`, `src/backend/internal/usecase/mlops_usecase.go` e `src/modelo/README.md`. |
+
+As páginas de [API de Predição](/sprints/sprint-3/api/api-predicao) e [Evolução do MLOps](/sprints/sprint-3/modelos/plano-evolucao-mlops) complementam essas evidências. Em caso de divergência com descrições de etapas anteriores, este levantamento considera o código atual: por exemplo, já há uma consulta de alarmes implementada, embora o texto de frontend da Sprint 3 ainda descreva a ausência dessa listagem.
+
+### 1.3. ODS escolhidos na Sprint 1 e justificativas originais
+
+O [Alinhamento ODS da Sprint 1](/sprints/sprint-1/alinhamento-ods) selecionou os **ODS 9, 11 e 12**. A tabela preserva o sentido das justificativas daquele documento como referência inicial. As afirmações de impacto abaixo representam o que foi atribuído à proposta naquela etapa; sua presença na tabela não equivale à comprovação desses resultados no projeto atual.
+
+| ODS inicialmente selecionado | Elemento associado na Sprint 1 | Síntese da justificativa original |
+| --- | --- | --- |
+| **ODS 9 — Indústria, Inovação e Infraestrutura** | Uso de inteligência artificial, Machine Learning e análise preditiva da telemetria das PSDs. | Modernizar a infraestrutura de mobilidade da Motiva nas Linhas 4-Amarela e 5-Lilás, passando de uma abordagem descrita como analógica e reativa para uma atuação preditiva. A justificativa vinculava essa modernização à redução de paradas não planejadas, de substituições prematuras e de custos operacionais, além do aumento da resiliência do transporte. |
+| **ODS 11 — Cidades e Comunidades Sustentáveis** | Diagnóstico preventivo de falhas de travamento, abertura e fechamento das portas. | Aumentar a disponibilidade e a segurança das PSDs, evitar atrasos em cascata e favorecer um transporte público acessível, pontual e confiável. O texto também atribuía à solução a prevenção de acidentes no vão entre o trem e a plataforma. |
+| **ODS 12 — Consumo e Produção Responsáveis** | Modelo de estimativa de vida útil e otimização da substituição de componentes mecânicos e eletrônicos. | Evitar o descarte prematuro de peças e o desgaste de componentes associados a quebras, prolongar a vida útil dos equipamentos, otimizar a cadeia de suprimentos e contribuir para reduzir resíduos industriais e para a economia circular. |
+
+O documento inicial não identificou metas específicas para cada ODS. A relação entre essas metas e as evidências atuais será examinada na etapa de revisão das justificativas, assim como as decisões de manutenção, correção ou remoção de cada escolha.
+
+### 1.4. Diferenças entre a proposta inicial e o projeto atual
+
+| Aspecto | Referência da proposta inicial | Situação identificada no projeto atual |
+| --- | --- | --- |
+| Cobertura da solução | O alinhamento da Sprint 1 mencionava as Linhas 4-Amarela e 5-Lilás. | A interface está organizada em torno da Linha 4-Amarela. A ampliação para a Linha 5-Lilás depende de dados, configuração e validação próprios; não deve ser apresentada como cobertura já comprovada. |
+| Integração dos dados | A proposta previa reunir alarmes das PSDs e ordens SAP para apoiar a manutenção. | Há importação de arquivos e cadastro de registros na plataforma. Essas funcionalidades não equivalem a uma conexão automática e contínua com o SAP ou com o sistema físico das portas. |
+| Entrega preditiva | O projeto previa identificar padrões que antecedem falhas; a justificativa do ODS 12 acrescentava a estimativa de vida útil de componentes. | O serviço atual utiliza o Modelo 5 para estimar risco por porta nos próximos sete dias. O alvo se baseia em registros futuros de corretiva emergencial ZM01. Não foi identificado um modelo de vida útil restante nem uma previsão do instante exato de quebra de cada componente. |
+| Organização das intervenções | O dashboard e os indicadores foram propostos como apoio ao diagnóstico e à priorização. | A aplicação inclui geração e acompanhamento de inspeções, histórico por porta e gestão do modelo. Há uma implementação do fluxo entre análise e planejamento, mas a inspeção e a decisão de trocar uma peça dependem da equipe técnica. |
+| Segurança e continuidade do transporte | A justificativa do ODS 11 associava o Lumem à prevenção de acidentes e à disponibilidade das portas. | A entrega atual é um sistema de informação para manutenção. Não foi identificada uma função de detecção de pessoas no vão, comando das portas ou bloqueio de partida do trem. A contribuição para a segurança depende das ações de manutenção e exige validação própria. |
+| Uso de peças, resíduos e custos | As justificativas iniciais associavam a solução à maior vida útil, à redução de descarte e à economia operacional. | Foram desenvolvidos recursos para apoiar decisões e uma análise financeira por cenários. Não foram encontrados resultados de campo que quantifiquem peças poupadas, resíduos evitados, vida útil ampliada ou economia efetivamente realizada. |
+
+### 1.5. Valor entregue, benefícios esperados e impactos medidos
+
+**Valor demonstrável na implementação:** o Lumem oferece recursos para centralizar registros, consultar históricos, produzir estimativas de risco por porta e organizar inspeções. Também há mecanismos para acompanhar versões e avaliações do modelo. Essas entregas sustentam a descrição do projeto como ferramenta de apoio à manutenção orientada por dados.
+
+**Benefícios esperados:** a utilização dessas informações pode melhorar a priorização das inspeções, reduzir o esforço de consulta manual e favorecer intervenções mais oportunas. Redução de falhas, de atrasos, de custos e de trocas desnecessárias são efeitos esperados, condicionados à qualidade dos dados, ao desempenho preditivo e à atuação das equipes. Eles ainda precisam de medição no contexto de uso.
+
+**Resultados medidos e limites das evidências:** os artefatos incluem avaliações retrospectivas dos modelos com dados históricos. O `src/modelo/artifacts/manifest.json` registra o alvo, os períodos de avaliação e métricas como precisão, recall e F1. Essas medidas avaliam a classificação e seus erros; não medem diretamente acidentes evitados, redução de indisponibilidade ou benefícios ambientais. Existe código para avaliar predições após o horizonte de sete dias em `src/backend/internal/usecase/evaluate_prediction_outcomes_usecase.go`, mas a existência desse mecanismo não comprova resultados operacionais já obtidos pela Motiva.
+
+A [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao), especialmente a seção 5.12, também distingue cenários de retorno efetivo: a economia potencial não foi incorporada ao resultado consolidado porque parâmetros monetários ainda precisam ser confirmados. Portanto, as simulações financeiras não devem ser utilizadas como prova de economia realizada.
+
+Com esse levantamento, a revisão dos ODS passa a ter uma referência concreta: funcionalidades presentes, público atendido, alcance da implementação e resultados que ainda dependem de validação. As escolhas dos ODS 9, 11 e 12 permanecem registradas como ponto de partida para a análise crítica das próximas etapas.
+
+## 2. Checklist da atualização
+
+Os três primeiros itens correspondem ao levantamento realizado nesta etapa. Os demais registram o trabalho necessário para concluir a revisão do alinhamento com os ODS.
+
+- [x] Registrar o alinhamento inicial da Sprint 1 com as ODS 9, 11 e 12 e suas justificativas, preservando essa referência para comparar com a revisão.
+- [x] Descrever o escopo atual do Lumem e o valor entregue pelas funcionalidades desenvolvidas, reunindo evidências no código, nos modelos, na interface e na documentação.
+- [x] Distinguir funcionalidades implementadas, benefícios esperados e impactos efetivamente medidos em operação.
 - [ ] Consultar os objetivos e as metas oficiais em https://brasil.un.org/pt-br/sdgs, registrando as fontes e as datas de acesso.
 - [ ] Reavaliar individualmente as ODS 9, 11 e 12 e decidir, com base no projeto desenvolvido, se cada escolha deve ser mantida, ter sua justificativa corrigida ou ser removida.
 - [ ] Justificar cada ODS mantida, relacionando suas metas ao valor entregue e apontando evidências concretas do projeto.
