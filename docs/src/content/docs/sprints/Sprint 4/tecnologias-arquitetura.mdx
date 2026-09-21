@@ -11,15 +11,24 @@ import Background from '../../../../assets/sprints/sprint1/background_title.png'
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução e Critérios Objetivos de Seleção</h2>
 </div>
 
-A definição da arquitetura de software para a plataforma de manutenção preditiva de Portas de Plataforma (*Platform Screen Doors* — PSDs) da Linha 4-Amarela do Metrô de São Paulo (concessão ViaQuatro / CCR) exige rigor na escolha de cada componente da pilha tecnológica. O sistema opera em um contexto de missão crítica: a indisponibilidade ou falha de uma porta em horário de pico acarreta atrasos em cadeia no carrossel de trens, superlotação nas plataformas, risco à segurança física dos passageiros e penalidades financeiras e regulatórias à concessionária.
+A plataforma foi construída para apoiar a manutenção preditiva das Portas de Plataforma (*Platform Screen Doors* ou PSDs) da Linha 4-Amarela. A escolha das tecnologias precisava caber no orçamento da POC, ser executável pela equipe e manter uma rota clara para uma implantação mais robusta. Por isso, a análise abaixo separa as metas definidas para o sistema dos resultados que foram medidos nos testes.
 
 Para assegurar que as decisões técnicas fossem sustentáveis e livres de escolhas arbitrárias, o grupo estabeleceu **cinco critérios objetivos de avaliação** que nortearam a seleção de cada tecnologia:
 
-1. **Custo (TCO - Total Cost of Ownership):** Priorização de tecnologias de código aberto (*open-source* permissivo, como MIT, Apache 2.0 e BSD), sem custo de licenciamento proprietário e com consumo computacional otimizado, permitindo execução econômica tanto em servidores locais (*on-premise*) quanto em nuvem.
+1. **Custo (TCO, *Total Cost of Ownership*):** preferência por ferramentas sem licença proprietária e com consumo compatível com as VPSs disponíveis. O custo considerado inclui operação, armazenamento, observabilidade e esforço de manutenção.
 2. **Curva de Aprendizado e Produtividade:** Aderência ao conjunto de habilidades da equipe de engenharia e ciência de dados, permitindo entregas contínuas ao longo das cinco sprints sem comprometer o rigor metodológico.
 3. **Maturidade do Ecossistema:** Escolha de ferramentas consolidadas no mercado corporativo e industrial, com documentação farta, comunidades ativas, suporte a longo prazo (LTS) e bibliotecas de integração estáveis.
-4. **Aderência aos Requisitos Não Funcionais (RNFs):** Cumprimento estrito das metas de tempo de resposta da API (latência inferior a 500 ms em consultas operacionais), disponibilidade mínima de 99.5%, integridade transacional de dados de manutenção e isolamento de privilégios entre perfis de usuário (*Operator* e *Engineer*).
-5. **Métricas de Desempenho:** Eficiência em tempo de execução, baixa pegada de memória RAM (*footprint*), capacidade de processamento concorrente sem bloqueio de I/O e velocidade de inferência e retreinamento dos modelos analíticos.
+4. **Aderência aos Requisitos Não Funcionais (RNFs):** integridade transacional, isolamento de privilégios, recuperação após reinício, observabilidade e possibilidade de separar a inferência do treinamento. As metas de latência e disponibilidade são registradas como metas de evolução quando ainda não há medição representativa.
+5. **Métricas de Desempenho:** tempo de build, tempo de teste, consumo de memória, latência observada, tempo de inferência e duração do treinamento. Cada número citado na documentação deve indicar a origem da medição.
+
+### Como as evidências foram classificadas
+
+| Classificação | Uso na análise |
+| :--- | :--- |
+| **Medido** | Resultado obtido em um teste reproduzível, com contexto e ferramenta informados. |
+| **Configurado** | Valor presente no código ou na infraestrutura, sem representar uma garantia de produção. |
+| **Meta** | Critério desejado para uma próxima etapa de validação. |
+| **Trade-off** | Custo ou limitação aceito para obter uma vantagem concreta. |
 
 ---
 
@@ -34,21 +43,24 @@ A tabela a seguir sumariza as tecnologias selecionadas para cada camada do ecoss
 
 | Camada Arquitetural | Tecnologia Adotada | Papel no Sistema | Alternativas Descartadas |
 | :--- | :--- | :--- | :--- |
-| **Apresentação (Frontend)** | React 19 + Vite + CSS Nativo | Interface SPA para monitoramento de risco, mapa da linha, catálogo de portas e governança MLOps. | Next.js (SSR), Vue.js, Angular, Tailwind CSS |
-| **API e Orquestração (Backend)** | Go (Golang 1.23) + Gin Web Framework | Roteamento HTTP de alta performance, orquestração de regras de negócio, controle de acesso (RBAC) e agendamento assíncrono. | Node.js (Express/Fastify), Python (FastAPI), Java (Spring Boot) |
-| **Inteligência e MLOps** | Python 3.12 + Scikit-Learn + SHAP + Joblib | Engenharia de atributos, inferência probabilística de falhas, explicabilidade local/global e pipeline de retreinamento com checkpoints. | XGBoost, Redes Neurais (LSTM/GRU), PyTorch, LightGBM |
-| **Persistência Relacional e Filas** | PostgreSQL 16 + River Queue | Persistência transacional de ordens SAP, histórico de alarmes, usuários, predições, metadados MLOps e fila de jobs transacional. | MongoDB, MySQL, Redis + RabbitMQ |
-| **Armazenamento de Objetos** | MinIO (Compatível com AWS S3) | Repositório local e seguro para snapshots brutos de dados, artefatos serializados (.joblib) e manifests de auditoria. | AWS S3 gerenciado, Armazenamento em disco local direto, Ceph |
-| **Infraestrutura e Deploy** | Docker + Docker Compose + Golang-Migrate | Conteinerização uniforme de todos os serviços, paridade entre ambientes de desenvolvimento e produção, e versionamento de banco. | Kubernetes (K8s), Scripts Bare-metal, Ansible |
+| **Apresentação (Frontend)** | React 19.2 + Vite 8 + CSS próprio | SPA para dashboard, estações, portas, predições, inspeções e laboratório de MLOps. | Next.js, Vue.js, Angular, Tailwind CSS |
+| **API e orquestração (backend)** | Go 1.26 + Gin 1.12 | API REST, casos de uso, RBAC, ingestão, scheduler e integração com PostgreSQL, MinIO e ML Service. | Node.js, Python/FastAPI, Java/Spring Boot |
+| **Inteligência e MLOps** | Python 3.11 + Flask + scikit-learn 1.4.2 + SHAP + joblib | Engenharia de atributos, inferência, avaliação temporal, treinamento assíncrono e registro de artefatos. | XGBoost, LSTM/GRU, PyTorch, LightGBM |
+| **Persistência relacional e fila** | PostgreSQL 16 + River Queue 0.47 | Dados operacionais, usuários, predições, governança de modelos e jobs duráveis de ingestão. | MongoDB, MySQL, Redis + RabbitMQ, Kafka |
+| **Armazenamento de objetos** | MinIO compatível com S3 | Planilhas de ingestão, datasets de treinamento, arquivos `.joblib` e manifests privados. | Supabase Storage, AWS S3, disco local, Ceph |
+| **Infraestrutura e deploy** | Docker + Docker Compose + golang-migrate | Imagens reprodutíveis, volumes persistentes, rede interna e migrations versionadas. | Kubernetes, instalação bare-metal, Ansible |
+| **Observabilidade** | OpenTelemetry + Prometheus + Grafana + Loki + Tempo | Métricas, logs estruturados e traces correlacionados entre API, worker e ML Service. | Elastic Stack, Datadog, CloudWatch, Application Insights |
+| **Rede entre VPSs** | WireGuard | Canal privado entre a VPS da aplicação e a VPS de Machine Learning. | Exposição pública com HTTPS, VPN gerenciada, rede privada de um único provedor |
 
 ```mermaid
 flowchart TD
     subgraph Client["Camada de Apresentação"]
-        UI["React 19 SPA (Vite)<br/>Dashboard · Portas · MLOps Pipeline"]
+        UI["React 19 SPA (Vite)<br/>Dashboard · Portas · MLOps"]
+        Nginx["Nginx<br/>reverse proxy"]
     end
 
     subgraph Core["Camada de API e Negócio"]
-        API["Backend Go 1.23 (Gin)<br/>Clean Architecture & RBAC"]
+        API["Backend Go 1.26 (Gin)<br/>Clean Architecture & RBAC"]
         Worker["River Worker (Go)<br/>Processamento em Segundo Plano"]
     end
 
@@ -58,10 +70,11 @@ flowchart TD
     end
 
     subgraph MLService["Camada de Inteligência e MLOps"]
-        ML["ML Service (Python 3.12)<br/>Random Forest (400 árvores) · SHAP<br/>Checkpoints Sequenciais (10 etapas)"]
+        ML["ML Service (Python 3.11)<br/>Random Forest · SHAP<br/>treinamento com checkpoints"]
     end
 
-    UI <-- "REST / JSON (HTTPS)" --> API
+    UI --> Nginx
+    Nginx --> API
     API <-- "SQL (pgxpool)" --> DB
     API <-- "Enfileira Jobs" --> DB
     Worker <-- "Lê / Processa Jobs" --> DB
@@ -69,88 +82,148 @@ flowchart TD
     Worker <-- "Armazena Artefatos" --> Storage
     API <-- "HTTP / JSON Interno" --> ML
     ML <-- "Carrega / Grava Artefatos" --> Storage
-    ML <-- "Consulta Checkpoints" --> DB
+    ML <-- "Features e governança" --> DB
 ```
 
+Em desenvolvimento, os serviços compartilham a rede Docker `backend-network`. Na implantação distribuída, a VPS 1 executa frontend, API, worker e observabilidade; a VPS 2 executa o ML Service, o worker de treinamento e o MinIO de modelos. O WireGuard liga as duas redes por `10.50.0.1` e `10.50.0.2`.
+
 > [!TIP]
-> **Ponto de Inserção da Imagem 1: Diagrama Isométrico da Arquitetura Tecnológica**
-> Recomenda-se posicionar abaixo deste fluxo um diagrama isométrico 3D de alta resolução, ilustrando as camadas físicas e lógicas da plataforma.
+> **Imagem sugerida 1: visão geral da arquitetura**
+> Use uma imagem horizontal para abrir a seção. O diagrama deve mostrar as duas VPSs, o PostgreSQL gerenciado, os dois MinIO e o túnel WireGuard. As setas precisam indicar o caminho de uma requisição de predição e de um upload de planilha.
 >
-> **Prompt detalhado para geração da imagem via IA (Midjourney / DALL-E 3 / Flux):**
+> **Prompt para geração:**
 > ```text
-> A clean, modern, isometric architectural diagram of a high-tech predictive maintenance software platform for subway platform screen doors. Dark slate and navy blue background with crisp neon accents in electric blue, emerald green, and amber. In the top layer, a sleek web browser dashboard interface showing real-time metro telemetry and status indicators. Below it, microservices represented as glowing modular glass blocks connected by luminous optical fiber data streams: a high-speed Go API core, a Python machine learning engine with neural and decision tree graphical nodes, a robust relational database cylinder (PostgreSQL), and an object storage cube (MinIO). Clean isometric perspective, elegant corporate tech aesthetic, minimalist icons, no messy text, professional enterprise software architecture visualization, 8k resolution, cinematic studio lighting.
+> Create a clean horizontal software architecture diagram for a railway platform-door predictive maintenance system. White background, Motiva-inspired electric blue and dark navy palette, flat editorial technical style, thin blue connectors, subtle gray containers, no gradients, no 3D glass effects. Show two large infrastructure zones: “VPS 1 Azure” with Nginx, React frontend, Go API, Go ingestion worker, PostgreSQL connection, Prometheus, Grafana, Loki and Tempo; and “VPS 2 AWS” with Python ML Service, training worker and private MinIO buckets for training-data and artefacts. Place Supabase PostgreSQL outside the VPS zones and connect it to Go and Python services. Draw a secure blue WireGuard tunnel between the two VPS zones. Include recognizable official logos for React, Go, Python, PostgreSQL, MinIO, Docker, Grafana, Prometheus, Loki, Tempo, AWS, Azure and WireGuard. Use short labels with generous spacing, clear arrow directions, high contrast, academic architecture documentation, 16:9, high resolution. Avoid decorative illustrations, neon, dark background and invented metrics. Leave enough empty space for labels to be corrected in post-production.
 > ```
 
 ---
+
+### 3.6 Observabilidade: OpenTelemetry, Prometheus, Grafana, Loki e Tempo
+
+A observabilidade foi separada em três sinais. Prometheus coleta métricas, Loki recebe logs estruturados e Tempo armazena traces. O OpenTelemetry Collector recebe os spans da API e do worker e encaminha os dados para o backend de traces. Grafana reúne as fontes em dashboards e permite relacionar um trace aos logs com o mesmo `trace_id`.
+
+#### Justificativa por critérios objetivos
+
+- **Custo:** A stack é composta por projetos abertos e pode rodar nos containers da VPS. Isso reduz custo de licença, mas transfere para a equipe a responsabilidade de retenção e capacidade de disco.
+- **Maturidade:** Os componentes têm integração conhecida com Go, Docker e Grafana. O uso de protocolos OTLP e métricas Prometheus reduz dependência de uma API proprietária.
+- **Aderência aos RNFs:** A propagação de contexto entre HTTP e jobs River permite investigar uma ingestão desde a requisição até o processamento assíncrono. Métricas de rota, runtime e host apoiam a análise de capacidade.
+
+#### Impacto arquitetural e risco
+
+- **Manutenibilidade:** Cada sinal tem uma responsabilidade clara e os dashboards são provisionados por arquivos versionados.
+- **Confiabilidade:** Logs e traces ajudam a diagnosticar falhas, mas não substituem alertas, backup ou um plano de resposta.
+- **Segurança:** Os endpoints de observabilidade ficam na rede interna e os logs devem evitar tokens, senhas e dados pessoais.
+- **Risco:** retenção excessiva pode consumir o disco da VPS. **Mitigação:** definir retenção, rotação, limites de volume e alertas de capacidade.
+
+> **Imagem sugerida 7: fluxo de observabilidade**
+>
+> ```text
+> Create a precise white-background observability architecture diagram. Show Go API and Go worker on the left emitting metrics to Prometheus, structured logs to Promtail and Loki, and traces through OpenTelemetry Collector to Tempo. Place Grafana on the right connected to Prometheus, Loki and Tempo, with a visible trace_id correlation line from Tempo to Loki. Use official OpenTelemetry, Prometheus, Grafana, Loki and Tempo logos, electric blue connectors, navy labels, light gray containers, flat technical documentation style, no dark background, no neon, no fake dashboards, 16:9, high resolution. Leave labels editable in post-production.
+> ```
+
+### 3.7 Nuvem e rede: Azure, AWS EC2 e WireGuard
+
+A distribuição em duas VPSs separa o tráfego operacional do processamento de Machine Learning. A VPS 1 concentra frontend, API, worker de ingestão e observabilidade. A VPS 2 concentra inferência, treinamento e o MinIO dos artefatos. O PostgreSQL permanece no Supabase e é acessado por conexão configurada no ambiente.
+
+#### Justificativa por critérios objetivos
+
+- **Custo:** A configuração foi escolhida dentro dos créditos disponíveis e permite dimensionar o serviço de ML separadamente quando o treinamento consumir mais CPU ou memória.
+- **Aprendizado e operação:** VPSs Linux com Docker e Compose são conhecidas pela equipe e permitem controlar manualmente o processo de atualização.
+- **Segurança:** WireGuard cria um túnel privado entre `10.50.0.1` e `10.50.0.2`. A porta da API de ML não precisa ser publicada para a internet; o firewall limita o acesso à rede do túnel.
+
+#### Impacto arquitetural e risco
+
+- **Manutenibilidade:** O mesmo repositório e Compose são usados nos dois hosts; o `.env` define somente endereços e credenciais específicos do ambiente.
+- **Escalabilidade:** É possível trocar o tamanho de uma VPS ou mover o serviço para outro provedor sem mudar o contrato HTTP. A topologia atual não fornece failover automático.
+- **Confiabilidade:** O túnel tem keepalive e healthcheck, mas uma falha de qualquer VPS interrompe parte do fluxo.
+- **Risco:** latência, perda do túnel ou erro de atualização manual. **Mitigação:** monitorar o handshake, manter procedimento de rollback e testar o healthcheck antes de liberar uma versão.
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Detalhamento e Justificativa por Camada Tecnológica</h2>
 </div>
 
-### 3.1 Camada de Apresentação: React 19 + Vite + CSS Custom Tokens
+### 3.1 Camada de Apresentação: React 19.2 + Vite 8 + CSS próprio
 
-A interface com o usuário precisa atender a dois perfis distintos na Linha 4-Amarela: a **planejadora de manutenção (Marta)**, que necessita de visão espacial das 11 estações, listas de portas priorizadas e histórico de ordens, e o **engenheiro de confiabilidade/dados**, que audita o pipeline de retreinamento, métricas de modelo e desvio de dados (*drift*).
+A interface atende o operador que acompanha estações, portas, alarmes, manutenções e inspeções, e o engenheiro que acompanha experimentos, modelos e treinamentos. A separação por perfil aparece na navegação e também é reforçada pela autorização do backend.
 
 #### Justificativa por Critérios Objetivos:
-- **Custo:** Totalmente gratuito, sem taxas de licença ou dependência de plataformas de hospedagem proprietárias.
-- **Curva de Aprendizado e Produtividade:** React é amplamente dominado pela equipe de desenvolvimento. O uso do **Vite** substitui empacotadores legados (Webpack), proporcionando *Hot Module Replacement* (HMR) quase instantâneo (< 100 ms) e compilação de produção em menos de 300 ms via Rolldown/esbuild.
-- **Maturidade do Ecossistema:** React 19 representa o padrão da indústria para aplicações ricas em estado (*Single Page Applications*), com suporte nativo a hooks performáticos (`useMemo`, `useCallback`, `useTransition`) que evitam re-renderizações desnecessárias ao renderizar listas volumosas de portas e alarmes.
-- **Aderência aos RNFs e Desempenho:** A decisão de utilizar **Vanilla CSS com Design Tokens nativos** (em vez de frameworks utilitários volumosos como Tailwind ou bibliotecas de componentes pesadas como Material UI) garantiu um bundle minificado de apenas 212 kB de CSS e 530 kB de JavaScript, resultando em um *First Contentful Paint* (FCP) inferior a 0.8 s em redes locais.
+- **Custo:** React, Vite e CSS próprio não acrescentam custo de licença. A operação usa os arquivos estáticos gerados no build e um Nginx para servi-los.
+- **Curva de aprendizado:** A composição por componentes facilita a criação de telas que repetem o mesmo padrão de cards, tabelas, filtros e estados de carregamento. Vite reduz o tempo de feedback durante o desenvolvimento.
+- **Maturidade:** React possui um ecossistema amplo para roteamento, gráficos e testes. Vite mantém o processo de build separado do código de negócio e permite trocar o servidor de arquivos sem alterar a aplicação.
+- **Aderência aos RNFs:** O CSS próprio mantém o design sob controle e evita adicionar uma biblioteca de componentes inteira ao bundle. O build do frontend foi validado no CI; o tamanho e a experiência de carregamento continuam sujeitos a medição por ambiente.
 
 #### Impacto Arquitetural:
-- **Manutenibilidade:** Separação estrita de componentes reutilizáveis (`TrainingPipeline`, `AppLayout`, `Toast`, `TableStandard`), com folhas de estilo modulares correspondentes e isolamento de escopo. Ausência de dependências externas efêmeras que quebram em atualizações de versão.
-- **Escalabilidade:** Como a aplicação é compilada como um conjunto de arquivos estáticos (HTML, JS, CSS e ativos otimizados), ela pode ser servida por qualquer servidor web leve (Nginx, Caddy ou bucket S3 estático), escalando para milhares de operadores simultâneos com consumo desprezível de servidor.
-- **Confiabilidade:** O ciclo de vida dos componentes gerencia estados de carregamento (*skeletons*), erros de conectividade de rede com feedback via toasts não bloqueantes e cache local em memória para navegação instantânea entre abas sem refetch desnecessário.
-- **Segurança:** Sanitização nativa contra ataques de *Cross-Site Scripting* (XSS) pelo motor JSX do React, ausência de injeção direta de HTML (`dangerouslySetInnerHTML`) e consumo da API backend exclusivamente via cabeçalhos tipados com tokens JWT de curta duração.
+- **Manutenibilidade:** Componentes como `TrainingPipeline`, `AppLayout`, `Toast` e `TableStandard` concentram comportamentos repetidos. O design fica em folhas CSS próximas às páginas e aos componentes.
+- **Escalabilidade:** O resultado do build é estático, portanto o frontend não precisa de um processo Node em produção. A capacidade final depende do Nginx, da rede e do cache configurado.
+- **Confiabilidade:** Skeletons, toasts e caches de dados tornam falhas de rede visíveis e evitam repetir chamadas ao retornar a uma seção.
+- **Segurança:** O React escapa texto renderizado por padrão. A proteção de rotas e a validade do JWT continuam sendo responsabilidades do backend; o frontend não é tratado como fronteira de confiança.
 
 #### Riscos Identificados e Mitigação:
-- **Risco:** Re-renderizações em cascata decorrentes do pooling frequente de telemetria de retreinamento.
-- **Mitigação:** Implementação de controle de estado visual isolado no componente `TrainingPipeline`, sincronizado por `setTimeout` determinístico e comparação estrita de identificadores de job (`job.id`), impedindo que atualizações do pipeline forcem a re-renderização de toda a página de Engenharia.
+- **Risco:** Re-renderizações em cascata quando o status do treinamento é atualizado.
+- **Mitigação:** Manter o estado do pipeline isolado, comparar o identificador do job antes de aplicar uma atualização e medir o comportamento com dados reais antes de aumentar a frequência de polling.
+
+> **Imagem sugerida 2: mapa de telas do frontend**
+>
+> ```text
+> Create a clean white-background product architecture board for a railway maintenance web application. Use Motiva-inspired electric blue, navy text and light gray surfaces. Show a browser frame containing five connected interface views: operational dashboard, station and door map, alarms table, predictions table and engineer MLOps laboratory. Use simple realistic UI blocks, consistent typography, no gradients, no neon, no random text and no decorative 3D elements. Add small React and Vite logos near the browser frame. Editorial product documentation style, generous whitespace, 16:9, high resolution. Leave labels editable in post-production.
+> ```
 
 ---
 
-### 3.2 Camada de API e Orquestração: Go (Golang 1.23) + Gin Web Framework
+### 3.2 Camada de API e Orquestração: Go 1.26 + Gin 1.12
 
 O backend funciona como o núcleo operacional da plataforma, integrando a interface React, o banco de dados PostgreSQL, o MinIO e o serviço de Machine Learning em Python.
 
 #### Justificativa por Critérios Objetivos:
-- **Custo e Consumo Computacional:** Go compila diretamente para código de máquina nativo sem necessidade de máquina virtual (como a JVM do Java) ou interpretadores em tempo de execução (como Node.js e Python). Em estado de repouso, o processo do backend consome menos de 28 MB de memória RAM, permitindo alocação em instâncias computacionais mínimas de baixo custo.
-- **Curva de Aprendizado e Rigor de Engenharia:** A linguagem Go possui uma sintaxe deliberadamente compacta e ortogonal. A ausência de polimorfismo complexo de herança incentiva o uso de composição por interfaces, facilitando a adesão estrita à **Clean Architecture** (divisão entre `domain`, `usecase`, `port` e `adapter`).
-- **Maturidade do Ecossistema:** Go é a linguagem padrão da infraestrutura de nuvem moderna (Kubernetes, Docker, Prometheus e Terraform são escritos em Go). O framework **Gin** oferece roteamento HTTP com árvore radix ultrarrápida, middleware de logging, recuperação de pânico e validação de requisições com sobrecarga de CPU inferior a microssegundos.
-- **Aderência aos RNFs e Métricas de Desempenho:** O modelo de concorrência baseado em *Goroutines* (threads lógicas gerenciadas pelo runtime com custo de alocação de ~2 kB) permite que o backend atenda a picos de concorrência de milhares de requisições simultâneas sem bloqueio de I/O, entregando latência de processamento de rotas abaixo de 5 ms.
+- **Custo e consumo:** O backend é compilado como binário estático com `CGO_ENABLED=0` e executado em uma imagem `scratch`. Isso reduz dependências no runtime, embora o consumo real dependa da carga e do pool de conexões.
+- **Curva de aprendizado:** Interfaces pequenas e composição combinam com as camadas `domain`, `usecase`, `port` e `adapter`. O custo é que a equipe precisa conhecer um segundo ecossistema além do Python usado em ML.
+- **Maturidade:** Gin, `pgx`, JWT, OpenTelemetry e Prometheus possuem integração direta no projeto. A maior parte da infraestrutura de apoio também é escrita em Go, o que facilita encontrar bibliotecas e exemplos.
+- **Aderência aos RNFs:** Goroutines e I/O explícito permitem atender requisições e executar workers sem criar uma thread do sistema por operação. A latência e a capacidade devem ser confirmadas por carga; não são inferidas apenas pela escolha da linguagem.
 
 #### Impacto Arquitetural:
-- **Manutenibilidade:** Implementação de arquitetura hexagonal limpa. As regras de negócio e casos de uso (`mlops_usecase.go`, `maintenance_usecase.go`) desconhecem detalhes de implementação de banco ou de clientes HTTP externos, operando exclusivamente sobre interfaces definidas na camada `port`. Essa separação viabilizou uma suíte de 273 testes unitários e de integração de execução ultrarrápida (menos de 2 segundos para rodar todo o pacote).
+- **Manutenibilidade:** Casos de uso como `mlops_usecase.go` recebem interfaces da camada `port` e não instanciam diretamente PostgreSQL, S3 ou Gin. Isso permite testar regras com fakes e trocar adaptadores sem reescrever o domínio.
 - **Escalabilidade:** Aplicação estritamente *stateless*. As sessões de usuário são validadas por assinatura criptográfica HMAC-SHA256 em tokens JWT, permitindo escalabilidade horizontal imediata através da inicialização de múltiplas réplicas do contêiner atrás de um balanceador de carga.
 - **Confiabilidade:** Tratamento explícito de erros (sem exceções não controladas que derrubam o processo silenciosamente). O middleware de *Recovery* do Gin intercepta eventuais falhas críticas e retorna respostas estruturadas de acordo com a RFC 7807 (*Problem Details*), impedindo a indisponibilidade do serviço.
-- **Segurança:** Sistema de autorização baseado em papéis (*Role-Based Access Control* — RBAC) aplicado diretamente nas rotas protegidas (`RequireRole("enginner")` e `RequireRole("operator")`). Proteção nativa contra injeção SQL assegurada pelo driver `pgx/v5`, que executa consultas exclusivamente via *prepared statements* parametrizados.
+- **Segurança:** O middleware valida JWT assinado com HMAC e as rotas de engenharia usam o papel legado `enginner` definido nas migrations. Consultas recebem parâmetros pelo driver `pgx`, mas a revisão de autorização, segredo e limites de entrada continua necessária em cada endpoint.
 
 #### Riscos Identificados e Mitigação:
-- **Risco:** Dependência de comunicação síncrona com o serviço de Machine Learning em Python, gerando risco de bloqueio da thread da API Go caso o treino demore minutos.
-- **Mitigação:** Desacoplamento assíncrono. O endpoint de disparo de retreinamento (`POST /ml/retrain`) apenas cria o registro com status `queued` no PostgreSQL e retorna imediatamente o código HTTP `202 Accepted` ao cliente. A execução pesada roda em segundo plano através de goroutines monitoradas ou jobs do River, comunicando o progresso incrementalmente via banco de dados.
+- **Risco:** Uma chamada síncrona ao ML Service pode aumentar a latência da API ou falhar quando o serviço remoto estiver indisponível.
+- **Mitigação:** Circuit breaker no cliente, timeout explícito, healthchecks e fluxo assíncrono para treinamento. O backend registra o job e o frontend acompanha o progresso por consulta ao status persistido.
+
+> **Imagem sugerida 3: Clean Architecture do backend**
+>
+> ```text
+> Create a precise clean architecture diagram on a pure white background for a Go backend. Use four concentric or layered blue outlines labeled Domain, Use Cases, Ports and Adapters, with dependency arrows pointing inward. Around the adapters show Gin HTTP, PostgreSQL/pgx, MinIO S3, River Queue, OpenTelemetry and Prometheus logos. Use navy typography, electric blue borders, light gray fills and a restrained Motiva corporate style. No dark background, no gradients, no invented code, no decorative 3D objects. Horizontal 16:9 technical documentation diagram, high resolution, leave labels editable in post-production.
+> ```
 
 ---
 
-### 3.3 Camada de Inteligência e MLOps: Python 3.12 + Scikit-Learn + SHAP + Joblib
+### 3.3 Camada de Inteligência e MLOps: Python 3.11 + scikit-learn + SHAP + joblib
 
 A camada analítica é responsável pela ingestão de logs de telemetria, tratamento de séries temporais de alarmes, separação temporal de dados, treinamento do modelo classificador e geração de explicações locais para os técnicos.
 
 #### Justificativa por Critérios Objetivos:
-- **Custo e Simplicidade Operacional:** O modelo adotado (**Random Forest com 400 árvores de decisão**) roda inferência de alta velocidade estritamente sobre CPU, eliminando a obrigatoriedade de instâncias com aceleradores gráficos dedicados (GPUs), cujo custo de operação mensal em nuvem é de 5 a 10 vezes superior.
-- **Curva de Aprendizado e Ferramental:** Python é a língua franca da ciência de dados e machine learning. Bibliotecas como Pandas, NumPy e Scikit-Learn oferecem pipelines reprodutíveis de transformação de dados e serialização padronizada.
-- **Maturidade e Robustez Teórica:** Enquanto modelos de Deep Learning (como redes LSTM ou Transformers) requerem milhões de registros para convergir e são altamente sensíveis a ruídos de medição em sensores industriais, o ensemble de árvores (*Random Forest*) apresenta estabilidade superior em bases de dados tabulares moderadas, lidando naturalmente com dados desbalanceados, não linearidades e valores atípicos (*outliers*).
-- **Aderência aos RNFs e Explicabilidade Mandatória (XAI):** A operação metroferroviária exige conformidade e justificativa técnica antes de autorizar uma ordem de serviço. A biblioteca **SHAP** (*SHapley Additive exPlanations*), fundamentada na teoria dos jogos cooperativos, calcula com precisão matemática o peso de cada atributo (ex.: aumento de alarmes de obstáculo ou tempo desde a última preventiva) no escore final de risco da porta, eliminando a rejeição associada a modelos de "caixa-preta".
+- **Custo e execução:** O artefato atual usa `RandomForestClassifier` com 400 estimadores e roda em CPU. Isso atende ao tamanho atual do conjunto sem exigir GPU; o custo de uma execução maior precisa ser medido antes de extrapolar a escolha para produção.
+- **Curva de aprendizado:** Python reúne pandas, NumPy, scikit-learn, SHAP e joblib no mesmo ecossistema dos notebooks exploratórios. O código de produção reaproveita as transformações documentadas no treinamento.
+- **Aderência aos dados:** Random Forest foi escolhido para trabalhar com dados tabulares, variáveis categóricas transformadas e relações não lineares. A comparação com RNN/LSTM permanece registrada como experimento; a escolha não significa que redes neurais sejam inadequadas para todos os horizontes.
+- **Explicabilidade:** SHAP produz contribuições por feature que podem ser exibidas ao engenheiro. Essas contribuições ajudam a investigar a classificação, mas não substituem validação operacional nem provam causalidade.
 
 #### Impacto Arquitetural:
-- **Manutenibilidade:** O serviço de ML foi organizado em arquitetura de microsserviço independente (`src/modelo`), expondo contratos formais documentados em especificação OpenAPI 3.0 (`openapi.yaml`). Isso permite que a equipe de ciência de dados ajuste hiperparâmetros, features ou regras de pré-processamento sem tocar em uma única linha de código do backend Go.
-- **Escalabilidade:** A execução do treinamento foi dividida em um **pipeline sequencial de 10 etapas determinísticas**, gerenciado pelo componente `training_progress.py`. Cada etapa persiste seu estado em arquivo JSON local e no banco de dados, viabilizando o isolamento do processo de treinamento sem concorrência com o tráfego de inferência.
-- **Confiabilidade:** Implementação de suporte a **retomada de treinamento a partir do último checkpoint**. Caso ocorra uma interrupção inesperada (como reinício do contêiner ou falta temporária de rede durante a extração SHAP), o pipeline é capaz de retomar exatamente da etapa com falha sem reprocessar as etapas anteriores que já haviam convergido com sucesso.
-- **Segurança:** O serviço de inferência opera em rede interna restrita de contêineres Docker, sem exposição direta de portas para a internet pública, recebendo comandos autenticados exclusivamente originados do backend Go.
+- **Manutenibilidade:** `src/modelo` possui domínio, casos de uso, portas e adaptadores. O contrato HTTP fica em `openapi.yaml`, enquanto o registry e o repositório de features são detalhes substituíveis.
+- **Escalabilidade:** Inferência e treinamento são containers diferentes. O serviço de inferência pode receber recursos próprios, enquanto o worker de treinamento tem limites de CPU e memória configuráveis.
+- **Confiabilidade:** O treinamento grava progresso e checkpoints. Uma retomada reaproveita saídas concluídas e registra a tentativa seguinte, evitando deixar um job indefinidamente em `running`.
+- **Segurança:** Na arquitetura com duas VPSs, a porta de ML é acessada pelo WireGuard. O PostgreSQL do ML deve usar uma role de leitura e os artefatos ficam em buckets privados.
 
 #### Riscos Identificados e Mitigação:
-- **Risco:** Degradação da performance preditiva ao longo do tempo causada por mudanças operacionais na linha (desvio de dados ou *data drift* decorrente de novas frotas de trens ou troca de peças por novos fornecedores).
-- **Mitigação:** Módulo de cálculo de drift baseado no teste estatístico de Kolmogorov-Smirnov e divergência de Jensen-Shannon integrado ao endpoint `GET /v1/models/{version}/drift`, sinalizando visualmente na aba de Engenharia a necessidade de disparar um novo ciclo de retreinamento.
+- **Risco:** Mudanças na operação podem alterar a distribuição das features e reduzir a qualidade da previsão.
+- **Mitigação:** O serviço expõe a consulta de drift e o laboratório registra as métricas por versão. O limiar para retreinar deve ser definido com dados históricos e revisão do engenheiro, em vez de ser acionado apenas por uma métrica isolada.
+
+> **Imagem sugerida 4: ciclo de vida do modelo**
+>
+> ```text
+> Create a clean white-background MLOps lifecycle diagram for predictive maintenance of subway platform doors. Use a circular flow with six blue outlined stages: data snapshot, feature engineering, temporal validation, Random Forest training, model registry in private MinIO, and official prediction. Add a separate checkpoint and resume branch from training back to the failed stage. Show PostgreSQL for job status and model governance, MinIO S3 for datasets and joblib artifacts, and a Python logo near the training service. Use electric blue, navy and light gray only, clear arrows, generous spacing, no dark background, no neon, no fake metrics, 16:9 technical report style. Keep labels short and editable in post-production.
+> ```
 
 ---
 
@@ -159,41 +232,53 @@ A camada analítica é responsável pela ingestão de logs de telemetria, tratam
 A persistência de uma plataforma preditiva ferroviária precisa conciliar dados relacionais estruturados (contas de acesso, estações, portas, ordens de serviço) com dados semiestruturados (telemetria de checkpoints, logs brutos e artefatos binários de modelos treinados).
 
 #### Justificativa por Critérios Objetivos:
-- **Custo e Redução da Complexidade Arquitetural:** Em vez de adotar um banco relacional para dados, um banco de documentos para logs, um broker de mensageria externo (como RabbitMQ ou Apache Kafka) para filas e uma conta de nuvem comercial para storage, o grupo consolidou a persistência em duas ferramentas de código aberto: **PostgreSQL 16** e **MinIO**. Essa decisão reduziu drasticamente o custo de infraestrutura e a sobrecarga operacional da equipe.
-- **Maturidade e Confiabilidade Transacional:** O PostgreSQL é amplamente reconhecido como o mais avançado banco de dados relacional de código aberto do mundo, com suporte pleno a garantias ACID (Atomicidade, Consistência, Isolamento e Durabilidade). O uso do tipo de dados nativo **JSONB** permitiu armazenar as 10 etapas detalhadas de progresso e telemetria de retreinamento (`ml_training_jobs.progress`) com indexação GIN sem abrir mão do esquema relacional estrito para as tabelas de negócio.
-- **Fila Transacional com River:** A biblioteca **River** implementa uma fila de alta performance diretamente sobre tabelas do PostgreSQL usando recursos avançados da linguagem SQL (`FOR UPDATE SKIP LOCKED`). Isso elimina a necessidade de coordenar transações distribuídas: quando uma ordem de serviço preventiva é criada, ela é salva e enfileirada dentro da mesmíssima transação do banco, garantindo consistência estrita sem risco de perda de mensagens.
-- **Soberania e Paridade de Armazenamento com MinIO:** O MinIO fornece uma API 100% compatível com o protocolo AWS S3, permitindo que a aplicação salve e recupere artefatos (.joblib, manifests e datasets brutos) exatamente como faria na nuvem, mas rodando de forma autocontida dentro do perímetro de rede local da concessionária, atendendo aos requisitos de soberania de dados do metrô.
+- **Custo e complexidade:** PostgreSQL e MinIO cobrem os dados relacionais, a fila de ingestão e os objetos do projeto sem introduzir um broker ou um serviço de storage adicional na POC. Essa escolha reduz componentes para operar, ao custo de concentrar mais responsabilidades nesses serviços.
+- **Transações:** PostgreSQL fornece transações ACID, constraints e migrations. O progresso de treinamento pode conter dados estruturados e JSON, mas a modelagem deve ser avaliada antes de adicionar índices JSONB sem necessidade.
+- **Fila River:** River persiste jobs no PostgreSQL e usa o próprio banco para reivindicar trabalhos. No projeto, ele atende principalmente a ingestão de alarmes e manutenções, com deduplicação por argumentos, retentativas e limpeza de objetos associada ao job.
+- **MinIO:** A API compatível com S3 permite manter a mesma abstração entre desenvolvimento local e um storage gerenciado futuro. A compatibilidade de API não elimina a necessidade de backup, monitoramento e políticas de acesso.
 
 #### Impacto Arquitetural:
 - **Manutenibilidade:** Esquema de banco de dados centralizado e versionado por migrações incrementais em arquivos SQL puros (`000001` até `000017`), gerenciadas pela biblioteca `golang-migrate`. Qualquer evolução estrutural é rastreada no controle de versão e executada de forma idempotente tanto localmente quanto em produção.
-- **Escalabilidade:** O banco de dados utiliza pooling de conexões eficiente através da biblioteca `pgxpool`, mantendo tempos de conexão estáveis e reutilizando sockets TCP. A fila River suporta múltiplos workers concorrentes que retiram tarefas do banco sem contenção de locks.
-- **Confiabilidade:** Durabilidade garantida pelo mecanismo de *Write-Ahead Logging* (WAL) do PostgreSQL. O MinIO garante integridade referencial por meio de hashes MD5/SHA256 para cada objeto gravado, evitando corrupção silenciosa de modelos serializados.
-- **Segurança:** Isolamento de rede dentro da bridge Docker, credenciais de banco e chaves de acesso S3 injetadas exclusivamente via variáveis de ambiente protegidas, e separação de esquemas impedindo acesso indevido entre camadas.
+- **Escalabilidade:** `pgxpool` reutiliza conexões e os workers River podem aumentar em número enquanto o banco suportar a carga. O limite precisa ser validado com volume de jobs e conexões reais.
+- **Confiabilidade:** O PostgreSQL oferece WAL e o MinIO usa volumes persistentes. O fluxo de upload calcula SHA-256 e valida o artefato, mas a disponibilidade dos dados ainda depende de backup do volume e do banco.
+- **Segurança:** Buckets são privados, o backend não recebe credenciais root do MinIO e os serviços usam a rede Docker. Credenciais devem ficar em secrets ou variáveis protegidas, nunca no repositório.
 
 #### Riscos Identificados e Mitigação:
-- **Risco:** Crescimento descontrolado das tabelas de fila do River e saturação de I/O em virtude de centenas de execuções de testes.
-- **Mitigação:** Configuração de política de expurgo automático de jobs finalizados com sucesso e índices parciais focados exclusivamente em tarefas em estado pendente ou com falha.
+- **Risco:** Crescimento das tabelas River ou saturação do storage com uploads e artefatos antigos.
+- **Mitigação:** Limpeza de jobs concluídos, expurgo de objetos processados, métricas de volume e uma política de retenção definida antes de operar em escala maior.
+
+> **Imagem sugerida 5: PostgreSQL, River e MinIO**
+>
+> ```text
+> Create a clean white-background data architecture diagram for a predictive maintenance platform. Show a PostgreSQL cylinder in the center, a River Queue job table inside the PostgreSQL boundary, and two private MinIO S3 buckets on the right: ingestion-uploads and artefacts/training-data. On the left show the Go API and ingestion worker. Draw one atomic transaction from upload registration to River job insertion, then a worker flow from the job to MinIO and back to PostgreSQL. Use blue lines for data flow, orange only for object storage, navy labels, official PostgreSQL, River, MinIO and Docker logos, flat technical style, no dark background, no gradients, no invented numbers, 16:9, high resolution. Leave labels editable in post-production.
+> ```
 
 ---
 
 ### 3.5 Camada de Infraestrutura e DevOps: Docker + Docker Compose + Golang-Migrate
 
-Para que uma solução acadêmica atinja maturidade industrial, a implantação precisa ser reproduzível com um único comando, independentemente do sistema operacional do desenvolvedor ou da máquina servidora da concessionária.
+Como a POC é executada em duas VPSs e também precisa funcionar localmente, a implantação foi organizada em Compose. Cada host constrói e inicia seus próprios serviços a partir do mesmo repositório, com diferenças controladas pelo `.env`.
 
 #### Justificativa por Critérios Objetivos:
-- **Custo e Simplicidade:** A orquestração baseada em **Docker Compose** entrega virtualização leve no nível do sistema operacional sem os custos de licenciamento e a extrema complexidade operacional de clusters Kubernetes (K8s), cuja manutenção demandaria equipe dedicada de sustentação.
-- **Curva de Aprendizado e Padronização:** Todos os integrantes da equipe e os avaliadores técnicos conseguem inicializar o ecossistema completo (Banco, Storage, Backend, ML Service e Frontend) executando simplesmente `docker compose up --build`.
-- **Aderência aos RNFs e Imutabilidade:** Imagens de contêiner imutáveis garantem que as versões das bibliotecas (como scikit-learn 1.9.0 e Go 1.23) sejam rigorosamente as mesmas em desenvolvimento, homologação e no ambiente final do parceiro.
+- **Custo e simplicidade:** Compose atende à quantidade atual de serviços sem exigir control plane, registry ou equipe dedicada para Kubernetes. A decisão reduz a operação inicial e limita a automação de múltiplos nós.
+- **Curva de aprendizado:** O mesmo comando e os mesmos healthchecks funcionam localmente e nas VPSs, enquanto os endereços e credenciais ficam no `.env` de cada ambiente.
+- **Reprodutibilidade:** Os Dockerfiles fixam as imagens base, as dependências do Go são verificadas por `go.sum` e o serviço Python fixa as versões do `requirements.txt`. A imagem garante o ambiente; ela não substitui testes de compatibilidade com o banco e os volumes.
 
 #### Impacto Arquitetural:
-- **Manutenibilidade:** Cada serviço possui seu próprio `Dockerfile` enxuto com compilação em múltiplos estágios (*multi-stage build*). No caso do backend Go, a imagem final é montada sobre uma base `alpine` mínima, gerando um artefato seguro e compacto de menos de 45 MB.
-- **Escalabilidade:** Facilidade de transição: caso o volume de dados da Linha 4 aumente e a concessionária decida migrar para um cluster em nuvem (AWS ECS, EKS ou GCP GKE), os mesmos manifestos e contêineres Docker serão reaproveitados sem necessidade de refatoração do código-fonte.
-- **Confiabilidade:** Políticas de reinicialização automática (`restart: unless-stopped`) e *healthchecks* declarativos configurados no arquivo `docker-compose.yml` garantem que o backend aguarde a prontidão real do PostgreSQL e do MinIO antes de tentar inicializar as rotas e rodar as migrações.
-- **Segurança:** Contêineres executados com privilégios reduzidos (usuários não-root) e isolamento de portas expostas: apenas as portas do frontend (5173/80) e do backend (8080) são expostas para consumo externo; serviços internos como o banco de dados e o ML Service comunicam-se exclusivamente pela rede privada do Docker.
+- **Manutenibilidade:** Os serviços têm Dockerfiles separados. O backend usa build multi-stage e runtime `scratch` com usuário não-root; o serviço Python mantém seu ambiente separado do Go.
+- **Escalabilidade:** Os containers podem ser levados para ECS, Kubernetes ou outro orquestrador, mas os Compose atuais não fornecem autoscaling, service discovery entre hosts ou failover automático.
+- **Confiabilidade:** `restart: unless-stopped`, healthchecks e inicializadores idempotentes reduzem falhas de ordem de inicialização. O PostgreSQL usado em produção continua sendo o Supabase, portanto a disponibilidade do banco é uma dependência externa.
+- **Segurança:** Os serviços internos usam a rede Docker e a API de ML fica protegida pelo WireGuard na implantação distribuída. A abertura de portas e o firewall do host precisam acompanhar o `.env` de produção.
 
 #### Riscos Identificados e Mitigação:
-- **Risco:** Conflito de portas locais e divergência de esquemas de banco entre desenvolvedores da equipe.
-- **Mitigação:** Parametrização integral através de arquivo `.env` unificado e execução automática das migrações SQL no bootstrap da API Go via `golang-migrate`.
+- **Risco:** Conflito de portas, volumes com permissões diferentes e divergência de schema entre hosts.
+- **Mitigação:** Variáveis por ambiente, volumes nomeados, migrations executadas pelo backend e um procedimento de atualização documentado para cada VPS.
+
+> **Imagem sugerida 6: implantação nas duas VPSs**
+>
+> ```text
+> Create a white-background deployment architecture diagram with two large clean containers. Left container: “Azure VPS 1” with Nginx, React frontend, Go API, Go ingestion worker, Prometheus, Grafana, Loki and Tempo. Right container: “AWS VPS 2” with Python ML Service, training worker and private MinIO. Place Supabase PostgreSQL below both containers. Connect the VPSs with a blue WireGuard tunnel and show only the ML API crossing it. Use official Azure, AWS, Docker, Go, Python, PostgreSQL, MinIO, WireGuard and Grafana logos. Flat academic style, navy and electric blue palette, light gray boundaries, clear arrows, no dark background, no neon, no 3D, no fake IPs or metrics, 16:9, high resolution.
+> ```
 
 ---
 
@@ -206,12 +291,12 @@ Toda decisão arquitetural envolve concessões deliberadas (*trade-offs*). A tab
 
 | Escolha Tecnológica | Alternativa Descartada | Principal Ganho Obtido | Custo de Oportunidade / Desafio Aceito |
 | :--- | :--- | :--- | :--- |
-| **Go no Backend** | Python (FastAPI) ou Node.js | Baixa latência (< 5 ms), tipagem estática rigorosa e pegada de memória desprezível (< 30 MB). | Necessidade de manter dois ecossistemas de linguagens distintos (Go para API e Python para ML). |
-| **Random Forest + SHAP** | Deep Learning (LSTM) ou XGBoost | Explicabilidade nativa mandatória para ferroviária e excelente estabilidade em dados tabulares com ruído. | Menor capacidade intrínseca de aprendizado de padrões sequenciais contínuos de altíssima frequência. |
-| **PostgreSQL + River** | RabbitMQ / Kafka / Redis | Eliminação de brokers adicionais; transacionalidade estrita ACID entre dados de negócio e fila de tarefas. | Maior pressão de escrita e IOPS sobre o disco do banco de dados relacional sob tráfego severo de mensagens. |
-| **MinIO Local** | AWS S3 Gerenciado | Soberania de dados operacionais metroferroviários e execução local com zero custo de tráfego de dados. | Responsabilidade própria de configuração de backup, replicação e sustentação de volume de disco. |
-| **React 19 + CSS Nativo** | Next.js (SSR) + Tailwind | Aplicação cliente leve, bundle enxuto (< 750 kB total) e controle pixel-perfect sem abstrações de CSS. | Ausência de otimização de SEO nativa e necessidade de escrever tokens de design do zero. |
-| **Docker Compose** | Kubernetes (K8s) | Simplicidade operacional máxima; qualquer membro sobe o ambiente completo com um único comando. | Ausência de mecanismos nativos de auto-scaling horizontal dinâmico e auto-healing distribuído em múltiplos nós. |
+| **Go no backend** | Python/FastAPI ou Node.js | Binário estático, tipagem e concorrência adequadas ao serviço de API e aos workers. | A equipe mantém Go na aplicação e Python no ML. Latência e memória precisam de benchmark próprio. |
+| **Random Forest + SHAP** | RNN/LSTM ou XGBoost | Modelo tabular, artefato simples de versionar e explicações por feature. | Pode representar pior padrões sequenciais que dependam de uma série temporal mais longa. |
+| **PostgreSQL + River** | RabbitMQ, Kafka ou Redis | Menos componentes e jobs duráveis no mesmo banco das transações de ingestão. | A fila compartilha I/O e capacidade com o banco; volumes maiores podem pedir um broker dedicado. |
+| **MinIO local** | AWS S3 gerenciado | Compatibilidade S3 com custo e controle local na POC. | Backup, replicação, atualização e disponibilidade do storage ficam sob responsabilidade da equipe. |
+| **React + CSS próprio** | Next.js + Tailwind | Controle visual e build estático simples para o dashboard operacional. | O projeto precisa manter seus próprios tokens e não recebe SSR ou componentes prontos. |
+| **Docker Compose** | Kubernetes | Operação compatível com duas VPSs e baixo custo de implantação. | Não há autoscaling, service discovery entre hosts ou failover distribuído. |
 
 ---
 
@@ -219,19 +304,19 @@ Toda decisão arquitetural envolve concessões deliberadas (*trade-offs*). A tab
 
 | Identificador do Risco | Camada Afetada | Probabilidade | Impacto | Estratégia de Mitigação Implementada |
 | :--- | :--- | :--- | :--- | :--- |
-| **R1: Quebra de Contrato Go / Python** | Integração Backend/ML | Baixa | Alto | Especificação rigorosa de contratos via OpenAPI 3.0 (`openapi.yaml` e `openapi.json`) e testes de integração automatizados que validam os payloads de entrada e saída a cada build. |
-| **R2: Degradação do Modelo (*Drift*)** | Inteligência / MLOps | Média | Alto | Módulo dedicado de cálculo de desvio estatístico de features (`/drift`) e pipeline visual de retreinamento contínuo em 10 etapas acessível diretamente na interface pelo perfil *Engineer*. |
-| **R3: Sobrecarga do PostgreSQL pela Fila** | Persistência / River | Baixa | Médio | Criação de índices parciais otimizados pelo River e rotinas de limpeza automática para expurgar registros de tarefas concluídas, mantendo a tabela de fila leve. |
-| **R4: Falha no Retreinamento Longo** | MLOps / Treinamento | Média | Médio | Implementação de arquitetura de **checkpoints incrementais** no script `exportar_modelo.py` e endpoint de retomada (`/resume`), permitindo recomeçar da etapa com erro sem perder o processamento anterior. |
-| **R5: Rejeição da Interface pela Operação** | Frontend / UX | Média | Alto | Concepção de interface minimalista e sóbria que reflete a linguagem do chão de fábrica e do SAP, complementada por explicabilidade visual em linguagem natural (motivos da classificação de risco). |
+| **R1: Quebra de contrato Go/Python** | Integração Backend/ML | Média | Alto | OpenAPI versionado, timeout, testes de integração e validação dos payloads no CI. |
+| **R2: Degradação do modelo (*drift*)** | Inteligência/MLOps | Média | Alto | Consulta de drift, histórico de métricas e revisão do engenheiro antes de promover uma nova versão. |
+| **R3: Sobrecarga do PostgreSQL pela fila** | Persistência/River | Média | Médio | Limpeza de jobs, índices, limites de workers e acompanhamento de conexões e I/O. |
+| **R4: Falha no retreinamento longo** | MLOps/Treinamento | Média | Médio | Checkpoints, cancelamento, retomada e persistência da causa da falha. |
+| **R5: Adoção baixa pela operação** | Frontend/UX | Média | Alto | Testes com usuários, linguagem operacional, estados claros e explicações ligadas às portas afetadas. |
 
 > [!TIP]
-> **Ponto de Inserção da Imagem 2: Infográfico de Confiabilidade, Segurança e Mitigação de Riscos**
-> Recomenda-se posicionar abaixo desta tabela um infográfico que sintetize os pilares de confiabilidade, segurança e continuidade operacional da arquitetura.
+> **Imagem sugerida 8: matriz de riscos e controles**
+> Posicione abaixo da tabela um infográfico simples que conecte cada risco ao controle que o reduz. A imagem deve apoiar a leitura da matriz; os valores oficiais continuam sendo os da tabela.
 >
-> **Prompt detalhado para geração da imagem via IA (Midjourney / DALL-E 3 / Flux):**
+> **Prompt para geração:**
 > ```text
-> An enterprise-grade infographic visualization representing industrial software reliability, scalability, security, and maintainability for railway systems. A central glowing shield emblem surrounded by four balanced hexagonal pillars or quadrants labeled with subtle technical symbols: a speed gauge (low latency and high throughput), a lock and cryptographic key (security and data integrity), interconnected modular nodes (maintainability and clean architecture), and expanding network lines (horizontal scalability). Sleek dark theme with deep navy, brushed titanium silver, and cyber blue highlights. Highly polished digital rendering, technical blueprint feel, corporate technology report style, crisp geometric precision, 8k.
+> Create a restrained white-background risk control infographic for a railway predictive maintenance software architecture. Show five numbered risks connected to five controls: OpenAPI contract tests, drift monitoring and model review, PostgreSQL queue cleanup, training checkpoints and resume, and user feedback sessions. Use electric blue lines, navy typography, light gray boxes and small official technology icons. Academic engineering report style, flat vector composition, no gradients, no dark background, no dramatic shield, no invented statistics, 16:9, high resolution. Keep all labels short and editable in post-production.
 > ```
 
 ---
@@ -241,6 +326,6 @@ Toda decisão arquitetural envolve concessões deliberadas (*trade-offs*). A tab
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Conclusão</h2>
 </div>
 
-As escolhas tecnológicas consolidadas nesta Sprint 4 equilibram maturidade industrial, aderência aos requisitos não funcionais e pragmatismo operacional. Ao optar por **Go** no backend, o projeto assegurou a robustez, velocidade e leveza necessárias para orquestrar dados operacionais e de mensageria com consumo mínimo de recursos. Ao concentrar o **Python** exclusivamente na camada de Inteligência e MLOps com **Random Forest e SHAP**, garantiu-se estabilidade estatística em dados tabulares ruidosos aliada à explicabilidade indispensável para engenheiros metroferroviários.
+As decisões desta análise foram tomadas para atender ao escopo da POC com componentes que a equipe consegue operar e testar. Go concentra a API e os workers, enquanto Python fica responsável pelo treinamento e pela inferência. PostgreSQL, River e MinIO reduzem a quantidade de serviços necessários, mas exigem políticas de retenção, backup e acompanhamento de capacidade.
 
-Por fim, a unificação da persistência no **PostgreSQL** com a fila **River** e o armazenamento de objetos no **MinIO** eliminou dependências complexas de nuvem e brokers externos, entregando uma solução coesa, segura, auditável e pronta para implantação sustentável na infraestrutura da concessionária.
+React e Vite entregam o frontend estático; Docker Compose reproduz os ambientes; OpenTelemetry, Prometheus, Loki, Tempo e Grafana tornam falhas observáveis. Azure, AWS e WireGuard permitem separar o processamento de ML do tráfego operacional. A solução atende ao escopo atual e deixa registradas as condições que precisam ser medidas antes de uma implantação em escala maior.
