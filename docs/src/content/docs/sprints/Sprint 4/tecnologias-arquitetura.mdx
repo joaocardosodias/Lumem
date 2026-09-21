@@ -4,14 +4,21 @@ description: "Detalhamento e justificativa técnica das tecnologias selecionadas
 ---
 
 import ImageCarousel from '../../../../components/ImageCarousel.astro';
-import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
-import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
-import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manutencoes.png';
-import telaAlertas from '../../../../assets/sprints/sprint3/frontend/Alertas.png';
-import telaPortas from '../../../../assets/sprints/sprint3/frontend/Portas.png';
-import telaPortasEstacao from '../../../../assets/sprints/sprint3/frontend/PortasEstacao.png';
-import telaInspecoes from '../../../../assets/sprints/sprint3/frontend/Inspecoes.png';
-import telaAbrirInspecao from '../../../../assets/sprints/sprint3/frontend/AbrirOrdemInspec.png';
+import telaLogin from '../../../../assets/sprints/sprint4/frontend/01_login.png';
+import telaVisaoGeral from '../../../../assets/sprints/sprint4/frontend/02_pos_login.png';
+import telaPredicoes from '../../../../assets/sprints/sprint4/frontend/03_predicoes.png';
+import telaPortas from '../../../../assets/sprints/sprint4/frontend/04_portas.png';
+import telaPortasDetalhe from '../../../../assets/sprints/sprint4/frontend/04_portas_detalhe.png';
+import telaPortasEstacao from '../../../../assets/sprints/sprint4/frontend/04_portas_estacao_butanta.png';
+import telaAlarmes from '../../../../assets/sprints/sprint4/frontend/05_alarmes.png';
+import telaManutencoes from '../../../../assets/sprints/sprint4/frontend/06_manutencoes.png';
+import telaManutencoesDetalhes from '../../../../assets/sprints/sprint4/frontend/06_manutencoes_detalhes_expandido.png';
+import telaInspecoes from '../../../../assets/sprints/sprint4/frontend/07_inspecoes.png';
+import telaInspecoesDetalhes from '../../../../assets/sprints/sprint4/frontend/07_inspecoes_detalhes_modal.png';
+import telaEngenharia from '../../../../assets/sprints/sprint4/frontend/08_engenharia_de_dados.png';
+import telaLaboratorio from '../../../../assets/sprints/sprint4/frontend/08_engenharia_laboratorio.png';
+import telaQualidadeDados from '../../../../assets/sprints/sprint4/frontend/08_engenharia_qualidade_dos_dados.png';
+import telaCicloRetreino from '../../../../assets/sprints/sprint4/frontend/08_engenharia_ciclo_de_retreino.png';
 
 ## 1. Introdução e critérios objetivos de seleção
 
@@ -165,13 +172,20 @@ A interface atende o operador que acompanha estações, portas, alarmes, manuten
   label="Telas do frontend em uso"
   images={[
     { src: telaLogin, alt: 'Tela de login da plataforma Motiva', caption: 'Login e autenticação' },
-    { src: telaDashboard, alt: 'Dashboard operacional da plataforma Motiva', caption: 'Dashboard operacional' },
-    { src: telaManutencoes, alt: 'Tela de listagem de manutenções', caption: 'Manutenções' },
-    { src: telaAlertas, alt: 'Tela de listagem de alertas', caption: 'Alertas' },
-    { src: telaPortas, alt: 'Tela de listagem de portas', caption: 'Portas monitoradas' },
+    { src: telaVisaoGeral, alt: 'Visão geral da plataforma Motiva após o login', caption: 'Visão geral' },
+    { src: telaPredicoes, alt: 'Tela de predições de falhas das portas', caption: 'Predições' },
+    { src: telaPortas, alt: 'Tela de listagem de portas de plataforma', caption: 'Portas monitoradas' },
+    { src: telaPortasDetalhe, alt: 'Detalhes da tela de portas de plataforma', caption: 'Detalhes das portas' },
     { src: telaPortasEstacao, alt: 'Mapa de portas por estação', caption: 'Portas por estação' },
+    { src: telaAlarmes, alt: 'Tela de alarmes de telemetria', caption: 'Alarmes' },
+    { src: telaManutencoes, alt: 'Tela de listagem de manutenções', caption: 'Manutenções' },
+    { src: telaManutencoesDetalhes, alt: 'Detalhes expandidos de uma manutenção', caption: 'Detalhes da manutenção' },
     { src: telaInspecoes, alt: 'Tela de inspeções preventivas', caption: 'Inspeções' },
-    { src: telaAbrirInspecao, alt: 'Formulário para abrir uma ordem de inspeção', caption: 'Abertura de inspeção' }
+    { src: telaInspecoesDetalhes, alt: 'Modal com detalhes de uma inspeção', caption: 'Detalhes da inspeção' },
+    { src: telaEngenharia, alt: 'Tela de engenharia de dados e governança', caption: 'Engenharia de dados' },
+    { src: telaLaboratorio, alt: 'Laboratório de experimentação de modelos', caption: 'Laboratório de modelos' },
+    { src: telaQualidadeDados, alt: 'Tela de qualidade e drift dos dados', caption: 'Qualidade dos dados' },
+    { src: telaCicloRetreino, alt: 'Ciclo de retreinamento do modelo', caption: 'Ciclo de retreinamento' }
   ]}
 />
 
