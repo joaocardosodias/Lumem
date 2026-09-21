@@ -3,6 +3,16 @@ title: "Tecnologias Selecionadas e Justificativas da Arquitetura"
 description: "Detalhamento e justificativa técnica das tecnologias selecionadas para a arquitetura da plataforma de manutenção preditiva de PSDs, com base em critérios objetivos, impactos arquiteturais e mitigação de riscos."
 ---
 
+import ImageCarousel from '../../../../components/ImageCarousel.astro';
+import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
+import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
+import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manutencoes.png';
+import telaAlertas from '../../../../assets/sprints/sprint3/frontend/Alertas.png';
+import telaPortas from '../../../../assets/sprints/sprint3/frontend/Portas.png';
+import telaPortasEstacao from '../../../../assets/sprints/sprint3/frontend/PortasEstacao.png';
+import telaInspecoes from '../../../../assets/sprints/sprint3/frontend/Inspecoes.png';
+import telaAbrirInspecao from '../../../../assets/sprints/sprint3/frontend/AbrirOrdemInspec.png';
+
 ## 1. Introdução e critérios objetivos de seleção
 
 A plataforma foi construída para apoiar a manutenção preditiva das Portas de Plataforma (*Platform Screen Doors* ou PSDs) da Linha 4-Amarela. A escolha das tecnologias precisava caber no orçamento da POC, ser executável pela equipe e manter uma rota clara para uma implantação mais robusta. Por isso, a análise abaixo separa as metas definidas para o sistema dos resultados que foram medidos nos testes.
@@ -151,11 +161,19 @@ A interface atende o operador que acompanha estações, portas, alarmes, manuten
 - **Risco:** Re-renderizações em cascata quando o status do treinamento é atualizado.
 - **Mitigação:** Manter o estado do pipeline isolado, comparar o identificador do job antes de aplicar uma atualização e medir o comportamento com dados reais antes de aumentar a frequência de polling.
 
-> **Imagem sugerida 2: mapa de telas do frontend**
->
-> ```text
-> Crie um painel limpo de arquitetura de produto sobre fundo branco para uma aplicação web de manutenção ferroviária. Use azul elétrico inspirado na Motiva, texto azul-marinho e superfícies cinza-claro. Mostre uma moldura de navegador com cinco telas conectadas: dashboard operacional, mapa de estações e portas, tabela de alarmes, tabela de predições e laboratório de MLOps do engenheiro. Use blocos de interface simples e realistas, tipografia consistente, sem gradientes, neon, textos aleatórios ou elementos 3D decorativos. Adicione pequenos logotipos do React e do Vite próximos à moldura. Estilo editorial de documentação de produto, com espaço em branco generoso, proporção 16:9 e alta resolução. Deixe os rótulos editáveis na pós-produção.
-> ```
+<ImageCarousel
+  label="Telas do frontend em uso"
+  images={[
+    { src: telaLogin, alt: 'Tela de login da plataforma Motiva', caption: 'Login e autenticação' },
+    { src: telaDashboard, alt: 'Dashboard operacional da plataforma Motiva', caption: 'Dashboard operacional' },
+    { src: telaManutencoes, alt: 'Tela de listagem de manutenções', caption: 'Manutenções' },
+    { src: telaAlertas, alt: 'Tela de listagem de alertas', caption: 'Alertas' },
+    { src: telaPortas, alt: 'Tela de listagem de portas', caption: 'Portas monitoradas' },
+    { src: telaPortasEstacao, alt: 'Mapa de portas por estação', caption: 'Portas por estação' },
+    { src: telaInspecoes, alt: 'Tela de inspeções preventivas', caption: 'Inspeções' },
+    { src: telaAbrirInspecao, alt: 'Formulário para abrir uma ordem de inspeção', caption: 'Abertura de inspeção' }
+  ]}
+/>
 
 ---
 
