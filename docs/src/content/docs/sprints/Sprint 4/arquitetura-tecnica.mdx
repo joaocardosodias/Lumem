@@ -276,18 +276,7 @@ O Diagrama de Fluxo de Dados (seção 3) e o Diagrama de Componentes (seção 7)
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">16. Isso pode mudar</h2>
-</div>
-
-Este documento descreve o fluxo e os componentes como estão hoje, não uma meta final. Se o time decidir fechar as lacunas do retreino, as seções acima devem ser atualizadas pra refletir a mudança — do mesmo jeito que os diagramas da Sprint 3 foram sendo ajustados conforme decisões eram validadas.
-
-Uma evolução real já está em andamento: uma nova versão do serviço de retreino foi commitada numa branch separada (`feat/frontend-ajustes`), ainda não integrada, trazendo execução assíncrona de verdade (com retomada em caso de falha), versionamento do modelo com troca sem precisar reconstruir o container, e cálculo real de drift a partir da distribuição das features das portas ativas. A lacuna que permanece, mesmo nessa versão nova, é a mesma apontada nas duas seções acima: a fonte de dado do treino ainda é um retrato histórico fixo, não o dado mais recente do armazenamento relacional. Quando essa branch for validada e integrada, este documento deve ser atualizado de novo.
-
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">17. Conclusão</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">16. Conclusão</h2>
 </div>
 
 A arquitetura foi construída a partir dos requisitos do sistema e confrontada com o frontend e o backend desenvolvidos no projeto. A visão agnóstica evidencia que a plataforma é formada por componentes independentes — Interface da Plataforma, Serviço de Aplicação, Serviço de Autenticação, Processamento Assíncrono, Serviço Preditivo, Repositório de Dados e Armazenamento de Arquivos — com contratos e dependências explícitos entre si, e por um fluxo de dados que mostra como a informação percorre esses componentes na prática, incluindo o que ainda não está implementado. Essa organização reduz o acoplamento entre implementações e favorece segurança, integridade, escalabilidade e manutenibilidade, mantendo a rastreabilidade com os requisitos funcionais e não funcionais definidos para o projeto.
