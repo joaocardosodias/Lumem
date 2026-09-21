@@ -67,39 +67,6 @@ A tabela a seguir sumariza as tecnologias selecionadas para cada camada do ecoss
 | **Observabilidade** | OpenTelemetry + Prometheus + Grafana + Loki + Tempo | Métricas, logs estruturados e traces correlacionados entre API, worker e ML Service. | Elastic Stack, Datadog, CloudWatch, Application Insights |
 | **Rede entre VPSs** | WireGuard | Canal privado entre a VPS da aplicação e a VPS de Machine Learning. | Exposição pública com HTTPS, VPN gerenciada, rede privada de um único provedor |
 
-```mermaid
-flowchart TD
-    subgraph Client["Camada de Apresentação"]
-        UI["React 19 SPA (Vite)<br/>Dashboard · Portas · MLOps"]
-        Nginx["Nginx<br/>reverse proxy"]
-    end
-
-    subgraph Core["Camada de API e Negócio"]
-        API["Backend Go 1.26 (Gin)<br/>Clean Architecture & RBAC"]
-        Worker["River Worker (Go)<br/>Processamento em Segundo Plano"]
-    end
-
-    subgraph DataLayer["Camada de Persistência e Storage"]
-        DB[("PostgreSQL 16<br/>Dados Operacionais · JSONB Telemetria<br/>Fila Transacional River")]
-        Storage[("MinIO Object Storage<br/>Modelos (.joblib) · Snapshots Brutos")]
-    end
-
-    subgraph MLService["Camada de Inteligência e MLOps"]
-        ML["ML Service (Python 3.11)<br/>Random Forest · SHAP<br/>treinamento com checkpoints"]
-    end
-
-    UI --> Nginx
-    Nginx --> API
-    API <-- "SQL (pgxpool)" --> DB
-    API <-- "Enfileira Jobs" --> DB
-    Worker <-- "Lê / Processa Jobs" --> DB
-    API <-- "S3 SDK" --> Storage
-    Worker <-- "Armazena Artefatos" --> Storage
-    API <-- "HTTP / JSON Interno" --> ML
-    ML <-- "Carrega / Grava Artefatos" --> Storage
-    ML <-- "Features e governança" --> DB
-```
-
 Em desenvolvimento, os serviços compartilham a rede Docker `backend-network`. Na implantação distribuída, a VPS 1 executa frontend, API, worker e observabilidade; a VPS 2 executa o ML Service, o worker de treinamento e o MinIO de modelos. O WireGuard liga as duas redes por `10.50.0.1` e `10.50.0.2`.
 
 <figure style="margin: 2rem 0; text-align: center;">
