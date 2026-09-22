@@ -129,6 +129,28 @@ Tabela recalculada pela execução completa de `03_modelo_1_treinamento.ipynb`, 
 
 **Por que os episódios podem aumentar:** o agrupamento é recalculado depois do filtro. Ao remover alertas intermediários, um episódio pode se dividir em vários. A passagem de 760 para 1.466 episódios não viola a monotonicidade dos registros, que caem de 29.530 para 20.045. A tabela anterior rotulava episódios como “Chamados Emitidos”, confundindo as duas unidades.
 
+#### Como o limiar altera os episódios
+
+**A coluna de episódios não altera o limiar. É o limiar que altera quais registros entram no agrupamento e, consequentemente, quantos episódios são formados.** O cálculo segue esta ordem:
+
+1. Define-se o limiar de probabilidade.
+2. Selecionam-se os registros porta-dia com probabilidade maior ou igual ao limiar.
+3. Agrupam-se os registros selecionados por ativo e proximidade temporal. Um intervalo de mais de dois dias entre alertas consecutivos inicia outro episódio.
+
+Considere este exemplo ilustrativo de uma mesma porta em cinco dias consecutivos:
+
+| Dia | Probabilidade | Corte 0,45 | Corte 0,48 |
+| :--- | :---: | :---: | :---: |
+| Segunda-feira | 0,50 | Alerta | Alerta |
+| Terça-feira | 0,46 | Alerta | Sem alerta |
+| Quarta-feira | 0,47 | Alerta | Sem alerta |
+| Quinta-feira | 0,46 | Alerta | Sem alerta |
+| Sexta-feira | 0,51 | Alerta | Alerta |
+
+Com o corte **0,45**, os cinco registros passam pelo filtro. Como os alertas são consecutivos, formam **um episódio**. Com o corte **0,48**, apenas segunda e sexta passam. O intervalo de quatro dias entre os dois alertas ultrapassa o limite de dois dias, formando **dois episódios**.
+
+Assim, subir o limiar reduz os registros de cinco para dois, mas aumenta os episódios de um para dois. As probabilidades permanecem iguais: o aumento dos episódios representa a separação dos alertas restantes no tempo, e não um aumento do risco previsto pelo modelo. Por isso, a exigência de contagem não crescente se aplica aos registros filtrados, mas não aos episódios recalculados após cada corte.
+
 **Interpretação operacional:** episódios são uma aproximação de demanda que depende da regra de agrupamento e precisa ser confrontada com a política real de abertura e encerramento de chamados. Falhas com alerta prévio não são falhas comprovadamente evitadas. O F1 combina precisão por episódio com recall por evento, sendo apenas descritivo, sem equivaler ao F1 de uma única matriz de confusão. Esta avaliação no teste não seleciona nem aprova um limiar para produção; a escolha deve usar validação e capacidade operacional.
 
 ### 5.3 Explicabilidade Global e Importância das Features (SHAP Values)
