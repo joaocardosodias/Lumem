@@ -102,10 +102,15 @@ npm run dev
 
 **Passo a passo para execução:**
 
+As dependências de modelagem estão fixadas para Python 3.14. O Modelo 4 (FLAML)
+e o serviço de inferência usam ambientes separados por incompatibilidade de
+versões. Consulte a [auditoria e os comandos de instalação](docs/dependencias-python.md)
+antes de selecionar o ambiente. O serviço mantém Python 3.11 no Docker.
+
 1. Crie e ative um ambiente virtual Python:
 
 ```bash
-python3 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 ```
 
