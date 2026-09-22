@@ -272,6 +272,8 @@ A verificação mostrou que todos os requisitos possuem pelo menos um componente
 
 O Diagrama de Fluxo de Dados (seção 3) e o Diagrama de Componentes (seção 7) representam duas perspectivas complementares da mesma solução: o fluxo mostra **por onde os dados passam e em qual sequência**, os componentes mostram **quais unidades executam essas responsabilidades e por quais interfaces elas se comunicam**. Por exemplo, onde o fluxo representa apenas o Serviço de Aplicação como uma caixa só, o Diagrama de Componentes detalha suas responsabilidades internas e mostra dependências explícitas com autenticação (`IAuth`), processamento (`IProcessamento`), predição (`IPredicao`) e persistência (`IDados`). Os dois artefatos usam a mesma abstração arquitetural e não representam soluções diferentes.
 
+Uma diferença pontual entre os dois merece nota: o Diagrama de Fluxo de Dados representa o retreino como uma caixa própria ("Serviço de retreino"), para deixar claro, na explicação do processo, quais três ligações ainda faltam. Já o Diagrama de Componentes não dá a ele uma caixa separada, porque a notação `<<componente>>` reserva essa marcação para unidades que já existem como peça implantável de verdade hoje — e o retreino ainda não é uma. Por isso ele aparece ali só como a dependência futura entre o Repositório de Dados e o Serviço Preditivo, não como uma inconsistência entre os dois documentos.
+
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
