@@ -36,7 +36,7 @@ A concepção do backend foi guiada desde o primeiro momento pelos princípios d
 
 ## Topologia geral do sistema
 
-A arquitetura em execução combina o PostgreSQL gerenciado do Supabase com contêineres Docker na VPS. MinIO fornece os buckets privados locais, e API, Worker e serviço de ML compartilham a rede `backend-network`. O Nginx é o ponto único de entrada externo. Os detalhes completos estão documentados na seção [Visão Geral da Arquitetura](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/visao-geral.mdx).
+A arquitetura em execução combina o PostgreSQL gerenciado do Supabase com contêineres Docker na VPS. MinIO fornece os buckets privados locais, e API, Worker e serviço de ML compartilham a rede `backend-network`. O Nginx é o ponto único de entrada externo. Os detalhes completos estão documentados na seção [Visão Geral da Arquitetura](/sprints/sprint-3/backend/arquitetura/visao-geral/).
 
 ## Matriz de requisitos de engenharia e decisões técnicas
 
@@ -44,40 +44,40 @@ Cada decisão arquitetural adotada na concepção do backend responde a requisit
 
 | Requisito de engenharia | Decisão técnica adotada | Benefício imediato | Custo / Trade-off aceito | Seção de detalhamento |
 |---|---|---|---|---|
-| Regras de negócio independentes de banco e frameworks | Clean Architecture com portas e adaptadores estritos | Núcleo testável em milissegundos sem dependências de infraestrutura | Criação de interfaces de portas e DTOs explícitos | [Clean Architecture](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/clean-architecture.mdx) |
-| Processamento assíncrono durável e sobrevivência a restarts | Fila River persistida no PostgreSQL com processo worker dedicado | Retentativas automáticas e garantia de que nenhum job desaparece | Tabelas de controle do River e conexões com o banco | [ADR-002 — River](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-002-river-postgresql.mdx) |
-| Arquivos acessíveis entre contêineres desacoplados | MinIO privado com API S3 e volume persistente | API, Worker e ML independentes de seus sistemas de arquivos efêmeros | Backup e capacidade do disco passam a ser responsabilidade da equipe | [ADR-003 — S3](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-003-object-storage.mdx) |
-| Atomicidade em operações com múltiplas tabelas | Padrão Unit of Work sobre transações PostgreSQL | Atomicidade garantida: ou todos os lotes gravam ou nada persiste | Controle de transação manual no adaptador de repositório | [Práticas de Engenharia](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/praticas-de-engenharia.mdx) |
-| Rastreabilidade de requisições web até tarefas assíncronas | Tracing distribuído com OpenTelemetry e contexto W3C no River | Visibilidade fim a fim de latência e causa raiz entre contêineres | Operação de OTel Collector e armazenamento no Tempo | [ADR-004 — OTel](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo.mdx) |
-| Proteção contra regressão e segurança em produção | Suíte de 249 testes com race detector, SonarQube e Trivy | Confiança com 99,7% de cobertura, 0 code smells e imagem hardened | Manutenção contínua de test doubles e fixtures | [Testes e CI](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/qualidade/testes-e-ci.mdx) |
+| Regras de negócio independentes de banco e frameworks | Clean Architecture com portas e adaptadores estritos | Núcleo testável em milissegundos sem dependências de infraestrutura | Criação de interfaces de portas e DTOs explícitos | [Clean Architecture](/sprints/sprint-3/backend/arquitetura/clean-architecture/) |
+| Processamento assíncrono durável e sobrevivência a restarts | Fila River persistida no PostgreSQL com processo worker dedicado | Retentativas automáticas e garantia de que nenhum job desaparece | Tabelas de controle do River e conexões com o banco | [ADR-002 — River](/sprints/sprint-3/backend/arquitetura/decisoes/adr-002-river-postgresql/) |
+| Arquivos acessíveis entre contêineres desacoplados | MinIO privado com API S3 e volume persistente | API, Worker e ML independentes de seus sistemas de arquivos efêmeros | Backup e capacidade do disco passam a ser responsabilidade da equipe | [ADR-003 — S3](/sprints/sprint-3/backend/arquitetura/decisoes/adr-003-object-storage/) |
+| Atomicidade em operações com múltiplas tabelas | Padrão Unit of Work sobre transações PostgreSQL | Atomicidade garantida: ou todos os lotes gravam ou nada persiste | Controle de transação manual no adaptador de repositório | [Práticas de Engenharia](/sprints/sprint-3/backend/praticas-de-engenharia/) |
+| Rastreabilidade de requisições web até tarefas assíncronas | Tracing distribuído com OpenTelemetry e contexto W3C no River | Visibilidade fim a fim de latência e causa raiz entre contêineres | Operação de OTel Collector e armazenamento no Tempo | [ADR-004 — OTel](/sprints/sprint-3/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo/) |
+| Proteção contra regressão e segurança em produção | Suíte de 249 testes com race detector, SonarQube e Trivy | Confiança com 99,7% de cobertura, 0 code smells e imagem hardened | Manutenção contínua de test doubles e fixtures | [Testes e CI](/sprints/sprint-3/backend/qualidade/testes-e-ci/) |
 
 ## Estrutura e guia de navegação da documentação
 
 A documentação do backend está organizada em eixos temáticos para facilitar a consulta técnica por desenvolvedores, operadores e avaliadores:
 
 ### 1. Arquitetura do Sistema
-- [Práticas de Engenharia e Padrões de Código](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/praticas-de-engenharia.mdx): Detalhamento dos 5 princípios SOLID aplicados ao Go, implementação do padrão Unit of Work, circuit breaker do serviço de ML, tratamento uniforme com Problem Details (RFC 7807) e estratégia de idempotência.
-- [Visão Geral da Arquitetura](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/visao-geral.mdx): Diagramas C4 de contexto e contêineres, fronteiras de confiança, políticas de rede e características de disponibilidade.
-- [Clean Architecture](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/clean-architecture.mdx): Mapeamento das 4 camadas conceituais, regra de dependência, organização de pacotes Go e papéis dos composition roots em `cmd/api` e `cmd/worker`.
-- [Banco de Dados e Modelagem Relacional](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/banco-de-dados.mdx): Modelagem de persistência no PostgreSQL 16, diagrama entidade-relacionamento (ERD), dicionário de tabelas, índices de alta performance, migrações versionadas com `golang-migrate` e transações ACID com Unit of Work.
-- [Fluxo de Ingestão](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/fluxo-de-ingestao.mdx): O ciclo de vida dos arquivos CSV/XLSX desde o recebimento HTTP, hash SHA-256 em fluxo, agendamento atômico, processamento em lotes e expurgo seguro.
+- [Práticas de Engenharia e Padrões de Código](/sprints/sprint-3/backend/praticas-de-engenharia/): Detalhamento dos 5 princípios SOLID aplicados ao Go, implementação do padrão Unit of Work, circuit breaker do serviço de ML, tratamento uniforme com Problem Details (RFC 7807) e estratégia de idempotência.
+- [Visão Geral da Arquitetura](/sprints/sprint-3/backend/arquitetura/visao-geral/): Diagramas C4 de contexto e contêineres, fronteiras de confiança, políticas de rede e características de disponibilidade.
+- [Clean Architecture](/sprints/sprint-3/backend/arquitetura/clean-architecture/): Mapeamento das 4 camadas conceituais, regra de dependência, organização de pacotes Go e papéis dos composition roots em `cmd/api` e `cmd/worker`.
+- [Banco de Dados e Modelagem Relacional](/sprints/sprint-3/backend/arquitetura/banco-de-dados/): Modelagem de persistência no PostgreSQL 16, diagrama entidade-relacionamento (ERD), dicionário de tabelas, índices de alta performance, migrações versionadas com `golang-migrate` e transações ACID com Unit of Work.
+- [Fluxo de Ingestão](/sprints/sprint-3/backend/arquitetura/fluxo-de-ingestao/): O ciclo de vida dos arquivos CSV/XLSX desde o recebimento HTTP, hash SHA-256 em fluxo, agendamento atômico, processamento em lotes e expurgo seguro.
 
 ### 2. Decisões de Arquitetura (ADRs)
-- [ADR 001 — Clean Architecture](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-001-clean-architecture.mdx): Justificativa para adoção de portas e adaptadores como fundação do sistema.
-- [ADR 002 — Fila River](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-002-river-postgresql.mdx): Análise da escolha do River para mensageria transacional sobre PostgreSQL.
-- [ADR 003 — Armazenamento S3](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-003-object-storage.mdx): Decisão de adoção do MinIO via S3 para desacoplamento de arquivos.
-- [ADR 004 — OpenTelemetry e Tracing](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo.mdx): Estabelecimento do padrão W3C para correlação entre sinais de telemetria distribuída.
+- [ADR 001 — Clean Architecture](/sprints/sprint-3/backend/arquitetura/decisoes/adr-001-clean-architecture/): Justificativa para adoção de portas e adaptadores como fundação do sistema.
+- [ADR 002 — Fila River](/sprints/sprint-3/backend/arquitetura/decisoes/adr-002-river-postgresql/): Análise da escolha do River para mensageria transacional sobre PostgreSQL.
+- [ADR 003 — Armazenamento S3](/sprints/sprint-3/backend/arquitetura/decisoes/adr-003-object-storage/): Decisão de adoção do MinIO via S3 para desacoplamento de arquivos.
+- [ADR 004 — OpenTelemetry e Tracing](/sprints/sprint-3/backend/arquitetura/decisoes/adr-004-opentelemetry-tempo/): Estabelecimento do padrão W3C para correlação entre sinais de telemetria distribuída.
 
 ### 3. Serviços e Qualidade
-- [API REST e Contratos OpenAPI](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/api/openapi.mdx): Contrato OpenAPI 3.0.3 versionado, respostas assíncronas 202 Accepted e autenticação Bearer JWT.
-- [Observabilidade e Telemetria](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/operacao/observabilidade.mdx): Consultas PromQL, filtros LogQL, links derivados no Grafana e waterfall no Tempo.
-- [Testes Automatizados e CI](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/qualidade/testes-e-ci.mdx): Pirâmide de testes, execução com `-race`, cobertura de statements e pipeline de integração contínua.
-- [SonarQube e Segurança](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/qualidade/sonarqube-e-seguranca.mdx): Quality Gate aprovado, otimizações da regra S3776, scans de segurança com Trivy e `govulncheck`.
+- [API REST e Contratos OpenAPI](/sprints/sprint-3/backend/api/openapi/): Contrato OpenAPI 3.0.3 versionado, respostas assíncronas 202 Accepted e autenticação Bearer JWT.
+- [Observabilidade e Telemetria](/sprints/sprint-3/backend/operacao/observabilidade/): Consultas PromQL, filtros LogQL, links derivados no Grafana e waterfall no Tempo.
+- [Testes Automatizados e CI](/sprints/sprint-3/backend/qualidade/testes-e-ci/): Pirâmide de testes, execução com `-race`, cobertura de statements e pipeline de integração contínua.
+- [SonarQube e Segurança](/sprints/sprint-3/backend/qualidade/sonarqube-e-seguranca/): Quality Gate aprovado, otimizações da regra S3776, scans de segurança com Trivy e `govulncheck`.
 
 ### 4. DevOps e Referências
-- [DevOps e Deploy](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/operacao/configuracao-e-deploy.mdx): Configuração Docker multi-stage, volumes de observabilidade, execução de migrações e checklist de verificação pós-deploy.
-- [Diagnóstico e Troubleshooting](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/operacao/troubleshooting.mdx): Procedimentos para jobs travados, erros 403 no S3, saturação de conexões no PostgreSQL e indisponibilidade de telemetria.
-- [Variáveis de Ambiente](file:///home/cardoso/GitHub/g04/docs/src/content/docs/sprints/Sprint 3/backend/referencia/variaveis-de-ambiente.mdx): Tabela completa de configurações, valores padrão e segredos exigidos em produção.
+- [DevOps e Deploy](/sprints/sprint-3/backend/operacao/configuracao-e-deploy/): Configuração Docker multi-stage, volumes de observabilidade, execução de migrações e checklist de verificação pós-deploy.
+- [Diagnóstico e Troubleshooting](/sprints/sprint-3/backend/operacao/troubleshooting/): Procedimentos para jobs travados, erros 403 no S3, saturação de conexões no PostgreSQL e indisponibilidade de telemetria.
+- [Variáveis de Ambiente](/sprints/sprint-3/backend/referencia/variaveis-de-ambiente/): Tabela completa de configurações, valores padrão e segredos exigidos em produção.
 
 ## Princípios de conformidade e segurança adotados
 

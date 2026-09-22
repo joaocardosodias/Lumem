@@ -13,7 +13,7 @@ Esta página documenta a construção da imagem Docker multi-stage, a topologia 
 
 ## 1. Construção da imagem Docker multi-stage
 
-O arquivo [`Dockerfile`](file:///home/cardoso/GitHub/g04/src/backend/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter as imagens finais sem compiladores ou ferramentas de desenvolvimento. Um único estágio `builder` compila os dois binários com `CGO_ENABLED=0`, `-trimpath` e remoção de símbolos e build ID. A partir de um runtime vazio (`scratch`) compartilhado, os targets `api` e `worker` recebem somente o executável e os artefatos necessários ao próprio processo.
+O arquivo [`Dockerfile`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter as imagens finais sem compiladores ou ferramentas de desenvolvimento. Um único estágio `builder` compila os dois binários com `CGO_ENABLED=0`, `-trimpath` e remoção de símbolos e build ID. A partir de um runtime vazio (`scratch`) compartilhado, os targets `api` e `worker` recebem somente o executável e os artefatos necessários ao próprio processo.
 
 Essa separação reduziu o tamanho exibido pelo Docker de **243 MB por imagem** para **57 MB na API** e **38,6 MB no Worker**:
 
@@ -41,7 +41,7 @@ Os dois targets continuam gerando imagens independentes, mas elas são construí
 
 ## 2. Orquestração e dependências de inicialização
 
-No [`docker-compose.yml`](file:///home/cardoso/GitHub/g04/src/backend/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
+No [`docker-compose.yml`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
 
 ```yaml
 services:

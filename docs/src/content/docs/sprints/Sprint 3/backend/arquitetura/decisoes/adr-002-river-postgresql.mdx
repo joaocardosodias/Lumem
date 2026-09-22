@@ -48,5 +48,5 @@ Adotar a biblioteca **River** (`github.com/riverqueue/river`) para prover mensag
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L74-L99): método `Enqueue` gerenciando a transação atômica entre `file_uploads` e `river_job`;
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L130-L180): método `Work` no `IngestionWorker` processando jobs com propagação de telemetria e tratamento de erros.
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L74-99): método `Enqueue` gerenciando a transação atômica entre `file_uploads` e `river_job`;
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L130-180): método `Work` no `IngestionWorker` processando jobs com propagação de telemetria e tratamento de erros.

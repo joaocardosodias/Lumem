@@ -15,7 +15,7 @@ A comunicação com o PostgreSQL é implementada em Go através do driver nativo
 
 ### Configuração do Pool de Conexões
 
-O ciclo de vida das conexões é controlado de forma determinística na inicialização da aplicação em [`cmd/api/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/worker/main.go):
+O ciclo de vida das conexões é controlado de forma determinística na inicialização da aplicação em [`cmd/api/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/worker/main.go):
 
 | Parâmetro | Valor Configurado | Justificativa de Engenharia |
 |---|---|---|
@@ -25,7 +25,7 @@ O ciclo de vida das conexões é controlado de forma determinística na iniciali
 
 ### Isolamento pela Clean Architecture
 
-Seguindo a regra de dependência da Clean Architecture, as entidades de domínio e os casos de uso não possuem conhecimento de tabelas SQL, drivers ou dialetos. Todas as operações de banco são expostas por meio de interfaces de portas declaradas em [`internal/usecase/port`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port), cujas implementações concretas residem exclusivamente no pacote de adaptadores [`internal/adapter/repository`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/repository).
+Seguindo a regra de dependência da Clean Architecture, as entidades de domínio e os casos de uso não possuem conhecimento de tabelas SQL, drivers ou dialetos. Todas as operações de banco são expostas por meio de interfaces de portas declaradas em [`internal/usecase/port`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/src/backend/internal/usecase/port), cujas implementações concretas residem exclusivamente no pacote de adaptadores [`internal/adapter/repository`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/src/backend/internal/adapter/repository).
 
 ---
 
@@ -340,7 +340,7 @@ A evolução do esquema do banco de dados é governada de maneira estrita atrav�
 
 ### Estrutura de Arquivos
 
-Todas as migrações residem no diretório [`src/backend/migrations`](file:///home/cardoso/GitHub/g04/src/backend/migrations) seguindo o padrão numérico sequencial de 6 dígitos:
+Todas as migrações residem no diretório [`src/backend/migrations`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/src/backend/migrations) seguindo o padrão numérico sequencial de 6 dígitos:
 
 ```
 migrations/
@@ -394,7 +394,7 @@ As migrações incluem os dados fundamentais para a operação do sistema metrov
 
 ## 6. Transações ACID e o Padrão Unit of Work
 
-Para coordenar mutações que abrangem múltiplos repositórios com garantia de atomicidade, o backend implementa o padrão **Unit of Work** em [`internal/adapter/repository/unit_of_work.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/repository/unit_of_work.go).
+Para coordenar mutações que abrangem múltiplos repositórios com garantia de atomicidade, o backend implementa o padrão **Unit of Work** em [`internal/adapter/repository/unit_of_work.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/repository/unit_of_work.go).
 
 ### Implementação do `PostgresUnitOfWork`
 
@@ -427,7 +427,7 @@ func (u *PostgresUnitOfWork) Do(ctx context.Context, fn func(store port.UnitOfWo
 
 ### Garantias no Fluxo de Ingestão e Agendamento
 
-O Unit of Work desempenha papel crucial nos casos de uso de ingestão de arquivos ([`usecase.IngestAlarmsUseCase`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/ingest_alarms.go)):
+O Unit of Work desempenha papel crucial nos casos de uso de ingestão de arquivos ([`usecase.IngestAlarmsUseCase`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/ingest_alarms_usecase.go)):
 
 1. **Atomicidade:** a criação do registro na tabela `file_uploads` e o enfileiramento do job transacional no River compartilham a mesma transação no PostgreSQL;
 2. **Consistência:** se a persistência do job falhar, a transação sofre rollback e o registro de upload não é persistido, eliminando estados inconsistentes no sistema;
