@@ -6,7 +6,7 @@
 
 <br>
 
-# Manutenção Preditiva de Portas de Plataforma (PSDs)
+# Lumen - Manutenção Preditiva de Portas de Plataforma (PSDs)
 
 ## Subway Surfers
 
@@ -134,11 +134,11 @@ pip install -r requirements.txt
   - [sprint 1] Entendimento do negócio (Motiva), alinhamento com ODS, definição de personas (Ronaldo e Marta), formulação e validação estatística de 7 hipóteses de falha, pipelines de limpeza de dados (Alarmes, ZM01, ZM02, ZM03) e definição das features candidatas.
 - 0.2.0 - 27/08/2026
   - [sprint 2] Consolidação da Tabela Mestra Contínua, engenharia de features (32+ atributos), blindagem contra vazamento temporal (*data leakage*), treinamento de 5 arquiteturas de Machine Learning (Árvores de Decisão, Random Forest, XGBoost, LightGBM, CatBoost e Ensembles), calibração de hiperparâmetros, avaliação sob métricas estritas de manutenção e explicabilidade global com SHAP.
-- 0.3.0 - Sprint 3 (A realizar)
+- 0.3.0 - 11/09/2026
   - [sprint 3] Refinamento dos modelos, otimização de limiares operacionais e avaliação de impacto financeiro.
-- 0.4.0 - Sprint 4 (A realizar)
+- 0.4.0 - 25/09/2026
   - [sprint 4] Integração do modelo com a interface visual e relatórios operacionais.
-- 0.5.0 - Sprint 5 (A realizar)
+- 0.5.0 - 09/10/2026
   - [sprint 5] Entrega final do sistema preditivo e validação de impacto operacional.
 
 ## Licença

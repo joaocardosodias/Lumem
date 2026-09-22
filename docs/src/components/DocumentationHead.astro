@@ -1,0 +1,10 @@
+---
+import Head from '@astrojs/starlight/components/Head.astro';
+import { getImage } from 'astro:assets';
+import background from '../assets/sprints/sprint1/background_title.png';
+
+const banner = await getImage({ src: background, format: 'png' });
+---
+
+<Head />
+<style is:inline set:html={`:root { --group-title-background: url("${banner.src}"); }`} />
