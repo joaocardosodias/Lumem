@@ -1,6 +1,6 @@
 ---
 title: "Atualização do alinhamento com os ODS"
-description: "Levantamento do escopo atual do Lumem e revisão fundamentada dos ODS 9, 11 e 12, com metas oficiais, evidências e correções das justificativas da Sprint 1."
+description: "Revisão dos ODS iniciais e avaliação de novos alinhamentos do Lumem, com metas oficiais, evidências do projeto e distinção entre contribuições do produto e de seu desenvolvimento."
 ---
 
 ## 1. Levantamento do projeto e dos ODS iniciais
@@ -120,11 +120,77 @@ O critério aplicado aos três objetivos é identificar **qual funcionalidade im
 | **ODS 11 — meta 11.2** | Prevenção de acidentes e atrasos e garantia de transporte acessível, pontual e confiável. | **Manter e corrigir a justificativa, explicitando a contribuição indireta.** | A organização das inspeções pode apoiar as condições de funcionamento das portas e, por meio das intervenções técnicas, a continuidade do transporte. Não há comprovação de prevenção de acidentes nem de melhoria de acesso. | `Portas.jsx`, `Inspecoes.jsx` e `inspection_usecase.go`; [Requisitos do Sistema](/sprints/sprint-3/requisitos). |
 | **ODS 12 — metas 12.2 e 12.5** | Estimativa de vida útil, otimização de substituições e suprimentos, redução de resíduos e economia circular. | **Remover do alinhamento atual.** | A previsão de corretivas não estima vida útil nem demonstra um processo de redução de consumo ou descarte de materiais. A premissa funcional original não foi atendida. | Alvo em `construir_painel.py`, entidades de manutenção e inspeção e seção 5.5.1 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao). |
 
-O resultado desta etapa é a manutenção dos **ODS 9 e 11 com justificativas corrigidas** e a **retirada do ODS 12 do alinhamento atual**. O registro da Sprint 1 é preservado para tornar a mudança verificável. A avaliação de novos ODS e a análise de possíveis ameaças permanecem como etapas seguintes; esta tabela registra apenas a revisão das três escolhas iniciais.
+O resultado desta etapa é a manutenção dos **ODS 9 e 11 com justificativas corrigidas** e a **retirada do ODS 12 do alinhamento atual**. O registro da Sprint 1 é preservado para tornar a mudança verificável. Esta tabela registra a revisão das três escolhas iniciais; a seção 3 avalia novos alinhamentos. A análise de possíveis ameaças permanece como etapa seguinte.
 
-## 3. Checklist da atualização
+## 3. Avaliação e inclusão de novos ODS
 
-Os itens concluídos abrangem o levantamento do projeto, a consulta às metas oficiais dos ODS iniciais e a revisão dessas escolhas. Os demais registram o trabalho necessário para concluir o artefato.
+A avaliação dos novos candidatos utiliza o mesmo critério da revisão anterior: relacionar uma entrega ou atividade verificável a um aspecto de uma meta oficial, explicando o mecanismo da contribuição e seus limites. Foram considerados os **17 objetivos**, reunindo as três escolhas já revisadas e os outros 14 candidatos. As fontes oficiais dos novos candidatos, vinculadas abaixo, foram consultadas em **22 de setembro de 2026**.
+
+Para explicitar de onde vem o valor, a análise distingue as **contribuições das funcionalidades do produto**, voltadas à manutenção, das **contribuições complementares do desenvolvimento**, decorrentes da formação dos estudantes e da cooperação entre Inteli e Motiva. Uma atividade acadêmica ou uma parceria só é considerada quando há evidência de ações realizadas, além da menção aos participantes. Essas relações são interpretações fundamentadas do grupo e não representam certificação ou cumprimento integral das metas da ONU.
+
+### 3.1. Triagem dos 17 objetivos
+
+| ODS e fonte oficial | Decisão nesta revisão | Fundamentação no escopo atual |
+| --- | --- | --- |
+| [1 — Erradicação da pobreza](https://brasil.un.org/pt-br/sdgs/1) | Não incluir. | Não há ações específicas de renda, proteção social ou acesso de pessoas pobres e vulneráveis a serviços básicos que sustentem, por exemplo, a meta 1.4. |
+| [2 — Fome zero e agricultura sustentável](https://brasil.un.org/pt-br/sdgs/2) | Não incluir. | O projeto não atua sobre alimentação, nutrição ou produção agrícola, objetos das metas 2.1 a 2.4. |
+| [3 — Saúde e bem-estar](https://brasil.un.org/pt-br/sdgs/3) | Não incluir. | A meta 3.6 trata de mortes e ferimentos em acidentes em estradas. Apoiar a manutenção de portas ferroviárias não demonstra essa contribuição, e não foram identificadas ações de saúde vinculadas às demais metas. |
+| [4 — Educação de qualidade](https://brasil.un.org/pt-br/sdgs/4) | **Incluir como contribuição complementar do desenvolvimento.** | Há prática orientada de competências técnicas pelos estudantes, relacionada à meta 4.4 e detalhada na seção 3.3. |
+| [5 — Igualdade de gênero](https://brasil.un.org/pt-br/sdgs/5) | Não incluir. | O uso de tecnologia não está associado a uma ação específica de empoderamento das mulheres, como exige a meta 5.b, nem há outra entrega dirigida à igualdade de gênero. |
+| [6 — Água potável e saneamento](https://brasil.un.org/pt-br/sdgs/6) | Não incluir. | As funcionalidades não tratam de abastecimento, saneamento, qualidade da água ou eficiência hídrica, abordados nas metas 6.1 a 6.4. |
+| [7 — Energia limpa e acessível](https://brasil.un.org/pt-br/sdgs/7) | Não incluir. | Não há atuação sobre fontes renováveis nem medição ou otimização energética das portas que sustente as metas 7.2 ou 7.3. |
+| [8 — Trabalho decente e crescimento econômico](https://brasil.un.org/pt-br/sdgs/8) | **Incluir no alinhamento do produto.** | A centralização dos registros e a organização das inspeções oferecem apoio tecnológico à produtividade da manutenção, relacionado à meta 8.2 e detalhado na seção 3.2. |
+| [9 — Indústria, inovação e infraestrutura](https://brasil.un.org/pt-br/sdgs/9) | Manter a decisão da seção 2.1. | O alinhamento com a meta 9.1 permanece vinculado ao apoio à manutenção da infraestrutura. Não é uma nova inclusão. |
+| [10 — Redução das desigualdades](https://brasil.un.org/pt-br/sdgs/10) | Não incluir. | Filtros por estação não demonstram redução de barreiras ou de desigualdades entre grupos, necessárias para sustentar as metas 10.2 e 10.3. |
+| [11 — Cidades e comunidades sustentáveis](https://brasil.un.org/pt-br/sdgs/11) | Manter a decisão da seção 2.2. | Permanece a contribuição indireta à meta 11.2, por meio da manutenção dos ativos do transporte público. Não é uma nova inclusão. |
+| [12 — Consumo e produção responsáveis](https://brasil.un.org/pt-br/sdgs/12) | Manter a retirada registrada na seção 2.3. | A análise de novos candidatos não acrescentou evidências de gestão de componentes ou redução de resíduos que alterem a decisão sobre as metas 12.2 e 12.5. |
+| [13 — Ação contra a mudança global do clima](https://brasil.un.org/pt-br/sdgs/13) | Não incluir. | Não há análise de riscos climáticos ou adaptação (13.1), integração de medidas climáticas ao planejamento nacional (13.2) ou formação climática (13.3). Atuar no setor metroviário não comprova redução de emissões. |
+| [14 — Vida na água](https://brasil.un.org/pt-br/sdgs/14) | Não incluir. | Não há atuação sobre poluição marinha ou conservação de ecossistemas costeiros e marinhos, como nas metas 14.1 e 14.2. |
+| [15 — Vida terrestre](https://brasil.un.org/pt-br/sdgs/15) | Não incluir. | O escopo não abrange conservação de ecossistemas, recuperação de solos ou proteção da biodiversidade, tratadas nas metas 15.1, 15.3 e 15.5. |
+| [16 — Paz, justiça e instituições eficazes](https://brasil.un.org/pt-br/sdgs/16) | Não incluir. | Registros internos e autenticação não demonstram transparência e responsabilização institucional, participação decisória ou acesso público à informação, previstos nas metas 16.6, 16.7 e 16.10. |
+| [17 — Parcerias e meios de implementação](https://brasil.un.org/pt-br/sdgs/17) | **Incluir como contribuição complementar do desenvolvimento.** | O compartilhamento de dados e contexto operacional pela Motiva, associado ao desenvolvimento acadêmico no Inteli, sustenta uma relação local com o aspecto de cooperação multissetorial da meta 17.16, detalhada na seção 3.4. |
+
+As decisões de não inclusão expressam a insuficiência de uma relação sustentada pelo escopo atual. Elas não significam que esses objetivos sejam irrelevantes para o setor de transporte ou que o projeto não possa afetá-los. A avaliação de ameaças exige uma análise própria.
+
+### 3.2. ODS 8 — Inclusão pelo apoio à produtividade da manutenção
+
+**Meta relacionada: 8.2.** A meta associa o aumento da produtividade econômica à modernização tecnológica, à inovação e à diversificação. O recorte do Lumem é a aplicação de tecnologia à organização do trabalho de manutenção. Fonte: [ONU Brasil — ODS 8, meta 8.2](https://brasil.un.org/pt-br/sdgs/8), acesso em **22 de setembro de 2026**.
+
+**Justificativa da inclusão:** a plataforma reúne históricos, oferece consultas e filtros e transforma classificações de risco em inspeções que podem ser acompanhadas. Esse fluxo fornece à equipe informações para decidir onde concentrar a análise e pode reduzir o esforço de busca e organização de informações antes dispersas. A relação com a meta 8.2 está nesse apoio tecnológico ao processo de trabalho. O ganho líquido de produtividade ainda precisa ser verificado no uso da solução.
+
+**Evidências:** as [Personas](/sprints/sprint-1/personas) registram a necessidade de Marta de centralizar informações e planejar intervenções e a janela limitada de trabalho de Ronaldo. As consultas e os filtros estão implementados em `src/frontend/src/pages/Manutencoes.jsx`; a criação de inspeções a partir das predições está em `src/backend/internal/usecase/trigger_predictions_usecase.go`; e o acompanhamento ocorre em `src/frontend/src/pages/Inspecoes.jsx` e `src/backend/internal/usecase/inspection_usecase.go`.
+
+**Benefício esperado e limites:** espera-se facilitar a preparação e a priorização do trabalho. Não foram medidos ganhos de produtividade, economia de horas, redução de jornadas ou aumento de renda. O resultado depende da qualidade das previsões e do esforço necessário para verificar os alertas; mais inspeções geradas não significam, por si, maior produtividade. A análise também considerou a **meta 8.8**, referente a direitos e segurança dos trabalhadores, mas não a utiliza como fundamento da inclusão: não foram identificados recursos ou procedimentos do projeto que demonstrem proteção ocupacional ou garantia de direitos trabalhistas. A organização das tarefas não autoriza afirmar redução de acidentes de trabalho.
+
+### 3.3. ODS 4 — Inclusão complementar pela formação técnica
+
+**Meta relacionada: 4.4.** A meta busca ampliar o contingente de jovens e adultos com competências relevantes para a vida profissional, inclusive habilidades técnicas. A contribuição identificada está no processo formativo dos estudantes que desenvolvem o Lumem. Fonte: [ONU Brasil — ODS 4, meta 4.4](https://brasil.un.org/pt-br/sdgs/4), acesso em **22 de setembro de 2026**.
+
+**Justificativa da inclusão:** o grupo executou atividades de tratamento de dados, construção e avaliação de modelos, desenvolvimento de software e documentação em torno de um problema aplicado de manutenção. Essas atividades oferecem prática orientada de competências técnicas e profissionais. A inclusão se refere à formação proporcionada pelo desenvolvimento do projeto, e não a uma funcionalidade educacional oferecida aos usuários da plataforma.
+
+**Evidências:** a [apresentação do projeto](/readme) identifica estudantes, orientador e instrutores. As seções 3.1 e 3.2 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao) registram a autoria estudantil da POC e atividades como modelagem, engenharia de atributos e documentação. O código em `models/` e `src/`, junto da [Comparação dos Modelos](/sprints/sprint-2/comparacao_modelos) e das [Práticas de Engenharia](/sprints/sprint-3/backend/praticas-de-engenharia), materializa os trabalhos realizados.
+
+**Benefício esperado e limites:** a experiência pode desenvolver a capacidade de analisar dados, justificar decisões técnicas e trabalhar em um projeto de software. Os artefatos comprovam atividades e entregas, mas não medem o ganho individual de competências nem efeitos sobre emprego e renda. Também não há evidência de capacitação de funcionários da Motiva ou ampliação do acesso à educação. Por isso, o ODS 4 é registrado como contribuição complementar do desenvolvimento, sem ser apresentado como resultado operacional do Lumem.
+
+### 3.4. ODS 17 — Inclusão complementar pela cooperação entre Inteli e Motiva
+
+**Meta relacionada: 17.16.** A meta trata da parceria global para o desenvolvimento sustentável e de parcerias multissetoriais que compartilham conhecimento, capacidades, tecnologia e recursos para apoiar os ODS. A relação identificada no projeto se limita ao aspecto de cooperação entre setores em escala local. Fonte: [ONU Brasil — ODS 17, meta 17.16](https://brasil.un.org/pt-br/sdgs/17), acesso em **22 de setembro de 2026**.
+
+**Justificativa da inclusão:** a cooperação combina o problema e os dados operacionais da Motiva com o trabalho técnico dos estudantes e a orientação acadêmica do Inteli. Essa combinação viabilizou o desenvolvimento e a avaliação de uma solução voltada à manutenção de infraestrutura de transporte, relacionada aos ODS 9 e 11 já examinados. A contribuição complementar se apoia na participação concreta dos atores no desenvolvimento, além da simples existência de uma parceria nominal.
+
+**Evidências:** a seção 1.1 da [Análise de Valor e da Solução](/sprints/sprint-1/analise-de-valor-e-da-solução) apresenta a parceria. A seção 3.6 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao) confirma que a Motiva disponibilizou os dados históricos utilizados no treinamento. A autoria acadêmica está registrada na [apresentação do projeto](/readme), e os modelos, a aplicação e a documentação constituem entregas verificáveis do desenvolvimento.
+
+**Benefício esperado e limites:** a cooperação permite aplicar conhecimento técnico a um problema real e produzir uma solução que pode apoiar a manutenção. Não foram demonstrados financiamento pela Motiva, transferência formal de tecnologia, adoção institucional do produto ou eficácia medida da parceria. Também não há evidência de cooperação internacional ou de fortalecimento da parceria global em si. O alinhamento com a meta 17.16 é, portanto, parcial e complementar ao desenvolvimento; a relação Inteli–Motiva não é classificada aqui como parceria público-privada.
+
+### 3.5. Resultado da avaliação de novos ODS
+
+A revisão adiciona o **ODS 8, pela meta 8.2**, às contribuições relacionadas às funcionalidades do produto. Assim, o alinhamento do Lumem como ferramenta de manutenção reúne os **ODS 8, 9 e 11**, com os limites de evidência descritos nas seções 2 e 3.
+
+Os **ODS 4, pela meta 4.4, e 17, pela meta 17.16, também são adicionados**, como contribuições complementares das atividades de formação e cooperação que viabilizaram o projeto. Essa distinção evita atribuir à operação do software resultados que pertencem ao seu processo de desenvolvimento. O ODS 12 permanece retirado do alinhamento atual, e os demais candidatos não são incluídos pelas razões registradas na triagem.
+
+## 4. Checklist da atualização
+
+Os itens concluídos abrangem o levantamento do projeto, a revisão das escolhas iniciais e a avaliação de novos ODS. A análise de ameaças, a consolidação final e a conferência completa do artefato permanecem pendentes.
 
 - [x] Registrar o alinhamento inicial da Sprint 1 com as ODS 9, 11 e 12 e suas justificativas, preservando essa referência para comparar com a revisão.
 - [x] Descrever o escopo atual do Lumem e o valor entregue pelas funcionalidades desenvolvidas, reunindo evidências no código, nos modelos, na interface e na documentação.
@@ -134,10 +200,10 @@ Os itens concluídos abrangem o levantamento do projeto, a consulta às metas of
 - [x] Justificar cada ODS mantida, relacionando suas metas ao valor entregue e apontando evidências concretas do projeto.
 - [x] Justificar cada ODS removida, explicando qual premissa inicial deixou de se sustentar ou qual contribuição não corresponde ao escopo desenvolvido; caso nenhuma seja removida, registrar essa conclusão e sua fundamentação.
 - [x] Revisar especialmente a justificativa da ODS 12, verificando se há suporte para alegações de aumento da vida útil, redução de descarte e otimização de peças, sem equiparar previsão de falhas a resultados ambientais comprovados.
-- [ ] Avaliar a inclusão da ODS 8, considerando a produtividade da manutenção, a priorização de inspeções e as condições de trabalho, sem pressupor ganhos já comprovados.
-- [ ] Avaliar as ODS 4 e 17 como possíveis contribuições complementares, verificando as evidências de formação técnica e cooperação entre Inteli e Motiva e distinguindo-as do impacto operacional do produto.
-- [ ] Examinar outras candidatas, incluindo as ODS 3 e 13, e verificar se existe relação sustentada com suas metas específicas, evitando associações apenas temáticas.
-- [ ] Justificar cada nova ODS selecionada com a meta pertinente, a funcionalidade ou atividade que a sustenta, o benefício esperado e as limitações da evidência; caso nenhuma seja adicionada, justificar a decisão.
+- [x] Avaliar a inclusão da ODS 8, considerando a produtividade da manutenção, a priorização de inspeções e as condições de trabalho, sem pressupor ganhos já comprovados.
+- [x] Avaliar as ODS 4 e 17 como possíveis contribuições complementares, verificando as evidências de formação técnica e cooperação entre Inteli e Motiva e distinguindo-as do impacto operacional do produto.
+- [x] Examinar outras candidatas, incluindo as ODS 3 e 13, e verificar se existe relação sustentada com suas metas específicas, evitando associações apenas temáticas.
+- [x] Justificar cada nova ODS selecionada com a meta pertinente, a funcionalidade ou atividade que a sustenta, o benefício esperado e as limitações da evidência; caso nenhuma seja adicionada, justificar a decisão.
 - [x] Comparar o alinhamento inicial e o revisado em uma tabela com ODS, justificativa anterior, decisão, justificativa atual e evidências, tornando explícitos os ajustes e as correções realizados.
 - [ ] Examinar os 17 objetivos para identificar se o desenvolvimento, a implantação ou o uso do Lumem pode ameaçar alguma ODS, inclusive objetivos que o próprio projeto pretende apoiar.
 - [ ] Analisar se falsos positivos podem gerar inspeções desnecessárias, sobrecarga de trabalho ou substituições prematuras de peças, avaliando possíveis conflitos com as ODS 8 e 12.
