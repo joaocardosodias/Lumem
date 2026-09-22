@@ -105,20 +105,31 @@ O modelo combina dois estimadores complementares via votação suave (soft votin
 </div>
 
 ### 5.1 Régua Estrita de Avaliação por Episódio e Evento Real
-A avaliação do modelo foi conduzida sob critério estrito de engenharia de manutenção, sem duplicação de ordens e sem esticamento de janelas temporais:
-* Quando o modelo emite um chamado no dia D, verifica-se se ocorreu uma falha real ZM01 no intervalo [D+1, D+7].
+A avaliação distingue registros porta-dia, episódios de alerta e eventos reais:
+* **Registro alertado:** uma linha porta-dia cuja probabilidade é maior ou igual ao limiar.
+* **Episódio:** agrupamento dos registros alertados do mesmo ativo. Um novo episódio começa quando o intervalo entre alertas consecutivos ultrapassa dois dias. Não representa um chamado efetivamente aberto.
+* Para a precisão por episódio, verifica-se se ocorreu uma falha ZM01 nos sete dias seguintes ao início do episódio, em [D+1, D+7]. Cada episódio recebe no máximo um acerto; uma mesma falha pode estar na janela de mais de um episódio.
 * Para o cálculo de Recall, verifica-se se cada uma das 388 falhas reais e distintas ocorridas no período de teste recebeu alerta prévio na janela [T-7, T-1].
 
-### 5.2 Resultados Oficiais por Limiar de Decisão (p)
+### 5.2 Resultados Auditados por Limiar de Decisão (p)
 
-| Limiar de Decisão (p) | Chamados Emitidos | Acertos Confirmados | Precisão Estrita | Recall Global | F1-Score | Perfil Operacional de Manutenção |
-| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **p >= 0,45** | **770** | **72** | **9,35%** | **97,94%** (380 / 388 falhas) | **0,1707** | **Proteção Máxima:** Evita quase 98% de todas as quebras reais da linha. |
-| **p >= 0,48** | **1.923** | **144** | **7,49%** | **88,66%** (344 / 388 falhas) | **0,1381** | **Alta Cobertura:** Antecipa quase 9 em cada 10 falhas. |
-| **p >= 0,50** | **1.884** | **161** | **8,55%** | **60,31%** (234 / 388 falhas) | **0,1497** | **Equilíbrio Médio:** Cobertura intermediária de eventos. |
-| **p >= 0,52** | **630** | **83** | **13,17%** | **29,90%** (116 / 388 falhas) | **0,1829** | **Pico de Eficiência F1:** Melhor equilíbrio harmônico contínuo. |
-| **p >= 0,55** | **270** | **36** | **13,33%** | **13,40%** (52 / 388 falhas) | **0,1337** | **Filtro Severo:** Redução expressiva no volume de ordens. |
-| **p >= 0,65** | **3** | **1** | **33,33%** | **0,77%** (3 / 388 falhas) | **0,0151** | **Certeza Absoluta:** Disparo apenas em condições de altíssima certeza técnica. |
+Tabela recalculada pela execução completa de `03_modelo_1_treinamento.ipynb`, sobre a mesma base de teste e o mesmo vetor de probabilidades para todos os cortes. Os resultados são exportados para `data/modelos_artefatos/modelo_1_limiares.csv`.
+
+| Limiar (p) | Registros alertados (porta-dia) | Episódios | Episódios com acerto | Precisão por episódio | Recall por evento | F1 descritivo |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **p >= 0,45** | 29.530 | 760 | 71 | 9,34% | 97,68% (379 / 388) | 0,1705 |
+| **p >= 0,48** | 20.045 | 1.466 | 129 | 8,80% | 86,34% (335 / 388) | 0,1597 |
+| **p >= 0,50** | 6.380 | 1.166 | 126 | 10,81% | 53,09% (206 / 388) | 0,1796 |
+| **p >= 0,52** | 1.115 | 449 | 67 | 14,92% | 25,26% (98 / 388) | 0,1876 |
+| **p >= 0,55** | 406 | 236 | 33 | 13,98% | 13,14% (51 / 388) | 0,1355 |
+| **p >= 0,60** | 55 | 34 | 5 | 14,71% | 2,06% (8 / 388) | 0,0362 |
+| **p >= 0,65** | 11 | 5 | 1 | 20,00% | 1,03% (4 / 388) | 0,0196 |
+
+**Verificação de monotonicidade:** a avaliação valida probabilidades finitas entre 0 e 1, ausência de chaves porta-dia duplicadas, inclusão dos registros de cada corte no conjunto selecionado pelo corte anterior e contagens não crescentes de registros e falhas com alerta prévio. Uma violação interrompe a avaliação antes da exibição e exportação da tabela. Igualdade entre contagens consecutivas é permitida.
+
+**Por que os episódios podem aumentar:** o agrupamento é recalculado depois do filtro. Ao remover alertas intermediários, um episódio pode se dividir em vários. A passagem de 760 para 1.466 episódios não viola a monotonicidade dos registros, que caem de 29.530 para 20.045. A tabela anterior rotulava episódios como “Chamados Emitidos”, confundindo as duas unidades.
+
+**Interpretação operacional:** episódios são uma aproximação de demanda que depende da regra de agrupamento e precisa ser confrontada com a política real de abertura e encerramento de chamados. Falhas com alerta prévio não são falhas comprovadamente evitadas. O F1 combina precisão por episódio com recall por evento, sendo apenas descritivo, sem equivaler ao F1 de uma única matriz de confusão. Esta avaliação no teste não seleciona nem aprova um limiar para produção; a escolha deve usar validação e capacidade operacional.
 
 ### 5.3 Explicabilidade Global e Importância das Features (SHAP Values)
 
