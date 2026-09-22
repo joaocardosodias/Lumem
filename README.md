@@ -72,61 +72,163 @@ Clique [aqui](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) para a
 └── README.md --> Arquivo guia de apresentação do projeto (o mesmo que você está lendo agora).
 ```
 
-## Instalação
+## Requisitos
 
-&emsp; Para instalar as dependências do portal de documentação (Astro), navegue até a pasta `docs` e rode o comando:
+O projeto possui três formas de execução: a aplicação Lumen, o portal de documentação e os notebooks de modelagem. Instale apenas as ferramentas necessárias ao fluxo escolhido.
 
-```bash
-cd docs
-npm install
+| Ferramenta ou recurso | Quando é necessário |
+| --- | --- |
+| Git | Obter e atualizar o repositório |
+| Docker com suporte a contêineres Linux e Docker Compose v2 | Executar a aplicação completa; no Windows, utilizar Docker Desktop com WSL 2 |
+| PostgreSQL acessível pelos contêineres | Banco da aplicação; os exemplos usam Supabase. Os arquivos Compose não criam um servidor PostgreSQL |
+| Node.js 22.12 ou superior e npm 9.6.5 ou superior | Executar o portal Astro e desenvolver o frontend React fora do Docker |
+| Python 3.14 | Executar os notebooks com as dependências principais fixadas no `requirements.txt` da raiz |
+| Go 1.26.0 | Apenas para executar ou testar o backend fora do Docker |
+| Python 3.11 | Apenas para executar o serviço de ML fora do Docker; a imagem já fornece essa versão |
+
+Os contêineres compilam o backend e o frontend e instalam as dependências do serviço de ML. Portanto, Node.js, Go e Python não precisam estar instalados no host para executar a aplicação via Docker.
+
+## Como Rodar a Aplicação
+
+Execute os comandos desta seção **na raiz do repositório**. A aplicação reúne o frontend React, a API Go, os workers, o serviço de ML, o armazenamento MinIO e os serviços de observabilidade.
+
+### 1. Preparar as variáveis de ambiente
+
+Na primeira configuração, crie os arquivos a partir dos exemplos. Preserve os arquivos `.env` que já estiverem configurados.
+
+No PowerShell:
+
+```powershell
+Copy-Item src/backend/.env.example src/backend/.env
+Copy-Item src/modelo/.env.example src/modelo/.env
+Copy-Item src/frontend/.env.example src/frontend/.env
 ```
 
-## Execução do Projeto
+No Linux ou macOS, utilize `cp` no lugar de `Copy-Item`.
 
-### 1. Documentação (Astro / Starlight)
+Preencha os arquivos antes de iniciar os contêineres:
 
-&emsp; A documentação do projeto é gerada através do framework Astro.
+| Arquivo | Configuração necessária |
+| --- | --- |
+| `src/backend/.env` | Configure `DATABASE_URL` e os campos `DB_*` para o mesmo PostgreSQL, além de `JWT_SECRET`. Mantenha `RUN_MIGRATIONS=true` para aplicar as migrações e `VPS_MODEL_URL=http://ml-service:8000` para comunicação local entre contêineres |
+| `src/backend/.env` | Defina as credenciais `MINIO_ROOT_*` e `MINIO_APP_*`; faça `S3_ACCESS_KEY_ID` e `S3_SECRET_ACCESS_KEY` corresponderem às credenciais da aplicação no MinIO |
+| `src/modelo/.env` | Configure `ML_DATABASE_URL` para o banco da aplicação, com o usuário de leitura preparado conforme `src/backend/migrations/create_ml_readonly_role.example.sql` |
+| `src/modelo/.env` | Defina as credenciais do MinIO do modelo; `MODEL_S3_ACCESS_KEY_ID` e `MODEL_S3_SECRET_ACCESS_KEY` devem corresponder a `MINIO_APP_USER` e `MINIO_APP_PASSWORD` desse arquivo. Mantenha `MODEL_S3_ENDPOINT=http://model-minio:9000` |
+| `src/frontend/.env` | Para acessar a aplicação pelo Nginx, mantenha `VITE_API_URL=http://localhost`, `FRONTEND_BIND_ADDRESS=127.0.0.1` e `FRONTEND_PORT=3000` |
 
-&emsp; Para iniciar o servidor local de desenvolvimento e visualizar a documentação interativa:
+Para execução local, use `ENV=development` e mantenha os binds do backend e do ML em `127.0.0.1`. Defina também `HTTP_BIND_ADDRESS=127.0.0.1` no backend para acessar o Nginx apenas pelo próprio computador. Os valores de exemplo de senhas e banco precisam ser substituídos; não versione os arquivos `.env`.
+
+O primeiro boot do serviço de ML utiliza `models/modelo-5/painel.parquet`, `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` e os artefatos em `src/modelo/artifacts/` para inicializar o registry. Confira se os dados e o modelo treinado estão disponíveis. A preparação e exportação estão descritas em `src/modelo/README.md`; um checkout sem os arquivos binários necessários não basta para iniciar a inferência.
+
+### 2. Criar a rede e iniciar os serviços
+
+Crie a rede compartilhada uma única vez:
 
 ```bash
-cd docs
+docker network create backend-network
+```
+
+Se ela já existir, prossiga. Inicie o frontend e o backend:
+
+```bash
+docker compose --env-file src/frontend/.env -f src/frontend/docker-compose.yml up -d --build
+docker compose --env-file src/backend/.env -f src/backend/docker-compose.yml up -d --build
+```
+
+No primeiro uso do banco, aguarde as migrações do backend e execute `src/backend/migrations/create_ml_readonly_role.example.sql` como administrador no PostgreSQL, adaptando a senha e o nome do banco. Esse script não é uma migração automática: ele cria `g04_ml_reader` e concede leitura às views do ML. Use esse mesmo usuário em `ML_DATABASE_URL` no lugar do nome ilustrativo do `.env.example`. Se o usuário já existir, confira suas permissões em vez de recriá-lo.
+
+Depois, inicie o serviço de ML:
+
+```bash
+docker compose --env-file src/modelo/.env -f src/modelo/docker-compose.yml up -d --build
+```
+
+O backend aplica as migrações; os inicializadores do MinIO criam os buckets e o serviço de ML publica os artefatos iniciais. Aguarde esses processos e os healthchecks. Os serviços `minio-init`, `model-minio-init` e `model-registry-init` são tarefas de inicialização e podem aparecer como `Exited (0)` após concluírem com sucesso.
+
+### 3. Acessar e conferir a execução
+
+Com as portas padrão dos exemplos:
+
+| Serviço | Endereço |
+| --- | --- |
+| Aplicação Lumen pelo Nginx | `http://localhost` |
+| Frontend diretamente | `http://localhost:3000` |
+| Swagger da API | `http://localhost/docs` |
+| Prontidão do backend | `http://localhost:8080/healthz/ready` |
+| Prontidão do serviço de ML | `http://localhost:8000/health/ready` |
+| Grafana | `http://localhost/grafana/` |
+
+O login usa uma conta cadastrada no banco da aplicação. As migrações incluem usuários iniciais; consulte a configuração de acesso da equipe.
+
+Para conferir o estado e acompanhar os logs:
+
+```bash
+docker compose --env-file src/backend/.env -f src/backend/docker-compose.yml ps
+docker compose --env-file src/modelo/.env -f src/modelo/docker-compose.yml ps
+docker compose --env-file src/backend/.env -f src/backend/docker-compose.yml logs -f backend worker
+```
+
+Para investigar o ML, use `logs -f model-registry-init ml-service ml-training-worker` no comando Compose de `src/modelo`. `Ctrl+C` encerra o acompanhamento dos logs, mantendo os contêineres ativos.
+
+### 4. Parar a aplicação
+
+```bash
+docker compose --env-file src/frontend/.env -f src/frontend/docker-compose.yml down
+docker compose --env-file src/backend/.env -f src/backend/docker-compose.yml down
+docker compose --env-file src/modelo/.env -f src/modelo/docker-compose.yml down
+```
+
+Esses comandos preservam os volumes de dados. Se uma porta estiver ocupada, ajuste a variável correspondente no `.env`; ao alterar a porta HTTP do Nginx, atualize também `VITE_API_URL` e reconstrua o frontend.
+
+### Desenvolvimento do frontend sem Docker
+
+Mantenha o backend e o serviço de ML disponíveis. Em `src/frontend/.env`, defina `VITE_API_URL=http://localhost:8080` para utilizar diretamente a API local. Execute, a partir da raiz:
+
+```bash
+cd src/frontend
+npm ci
 npm run dev
 ```
 
-&emsp; Acesse a página `http://localhost:4321` no navegador.
+Acesse o endereço informado pelo Vite, normalmente `http://localhost:5173`. Para gerar a versão de distribuição, execute `npm run build`; a saída fica em `src/frontend/dist`. Mudanças em `VITE_API_URL` exigem reiniciar o servidor de desenvolvimento ou reconstruir a imagem do frontend.
 
-### 2. Modelagem Preditiva e Análise de Dados (Python / Jupyter)
+## Como Rodar a Documentação
 
-&emsp; Os pipelines de modelagem preditiva estão centralizados no diretório [`models/`](./models/).
-
-**Passo a passo para execução:**
-
-As dependências de modelagem estão fixadas para Python 3.14. O Modelo 4 (FLAML)
-e o serviço de inferência usam ambientes separados por incompatibilidade de
-versões. Consulte a [auditoria e os comandos de instalação](docs/dependencias-python.md)
-antes de selecionar o ambiente. O serviço mantém Python 3.11 no Docker.
-
-1. Crie e ative um ambiente virtual Python:
+O portal Astro é independente da aplicação e não exige banco, Docker ou serviço de ML. A partir da raiz:
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
+cd docs
+npm ci
+npm run dev
 ```
 
-2. Instale as dependências completas do projeto:
+Acesse `http://localhost:4321/2026-2a/t16/g04/`. Se a porta estiver ocupada, utilize a porta exibida no terminal. Para encerrar, pressione `Ctrl+C`.
+
+Para compilar e conferir a versão de publicação, execute dentro de `docs`:
 
 ```bash
-pip install -r requirements.txt
+npm run build
+npm run preview
 ```
 
-3. Execute os notebooks do modelo desejado em [`models/`](./models/):
-   - **Modelo 1:** `models/modelo-1/`
-   - **Modelo 2:** `models/modelo-2/`
-   - **Modelo 3:** `models/modelo-3/`
-   - **Modelo 5:** `models/modelo-5/`
-   - **Modelo 6:** `models/modelo-6/`
-   - **Modelo 7:** `models/modelo-7/`
+O build gera `docs/dist`. Use o endereço informado pelo preview, mantendo o prefixo `/2026-2a/t16/g04/`. No GitLab CI, o prefixo pode ser definido por `CI_PAGES_URL`.
+
+## Como Rodar os Notebooks
+
+Os notebooks estão em `eda/` e `models/`. Para o ambiente principal de modelagem, execute na raiz, usando PowerShell:
+
+```powershell
+py -3.14 -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+.venv/Scripts/python.exe -m pip check
+.venv/Scripts/python.exe -m jupyterlab
+```
+
+No Linux ou macOS, crie o ambiente com `python3.14 -m venv .venv` e substitua `.venv/Scripts/python.exe` por `.venv/bin/python` nos comandos seguintes. As versões do ambiente principal foram validadas em Windows; confira a disponibilidade das dependências no seu sistema.
+
+Abra o notebook desejado no JupyterLab. Nos modelos com etapas numeradas, execute construção da base, pré-processamento e treinamento nessa ordem. Os arquivos de entrada esperados ficam em `data/` e nas pastas dos modelos.
+
+O Modelo 4 (FLAML) requer um ambiente separado, definido em `models/modelo-4/requirements.txt`, devido à versão do XGBoost. O serviço de inferência usa Python 3.11 e seu próprio `src/modelo/requirements.txt`; não misture esses ambientes com o da raiz. Os arquivos fixam as dependências principais, e o pip resolve as transitivas automaticamente. Consulte `docs/dependencias-python.md` para a auditoria e os comandos específicos de cada ambiente.
 
 ## Histórico de lançamentos
 
