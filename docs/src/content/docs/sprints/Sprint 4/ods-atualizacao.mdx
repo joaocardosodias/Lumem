@@ -1,6 +1,6 @@
 ---
 title: "Atualização do alinhamento com os ODS"
-description: "Revisão dos ODS iniciais e avaliação de novos alinhamentos do Lumem, com metas oficiais, evidências do projeto e distinção entre contribuições do produto e de seu desenvolvimento."
+description: "Revisão do alinhamento do Lumem com os ODS, incluindo novas contribuições, possíveis impactos adversos, evidências e medidas de mitigação."
 ---
 
 ## 1. Levantamento do projeto e dos ODS iniciais
@@ -120,7 +120,7 @@ O critério aplicado aos três objetivos é identificar **qual funcionalidade im
 | **ODS 11 — meta 11.2** | Prevenção de acidentes e atrasos e garantia de transporte acessível, pontual e confiável. | **Manter e corrigir a justificativa, explicitando a contribuição indireta.** | A organização das inspeções pode apoiar as condições de funcionamento das portas e, por meio das intervenções técnicas, a continuidade do transporte. Não há comprovação de prevenção de acidentes nem de melhoria de acesso. | `Portas.jsx`, `Inspecoes.jsx` e `inspection_usecase.go`; [Requisitos do Sistema](/sprints/sprint-3/requisitos). |
 | **ODS 12 — metas 12.2 e 12.5** | Estimativa de vida útil, otimização de substituições e suprimentos, redução de resíduos e economia circular. | **Remover do alinhamento atual.** | A previsão de corretivas não estima vida útil nem demonstra um processo de redução de consumo ou descarte de materiais. A premissa funcional original não foi atendida. | Alvo em `construir_painel.py`, entidades de manutenção e inspeção e seção 5.5.1 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao). |
 
-O resultado desta etapa é a manutenção dos **ODS 9 e 11 com justificativas corrigidas** e a **retirada do ODS 12 do alinhamento atual**. O registro da Sprint 1 é preservado para tornar a mudança verificável. Esta tabela registra a revisão das três escolhas iniciais; a seção 3 avalia novos alinhamentos. A análise de possíveis ameaças permanece como etapa seguinte.
+O resultado desta etapa é a manutenção dos **ODS 9 e 11 com justificativas corrigidas** e a **retirada do ODS 12 do alinhamento atual**. O registro da Sprint 1 é preservado para tornar a mudança verificável. Esta tabela registra a revisão das três escolhas iniciais; a seção 3 avalia novos alinhamentos e a seção 4 examina possíveis ameaças.
 
 ## 3. Avaliação e inclusão de novos ODS
 
@@ -188,9 +188,111 @@ A revisão adiciona o **ODS 8, pela meta 8.2**, às contribuições relacionadas
 
 Os **ODS 4, pela meta 4.4, e 17, pela meta 17.16, também são adicionados**, como contribuições complementares das atividades de formação e cooperação que viabilizaram o projeto. Essa distinção evita atribuir à operação do software resultados que pertencem ao seu processo de desenvolvimento. O ODS 12 permanece retirado do alinhamento atual, e os demais candidatos não são incluídos pelas razões registradas na triagem.
 
-## 4. Checklist da atualização
+## 4. Análise de possíveis ameaças aos ODS
 
-Os itens concluídos abrangem o levantamento do projeto, a revisão das escolhas iniciais e a avaliação de novos ODS. A análise de ameaças, a consolidação final e a conferência completa do artefato permanecem pendentes.
+O Lumem pode contribuir para a manutenção e, ao mesmo tempo, produzir efeitos contrários aos ODS se suas previsões forem utilizadas de forma inadequada ou se os recursos necessários à operação forem mal administrados. Esta análise considera o desenvolvimento, a implantação e o uso da solução a partir do código e dos artefatos disponíveis em **22 de setembro de 2026**. As metas são as apresentadas nas fontes da ONU vinculadas às análises.
+
+São distinguidos três níveis: **evidência técnica**, quando um comportamento ou resultado está registrado no repositório; **ameaça plausível**, quando existe um mecanismo que pode gerar prejuízo sob condições explicitadas; e **hipótese não caracterizada**, quando faltam elementos para sustentar essa relação com uma meta específica. Não foram encontrados registros que comprovem danos efetivamente causados pelo uso do Lumem na operação da Motiva. Os controles citados como existentes estão implementados no código ou na configuração; sua eficácia operacional não foi comprovada por esta revisão. As medidas propostas a seguir ainda precisam ser implementadas ou formalizadas.
+
+### 4.1. Evidência dos erros e limites da avaliação
+
+O manifest local `src/modelo/artifacts/manifest.json`, versão **v1.0.0**, registra, no teste temporal e com limiar **0,48**, **20.898 falsos positivos** e **2.478 falsos negativos**, entre **71.184 amostras**. A precisão é de **15,12%**, e o recall é de **60,05%**. Esses resultados demonstram a existência de erros de classificação no teste histórico; não identificam a versão atualmente ativa em um serviço remoto.
+
+A unidade avaliada é **porta-dia**, e o alvo é a ocorrência de uma ordem ZM01 na janela futura de sete dias, conforme `models/modelo-5/construir_painel.py`. Uma mesma corretiva pode aparecer em várias janelas sobrepostas. Portanto, essas contagens não representam portas únicas, inspeções realizadas, peças descartadas ou quebras independentes. Também não permitem calcular diretamente prejuízos financeiros ou efeitos sobre passageiros.
+
+Já existe avaliação posterior ao horizonte preditivo em `src/backend/internal/adapter/repository/prediction_outcome_repository.go`, mas ela depende dos registros importados. A ausência de ZM01 é tratada como ausência do evento, sem garantir que todas as ordens tenham chegado à base; resultados já gravados também não são recalculados automaticamente pela chegada de uma ordem tardia. Além disso, uma intervenção que evite a corretiva pode ser contabilizada como falso positivo. Assim, medir desempenho após a implantação exige conferir a completude dos dados e registrar as intervenções decorrentes dos alertas, distinguindo erro do modelo de prevenção bem-sucedida.
+
+### 4.2. Triagem de ameaças nos 17 objetivos
+
+| ODS | Resultado da análise de ameaça | Fundamentação e encaminhamento |
+| --- | --- | --- |
+| **1 — Erradicação da pobreza** | Sem mecanismo específico caracterizado. | Não há evidência de que o projeto altere renda, proteção social ou condições de acesso de pessoas em pobreza. Não se infere esse efeito apenas de uma possível falha no transporte. |
+| **2 — Fome zero e agricultura sustentável** | Sem mecanismo específico caracterizado. | O escopo não interfere diretamente em alimentação, nutrição ou produção agrícola. |
+| **3 — Saúde e bem-estar** | Associação específica não sustentada nesta revisão. | A meta 3.6 trata de acidentes em estradas e não deve ser aplicada automaticamente às PSDs. Os riscos concretos de manutenção e sobrecarga são tratados pelas metas 11.2 e 8.8, sem afirmar danos à saúde já ocorridos. |
+| **4 — Educação de qualidade** | Sem ameaça específica identificada nas atividades documentadas. | Os artefatos evidenciam prática formativa, mas não demonstram redução de acesso ou prejuízo de aprendizagem atribuível ao projeto. Isso não equivale a uma avaliação integral da qualidade da formação. |
+| **5 — Igualdade de gênero** | Sem mecanismo específico caracterizado. | Não há evidência de decisões de manutenção diferenciadas por gênero. A falta de dados sobre os usuários impede afirmar ausência de efeitos desiguais; a hipótese de distribuição desigual do serviço é examinada em R4. |
+| **6 — Água potável e saneamento** | Hipótese ambiental sem vínculo específico demonstrado. | Não há dados sobre uso de água ou efluentes associados à infraestrutura contratada que permitam caracterizar uma ameaça às metas desse objetivo. |
+| **7 — Energia limpa e acessível** | **Ameaça plausível e condicionada à meta 7.3.** | Processamento evitável ou infraestrutura superdimensionada podem contrariar a eficiência energética. A execução do sistema, isoladamente, não prova desperdício. Ver R5. |
+| **8 — Trabalho decente e crescimento econômico** | **Ameaça plausível às metas 8.2 e, sob sobrecarga, 8.8.** | Verificações improdutivas podem consumir a capacidade da equipe; pressão por atendimento além dessa capacidade pode prejudicar condições de trabalho. Ver R1. |
+| **9 — Indústria, inovação e infraestrutura** | **Ameaça plausível à meta 9.1.** | Decisões baseadas em previsões incorretas, ausentes ou desatualizadas podem prejudicar a manutenção da infraestrutura. Ver R2. |
+| **10 — Redução das desigualdades** | **Hipótese condicional para as metas 10.2 e 10.3.** | Cobertura desigual de dados pode afetar a priorização entre estações. A relação com desigualdade social exige demonstrar prejuízo a grupos de usuários; não há comprovação de discriminação. Ver R4. |
+| **11 — Cidades e comunidades sustentáveis** | **Ameaça plausível à meta 11.2.** | Omissões de inspeção ou priorizações inadequadas podem afetar condições de funcionamento do transporte. Ver R2 e R4. |
+| **12 — Consumo e produção responsáveis** | **Ameaças plausíveis às metas 12.2 e 12.5.** | Trocas indevidas podem consumir peças e gerar resíduos; uso computacional evitável pode pressionar recursos. O objetivo pode ser ameaçado mesmo tendo sido retirado do alinhamento positivo. Ver R3 e R5. |
+| **13 — Ação contra a mudança global do clima** | Repercussão climática potencial a verificar. | Não há medição de energia ou emissões nem vínculo específico demonstrado com as metas climáticas. A questão é discutida em R5, sem forçar uma associação com planejamento nacional. |
+| **14 — Vida na água** | Sem mecanismo específico caracterizado. | Não há evidência de descarte do projeto atingindo ambientes marinhos. O risco de geração desnecessária de resíduos é tratado em R3, sem presumir sua destinação. |
+| **15 — Vida terrestre** | Sem mecanismo específico caracterizado. | Não há evidência de interferência do projeto em solos, habitats ou biodiversidade que sustente uma ameaça específica. |
+| **16 — Paz, justiça e instituições eficazes** | Associação específica não sustentada nesta revisão. | Uma falha de acesso ou de registro do software não demonstra, por si, prejuízo às metas institucionais desse ODS. Seus possíveis efeitos na manutenção são considerados em R2. |
+| **17 — Parcerias e meios de implementação** | Sem ameaça específica caracterizada à meta 17.16. | Não foram identificadas práticas documentadas de ruptura ou impedimento da cooperação Inteli–Motiva. A existência de limitações técnicas não é suficiente para concluir que o projeto ameaça a parceria. |
+
+Os objetivos sem ameaça específica caracterizada não são declarados imunes a efeitos adversos. A análise deverá ser revista se o escopo, o público, os fornecedores de infraestrutura ou as condições de implantação mudarem. As referências oficiais dos 17 objetivos estão vinculadas na seção 3.1; as metas dos riscos selecionados são retomadas abaixo.
+
+### 4.3. Mecanismos de risco e medidas de mitigação
+
+#### R1 — Verificações improdutivas e sobrecarga da equipe
+
+**ODS e metas:** [ODS 8, metas 8.2 e 8.8](https://brasil.un.org/pt-br/sdgs/8), relacionadas à produtividade e à proteção das condições de trabalho. Fonte consultada em **22 de setembro de 2026**.
+
+**Mecanismo e condições:** falsos positivos podem direcionar a equipe a portas sem necessidade de intervenção. Se a quantidade de verificações superar a capacidade da janela de manutenção, tarefas importantes podem ser adiadas e pode haver pressão por aceleração do trabalho ou extensão da jornada. A relação com a meta 8.8 depende dessas condições de sobrecarga; não há registro de que elas já tenham ocorrido. O código gera inspeções para portas classificadas em risco, e o teste histórico demonstra que essa classificação pode errar.
+
+**Controles existentes e limites:** `src/backend/internal/usecase/trigger_predictions_usecase.go` separa experimentos das rodadas que geram inspeções, permitindo examinar limiares antes da publicação. A migração `src/backend/migrations/000015_prevent_duplicate_open_inspections.up.sql` e o repositório `src/backend/internal/adapter/repository/inspection_repository.go` impedem mais de uma inspeção aberta por porta. Isso reduz duplicações, mas não limita o número de portas distintas sinalizadas nem impede novas inspeções depois da conclusão de uma anterior. A interface acompanha pendências; não foi identificado dimensionamento da carga conforme a capacidade da equipe.
+
+**Medidas ainda necessárias:** estabelecer triagem técnica, capacidade de atendimento por janela e acompanhamento do tempo gasto em verificações sem defeito confirmado. A escolha do limiar deve considerar conjuntamente falsos positivos, falsos negativos e capacidade de inspeção; reduzir alertas apenas para atender a uma quota pode aumentar omissões. A seção 5.10 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao) reconhece a dependência do retorno em relação ao custo dos alertas falsos, mas seus cenários não comprovam capacidade disponível ou custo nulo das verificações na operação real.
+
+#### R2 — Decisões baseadas em previsão incorreta, ausente ou desatualizada
+
+**ODS e metas:** [ODS 9, meta 9.1](https://brasil.un.org/pt-br/sdgs/9), pela confiabilidade da infraestrutura, e [ODS 11, meta 11.2](https://brasil.un.org/pt-br/sdgs/11), pelas condições do transporte público. Fontes consultadas em **22 de setembro de 2026**.
+
+**Mecanismo e condições:** um falso negativo pode contribuir para postergar uma inspeção se a equipe interpretar o resultado como garantia de funcionamento. A indisponibilidade do serviço ou a utilização de dados antigos podem produzir efeito semelhante quando uma avaliação anterior continua sendo tratada como atual. O risco depende do uso dessas informações na decisão de manutenção; o Lumem não aciona fisicamente portas ou trens.
+
+**Evidências específicas:** `src/backend/internal/adapter/repository/dashboard_repository.go` representa a ausência de predição de uma porta como `will_fail = false` na consulta de status por estação. Em `src/frontend/src/pages/Portas.jsx`, esse valor pode aparecer como “Estável”; no dossiê, a ausência de data pode aparecer como “Recente”. Parte das telas também preserva dados em cache e omite o erro de atualização quando já há resultados disponíveis. Além disso, `src/modelo/ml_service/adapters/postgres_feature_repository.py` pode construir a previsão a partir de uma referência histórica quando a telemetria está muito defasada. O serviço Python devolve essa data, mas o fluxo principal no Go não a preserva como data de referência da rodada. São condições que podem induzir uma leitura de atualidade ou segurança maior que a sustentada pelos dados.
+
+**Controles existentes e limites:** o histórico da porta registra informações sobre a previsão; o cliente de ML possui timeout e interrupção temporária de chamadas após falhas repetidas, e uma inferência indisponível não é substituída por uma nova previsão inventada. Experimentos e promoções são restritos ao perfil de engenharia; há verificação de versão e transações na publicação. A promoção de modelo também tenta restaurar a versão anterior se falhar, sem garantia de que a restauração sempre terá sucesso. Esses recursos reduzem algumas falhas técnicas, mas não corrigem os estados ambíguos da interface nem asseguram disponibilidade de todo o fluxo. Evidências: `src/backend/internal/adapter/mlclient/client.go`, `src/backend/internal/usecase/trigger_predictions_usecase.go` e `src/backend/internal/usecase/promote_model_usecase.go`.
+
+**Medidas ainda necessárias:** distinguir “sem avaliação”, “dados insuficientes”, “avaliação expirada” e “risco abaixo do limiar”; preservar e mostrar a data real dos dados usados; avisar quando a atualização falhar; e impedir a publicação de experimentos vencidos sem nova avaliação. A comunicação deve descrever o resultado probabilístico sem assegurar condição física ou atribuir diagnósticos de sensores que esse fluxo não comprova. Também é necessário formalizar e testar uma rotina de contingência, mantendo critérios de inspeção e manutenção independentes do score. As previsões devem complementar os procedimentos técnicos da equipe.
+
+#### R3 — Substituição prematura de componentes e geração de resíduos
+
+**ODS e metas:** [ODS 12, metas 12.2 e 12.5](https://brasil.un.org/pt-br/sdgs/12), referentes ao uso de recursos e à redução de resíduos. Fonte consultada em **22 de setembro de 2026**.
+
+**Mecanismo e condições:** se um alerta for tratado como justificativa suficiente para trocar uma peça, um falso positivo pode levar à substituição de um componente ainda utilizável. Isso pode aumentar o consumo de materiais e a geração de resíduos. A ameaça exige uma decisão adicional da equipe: o sistema cria inspeções, não ordens automáticas de troca. Não há registro de descarte provocado pelo Lumem.
+
+**Controles existentes e limites:** o fluxo de `src/backend/internal/usecase/trigger_predictions_usecase.go` encaminha a porta para inspeção. As entidades de manutenção e inspeção permitem registrar ações e observações, mas não fornecem uma lógica de decisão sobre conservação, reparo ou troca, nem rastreiam de forma estruturada os materiais e resíduos. A seção 5.5.1 da [Análise Financeira](/sprints/sprint-3/analise_financeira_projeto_poc_implementacao) reforça que prever uma corretiva não determina se uma peça precisa ser substituída.
+
+**Medidas ainda necessárias:** exigir confirmação técnica da condição do componente antes de substituí-lo, registrar o motivo da decisão e acompanhar peças utilizadas, reparadas, reaproveitadas ou descartadas, com sua destinação. Qualquer decisão de prolongar o uso deve respeitar os critérios técnicos de manutenção. Essas medidas permitiriam verificar tanto trocas prematuras quanto eventual redução de consumo. A existência desse risco não altera a decisão da seção 2.3: ainda não há contribuição positiva demonstrada do produto à gestão de materiais.
+
+#### R4 — Cobertura desigual de dados e priorização inadequada
+
+**ODS e metas:** [ODS 11, meta 11.2](https://brasil.un.org/pt-br/sdgs/11), pelas condições de atendimento no transporte; e, **se forem demonstrados efeitos desiguais entre grupos de usuários**, [ODS 10, metas 10.2 e 10.3](https://brasil.un.org/pt-br/sdgs/10), pela inclusão e pela redução de desigualdades de resultados. Fontes consultadas em **22 de setembro de 2026**.
+
+**Mecanismo e condições:** portas com registros ausentes, antigos ou de difícil associação podem receber estimativas menos informativas. Se a equipe distribuir sua atenção apenas pelos scores, locais com cobertura pior podem ser priorizados inadequadamente. Isso pode prejudicar a uniformidade do serviço. A relação com desigualdade social é condicional: não foram encontrados dados que demonstrem quais grupos seriam afetados nem discriminação observada.
+
+**Evidências e controles existentes:** `models/modelo-5/construir_painel.py` exclui do treinamento registros sem localização reconhecível e linhas de estações sem telemetria recente. Porém, `src/modelo/ml_service/domain/feature_builder.py` pode preencher contagens sem alarmes com zero, recência sem manutenção com um valor substituto e estação desconhecida com código específico. Esse preenchimento permite calcular features, mas não equivale a comprovar ausência de falhas; também não determina, sozinho, que a previsão será de baixo risco. Há monitoramento agregado de mudanças na distribuição dos atributos em `src/modelo/ml_service/application/monitoring_use_case.py`, calculado depois desses preenchimentos. Ele não substitui a conferência de dados ausentes na fonte ou a avaliação por estação. Não foi identificada uma regra de abstenção da previsão por cobertura insuficiente nesse fluxo.
+
+**Medidas ainda necessárias:** distinguir ausência de eventos de ausência de dados; verificar cobertura, atraso e associação das ordens por porta e estação; sinalizar ou suspender o uso do score quando os requisitos mínimos não forem atendidos; e comparar o desempenho entre recortes antes de ampliar a cobertura. Portas sem avaliação válida devem seguir critérios técnicos de inspeção, sem serem presumidas estáveis. Para sustentar uma conclusão sobre o ODS 10, será preciso investigar se as diferenças de atendimento afetam grupos de usuários de forma desigual, sem inferir características sociais apenas pelo código da estação.
+
+#### R5 — Processamento e armazenamento evitáveis
+
+**ODS e metas:** [ODS 7, meta 7.3](https://brasil.un.org/pt-br/sdgs/7), pela eficiência energética, e [ODS 12, meta 12.2](https://brasil.un.org/pt-br/sdgs/12), pelo uso eficiente de recursos. Fontes consultadas em **22 de setembro de 2026**.
+
+**Mecanismo e condições:** retreinos sucessivos sem necessidade, retenção de artefatos sem utilidade ou infraestrutura superdimensionada podem demandar recursos sem benefício correspondente. O risco está no gasto evitável; a existência de processamento computacional não demonstra desperdício. Não foram encontradas medições de energia ou emissões que permitam quantificar esse efeito no projeto.
+
+**Controles existentes e limites:** `src/modelo/docker-compose.yml` separa o worker de treinamento e configura limites de CPU e memória. O serviço executa um treinamento por vez, permite cancelamento e retoma etapas por checkpoints, conforme `src/modelo/ml_service/application/training_service.py` e `src/modelo/exportar_modelo.py`. Há reutilização de modelos e limpeza de arquivos temporários de ingestão. Esses controles evitam parte do processamento repetido e contêm o uso de recursos, mas não comprovam menor consumo de energia; os limites do worker também não devem ser generalizados para notebooks executados fora dele ou para toda a infraestrutura.
+
+**Medidas ainda necessárias:** definir quando um retreino é justificável, estabelecer retenção para versões e checkpoints e dimensionar os serviços conforme a demanda. O acompanhamento deve relacionar custo computacional e consumo energético, quando mensurável, à utilidade das execuções, preservando os artefatos necessários à auditoria e à restauração. Os painéis de CPU, memória e disco existentes não equivalem a medição de kWh ou emissões.
+
+**Repercussão climática a verificar:** o consumo de eletricidade pode ter efeitos climáticos, dependentes da quantidade utilizada e de sua origem. Isso merece acompanhamento no contexto do [ODS 13](https://brasil.un.org/pt-br/sdgs/13), mas não permite afirmar emissões do Lumem nem ameaça específica já caracterizada a uma de suas metas. Em particular, a meta 13.2 trata de políticas e planejamento nacionais e não deve ser vinculada automaticamente à execução de um modelo. Fonte consultada em **22 de setembro de 2026**.
+
+### 4.4. Condições para sustentar as contribuições do projeto
+
+O valor esperado da manutenção orientada por dados depende de uma combinação de previsões úteis, dados adequados e decisões técnicas responsáveis. Aumentar a sensibilidade do modelo pode ampliar alertas e verificações; reduzir alertas pode deixar de sinalizar casos relevantes. Por isso, a configuração deve considerar a capacidade de atendimento e o custo das omissões, sem converter desempenho histórico em garantia operacional.
+
+Os controles de engenharia já implementados oferecem uma base de rastreabilidade e reduzem alguns erros de uso, mas permanecem lacunas de comunicação, atualidade e cobertura dos dados, acompanhamento de materiais e dimensionamento dos recursos. As medidas propostas precisam ser verificadas na implantação, com participação das equipes responsáveis. A avaliação posterior também deve considerar ordens recebidas com atraso e intervenções realizadas a partir do alerta.
+
+Assim, o Lumem mantém os alinhamentos positivos registrados nas seções 2 e 3, sob as condições explicitadas, e reconhece riscos que podem contrariar **os próprios ODS 8, 9 e 11**, além de afetar **os ODS 7 e 12**. A relação com o **ODS 10** permanece condicionada à demonstração de desigualdades entre grupos; a repercussão no **ODS 13** requer caracterização adicional. A inclusão ou manutenção de um ODS não elimina a possibilidade de ameaça a esse mesmo objetivo.
+
+## 5. Checklist da atualização
+
+Os itens concluídos abrangem o levantamento do projeto, a revisão das escolhas iniciais, a avaliação de novos ODS e a análise de ameaças e mitigações. A consolidação final, os indicadores de acompanhamento e a conferência completa do artefato permanecem pendentes.
 
 - [x] Registrar o alinhamento inicial da Sprint 1 com as ODS 9, 11 e 12 e suas justificativas, preservando essa referência para comparar com a revisão.
 - [x] Descrever o escopo atual do Lumem e o valor entregue pelas funcionalidades desenvolvidas, reunindo evidências no código, nos modelos, na interface e na documentação.
@@ -205,14 +307,14 @@ Os itens concluídos abrangem o levantamento do projeto, a revisão das escolhas
 - [x] Examinar outras candidatas, incluindo as ODS 3 e 13, e verificar se existe relação sustentada com suas metas específicas, evitando associações apenas temáticas.
 - [x] Justificar cada nova ODS selecionada com a meta pertinente, a funcionalidade ou atividade que a sustenta, o benefício esperado e as limitações da evidência; caso nenhuma seja adicionada, justificar a decisão.
 - [x] Comparar o alinhamento inicial e o revisado em uma tabela com ODS, justificativa anterior, decisão, justificativa atual e evidências, tornando explícitos os ajustes e as correções realizados.
-- [ ] Examinar os 17 objetivos para identificar se o desenvolvimento, a implantação ou o uso do Lumem pode ameaçar alguma ODS, inclusive objetivos que o próprio projeto pretende apoiar.
-- [ ] Analisar se falsos positivos podem gerar inspeções desnecessárias, sobrecarga de trabalho ou substituições prematuras de peças, avaliando possíveis conflitos com as ODS 8 e 12.
-- [ ] Analisar se falsos negativos, indisponibilidade do sistema ou confiança excessiva nas previsões podem prejudicar a segurança e a continuidade do transporte, identificando as ODS e metas pertinentes.
-- [ ] Analisar o consumo de energia e recursos da infraestrutura e dos treinamentos de IA como possível impacto ambiental adverso, sem afirmar emissões ou desperdícios que não tenham sido medidos.
-- [ ] Avaliar se diferenças de cobertura e qualidade dos dados entre portas ou estações podem produzir priorizações inadequadas e atendimento desigual, verificando a pertinência da relação com as ODS 10 e 11.
-- [ ] Registrar, para cada ameaça plausível, a ODS e a meta afetadas, o mecanismo de impacto, as condições em que o risco pode ocorrer, as evidências disponíveis e as incertezas; justificar também quando uma hipótese de ameaça for descartada.
-- [ ] Propor medidas de mitigação para as ameaças identificadas e verificar quais já existem no projeto e quais ainda precisam ser implementadas.
-- [ ] Confrontar benefícios e impactos adversos, explicando em quais condições a contribuição do Lumem às ODS se sustenta e quais limitações impedem conclusões mais fortes.
+- [x] Examinar os 17 objetivos para identificar se o desenvolvimento, a implantação ou o uso do Lumem pode ameaçar alguma ODS, inclusive objetivos que o próprio projeto pretende apoiar.
+- [x] Analisar se falsos positivos podem gerar inspeções desnecessárias, sobrecarga de trabalho ou substituições prematuras de peças, avaliando possíveis conflitos com as ODS 8 e 12.
+- [x] Analisar se falsos negativos, indisponibilidade do sistema ou confiança excessiva nas previsões podem prejudicar a segurança e a continuidade do transporte, identificando as ODS e metas pertinentes.
+- [x] Analisar o consumo de energia e recursos da infraestrutura e dos treinamentos de IA como possível impacto ambiental adverso, sem afirmar emissões ou desperdícios que não tenham sido medidos.
+- [x] Avaliar se diferenças de cobertura e qualidade dos dados entre portas ou estações podem produzir priorizações inadequadas e atendimento desigual, verificando a pertinência da relação com as ODS 10 e 11.
+- [x] Registrar, para cada ameaça plausível, a ODS e a meta afetadas, o mecanismo de impacto, as condições em que o risco pode ocorrer, as evidências disponíveis e as incertezas; justificar também quando uma hipótese de ameaça for descartada.
+- [x] Propor medidas de mitigação para as ameaças identificadas e verificar quais já existem no projeto e quais ainda precisam ser implementadas.
+- [x] Confrontar benefícios e impactos adversos, explicando em quais condições a contribuição do Lumem às ODS se sustenta e quais limitações impedem conclusões mais fortes.
 - [ ] Como aprofundamento do artefato, definir indicadores verificáveis para os principais benefícios e ameaças, com fonte de dados, linha de base necessária e método de acompanhamento, sem confundi-los com os indicadores oficiais da ONU.
 - [ ] Conferir as premissas da análise financeira e das avaliações dos modelos antes de usar seus resultados como evidência de produtividade, economia ou redução de falhas.
 - [ ] Consolidar a análise na documentação da Sprint 4, incluindo revisão das escolhas iniciais, justificativas de manutenção ou remoção, avaliação de novas ODS, ameaças e conclusão crítica sobre o valor entregue.
