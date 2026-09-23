@@ -266,18 +266,21 @@ Nenhum desses três se comunica diretamente com outro. Quem lê e grava no Armaz
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">14. Requisitos não funcionais na arquitetura</h2>
 </div>
 
-Os requisitos não funcionais não foram representados como serviços isolados, pois atuam de forma transversal sobre diferentes partes da solução.
+Os requisitos não funcionais não foram representados como serviços isolados, pois atuam de forma transversal sobre diferentes partes da solução. A tabela abaixo substitui uma versão anterior que só citava, em termos gerais, "serviço, persistência e interfaces" como evidência — cada linha agora aponta uma decisão concreta e seu estado real, não só a intenção.
 
-| Aspecto transversal | Aplicação na arquitetura |
-| --- | --- |
-| **Segurança** | Proteção dos recursos da aplicação, controle de acesso e comunicação segura entre os componentes. |
-| **Integridade e Validação** | Validação dos dados de entrada, prevenção de duplicidades e preservação da consistência durante processamento e persistência. |
-| **Conformidade e Privacidade** | Tratamento adequado das informações de usuários e dados protegidos conforme as regras aplicáveis. |
-| **Observabilidade** | Registro de erros, execuções e eventos relevantes para facilitar diagnóstico e acompanhamento operacional. |
-| **Escalabilidade** | Separação do processamento assíncrono e desacoplamento entre apresentação, aplicação, predição e dados. |
-| **Manutenibilidade** | Componentes com responsabilidades específicas e dependências expressas por interfaces, reduzindo acoplamento entre implementações. |
+| Requisito | Decisão arquitetural | Evidência no código/infraestrutura | Estado |
+| --- | --- | --- | --- |
+| RNF01 (autenticação) | Controle de sessão por token assinado (JWT) e validação em middleware. | Módulo de Autenticação e Controle de Acesso, dentro do Serviço de Aplicação. | Implementado |
+| RNF02 (proteção de dados) | Controle de acesso por papel (role) nas rotas protegidas, e acesso anônimo desabilitado nos três armazenamentos de objetos. | Middleware de autorização do Serviço de Aplicação; política de acesso e configuração de anonimato aplicadas aos três buckets (uploads, dado de treino e artefatos). | Implementado |
+| RNF03 (privacidade) | Segredos e credenciais fora do repositório. | Variáveis de ambiente/arquivo de configuração local, não versionado. | Implementado |
+| RNF04 (comunicação segura) | Canal privado dedicado entre a VPS da aplicação e a VPS de Machine Learning. | Túnel de rede privado entre as duas VPSs; conexão do Serviço Preditivo ao Repositório de Dados usa credencial somente leitura. | Implementado |
+| RNF05 (integridade dos dados) | Registro do upload e do job de processamento na mesma transação, com verificação de hash para evitar duplicidade. | Fluxo de ingestão do Serviço de Aplicação. | Implementado |
+| RNF06 (validação de entrada) | Validação de formato e campos antes de gravar no Repositório de Dados. | Etapa de validação do Processamento Assíncrono. | Implementado |
+| RNF07 (usabilidade) | Interface orientada a papéis (operação e engenharia), sem exigir conhecimento técnico. | Módulos da Interface da Plataforma (seção 8). | Implementado |
+| RNF08 (escalabilidade) | Processamento assíncrono e treinamento como processos separados do atendimento de requisições. | Processamento Assíncrono de Ingestão e Worker de Treinamento (seções 10 e 12). | Implementado |
+| RNF09 (manutenibilidade) | Componentes com responsabilidade única e comunicação só por interface. | Separação entre Serviço de Aplicação, Processamento, Serviço Preditivo, Orquestração de Treinamento e persistência. | Implementado |
 
-Essa representação está diretamente relacionada aos RNF01 a RNF09 definidos para o projeto.
+Alguns detalhes de evidência (backup, limites de recurso, rotação de segredo) ainda não têm uma verificação formal registrada e ficam como próximo passo de auditoria, não como requisito não atendido.
 
 ---
 
@@ -288,36 +291,24 @@ Essa representação está diretamente relacionada aos RNF01 a RNF09 definidos p
 
 A arquitetura foi verificada contra todos os requisitos definidos para a solução.
 
-| Grupo | Componentes principais |
-| --- | --- |
-| **RF01–RF02** | Interface da Plataforma; Serviço de Aplicação; Serviço de Autenticação |
-| **RF03–RF04** | Serviço de Ingestão; Processamento Assíncrono; Repositório de Dados; Armazenamento de Arquivos |
-| **RF05–RF06** | Gestão de Manutenções; Gestão de Inspeções; Alertas; Repositório de Dados |
-| **RF07–RF09** | Gestão de Portas; Orquestração de Predição; Serviço Preditivo |
-| **RF10** | Serviço de Dashboard; Dashboard |
-| **RF11** | Serviço Preditivo; Gestão de Portas; Gestão de Inspeções; Dashboard |
-| **RNF01–RNF04** | Serviço de Autenticação; Serviço de Aplicação; persistência e interfaces de comunicação entre componentes |
-| **RNF05–RNF06** | Ingestão, processamento, validação e persistência |
-| **RNF07** | Interface da Plataforma e seus módulos |
-| **RNF08** | Processamento assíncrono e separação entre camadas |
-| **RNF09** | Componentização e desacoplamento por interfaces entre apresentação, aplicação, processamento, predição e persistência |
+| Grupo | Componentes principais | Estado |
+| --- | --- | --- |
+| **RF01–RF02** | Interface da Plataforma; Serviço de Aplicação (Módulo de Autenticação) | Atendido |
+| **RF03–RF04** | Serviço de Ingestão; Processamento Assíncrono; Repositório de Dados; Armazenamento de Uploads | Atendido |
+| **RF05–RF06** | Gestão de Manutenções; Gestão de Inspeções; Alertas; Repositório de Dados | Atendido |
+| **RF07** | Gestão de Portas; Orquestração de Predição; Orquestração de Treinamento; Serviço Preditivo | Atendido |
+| **RF08** | Orquestração de Predição | Parcialmente atendido: o horizonte de previsão é sempre fixado em sete dias pelo Serviço de Aplicação, independente do valor informado. A opção de configurar esse horizonte ainda não está implementada. |
+| **RF09** | Gestão de Portas; Serviço Preditivo | Atendido |
+| **RF10** | Serviço de Dashboard; Dashboard | Atendido |
+| **RF11** | Serviço Preditivo; Gestão de Portas; Gestão de Inspeções; Dashboard | Atendido |
 
-A verificação mostrou que todos os requisitos possuem pelo menos um componente responsável na arquitetura.
+A verificação mostrou que todos os requisitos possuem pelo menos um componente responsável na arquitetura, com uma observação no RF08.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">16. Relação entre o fluxo e os componentes</h2>
-</div>
-
-O Diagrama de Fluxo de Dados (seção 3) e o Diagrama de Componentes (seção 7) representam duas perspectivas complementares da mesma solução: o fluxo mostra **por onde os dados passam e em qual sequência**, os componentes mostram **quais unidades executam essas responsabilidades e por quais interfaces elas se comunicam**. Por exemplo, onde o fluxo representa apenas o Serviço de Aplicação como uma caixa só, o Diagrama de Componentes detalha suas responsabilidades internas e mostra dependências explícitas com autenticação (`IAuth`), processamento (`IProcessamento`), predição (`IPredicao`) e persistência (`IDados`). Os dois artefatos usam a mesma abstração arquitetural e não representam soluções diferentes.
-
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">17. Conclusão</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">16. Conclusão</h2>
 </div>
 
 A arquitetura foi construída a partir dos requisitos do sistema e confrontada com o frontend, o backend e o serviço de modelo efetivamente implementados. A visão agnóstica evidencia que a plataforma é formada por componentes independentes — Interface da Plataforma, Serviço de Aplicação, Processamento Assíncrono, Serviço Preditivo, Orquestração de Treinamento, Worker de Treinamento, Registro de Modelos, Repositório de Dados, Armazenamento de Uploads e Armazenamento de Treinamento — com contratos e dependências explícitos entre si, e por um fluxo de dados que mostra como a informação percorre esses componentes na prática, incluindo a única parte que ainda não está implementada. Essa organização reduz o acoplamento entre implementações e favorece segurança, integridade, escalabilidade e manutenibilidade, mantendo a rastreabilidade com os requisitos funcionais e não funcionais definidos para o projeto.
