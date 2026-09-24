@@ -1,0 +1,100 @@
+{
+  "descricao": "Etapa 0: baseline da RNN (LSTM 1 camada, 32 unidades) reproduzindo modelo_rnn.ipynb",
+  "cfg": {
+    "cell": "lstm",
+    "hidden": 32,
+    "layers": 1,
+    "dropout": 0.0,
+    "lr": 0.001,
+    "batch": 1024,
+    "weight_decay": 0.0,
+    "pos_weight_mult": 1.0,
+    "max_epocas": 15,
+    "paciencia": 3
+  },
+  "semente": 42,
+  "melhor_epoca": 4,
+  "pr_auc_validacao": 0.16750942823315274,
+  "limiar": 0.5771707396929587,
+  "tempo_treino_early_stopping_s": 48.8,
+  "historico_validacao": [
+    {
+      "epoca": 1.0,
+      "perda": 1.2452875378888901,
+      "pr_auc_val": 0.15367684843390386
+    },
+    {
+      "epoca": 2.0,
+      "perda": 1.2095225820114175,
+      "pr_auc_val": 0.15903464761816175
+    },
+    {
+      "epoca": 3.0,
+      "perda": 1.2009454425301633,
+      "pr_auc_val": 0.16207618196741813
+    },
+    {
+      "epoca": 4.0,
+      "perda": 1.1962929005993528,
+      "pr_auc_val": 0.16750942823315274
+    },
+    {
+      "epoca": 5.0,
+      "perda": 1.1898495964067883,
+      "pr_auc_val": 0.16566152611224133
+    },
+    {
+      "epoca": 6.0,
+      "perda": 1.187904814800569,
+      "pr_auc_val": 0.1652307468813512
+    },
+    {
+      "epoca": 7.0,
+      "perda": 1.1844688578556648,
+      "pr_auc_val": 0.1662144414351151
+    }
+  ],
+  "teste": {
+    "modelo": "RNN baseline",
+    "precisao": 0.13697570739696116,
+    "recall": 0.4854885520799742,
+    "f1": 0.21366732898098212,
+    "pr_auc": 0.15443707959887915,
+    "roc_auc": 0.6610671046245427,
+    "alertas": 21982.0,
+    "tp": 3011.0,
+    "fp": 18971.0,
+    "fn": 3191.0
+  },
+  "referencia_rnn_original": {
+    "modelo": "RNN original (modelo_rnn.ipynb)",
+    "precisao": 0.137,
+    "recall": 0.487,
+    "f1": 0.214,
+    "pr_auc": 0.154,
+    "roc_auc": 0.661,
+    "alertas": 22038,
+    "tp": 3020,
+    "fp": 19018,
+    "fn": 3182
+  },
+  "referencia_random_forest": {
+    "modelo": "Random Forest (Modelo 5)",
+    "precisao": 0.159,
+    "recall": 0.553,
+    "f1": 0.247,
+    "pr_auc": 0.185,
+    "roc_auc": 0.697,
+    "alertas": 21564,
+    "tp": 3432,
+    "fp": 18132,
+    "fn": 2770
+  },
+  "ambiente": {
+    "python": "3.12.3",
+    "torch": "2.14.0+cpu",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scikit_learn": "1.9.0"
+  }
+}
