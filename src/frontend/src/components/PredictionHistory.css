@@ -1,0 +1,64 @@
+.prediction-history { display: grid; gap: 18px; }
+.prediction-history__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid #dfe6f0; background: #f8faff; }
+.prediction-history__summary > div { min-width: 0; padding: 15px 16px 16px; border-left: 1px solid #e3e9f2; }
+.prediction-history__summary > div:first-child { border-left: 0; }
+.prediction-history__summary span { display: block; margin-bottom: 8px; color: #66758c; font-size: 11px; font-weight: 700; }
+.prediction-history__summary strong { display: block; overflow: hidden; color: #16243a; font-size: 19px; font-weight: 750; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.prediction-history__summary strong.is-up { color: #c62d38; }
+.prediction-history__visuals { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, .8fr); border: 1px solid #dfe6f0; background: #fff; }
+.prediction-history__visuals > section { min-width: 0; padding: 18px 18px 15px; }
+.prediction-history__visuals > section + section { border-left: 1px solid #e6ebf2; }
+.prediction-history__visuals header h5 { margin: 0; color: #17263c; font-size: 22px; font-weight: 800; letter-spacing: -.025em; line-height: 1.2; }
+.prediction-history__visuals header p { margin: 7px 0 0; color: #526178; font-size: 15px; font-weight: 500; line-height: 1.55; }
+.prediction-history-chart { margin-top: 12px; overflow: hidden; }
+.prediction-chart-empty { display: grid; min-height: 170px; margin: 12px 0 0; place-items: center; padding: 24px; background: #f7f9fc; color: #6c798d; font-size: 11px; line-height: 1.55; text-align: center; }
+.prediction-history-chart svg { display: block; width: 100%; min-width: 420px; }
+.prediction-chart-grid { stroke: #e8edf4; stroke-width: 1; }
+.prediction-chart-label, .prediction-chart-date { fill: #68778c; font: 600 12px Manrope, sans-serif; }
+.prediction-chart-threshold { stroke: #c62d38; stroke-width: 1; stroke-dasharray: 5 5; }
+.prediction-chart-threshold-label { fill: #a32832; font: 700 12px Manrope, sans-serif; }
+.prediction-chart-line { fill: none; stroke: #3f00ff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.prediction-chart-point { fill: #fff; stroke: #3f00ff; stroke-width: 3; }
+.prediction-chart-point.is-risk { fill: #d83a45; stroke: #fff; filter: drop-shadow(0 0 0.18rem rgba(198, 45, 56, .45)); }
+.prediction-calendar { margin-top: 16px; }
+.prediction-calendar__month { margin-bottom: 13px; color: #202f44; font-size: 13px; font-weight: 750; text-transform: capitalize; }
+.prediction-calendar__weekdays, .prediction-calendar__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.prediction-calendar__weekdays { margin-bottom: 5px; }
+.prediction-calendar__weekdays span { color: #8a95a7; font-size: 9px; font-weight: 750; text-align: center; }
+.prediction-calendar__grid span { position: relative; display: grid; place-items: center; aspect-ratio: 1; color: #34445b; font-size: 11px; font-weight: 650; }
+.prediction-calendar__grid span.is-outside { color: #a4adba; }
+.prediction-calendar__grid span.is-risk { background: #fde8ea; color: #a52631; }
+.prediction-calendar__grid span.is-high { background: #d83a45; color: #fff; }
+.prediction-calendar__grid span.has-prediction::after { position: absolute; right: 3px; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: #3f00ff; content: ''; }
+.prediction-calendar__legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 13px; color: #69778b; font-size: 9px; }
+.prediction-calendar__legend span { display: inline-flex; align-items: center; gap: 5px; }
+.prediction-calendar__legend i { width: 8px; height: 8px; }
+.prediction-calendar__legend .is-window { background: #d83a45; }
+.prediction-calendar__legend .is-run { border-radius: 50%; background: #3f00ff; }
+.prediction-history__runs { border-top: 1px solid #e3e9f1; }
+.prediction-history__runs summary { display: flex; align-items: center; justify-content: space-between; padding: 15px 2px; color: #26364d; font-size: 12px; font-weight: 750; cursor: pointer; }
+.prediction-history__runs summary span { display: grid; place-items: center; min-width: 25px; height: 21px; background: #edf1f7; color: #59677a; font-size: 10px; }
+.prediction-history__table-wrap { overflow-x: auto; }
+.prediction-history__runs table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.prediction-history__runs th { padding: 10px 12px; border-bottom: 1px solid #dae2ec; background: #f4f7fb; color: #637188; font-size: 9px; font-weight: 750; text-align: left; }
+.prediction-history__runs td { padding: 12px; border-bottom: 1px solid #e8edf3; color: #34445b; white-space: nowrap; }
+.prediction-history__runs code { color: #3f00ff; font-size: 10px; }
+.prediction-run-status { color: #34445b; font-weight: 700; }
+.prediction-run-status.is-risk { display: inline-flex; padding: 5px 7px; background: #d83a45; color: #fff; }
+.prediction-history-empty { margin: 0; padding: 16px; border: 1px solid #e1e7ef; background: #f8faff; color: #66758a; font-size: 12px; line-height: 1.5; }
+.prediction-history-empty.is-error { border-color: #f1c9cd; background: #fff4f5; color: #a82b35; }
+.prediction-history-state { display: flex; align-items: center; gap: 10px; padding: 17px; background: #f7f9fc; color: #66758a; font-size: 12px; }
+.prediction-history-state span { width: 14px; height: 14px; border: 2px solid #c9d2e0; border-top-color: #3f00ff; border-radius: 50%; animation: prediction-history-spin .7s linear infinite; }
+@keyframes prediction-history-spin { to { transform: rotate(360deg); } }
+@media (max-width: 850px) {
+  .prediction-history__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prediction-history__summary > div:nth-child(odd) { border-left: 0; }
+  .prediction-history__summary > div:nth-child(n+3) { border-top: 1px solid #e3e9f2; }
+  .prediction-history__visuals { grid-template-columns: 1fr; }
+  .prediction-history__visuals > section + section { border-top: 1px solid #e6ebf2; border-left: 0; }
+}
+@media (max-width: 560px) {
+  .prediction-history__summary { grid-template-columns: 1fr; }
+  .prediction-history__summary > div { border-top: 1px solid #e3e9f2; border-left: 0; }
+  .prediction-history__summary > div:first-child { border-top: 0; }
+}

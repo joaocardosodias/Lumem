@@ -173,6 +173,10 @@ func (m *mockAlarmRepoForHTTP) DeleteByUploadID(ctx context.Context, uploadID st
 	return nil
 }
 
+func (m *mockAlarmRepoForHTTP) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	return nil, nil
+}
+
 type mockMaintRepoForHTTP struct {
 	insertErr error
 	createErr error
@@ -417,11 +421,31 @@ type mockPredictionRepoForHTTP struct {
 	saveRunErr error
 }
 
+func (m *mockPredictionRepoForHTTP) GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error) {
+	if m.run == nil || m.run.ID != id {
+		return nil, domain.ErrExperimentNotFound
+	}
+	return m.run, nil
+}
+
+func (m *mockPredictionRepoForHTTP) ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error) {
+	return []domain.PredictionRun{}, nil
+}
+
+func (m *mockPredictionRepoForHTTP) PromoteExperiment(ctx context.Context, id, userID string) error {
+	if m.run == nil || m.run.ID != id {
+		return domain.ErrExperimentNotFound
+	}
+	m.run.IsExperiment = false
+	return nil
+}
+
 func (m *mockPredictionRepoForHTTP) SaveRun(ctx context.Context, run *domain.PredictionRun, items []domain.PredictionItem) error {
 	if m.saveRunErr != nil {
 		return m.saveRunErr
 	}
 	run.ID = "run-1"
+	run.Predictions = append([]domain.PredictionItem(nil), items...)
 	m.run = run
 	return nil
 }
@@ -431,6 +455,10 @@ func (m *mockPredictionRepoForHTTP) GetLatestRun(ctx context.Context) (*domain.P
 		return nil, m.runErr
 	}
 	return m.run, nil
+}
+
+func (m *mockPredictionRepoForHTTP) GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error) {
+	return []domain.DoorPredictionHistoryItem{}, nil
 }
 
 func (m *mockPredictionRepoForHTTP) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
@@ -445,11 +473,11 @@ type mockMLClientForHTTP struct {
 	err   error
 }
 
-func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+func (m *mockMLClientForHTTP) PredictBatch(ctx context.Context, doors []domain.Door) (*port.MLPredictionBatch, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.preds, nil
+	return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: m.preds}, nil
 }
 
 type mockUOWStoreForHTTP struct {
@@ -521,12 +549,10 @@ func setupDashboardTestRouter() (*gin.Engine, *mockDashboardRepoForHTTP, *mockPr
 			},
 			Inspections: []*domain.Inspection{
 				{
-					ID:           "ins-1",
-					Status:       "completed",
-					Priority:     "high",
-					Notes:        "ok",
-					ScheduledFor: "2026-09-05 10:00:00",
-					CompletedAt:  &now,
+					ID:          "ins-1",
+					Status:      "completed",
+					Notes:       "ok",
+					CompletedAt: &now,
 				},
 			},
 		},
@@ -576,6 +602,9 @@ func setupDashboardTestRouter() (*gin.Engine, *mockDashboardRepoForHTTP, *mockPr
 	r.GET("/doors/:id/timeline", handler.GetDoorTimeline)
 	r.GET("/stations/:code/doors/status", handler.GetStationDoorsStatus)
 	r.POST("/predictions/trigger", handler.TriggerPredictions)
+	r.POST("/predictions/experiments", handler.RunPredictionExperiment)
+	r.GET("/predictions/experiments", handler.ListPredictionExperiments)
+	r.POST("/predictions/experiments/:id/promote", handler.PromotePredictionExperiment)
 	r.GET("/predictions/latest", handler.GetLatestPredictions)
 	return r, dashRepo, predRepo
 }
@@ -681,6 +710,32 @@ func TestDashboardHandler_Predictions(t *testing.T) {
 	}
 }
 
+func TestDashboardHandler_PredictionExperimentLifecycle(t *testing.T) {
+	r, _, _ := setupDashboardTestRouter()
+
+	req := httptest.NewRequest(http.MethodPost, "/predictions/experiments", strings.NewReader(`{"threshold":0.35}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("esperava 201 ao executar experimento, obteve %d: %s", w.Code, w.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/predictions/experiments?limit=20", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava 200 ao listar experimentos, obteve %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/predictions/experiments/run-1/promote", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("esperava 200 ao promover experimento, obteve %d: %s", w.Code, w.Body.String())
+	}
+}
+
 type mockInspectionRepoForHTTP struct {
 	created   *domain.Inspection
 	createErr error
@@ -726,16 +781,14 @@ func setupInspectionTestRouter() (*gin.Engine, *mockInspectionRepoForHTTP, *doma
 
 	now := time.Now()
 	ins := &domain.Inspection{
-		ID:           "ins-1",
-		StationCode:  "HIG",
-		Platform:     "P1",
-		DoorNumber:   1,
-		ScheduledFor: "2026-09-06 10:00:00",
-		Priority:     "high",
-		Status:       "pending",
-		CompletedAt:  &now,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:          "ins-1",
+		StationCode: "HIG",
+		Platform:    "P1",
+		DoorNumber:  1,
+		Status:      "pending",
+		CompletedAt: &now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	repo := &mockInspectionRepoForHTTP{
@@ -781,13 +834,10 @@ func TestInspectionHandler_Create(t *testing.T) {
 	})
 
 	t.Run("create success", func(t *testing.T) {
-		now := time.Now()
 		body, _ := json.Marshal(map[string]any{
-			"station_code":  "HIG",
-			"platform":      "P1",
-			"door_number":   2,
-			"scheduled_for": now.Add(48 * time.Hour).Format(time.RFC3339),
-			"priority":      "high",
+			"station_code": "HIG",
+			"platform":     "P1",
+			"door_number":  2,
 		})
 		req := httptest.NewRequest(http.MethodPost, "/inspections", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")

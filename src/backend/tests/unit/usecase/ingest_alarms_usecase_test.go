@@ -156,6 +156,25 @@ func (m *mockAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 	return nil
 }
 
+func (m *mockAlarmRepo) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if filter.Limit <= 0 {
+		filter.Limit = 50
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if filter.Offset > len(m.alarms) {
+		return []*domain.Alarm{}, nil
+	}
+	end := filter.Offset + filter.Limit
+	if end > len(m.alarms) {
+		end = len(m.alarms)
+	}
+	return m.alarms[filter.Offset:end], nil
+}
+
 func (m *mockAlarmRepo) Predictions() port.PredictionRepository   { return nil }
 func (m *mockAlarmRepo) Inspections() port.InspectionRepository   { return nil }
 func (m *mockAlarmRepo) Maintenances() port.MaintenanceRepository { return nil }

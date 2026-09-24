@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,12 +20,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type prepareErrorDB struct {
+type predictionInsertErrorDB struct {
 	*sql.DB
 }
 
-func (db *prepareErrorDB) PrepareContext(context.Context, string) (*sql.Stmt, error) {
-	return nil, errors.New("falha simulada ao preparar statement")
+func (db *predictionInsertErrorDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	if strings.Contains(query, "INSERT INTO predictions") {
+		return nil, errors.New("falha simulada ao inserir previsoes")
+	}
+	return db.DB.ExecContext(ctx, query, args...)
 }
 
 func testUserRepo(t *testing.T, ctx context.Context, db *sql.DB) {
@@ -362,14 +367,26 @@ func testInspectionRepo(t *testing.T, ctx context.Context, db *sql.DB, predID st
 		Platform:     "P1",
 		DoorNumber:   1,
 		Status:       "pending",
-		Priority:     "high",
 		Notes:        "Inspecao gerada automaticamente pelo teste",
-		ScheduledFor: "2026-09-10",
 		CreatedAt:    time.Now().UTC(),
 		UpdatedAt:    time.Now().UTC(),
 	}
 	if err := inspRepo.Create(ctx, insp); err != nil {
 		t.Fatalf("inspRepo.Create failed: %v", err)
+	}
+
+	duplicate := &domain.Inspection{
+		ID:          uuid.New().String(),
+		StationCode: "PIN",
+		Platform:    "P1",
+		DoorNumber:  1,
+		Status:      "pending",
+	}
+	if err := inspRepo.Create(ctx, duplicate); err != nil {
+		t.Fatalf("inspRepo.Create duplicate failed: %v", err)
+	}
+	if duplicate.ID != inspID {
+		t.Fatalf("esperava reutilizar inspecao %s, obteve %s", inspID, duplicate.ID)
 	}
 
 	fetchedInsp, err := inspRepo.GetByID(ctx, inspID)
@@ -403,7 +420,6 @@ func testInspectionRepoEdgeCases(t *testing.T, ctx context.Context, db *sql.DB, 
 		StationCode: "PIN",
 		Platform:    "P1",
 		DoorNumber:  1,
-		Priority:    "high",
 		Status:      "pending",
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
@@ -473,6 +489,52 @@ func testDashboardRepo(t *testing.T, ctx context.Context, db *sql.DB) {
 	}
 	if timeline.Door.ID != 1 {
 		t.Fatalf("unexpected door id: %d", timeline.Door.ID)
+	}
+
+	matchingAlarmID := uuid.New().String()
+	otherPlatformAlarmID := uuid.New().String()
+	otherPlatform := "P2"
+	if timeline.Door.Platform == "P2" {
+		otherPlatform = "P1"
+	}
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO telemetry_alarms
+			(id, tag, station_code, platform, door_number, alarm_type, duration_seconds, event_timestamp, source)
+		VALUES
+			($1, $2, $3, $4, $5, 'timeline-match', 1, '2099-01-02T00:00:00Z', 'integration-test'),
+			($6, $7, $3, $8, $5, 'timeline-other-platform', 1, '2099-01-03T00:00:00Z', 'integration-test')
+	`,
+		matchingAlarmID,
+		"timeline-"+timeline.Door.Platform,
+		timeline.Door.StationCode,
+		timeline.Door.Platform,
+		timeline.Door.DoorNumber,
+		otherPlatformAlarmID,
+		"timeline-"+otherPlatform,
+		otherPlatform,
+	)
+	if err != nil {
+		t.Fatalf("prepare timeline platform alarms: %v", err)
+	}
+	defer func() {
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM telemetry_alarms WHERE id IN ($1, $2)`, matchingAlarmID, otherPlatformAlarmID)
+	}()
+
+	platformTimeline, err := dashRepo.GetDoorTimeline(ctx, timeline.Door.ID)
+	if err != nil {
+		t.Fatalf("GetDoorTimeline with platform alarms failed: %v", err)
+	}
+	matchingAlarmFound := false
+	for _, alarm := range platformTimeline.RecentAlarms {
+		if alarm.ID == otherPlatformAlarmID {
+			t.Fatalf("timeline included alarm from platform %s in platform %s", otherPlatform, timeline.Door.Platform)
+		}
+		if alarm.ID == matchingAlarmID {
+			matchingAlarmFound = true
+		}
+	}
+	if !matchingAlarmFound {
+		t.Fatal("timeline did not include alarm from the door platform")
 	}
 
 	timeline145, err := dashRepo.GetDoorTimeline(ctx, 145)
@@ -552,6 +614,11 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 		DoorNumber:  1,
 		WillFail:    true,
 	}
+	probability := 0.72
+	threshold := 0.28
+	itemNoID.Probability = &probability
+	runNoID.ThresholdUsed = &threshold
+	runNoID.ModelVersion = "v1.0.0"
 	if err := predRepo.SaveRun(ctx, runNoID, []domain.PredictionItem{itemNoID}); err != nil {
 		t.Fatalf("predRepo.SaveRun without IDs failed: %v", err)
 	}
@@ -562,6 +629,22 @@ func testPredictionRepoExtra(t *testing.T, ctx context.Context, db *sql.DB) {
 	runWithItems, err := predRepo.GetLatestRun(ctx)
 	if err != nil || len(runWithItems.Predictions) == 0 {
 		t.Fatalf("esperava run com items preenchidos, obteve %+v", runWithItems)
+	}
+	var doorID int
+	if err := db.QueryRowContext(ctx, `
+		SELECT d.id
+		FROM doors d
+		JOIN stations s ON s.id = d.station_id
+		WHERE s.code = $1 AND d.platform = $2 AND d.door_number = $3
+	`, "PIN", "P1", 1).Scan(&doorID); err != nil {
+		t.Fatalf("falha ao localizar porta usada no historico: %v", err)
+	}
+	history, err := predRepo.GetDoorHistory(ctx, doorID, 30)
+	if err != nil || len(history) == 0 {
+		t.Fatalf("esperava historico da porta preenchido, obteve %+v: %v", history, err)
+	}
+	if history[0].Probability == nil || math.Abs(*history[0].Probability-probability) > 1e-6 || history[0].ModelVersion != "v1.0.0" {
+		t.Fatalf("metadados preditivos nao preservados: %+v", history[0])
 	}
 
 	dupItemID := uuid.New().String()
@@ -613,8 +696,8 @@ func testRepositoryErrorPaths(t *testing.T, ctx context.Context, db *sql.DB) {
 
 		CREATE TEMP VIEW inspections AS
 		SELECT 'inspection-error'::TEXT AS id, NULL::TEXT AS prediction_id, 'ERR'::TEXT AS station_code,
-		       'P1'::TEXT AS platform, NULL::INTEGER AS door_number, NULL::TEXT AS scheduled_for,
-		       'high'::TEXT AS priority, 'pending'::TEXT AS status, NULL::TEXT AS notes,
+		       'P1'::TEXT AS platform, NULL::INTEGER AS door_number,
+		       'pending'::TEXT AS status, NULL::TEXT AS notes,
 		       NULL::TIMESTAMPTZ AS completed_at, NOW() AS created_at, NOW() AS updated_at
 	`)
 	if err != nil {
@@ -638,13 +721,13 @@ func testRepositoryErrorPaths(t *testing.T, ctx context.Context, db *sql.DB) {
 		t.Fatalf("reverter views temporarias: %v", err)
 	}
 
-	repoWithPrepareFailure := repository.NewPostgresPredictionRepository(&prepareErrorDB{DB: db})
-	err = repoWithPrepareFailure.SaveRun(ctx, &domain.PredictionRun{
+	repoWithInsertFailure := repository.NewPostgresPredictionRepository(&predictionInsertErrorDB{DB: db})
+	err = repoWithInsertFailure.SaveRun(ctx, &domain.PredictionRun{
 		ID:          uuid.NewString(),
 		HorizonDays: 7,
 	}, []domain.PredictionItem{{StationCode: "PIN", Platform: "P1", DoorNumber: 1}})
-	if err == nil || err.Error() != "falha simulada ao preparar statement" {
-		t.Fatalf("esperava erro ao preparar insercao de previsoes, obteve %v", err)
+	if err == nil || err.Error() != "falha simulada ao inserir previsoes" {
+		t.Fatalf("esperava erro ao inserir previsoes, obteve %v", err)
 	}
 }
 
@@ -676,6 +759,165 @@ func testUOWRollback(t *testing.T, ctx context.Context, db *sql.DB) {
 	}
 }
 
+func testMLOpsGovernanceRepo(t *testing.T, ctx context.Context, db *sql.DB) {
+	repo := repository.NewPostgresMLOpsRepository(db)
+	now := time.Now().UTC()
+	recommended := 0.52
+	version := "v-integration-" + uuid.NewString()
+	run := &domain.MLModelRun{
+		ID:                   "run-" + uuid.NewString(),
+		Version:              version,
+		Algorithm:            "RandomForestClassifier",
+		Status:               "candidate",
+		TrainMetrics:         map[string]any{"f1_score": 0.7},
+		TestMetrics:          map[string]any{"f1_score": 2.0 / 3.0},
+		FeatureImportance:    []map[string]any{{"feature": "alarms_7d", "importance": 1.0}},
+		ArtifactURI:          "s3://test/models/" + version + "/model.joblib",
+		ArtifactSHA256:       strings.Repeat("a", 64),
+		DatasetSHA256:        strings.Repeat("b", 64),
+		TargetName:           "falha_nos_proximos_7_dias",
+		TestRows:             10,
+		PositiveRows:         3,
+		RecommendedThreshold: &recommended,
+		Manifest:             map[string]any{"schema_version": 1},
+		StartedAt:            now.Add(-time.Minute),
+		FinishedAt:           now,
+		CreatedBy:            "usr_engineer_01",
+	}
+	if err := repo.SaveModelRun(ctx, run); err != nil {
+		t.Fatalf("SaveModelRun falhou: %v", err)
+	}
+	metric := domain.ThresholdMetric{
+		Threshold: 0.52, TruePositives: 2, FalsePositives: 1,
+		FalseNegatives: 1, TrueNegatives: 6, Precision: 2.0 / 3.0,
+		Recall: 2.0 / 3.0, F1Score: 2.0 / 3.0, AlertCount: 3, AlertRate: 0.3,
+	}
+	if err := repo.SaveThresholdMetrics(ctx, run.ID, []domain.ThresholdMetric{metric}); err != nil {
+		t.Fatalf("SaveThresholdMetrics falhou: %v", err)
+	}
+	stored, err := repo.GetModelByVersion(ctx, version)
+	if err != nil || len(stored.ThresholdMetrics) != 1 || stored.ArtifactSHA256 != run.ArtifactSHA256 {
+		t.Fatalf("modelo governado inconsistente: model=%+v err=%v", stored, err)
+	}
+
+	job := &domain.MLTrainingJob{
+		ID: uuid.NewString(), RequestedVersion: version, Status: "completed",
+		RequestedBy: "usr_engineer_01", Parameters: map[string]any{"random_state": 42},
+		Manifest: run.Manifest, CreatedAt: now, StartedAt: &now, FinishedAt: &now,
+		Progress: domain.MLTrainingProgress{
+			CurrentStage: "artifact_publish", CompletedSteps: 9, TotalSteps: 10, Percent: 90,
+			Stages: []domain.MLTrainingStage{{Key: "artifact_publish", Label: "Publicar artefato", Status: "completed"}},
+		},
+	}
+	if err := repo.SaveTrainingJob(ctx, job); err != nil {
+		t.Fatalf("SaveTrainingJob falhou: %v", err)
+	}
+	if restored, err := repo.GetTrainingJob(ctx, job.ID); err != nil || restored.Status != "completed" || restored.Progress.Percent != 90 {
+		t.Fatalf("job persistido inconsistente: job=%+v err=%v", restored, err)
+	}
+	if jobs, err := repo.ListTrainingJobs(ctx, 20); err != nil || len(jobs) == 0 || jobs[0].ID != job.ID {
+		t.Fatalf("historico de jobs inconsistente: jobs=%+v err=%v", jobs, err)
+	}
+
+	detected := false
+	psi := 0.03
+	ks := 0.04
+	report := &domain.MLDriftReport{
+		Status: "healthy", DataDriftDetected: &detected, ModelVersion: version,
+		ReferenceDatasetSHA256: run.DatasetSHA256, PSIScore: &psi, KSStatistic: &ks,
+		EvaluatedAt:   now.Format(time.RFC3339Nano),
+		FeaturesDrift: []map[string]any{{"feature": "alarms_7d", "psi": psi}},
+	}
+	if err := repo.SaveDriftReport(ctx, report); err != nil {
+		t.Fatalf("SaveDriftReport falhou: %v", err)
+	}
+	var driftCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ml_drift_reports WHERE model_run_id = $1`, run.ID).Scan(&driftCount); err != nil || driftCount != 1 {
+		t.Fatalf("auditoria de drift ausente: count=%d err=%v", driftCount, err)
+	}
+	if err := repo.PromoteModel(ctx, version, "usr_engineer_01"); err != nil {
+		t.Fatalf("PromoteModel falhou: %v", err)
+	}
+	active, err := repo.GetActiveModel(ctx)
+	if err != nil || active.Version != version {
+		t.Fatalf("versao ativa incorreta: active=%+v err=%v", active, err)
+	}
+	run.Status = "candidate"
+	if err := repo.SaveModelRun(ctx, run); err != nil {
+		t.Fatalf("ressincronizacao do modelo ativo falhou: %v", err)
+	}
+	active, err = repo.GetActiveModel(ctx)
+	if err != nil || active.Version != version {
+		t.Fatalf("ressincronizacao rebaixou o modelo ativo: active=%+v err=%v", active, err)
+	}
+	if err := repo.PromoteModel(ctx, "versao-inexistente", "usr_engineer_01"); !errors.Is(err, domain.ErrModelNotFound) {
+		t.Fatalf("esperava ErrModelNotFound ao promover versao ausente, obteve %v", err)
+	}
+	active, err = repo.GetActiveModel(ctx)
+	if err != nil || active.Version != version {
+		t.Fatalf("promocao invalida retirou a versao ativa: active=%+v err=%v", active, err)
+	}
+}
+
+func testPredictionOutcomes(t *testing.T, ctx context.Context, db *sql.DB) {
+	predictionRepo := repository.NewPostgresPredictionRepository(db)
+	outcomeRepo := repository.NewPostgresPredictionOutcomeRepository(db)
+	threshold := 0.52
+
+	createMatureRun := func(version string, age time.Duration, items []domain.PredictionItem) string {
+		run := &domain.PredictionRun{
+			ID: uuid.NewString(), HorizonDays: 7, ThresholdUsed: &threshold,
+			ModelVersion: version, TotalDoorsEvaluated: len(items),
+		}
+		for index := range items {
+			items[index].RunID = run.ID
+		}
+		if err := predictionRepo.SaveRun(ctx, run, items); err != nil {
+			t.Fatalf("SaveRun para outcome falhou: %v", err)
+		}
+		if _, err := db.ExecContext(ctx, `
+			UPDATE prediction_runs
+			SET created_at = CURRENT_TIMESTAMP - make_interval(days => $2),
+			    published_at = CURRENT_TIMESTAMP - make_interval(days => $2)
+			WHERE id = $1
+		`, run.ID, int(age.Hours()/24)); err != nil {
+			t.Fatalf("amadurecer rodada falhou: %v", err)
+		}
+		return run.ID
+	}
+
+	createMatureRun("v-old", 240*time.Hour, []domain.PredictionItem{
+		{ID: uuid.NewString(), StationCode: "XYZ", Platform: "P1", DoorNumber: 9, WillFail: true},
+	})
+	currentRunID := createMatureRun("v-current", 192*time.Hour, []domain.PredictionItem{
+		{ID: uuid.NewString(), StationCode: "XYZ", Platform: "P1", DoorNumber: 7, WillFail: true},
+		{ID: uuid.NewString(), StationCode: "XYZ", Platform: "P1", DoorNumber: 8, WillFail: false},
+	})
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO maintenance_events (
+			id, order_type, station_code, installation_location, start_timestamp, source
+		) VALUES ($1, 'ZM01', 'XYZ', 'SP04-6-PSD-XYZ-P1S1-PP07PDM',
+			TO_CHAR(CURRENT_DATE - INTERVAL '4 days', 'YYYY-MM-DD'), 'integration-test')
+	`, uuid.NewString()); err != nil {
+		t.Fatalf("inserir falha observada falhou: %v", err)
+	}
+
+	if count, err := outcomeRepo.EvaluateMaturePredictions(ctx); err != nil || count < 3 {
+		t.Fatalf("avaliacao de outcomes falhou: count=%d err=%v", count, err)
+	}
+	performance, err := outcomeRepo.GetProductionPerformance(ctx)
+	if err != nil {
+		t.Fatalf("GetProductionPerformance falhou: %v", err)
+	}
+	if performance.ModelVersion != "v-current" || performance.EvaluatedItems != 2 ||
+		performance.TruePositives != 1 || performance.TrueNegatives != 1 ||
+		performance.FalsePositives != 0 || performance.FalseNegatives != 0 ||
+		performance.Precision == nil || *performance.Precision != 1 ||
+		performance.Recall == nil || *performance.Recall != 1 {
+		t.Fatalf("metricas de producao incorretas para %s: %+v", currentRunID, performance)
+	}
+}
+
 func runTestMigrations(t *testing.T, db *sql.DB) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
@@ -702,7 +944,7 @@ func TestPostgresRepositories(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
@@ -718,6 +960,8 @@ func TestPostgresRepositories(t *testing.T) {
 	testDashboardRepo(t, ctx, db)
 	testPredictionRepoExtra(t, ctx, db)
 	testRepositoryErrorPaths(t, ctx, db)
+	testMLOpsGovernanceRepo(t, ctx, db)
+	testPredictionOutcomes(t, ctx, db)
 	testCleanupUploads(t, ctx, db, uploadID)
 	testUOWRollback(t, ctx, db)
 }

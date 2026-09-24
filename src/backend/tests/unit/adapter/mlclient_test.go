@@ -13,22 +13,23 @@ import (
 
 func TestMLClient_PredictBatch_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/predict" {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/predictions" {
 			http.NotFound(w, r)
 			return
 		}
-		var reqs []mlclient.PredictionRequest
-		if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+		var reqBody mlclient.BatchPredictionRequest
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		resps := []mlclient.PredictionResponse{
-			{
-				StationCode: reqs[0].StationCode,
-				Platform:    reqs[0].Platform,
-				DoorNumber:  reqs[0].DoorNumber,
-				WillFail:    true,
-			},
+		resps := mlclient.BatchPredictionResponse{
+			ModelVersion: "v1.0.0",
+			Predictions: []mlclient.PredictionResponse{{
+				StationCode: reqBody.Doors[0].StationCode,
+				Platform:    reqBody.Doors[0].Platform,
+				DoorNumber:  reqBody.Doors[0].DoorNumber,
+				Probability: 0.72,
+			}},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resps)
@@ -40,12 +41,18 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 		{StationCode: "FAL", Platform: "P1", DoorNumber: 4},
 	}
 
-	items, err := client.PredictBatch(context.Background(), doors)
+	batch, err := client.PredictBatch(context.Background(), doors)
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
-	if len(items) != 1 || !items[0].WillFail {
-		t.Fatalf("unexpected items: %+v", items)
+	if batch.ModelVersion != "v1.0.0" || len(batch.Predictions) != 1 {
+		t.Fatalf("unexpected batch: %+v", batch)
+	}
+	if batch.Predictions[0].WillFail {
+		t.Fatalf("the ML client must not classify the probability")
+	}
+	if batch.Predictions[0].Probability == nil || *batch.Predictions[0].Probability != 0.72 {
+		t.Fatalf("expected probability to be preserved, got %+v", batch.Predictions[0])
 	}
 	if client.CircuitState() != mlclient.StateClosed {
 		t.Fatalf("expected closed circuit state")

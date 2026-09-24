@@ -22,10 +22,10 @@ const STAGES = {
     [88, 'Publicando o modelo'],
   ],
   login: [
-    [0, 'Autenticando o acesso'],
-    [24, 'Disparando a inferência'],
-    [52, 'Avaliando as portas da linha'],
-    [78, 'Carregando as ordens de manutenção'],
+    [0, 'Preparando os dados da operação'],
+    [24, 'Carregando resumo e predições'],
+    [75, 'Liberando o painel de operação'],
+    [94, 'Finalizando o acesso'],
   ],
 }
 
@@ -253,8 +253,8 @@ function PredictionLoadOverlay({ sessionRef, onSettled }) {
     <div ref={rootRef} className="prediction-load" role="alert" aria-live="assertive" aria-busy="true">
       <div className="prediction-load__grainient">
         <Grainient
-          color1="#1f03ff"
-          color2="#0e2697"
+          color1="#3f00ff"
+          color2="#3100cd"
           color3="#597dfd"
           timeSpeed={1.25}
           colorBalance={0}

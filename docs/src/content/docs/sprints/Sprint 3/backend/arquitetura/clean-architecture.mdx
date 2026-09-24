@@ -53,7 +53,7 @@ O desacoplamento é alcançado definindo interfaces na camada de casos de uso e 
 
 ### Exemplo: Armazenamento de Arquivos de Ingestão
 
-O caso de uso de ingestão precisa salvar o arquivo bruto para processamento posterior, mas não deve conhecer o SDK da AWS ou a existência do Supabase.
+O caso de uso de ingestão precisa salvar o arquivo bruto para processamento posterior, mas não deve conhecer o SDK da AWS nem a implementação MinIO usada em produção.
 
 1. **A porta declara o contrato em `internal/usecase/port/services.go`:**
 ```go

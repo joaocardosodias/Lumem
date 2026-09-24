@@ -26,7 +26,7 @@ hey -n 1000 -c 30 "$TARGET_URL/healthz/live"
 echo "Fase 2: Batalha de Escrita Concorrente (ACID Writes no PostgreSQL) - 500 inserts de inspecao"
 hey -n 500 -c 20 -m POST \
   -H "Content-Type: application/json" \
-  -d '{"station_code":"PIN","platform":"P1","door_number":1,"scheduled_for":"2026-09-15","priority":"critical","notes":"rinha_stress_test"}' \
+  -d '{"station_code":"PIN","platform":"P1","door_number":1,"notes":"rinha_stress_test"}' \
   "$TARGET_URL/api/v1/inspections"
 
 echo "Fase 3: Batalha de Escrita Concorrente em Manutencao - 500 inserts de ordens ZM03"

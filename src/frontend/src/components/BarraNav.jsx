@@ -4,38 +4,49 @@ import logo from '../assets/logo.svg'
 import './BarraNav.css'
 
 const items = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'alertas', label: 'Alertas' },
-  { id: 'manutencoes', label: 'Manutenções' },
+  { id: 'dashboard', label: 'Visão geral' },
+  { id: 'predicoes', label: 'Predições' },
   { id: 'portas', label: 'Portas' },
+  { id: 'alarmes', label: 'Alarmes' },
+  { id: 'manutencoes', label: 'Manutenções' },
   { id: 'inspecoes', label: 'Inspeções' },
 ]
 
-function BarraNav({ current, onNavigate, onLogout }) {
+function BarraNav({ current, user, onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
+  const navItems = [
+    ...items,
+    ...(user?.role === 'enginner' ? [{ id: 'engenharia', label: 'Engenharia de Dados' }] : []),
+  ]
   const activeIndex = Math.max(
-    items.findIndex((item) => item.id === current),
+    navItems.findIndex((item) => item.id === current),
     0,
   )
 
   return (
     <aside className={`barra-nav${collapsed ? ' is-collapsed' : ''}`}>
-      <img
-        className="barra-nav__logo"
-        src={collapsed ? iconMotiva : logo}
-        alt="motiva"
-      />
+      <div className="barra-nav__brand">
+        <img
+          className="barra-nav__logo"
+          src={collapsed ? iconMotiva : logo}
+          alt="motiva"
+        />
+        <span className="barra-nav__brand-caption">Manutenção preditiva</span>
+      </div>
 
-      <nav>
+      <p className="barra-nav__section-label">Operação</p>
+      <nav aria-label="Navegação principal">
         <div className="barra-nav__indicator" style={{ '--i': String(activeIndex) }} aria-hidden="true" />
         <ul>
-          {items.map((item) => (
+          {navItems.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
                 className={current === item.id ? 'is-active' : undefined}
                 onClick={() => onNavigate(item.id)}
                 title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+                aria-current={current === item.id ? 'page' : undefined}
               >
                 <NavIcon id={item.id} />
                 <span className="barra-nav__label">{item.label}</span>
@@ -45,12 +56,34 @@ function BarraNav({ current, onNavigate, onLogout }) {
         </ul>
       </nav>
 
+      {user ? (
+        <div className="barra-nav__user" title={`${user.name} (${user.email || user.role || 'Operador'})`}>
+          <div className="barra-nav__user-avatar">
+            {user.name ? user.name.charAt(0).toUpperCase() : user.role === 'enginner' ? 'E' : 'O'}
+          </div>
+          {!collapsed ? (
+            <div className="barra-nav__user-info">
+              <strong>{user.name}</strong>
+              <small>
+                {user.role === 'enginner'
+                  ? 'Engenheiro(a)'
+                  : user.role === 'operator'
+                    ? 'Operador(a)'
+                    : user.role || 'Operador Linha 4'}
+              </small>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="barra-nav__footer">
         <button
           type="button"
           className="barra-nav__toggle"
           onClick={() => setCollapsed((value) => !value)}
           aria-label={collapsed ? 'Expandir menu' : 'Minimizar menu'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expandir menu' : 'Minimizar menu'}
         >
           <ToggleIcon collapsed={collapsed} />
         </button>
@@ -59,6 +92,7 @@ function BarraNav({ current, onNavigate, onLogout }) {
           className="barra-nav__sair"
           onClick={onLogout}
           title={collapsed ? 'Sair' : undefined}
+          aria-label="Sair"
         >
           <NavIcon id="sair" />
           <span className="barra-nav__label">Sair</span>
@@ -80,7 +114,25 @@ function ToggleIcon({ collapsed }) {
   )
 }
 
-function NavIcon({ id }) {
+export function NavIcon({ id }) {
+  if (id === 'completed') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="m8 12 3 3 5-6" />
+      </svg>
+    )
+  }
+
+  if (id === 'station') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12h5m8 0h5M12 3v5m0 8v5" />
+        <circle cx="12" cy="12" r="4" />
+      </svg>
+    )
+  }
+
   if (id === 'dashboard') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -90,7 +142,15 @@ function NavIcon({ id }) {
     )
   }
 
-  if (id === 'alertas') {
+  if (id === 'predicoes') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    )
+  }
+
+  if (id === 'alarmes' || id === 'alertas') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M7 10a5 5 0 0 1 10 0c0 5 2 6 2 7H5c0-1 2-2 2-7Z" />
@@ -123,6 +183,16 @@ function NavIcon({ id }) {
         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
         <rect x="9" y="3" width="6" height="4" rx="1" />
         <path d="M9 12h6M9 16h4" />
+      </svg>
+    )
+  }
+
+  if (id === 'engenharia') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="12" cy="5" rx="9" ry="3" />
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
       </svg>
     )
   }

@@ -1,106 +1,95 @@
-# Modelo 5, API de predição
+# Serviço de Machine Learning
 
-Funciona com o Modelo 5 (Random Forest, `models/modelo-5/modelo_5.ipynb`) atrás de
-uma API HTTP, no formato que o backend em Go já espera consumir
-(`internal/adapter/mlclient/client.go`).
+Este serviço executa o Modelo 5, um `RandomForestClassifier` treinado para estimar a probabilidade de uma porta apresentar falha nos próximos sete dias. Ele ficou responsável somente pela parte matemática do fluxo: montar as mesmas features do treinamento e devolver probabilidades. O backend Go escolhe o threshold, classifica as portas e executa as regras operacionais, como registrar a rodada e abrir inspeções.
 
-O RNN (`models/modelo-rnn/`) continua documentado como o experimento de
-comparação da Sprint 3, mas quem serve a predição de verdade é o Modelo 5 
-ele venceu a comparação (PR-AUC 0,184 contra 0,154 da RNN — números do bundle
-real exportado por `exportar_modelo.py`, ver detalhes em `modelo-RNN.mdx`).
+O RNN em `models/modelo-rnn-1/` permanece como experimento comparativo da Sprint 3. O Modelo 5 é o artefato servido em produção porque obteve PR-AUC de 0,184, contra 0,154 da RNN. Os números vêm dos artefatos reais de avaliação e estão detalhados na documentação `modelo-RNN.mdx`.
 
-## Contrato
+## Arquitetura
 
-`POST /predict`
+O código foi separado em domínio, aplicação, portas e adaptadores:
 
-```json
-[{"station_code": "VSO", "platform": "P1", "door_number": 8}]
-
-[{"station_code": "VSO", "platform": "P1", "door_number": 8, "will_fail": true, "probability": 0.62}]
+```text
+ml_service/
+  domain/       validação do artefato, ordem das features e inferência
+  application/  casos de uso de predição, treinamento e monitoramento
+  ports/        contratos de repositório de features e registry de modelo
+  adapters/     PostgreSQL e registry local/S3
+app.py          adaptador HTTP Flask
+training_worker.py consumidor dedicado da fila de treinamentos
 ```
 
-`GET /health` é usado pelo healthcheck do container.
+O `ml-service` atende inferências e registra novos jobs no volume compartilhado. O container `ml-training-worker` reivindica um job por vez e executa o pipeline pesado em processo separado, com limites próprios de CPU e memória. Dessa forma, SHAP e Random Forest não disputam diretamente os recursos reservados às respostas de inferência.
 
-## Como funciona
+O domínio e os casos de uso não conhecem Flask, SQLAlchemy, nomes de tabelas ou AWS SDK. O adaptador PostgreSQL consulta apenas as views versionadas `ml_telemetry_v1`, `ml_maintenance_v1` e `ml_active_doors_v1`. Em produção, `ML_DATABASE_URL` é obrigatória e deve pertencer ao usuário somente leitura criado a partir de `src/backend/migrations/create_ml_readonly_role.example.sql`.
 
-1. A API recebe a lista de portas (só identificadores).
-2. Busca no Postgres os alarmes dos últimos 60 dias (`telemetry_alarms`, o
-   dobro da maior janela usada no treino, para "esquentar" o filtro de
-   decaimento por recência) e o histórico completo de ordens
-   (`maintenance_events`) das estações pedidas.
-3. Calcula, ao vivo, as mesmas 83 features candidatas do treino (janelas
-   móveis, decaimento por recência, histórico de corretivas), ver
-   `pipeline.py`.
-4. Seleciona as features que o SHAP manteve no treino, roda o modelo e
-   aplica o limiar salvo.
+## Contrato interno v1
 
-## Artefatos
+O backend usa exclusivamente as rotas versionadas descritas em `openapi.yaml`:
 
-artifacts/modelo_5.joblib é gerado por exportar_modelo.py, ele reproduz as
-seções 1 a 6 do `modelo_5.ipynb` (mesmo split temporal, mesmos hiperparâmetros,
-mesma seleção de features por SHAP) e salva o bundle:
-`{"model", "features", "threshold", "est_categorias"}`.
+- `POST /v1/predictions`: recebe `{ "doors": [...] }` e devolve `model_version`, `reference_date` e probabilidades. O payload não recebe threshold e a resposta não contém `will_fail`.
+- `GET /v1/models/active`: devolve o manifest da versão carregada.
+- `GET /v1/models/{version}/metrics`: devolve a curva de thresholds produzida no teste temporal.
+- `POST /v1/models/{version}/activate`: valida o candidato e altera o ponteiro ativo.
+- `POST /v1/training-jobs` e `GET /v1/training-jobs/{id}`: iniciam e acompanham treinamento real assíncrono. A resposta inclui `progress.stages`, com checkpoints, horários, durações e a etapa exata de uma eventual falha.
+- `POST /v1/training-jobs/{id}/resume`: cria uma nova tentativa para um job com falha ou cancelado, reutiliza as saídas persistidas das etapas anteriores e recomeça exatamente na etapa interrompida.
+- `GET /v1/models/{version}/drift`: compara as features atuais com a distribuição de referência do treinamento.
+- `GET /health/live` e `GET /health/ready`: distinguem processo vivo de modelo realmente carregado.
+
+As rotas `/predict`, `/metadata`, `/drift`, `/retrain` e `/health` permanecem temporariamente para clientes antigos e devolvem o cabeçalho `Deprecation: true`.
+
+## Métricas reproduzíveis
+
+`exportar_modelo.py` usa o split temporal original e gera, junto do artefato:
+
+- `manifest.json`, com hashes SHA-256 do modelo e do conjunto de teste, versão, target, períodos, features, hiperparâmetros e distribuição de referência;
+- `threshold-metrics.json`, com 91 pontos entre 0,05 e 0,95;
+- TP, FP, FN, TN, precisão, recall, F1, quantidade e taxa de alertas em cada ponto.
+
+O threshold é escolhido sobre validação. As métricas apresentadas como desempenho final são calculadas sobre teste temporal intocado. `validate_manifest.py` recalcula as relações da matriz de confusão e impede a publicação de um manifest inconsistente.
+
+Para conferir o artefato atual sem retreiná-lo:
 
 ```bash
-python exportar_modelo.py
+python exportar_modelo.py --version v1.0.0 --evaluate-existing --activate-local
+python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib
 ```
 
-##  Validado contra o banco real (staging, 09/2026)
+Para criar uma candidata sem alterar a versão ativa:
 
-- order_type em maintenance_events é literalmente `ZM01` (2.700 linhas),
-  `ZM02` (52) e `ZM03` (3.021).
-- `installation_location`: 41% das 5.773 linhas (2.362) batem com o
-  regex e trazem a porta específica (ex:
-  `SP04-6-PSD-BUT-PLT1-PP21PDM`),  as features de ciclo/corretiva funcionam
-  de verdade pra essas. Os outros ~51% vêm num formato diferente
-  (`"PLATAFORMA 1"`, sem tag), que o regex não reconhece, não quebra nada,
-  só cai no valor padrão (sem histórico) pra essas linhas.
-- Foi rodado o container Docker (`docker build` + `docker run` com a
-  DATABASE_URL real) e foi chamado /predict pra várias portas de
-  BUT/BUT1. Foi respondido sem erro, com probabilidades
-  variando entre portas (0,18 a 0,26).
+```bash
+python exportar_modelo.py --version v1.1.0
+```
 
-## Validado de ponta a ponta com o Go (staging, 09/2026)
+Em `MODEL_REGISTRY_DRIVER=s3`, a candidata é publicada no bucket privado `artefacts`, sob o prefixo imutável `models/random-forest/<versão>/`. A promoção valida o manifest e o SHA-256 antes de atualizar `models/random-forest/active/manifest.json`.
 
-Foi lançado os dois serviços (backend Go buildado local + o ml-service,
-ligados pela rede backend-network) contra o banco de staging real e disparamos
-`POST /api/v1/predictions/trigger`, autenticado, pra 528 portas:
+## Dados de treinamento
 
-- `doors.platform` usa `"P1"`/`"P2"`, diferente de `telemetry_alarms.platform`
-  (`"BUT1"`). São convenções diferentes, e `normaliza_via()` já lida com isso (extrai só o número
-  final, funciona pros dois formatos).
-- O /predict respondeu em 3,3s pras 528 portas, dentro do
-  timeout de 5s que o cliente Go usa.
+No primeiro boot, `model-registry-init` envia `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` ao bucket `training-data`. O treinamento baixa as chaves configuradas por `MODEL_PANEL_S3_KEY` e `MODEL_MAINTENANCE_S3_KEY` para `MODEL_TRAINING_CACHE_DIR`. O mesmo inicializador publica o modelo `v1.0.0`, seu manifest e a curva de thresholds em `artefacts` caso ainda não exista um ponteiro ativo.
 
-## Rodar localmente
+Os jobs e seus checkpoints intermediários ficam no volume persistente montado em `/var/lib/g04/training-jobs`, enquanto modelos e datasets persistem no MinIO. Se o processo reiniciar no meio de um job, o registro é recuperado como `failed`, preservando a causa e evitando um estado `running` eterno. A retomada reaproveita snapshots, painéis processados, seleção de features, modelos e avaliação já concluídos; somente a etapa com falha e as posteriores são executadas novamente. Retomadas sucessivas mantêm a mesma raiz de checkpoints. Um job na fila ou em execução também pode ser cancelado por `POST /v1/training-jobs/{id}/cancel`; o grupo de processos é encerrado e os checkpoints concluídos permanecem no volume. Apenas um treinamento pode ser executado por instância de serviço.
+
+## Execução local
+
+O serviço possui seu próprio MinIO para modelos, datasets e checkpoints. Crie a rede compartilhada uma vez, prepare o arquivo de ambiente e suba a stack:
+
+```bash
+docker network inspect backend-network >/dev/null 2>&1 || docker network create backend-network
+cd src/modelo
+cp .env.example .env
+docker compose up -d --build
+```
+
+Em desenvolvimento, mantenha `ML_BIND_ADDRESS=127.0.0.1`; o backend alcança o serviço pelo alias `http://ml-service:8000` na rede Docker. Na VPS 2, configure `ENV=production` e `ML_BIND_ADDRESS=10.50.0.2`; a VPS 1 passa a usar `VPS_MODEL_URL=http://10.50.0.2:8000` pelo WireGuard.
 
 ```bash
 pip install -r requirements.txt
-export DATABASE_URL=postgresql://...
-gunicorn --bind 0.0.0.0:8000 app:app
+export ML_DATABASE_URL='postgresql://postgres.PROJECT_REF:senha@pooler.supabase.com:6543/postgres?sslmode=require&default_query_exec_mode=simple_protocol'
+gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 4 app:app
 ```
-
-## Testes
 
 ```bash
-python -m pytest tests/ -v -s
+python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib
+python -m pytest tests/ -v
 ```
 
-## CI/CD
-
-O .gitlab-ci.yml (raiz do repo) cobre este serviço: `test_modelo` roda
-`pytest`, `build_container_modelo` builda a imagem, `trivy_scan_modelo`
-escaneia vulnerabilidade, e `publish_container_modelo` publica
-`g04-ml-service` no Azure Container Registry a cada push na branch
-principal.
-
-## docker-compose
-
-Serviço separado do backend, próprio (docker-compose.yml pro build local,
-docker-compose.prod.yml pra imagem publicada), ligado na mesma rede
-backend-network que o backend usa.
-
-## Deploy
-
-Já rodando na VM da Azure. O
-Watchtower assume as atualizações seguintes sozinho a partir daqui.
+O pipeline do GitLab valida manifest, testes, build e vulnerabilidades. O deploy é manual: cada VPS executa `git pull`, `docker compose build` e `docker compose up -d`; nenhuma imagem da aplicação é publicada em registry.

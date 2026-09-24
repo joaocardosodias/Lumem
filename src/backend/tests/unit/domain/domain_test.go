@@ -81,7 +81,6 @@ func TestInspection_CreationValidation(t *testing.T) {
 		StationCode: "PIN",
 		Platform:    "P2",
 		DoorNumber:  5,
-		Priority:    "critical",
 		Notes:       "test notes",
 	}
 
@@ -91,13 +90,6 @@ func TestInspection_CreationValidation(t *testing.T) {
 	}
 
 	p := validParams
-	p.Priority = ""
-	inspDefPrio, err := domain.NewInspection(p)
-	if err != nil || inspDefPrio.Priority != "normal" {
-		t.Fatalf("expected normal priority default")
-	}
-
-	p = validParams
 	p.StationCode = ""
 	if _, err := domain.NewInspection(p); !errors.Is(err, domain.ErrStationCodeRequired) {
 		t.Fatalf("expected ErrStationCodeRequired")
@@ -119,12 +111,6 @@ func TestInspection_CreationValidation(t *testing.T) {
 	if _, err := domain.NewInspection(p); !errors.Is(err, domain.ErrInvalidDoorNumber) {
 		t.Fatalf("expected ErrInvalidDoorNumber for 25")
 	}
-
-	p = validParams
-	p.Priority = "invalid_priority"
-	if _, err := domain.NewInspection(p); !errors.Is(err, domain.ErrInvalidPriority) {
-		t.Fatalf("expected ErrInvalidPriority")
-	}
 }
 
 func TestInspection_StatusTransitions(t *testing.T) {
@@ -133,7 +119,6 @@ func TestInspection_StatusTransitions(t *testing.T) {
 		StationCode: "PIN",
 		Platform:    "P2",
 		DoorNumber:  5,
-		Priority:    "critical",
 		Notes:       "test notes",
 	}
 	insp, _ := domain.NewInspection(validParams)

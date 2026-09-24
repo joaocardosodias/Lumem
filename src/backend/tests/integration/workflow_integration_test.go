@@ -184,6 +184,25 @@ func (r *intAlarmRepo) ReconcileStaleUploads(ctx context.Context) error {
 	return nil
 }
 
+func (r *intAlarmRepo) List(ctx context.Context, filter port.AlarmFilter) ([]*domain.Alarm, error) {
+	r.store.mu.RLock()
+	defer r.store.mu.RUnlock()
+	if filter.Limit <= 0 {
+		filter.Limit = 50
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if filter.Offset > len(r.store.alarms) {
+		return []*domain.Alarm{}, nil
+	}
+	end := filter.Offset + filter.Limit
+	if end > len(r.store.alarms) {
+		end = len(r.store.alarms)
+	}
+	return r.store.alarms[filter.Offset:end], nil
+}
+
 type intMaintenanceRepo struct{ store *inMemoryStore }
 
 func (r *intMaintenanceRepo) BatchInsertMaintenance(ctx context.Context, events []*domain.MaintenanceEvent) error {
@@ -413,6 +432,22 @@ func (r *intPredictionRepo) GetLatestRun(ctx context.Context) (*domain.Predictio
 	latest.Predictions = r.store.predictions
 	return latest, nil
 }
+
+func (r *intPredictionRepo) GetDoorHistory(ctx context.Context, doorID, limit int) ([]domain.DoorPredictionHistoryItem, error) {
+	return []domain.DoorPredictionHistoryItem{}, nil
+}
+
+func (r *intPredictionRepo) GetRunByID(ctx context.Context, id string) (*domain.PredictionRun, error) {
+	return r.GetLatestRun(ctx)
+}
+
+func (r *intPredictionRepo) ListExperiments(ctx context.Context, limit int) ([]domain.PredictionRun, error) {
+	return []domain.PredictionRun{}, nil
+}
+
+func (r *intPredictionRepo) PromoteExperiment(ctx context.Context, id, userID string) error {
+	return nil
+}
 func (r *intPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain.Door, error) {
 	r.store.mu.RLock()
 	defer r.store.mu.RUnlock()
@@ -421,7 +456,7 @@ func (r *intPredictionRepo) ListDoorsForInference(ctx context.Context) ([]domain
 
 type intMLClient struct{}
 
-func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]domain.PredictionItem, error) {
+func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) (*port.MLPredictionBatch, error) {
 	items := make([]domain.PredictionItem, 0, len(doors))
 	for _, d := range doors {
 		willFail := (d.StationCode == "FAL" && d.Platform == "P1" && d.DoorNumber == 4)
@@ -432,7 +467,7 @@ func (m *intMLClient) PredictBatch(ctx context.Context, doors []domain.Door) ([]
 			WillFail:    willFail,
 		})
 	}
-	return items, nil
+	return &port.MLPredictionBatch{ModelVersion: "v1.0.0", Predictions: items}, nil
 }
 
 type intUOWStore struct {
@@ -697,8 +732,8 @@ func testListInspectionsStep(t *testing.T, router http.Handler) string {
 	}
 	_ = json.Unmarshal(inspListW.Body.Bytes(), &inspListResp)
 
-	if inspListResp.Total != 1 || inspListResp.Data[0].Priority != "critical" {
-		t.Fatalf("etapa 7 falhou: inspecao critica automatica nao gerada: %+v", inspListResp)
+	if inspListResp.Total != 1 || inspListResp.Data[0].Status != "pending" {
+		t.Fatalf("etapa 7 falhou: inspecao pendente automatica nao gerada: %+v", inspListResp)
 	}
 
 	if inspListResp.Data[0].PredictionID == nil || *inspListResp.Data[0].PredictionID == "" {

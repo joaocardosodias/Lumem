@@ -12,6 +12,7 @@ var (
 	ErrNoActiveDoors                = errors.New("nenhuma porta ativa encontrada para inferencia")
 	ErrInvalidDoorID                = errors.New("o parametro ID da porta deve ser um numero inteiro positivo")
 	ErrPredictionServiceUnavailable = errors.New("servico de predicao indisponivel")
+	ErrExperimentNotFound           = errors.New("experimento de predicao nao encontrado")
 )
 
 type Station struct {
@@ -35,8 +36,19 @@ type Door struct {
 type PredictionRun struct {
 	ID                  string
 	HorizonDays         int
+	ThresholdUsed       *float64
+	ModelVersion        string
+	IsExperiment        bool
+	PublishedAt         *time.Time
 	TotalDoorsEvaluated int
 	TotalDoorsAtRisk    int
+	AverageProbability  *float64
+	P95Probability      *float64
+	MaximumProbability  *float64
+	EstimatedPrecision  *float64
+	EstimatedRecall     *float64
+	EstimatedF1         *float64
+	ValidationSource    string
 	CreatedAt           time.Time
 	Predictions         []PredictionItem
 }
@@ -48,6 +60,15 @@ type PredictionItem struct {
 	Platform    string
 	DoorNumber  int
 	WillFail    bool
+	Probability *float64
+}
+
+type DoorPredictionHistoryItem struct {
+	PredictionItem
+	HorizonDays   int
+	ThresholdUsed *float64
+	ModelVersion  string
+	CreatedAt     time.Time
 }
 
 type StationRiskSummary struct {

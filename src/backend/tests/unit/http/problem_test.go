@@ -169,9 +169,6 @@ func TestRespondDomainError_RemainingErrors(t *testing.T) {
 	r.GET("/validation-door-num", func(c *gin.Context) {
 		httpAdapter.RespondDomainError(c, domain.ErrInvalidDoorNumber)
 	})
-	r.GET("/validation-priority", func(c *gin.Context) {
-		httpAdapter.RespondDomainError(c, domain.ErrInvalidPriority)
-	})
 	r.GET("/validation-status", func(c *gin.Context) {
 		httpAdapter.RespondDomainError(c, domain.ErrInvalidInspectionStatus)
 	})
@@ -198,7 +195,6 @@ func TestRespondDomainError_RemainingErrors(t *testing.T) {
 		"/inactive":                 http.StatusForbidden,
 		"/validation-extra":         http.StatusBadRequest,
 		"/validation-door-num":      http.StatusBadRequest,
-		"/validation-priority":      http.StatusBadRequest,
 		"/validation-status":        http.StatusBadRequest,
 		"/validation-insp-id":       http.StatusBadRequest,
 		"/validation-order-type":    http.StatusBadRequest,

@@ -76,7 +76,6 @@ func TestInspectionUseCase_Create(t *testing.T) {
 		StationCode: "FAL",
 		Platform:    "P1",
 		DoorNumber:  4,
-		Priority:    "critical",
 		Notes:       "Ruido excessivo ao abrir",
 	}
 
@@ -149,11 +148,6 @@ func TestInspectionUseCase_ValidationErrors(t *testing.T) {
 			name:        "invalid door number above range",
 			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P1", DoorNumber: 25},
 			expectedErr: domain.ErrInvalidDoorNumber,
-		},
-		{
-			name:        "invalid priority",
-			input:       usecase.CreateInspectionInputDTO{StationCode: "FAL", Platform: "P1", DoorNumber: 1, Priority: "extreme"},
-			expectedErr: domain.ErrInvalidPriority,
 		},
 	}
 

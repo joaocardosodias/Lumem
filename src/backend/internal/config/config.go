@@ -23,6 +23,8 @@ type Config struct {
 	DBPassword        string
 	DBSSLMode         string
 	DatabaseURL       string
+	DBMaxOpenConns    int
+	DBMaxIdleConns    int
 	DBPath            string
 	MigrationsPath    string
 	JWTSecret         string
@@ -124,7 +126,7 @@ func LoadConfig() *Config {
 	}
 
 	dbHost := getEnv("DB_HOST", "aws-0-us-west-2.pooler.supabase.com")
-	dbPort := getEnv("DB_PORT", "5432")
+	dbPort := getEnv("DB_PORT", "6543")
 	dbName := getEnv("DB_NAME", "postgres")
 	dbUser := getEnv("DB_USER", "postgres.yqkcxaqorhekxbctewwj")
 	dbPass := getEnv("DB_PASSWORD", "")
@@ -136,6 +138,13 @@ func LoadConfig() *Config {
 	rawURL := getEnv("DATABASE_URL", defaultURL)
 	if strings.Contains(rawURL, "sua-senha-aqui") && dbPass != "" {
 		rawURL = strings.ReplaceAll(rawURL, "sua-senha-aqui", dbPass)
+	}
+	if (strings.Contains(rawURL, ":6543") || strings.Contains(rawURL, "pooler.supabase.com")) && !strings.Contains(rawURL, "default_query_exec_mode") {
+		sep := "?"
+		if strings.Contains(rawURL, "?") {
+			sep = "&"
+		}
+		rawURL = rawURL + sep + "default_query_exec_mode=simple_protocol"
 	}
 
 	migrationsPath := getEnv("MIGRATIONS_PATH", "migrations")
@@ -163,6 +172,14 @@ func LoadConfig() *Config {
 	if riverMaxAttempts <= 0 {
 		riverMaxAttempts = 5
 	}
+	dbMaxOpenConns, _ := strconv.Atoi(getEnv("DB_MAX_OPEN_CONNS", "5"))
+	if dbMaxOpenConns <= 0 {
+		dbMaxOpenConns = 5
+	}
+	dbMaxIdleConns, _ := strconv.Atoi(getEnv("DB_MAX_IDLE_CONNS", "2"))
+	if dbMaxIdleConns <= 0 {
+		dbMaxIdleConns = 2
+	}
 
 	return &Config{
 		Port:              getEnv("PORT", "8080"),
@@ -176,6 +193,8 @@ func LoadConfig() *Config {
 		DBPassword:        dbPass,
 		DBSSLMode:         dbSSL,
 		DatabaseURL:       rawURL,
+		DBMaxOpenConns:    dbMaxOpenConns,
+		DBMaxIdleConns:    dbMaxIdleConns,
 		DBPath:            getEnv("DB_PATH", "database.db"),
 		MigrationsPath:    migrationsPath,
 		JWTSecret:         getEnv("JWT_SECRET", ""),

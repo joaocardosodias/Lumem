@@ -83,7 +83,7 @@ type IngestionJobQueue interface {
 Os adaptadores contêm o código que conversa com o mundo externo. Eles implementam as interfaces definidas em `port`:
 - `adapter/http`: roteamento REST com Gin, validação de requisições e conversão de respostas;
 - `adapter/repository`: comandos SQL parametrizados executados sobre PostgreSQL;
-- `adapter/storage`: cliente S3 para Supabase Storage e implementação local para testes;
+- `adapter/storage`: cliente S3 para MinIO e implementação local para testes;
 - `adapter/jobqueue`: cliente River para gerenciamento de fila sobre PostgreSQL;
 - `adapter/mlclient`: cliente HTTP para o modelo preditivo em Python com circuit breaker e retentativas;
 - `adapter/security`: geração e validação de tokens JWT e hashing com bcrypt.
