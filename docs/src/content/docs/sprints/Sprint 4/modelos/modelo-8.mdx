@@ -1,6 +1,6 @@
 ---
 title: "Modelo 8"
-description: "Documentação CRISP-DM do Isolation Forest para detecção de anomalia em portas de plataforma, com calibração supervisionada sobre o painel do Modelo 5."
+description: "Isolation Forest para detecção de anomalia nas portas de plataforma, usando o mesmo painel e o mesmo alvo do Modelo 5."
 ---
 
 import { Image } from 'astro:assets';
@@ -8,82 +8,73 @@ import Background from '../../../../../assets/sprints/sprint1/background_title.p
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Entendimento do negócio</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
 </div>
 
-Criamos esse modelo como forma de buscar novas alternativas para a predição atual do sistema. A predição em produção estima, para cada porta e cada dia, se uma corretiva emergencial ZM01 ocorrerá nos sete dias seguintes, e o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) já responde a essa pergunta com Random Forest sobre o histórico de alarmes e manutenção. O Modelo 8 parte do mesmo problema operacional e testa se um detector de novidade consegue enxergar risco por outro ângulo: o desvio do dia em relação ao funcionamento normal daquela porta.
+O sistema já tem uma forma de prever falha. Para cada porta e cada dia, o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) estima se uma corretiva emergencial ZM01 vai aparecer nos sete dias seguintes, a partir do histórico de alarmes e de manutenção. Esse caminho funciona e já está documentado. Ainda assim, ele olha o problema sempre do mesmo lado: aprende, com o rótulo na mão, quais combinações de features costumam anteceder uma ordem.
 
-A pergunta de negócio, portanto, permanece a antecipação da falha, mas o mecanismo muda. Em vez de aprender direto a relação entre features e o rótulo, o Isolation Forest descreve o que é cotidiano nos dias sem ZM01 e atribui um score de quão isolável é a observação atual. Se esse desvio antecipar corretiva, o score vira um sinal útil para a manutenção; se a falha se parecer com um dia comum de telemetria, o detector sozinho não basta e precisa ser combinado com um classificador que ainda enxergue o rótulo.
+O Modelo 8 nasceu da vontade de experimentar outro olhar sobre a mesma pergunta. Em vez de perguntar direto se a porta quebra em sete dias, perguntamos se o dia de hoje se parece com o cotidiano daquela porta ou se ele destoa. Uma porta que começa a sair do próprio padrão pode estar pedindo atenção antes de o histórico de ZM01 se repetir. Se esse desvio antecipar corretiva, ganhamos um sinal que o Random Forest sozinho não formula. Se a falha se parecer com um dia normal de telemetria, aprendemos o limite dessa ideia.
 
-O custo de não avisar uma porta que quebra continua maior do que o de inspecionar uma porta que não quebra. Por isso recall e precisão são lidos juntos. Um limiar que só maximiza recall transforma quase toda a grade em alerta e deixa de priorizar; um limiar que só maximiza precisão silencia a maior parte dos eventos reais. O critério adotado na validação é o F1, o mesmo compromisso usado no Modelo 5.
+Como a pergunta é a mesma, o notebook lê o painel porta-dia do Modelo 5, em `models/modelo-5/painel.parquet`. Cada linha é uma porta em um dia: cerca de 480 portas, dez estações, pouco mais de 300 mil observações. O alvo vale 1 quando existe ZM01 depois daquele dia e dentro de uma semana. A contagem que gera esse rótulo, `n_falhas_7d_futuro`, não entra no modelo.
 
-O artefato desta etapa é o notebook `models/modelo-8/modelo_8.ipynb`. Ele não substitui o serviço que já serve o Modelo 5: serve para medir se a detecção de anomalia acrescenta informação à predição que o sistema já faz.
+Treino, validação e teste acompanham o calendário. Dias vizinhos neste painel são quase a mesma foto, porque as janelas móveis se sobrepõem. Treinamos até 23 de janeiro de 2025, esperamos uma semana para o rótulo dessa última data terminar de acontecer, validamos de 31 de janeiro a 23 de abril e só então olhamos o teste, de 1º de maio em diante.
+
+O Isolation Forest tenta isolar cada ponto: dias muito diferentes do restante recebem score alto, e esse valor vira a coluna `iso`. Sozinho, o detector quase não separa ZM01. A montagem atual usa esse score junto com o histórico do painel e compara Random Forest, Extra Trees, HistGradientBoosting e a média das três probabilidades. O limiar de cada um é o melhor F1 da validação. O trabalho está em `models/modelo-8/modelo_8.ipynb`.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entendimento dos dados</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Features</h2>
 </div>
 
-Para não reconstruir as bases da Sprint 1 nem inventar outra granularidade, o Modelo 8 reutiliza o painel porta-dia do Modelo 5, gravado em `models/modelo-5/painel.parquet` e montado por `construir_painel.py`. Cada linha é uma porta em um dia, com cerca de 480 portas em dez estações e aproximadamente 307 mil observações. O alvo `y` vale 1 quando existe ZM01 no intervalo aberto `(t, t+7]`, e a contagem futura que gera esse rótulo (`n_falhas_7d_futuro`) permanece fora de qualquer feature.
+O painel já entrega contagens por tipo de alarme, duração, decaimento e histórico SAP, sempre com um dia de atraso. Em cima disso o notebook cria variáveis de ritmo e de desvio, porque contar alarme não diz se o dia destoa do normal da porta.
 
-As colunas que o painel já entrega são as mesmas que o Modelo 5 justificou: contagens por tipo de alarme em janelas de 7, 14 e 30 dias, duração máxima do alarme, decaimento por recência e histórico SAP de ZM01, ZM02 e ZM03, inclusive o tempo desde a última ordem. Todas as janelas nascem com defasagem de um dia, de modo que nenhuma feature enxerga o próprio dia `t` nem o horizonte que o rótulo ainda vai olhar. A recência das ordens é obtida com `merge_asof` para trás, portanto também é causal.
+Herdadas do painel:
 
-Duas leituras do SHAP do Modelo 5 orientaram o que não repetir. Contagens em janelas de um e três dias quase não contribuíam e foram deixadas de lado. O sentinela 9999 em `dias_desde_*`, criado para portas sem ordem anterior, distorce qualquer método que isole pontos por magnitude, e por isso foi convertido em recência exponencial antes de entrar no Isolation Forest.
+* **Janelas 7, 14 e 30 dias.** Quantidade de alarmes por tipo, total, técnicos e longos, além da duração máxima.
+* **Decaimento por recência.** O alarme de ontem pesa mais do que o de semanas atrás.
+* **Histórico SAP.** Contagem recente de ZM01, ZM02 e ZM03 e tempo desde a última ordem, já olhando só para trás.
 
-A prevalência da classe 1 no teste, a partir de 1º de maio de 2025, fica em 8,7%. Esse desbalanceamento é o mesmo cenário em que o Modelo 5 operou, e é ele que torna o PR-AUC mais informativo do que a acurácia: um ranking sem sinal ficaria perto dessa prevalência.
+Criadas neste modelo:
+
+* **Rampa.** Última semana contra a semana anterior, nos totais, no LSD, nos técnicos e nos tipos mais persistentes.
+* **Razão 7/30 e frações.** Se a atividade recente está concentrada ou só inchada (LSD, técnicos, longos, FO).
+* **Intensidade e LSD × duração.** Um alarme crítico que não passa é diferente de um que some logo.
+* **Frescor do decaimento.** Compara o filtro curto com o longo para ver se o barulho é recente.
+* **Recência exponencial.** Substitui o sentinela 9999 das portas sem ordem: quanto mais recente, maior o valor.
+* **Concentração de ZM01 e razão de atraso.** Situam a porta no próprio ciclo de corretiva.
+* **Desvio contra a estação (`zest`).** O que for comum à estação naquele dia deixa de parecer anomalia da porta.
+
+Janelas de 1 e 3 dias ficaram de fora: no Modelo 5 quase não ajudavam. No treino, cada candidata é medida sozinha pelo PR-AUC e, entre duas colunas quase iguais, fica uma. Esse recorte menor alimenta o Isolation Forest. Os classificadores recebem o conjunto mais largo e ainda o score `iso`.
+
+Antes de entrar no detector, as contagens passam por logaritmo, cada porta é centrada na mediana dos seus dias calmos de treino, os extremos são cortados e um transformador de quantis iguala as escalas. O Isolation Forest vê só os dias quietos do treino, com pouca telemetria e sem ZM01 recente.
 
 ---
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Preparação dos dados</h2>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Resultados</h2>
 </div>
 
-Sobre o painel, o notebook constrói features de ritmo e de desvio que o Isolation Forest consegue usar melhor do que a contagem bruta. A rampa compara a janela de sete dias com a semana anterior para os totais, o LSD, os alarmes técnicos, os alarmes longos e os tipos FO, FC e RCE. As razões 7/30 e as frações de LSD, técnicos, longos e FO descrevem concentração, não só volume. A intensidade e o produto do LSD pela duração ligam persistência do alarme ao tipo crítico. O frescor do decaimento compara o filtro de recência curta com o de recência longa. A recência de ZM01, ZM02 e ZM03 vira um decaimento exponencial com meia-vida de trinta dias. A concentração recente de ZM01 e a razão de atraso situam a porta no próprio ciclo de corretiva. Por fim, o desvio da porta contra a mediana da estação no mesmo dia (`zest`) separa o que é regime da estação daquilo que é específico da porta.
+O teste começa em 1º de maio de 2025. Linha a linha responde se cada dia foi classificado certo. A operação pergunta outra coisa: na semana em que a porta quebrou, alguém foi avisado? Por isso o notebook junta dias seguidos de falha num evento e dias seguidos de alerta num aviso. Basta um acerto dentro da janela para o evento contar como pego.
 
-A seleção dessas candidatas acontece só no treino. Cada coluna é ranqueada pelo PR-AUC univariado, nas duas direções, e permanece se superar a prevalência do treino com margem. Em seguida cai a coluna quase constante e, entre pares com correlação absoluta acima de 0,94, fica a de maior PR-AUC. O subconjunto assim obtido alimenta o Isolation Forest. Os classificadores supervisionados recebem o conjunto numérico mais amplo e o score de anomalia `iso`, porque árvores toleram redundância que o detector de isolamento não tolera.
+| Recorte de teste | Valor |
+|---|---:|
+| Início | 01/05/2025 |
+| Linhas | 71.184 |
+| Classe 1 (falha em 7 dias) | 6.202 (8,7%) |
+| Eventos de falha | 813 |
 
-O Isolation Forest isola pontos no espaço das features, então escala e cauda pesada mudam o resultado. As contagens passam por `log1p`. Cada porta é centrada na mediana dos seus próprios dias normais de treino, para o detector ver desvio e não o nível absoluto de uma porta que naturalmente alarma mais. Os extremos são winsorizados entre 0,5% e 99,5% desse residual, e um `QuantileTransformer` com saída normal iguala as dimensões. O ajuste do detector usa apenas dias de treino com `y` igual a zero, telemetria baixa e sem ZM01 nos trinta dias anteriores. O “normal” é o cotidiano limpo, não a média de todos os dias sem rótulo.
+| Abordagem | Precisão | Recall | F1 | PR-AUC | Recall evento | Precisão evento |
+|---|---:|---:|---:|---:|---:|---:|
+| Isolation Forest (ranking) | — | — | — | 0,098 a 0,116 | — | — |
+| Limiar F2 | 0,106 | 0,829 | 0,188 | 0,156 | 0,91 | 0,22 |
+| Limiar F0,5 + porta do Isolation Forest | 0,167 | 0,308 | 0,216 | 0,152 | 0,44 | 0,21 |
+| [Modelo 5](/sprints/sprint-2/modelos/modelo-5), mesmo teste | 0,159 | 0,553 | 0,245 | 0,186 | 0,65 | 0,26 |
 
-A divisão segue o tempo e a ordem do alvo. O painel é ordenado por data e, em seguida, por porta. O treino vai até 23 de janeiro de 2025 e serve ao Isolation Forest e às cabeças supervisionadas. Entre 24 e 30 de janeiro há uma folga de sete dias, porque o `y` do último dia de treino ainda olha esse intervalo. A validação cobre 31 de janeiro a 23 de abril de 2025 e é o único recorte em que se escolhem modelo e limiar. Outra folga, de 24 a 30 de abril, separa a validação do teste, que começa em 1º de maio de 2025 e só é lido uma vez.
+O Isolation Forest sozinho ficou pouco acima do acaso: duas colunas simples, recência de ZM01 e contagem em noventa dias, já ranqueavam melhor. Neste painel, a porta que vai receber ZM01 muitas vezes não é um ponto estranho.
 
-Três escolhas de preparação foram revertidas depois de identificadas como vazamento. A média de `y` por porta ou estação no período de treino, usada como prior, incluía o rótulo da própria linha e falhas futuras daquela porta. O early stopping com uma fatia aleatória do treino embaralhava a ordem temporal. Qualquer estatística calculada no teste, inclusive para escolher feature ou limiar, foi proibida. Com isso, o que o modelo vê em `t` é só o que já existia antes de `t`.
+O limiar em F2 pega quase todos os eventos e alerta demais. O limiar em F0,5 acerta mais quando alerta e deixa passar a maior parte das falhas. A comparação entre Random Forest, Extra Trees, HistGradientBoosting e o blend, com limiar de F1 na validação, ainda deve ser lida na saída do notebook.
 
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelagem</h2>
-</div>
-
-A modelagem tem duas camadas que se encadeiam. Primeiro o Isolation Forest, com 280 árvores e até 2048 amostras por árvore, ajusta-se ao espaço residual já normalizado e devolve, para cada linha, o simétrico do `score_samples`. Esse valor é a feature `iso`. Depois três classificadores com `class_weight='balanced'` recebem as features candidatas e esse score: um Random Forest com 300 árvores, profundidade 14 e folha mínima 40, na mesma família do Modelo 5; um Extra Trees com 350 árvores e profundidade 16; e um HistGradientBoosting com profundidade 6 e até 200 iterações. A média das três probabilidades forma um quarto candidato, o blend.
-
-Para cada candidato o limiar é o que maximiza o F1 na validação, percorrendo quantis da probabilidade prevista. O modelo que vence nessa validação é o único avaliado no teste. A semente 42 fixa a amostragem das árvores e do Isolation Forest.
-
-Essa arquitetura é o resultado de um ciclo CRISP-DM, não o primeiro desenho. O Isolation Forest sozinho, mesmo misturado a um proxy de telemetria, ficou com PR-AUC entre 0,098 e 0,116 no teste, pouco acima da prevalência de 8,7%, enquanto `rec_zm01` e `zm01_90d` já passavam de 0,12 como ranking univariado. A falha ZM01, neste painel, em geral não é um ponto isolável. O detector passou então a ser feature, não decisão final.
-
-O segundo ciclo mexeu no limiar. Maximizar F2 com peso balanceado de classe produziu precisão 0,106 e recall 0,829 por linha, e recall de evento 0,91, à custa de um volume de alertas que a operação não prioriza. Maximizar F0,5 e ainda exigir que o Isolation Forest também passasse de um quantil da validação subiu a precisão para 0,167 e derrubou o recall para 0,308, com recall de evento 0,44. O F1 na validação, sem porta extra do detector, é o meio-termo que a versão atual usa para escolher entre as cabeças supervisionadas.
-
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Avaliação</h2>
-</div>
-
-A avaliação no teste cobre 71.184 linhas a partir de 1º de maio de 2025, das quais 6.202 são positivas. Além de precisão, recall, F1 e PR-AUC por linha, o notebook agrega a série de cada porta. Dias consecutivos com `y` igual a 1 formam um evento de falha; dias consecutivos de alerta formam um aviso. O recall de evento é a fração dos 813 episódios de falha que receberam pelo menos um alerta. A precisão de evento é a fração dos avisos que tocaram um episódio real. Essa leitura é a mesma do Modelo 5 e é a que a operação faz: importa se o aviso caiu dentro da janela em que a porta quebrou, não se cada um dos sete dias foi classificado à parte. Por construção, o recall de evento fica acima do recall por linha, porque basta um acerto dentro do episódio.
-
-Na execução em que o limiar ainda maximizava F2, o teste registrou F1 0,188 e PR-AUC 0,156. Na execução com F0,5 e porta do Isolation Forest, o F1 subiu para 0,216 e o PR-AUC ficou em 0,152. A célula que compara Random Forest, Extra Trees, HistGradientBoosting e o blend ainda deve ser lida na saída do notebook, porque o vencedor e o limiar saem da validação daquela corrida. O referencial de produção continua sendo o Modelo 5 no mesmo recorte de teste: precisão 15,9%, recall 55,3% e F1 0,245 por linha, e, por evento, recall 65,0% com precisão de episódio 26,0%.
-
-O que a avaliação confirma é duplo. O Isolation Forest documenta desvio em relação ao normal da porta, mas não substitui um modelo que vê o rótulo. O recorte temporal, a folga de sete dias e a proibição de features derivadas de `y` são condições para essa comparação ser honesta: sem elas, um prior construído com a média do alvo no treino inflava a métrica sem corresponder ao que existiria no dia da previsão.
-
----
-
-<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
-  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
-  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Próximo ciclo</h2>
-</div>
-
-O CRISP-DM fecha esta volta na avaliação e reabre na preparação. O próximo passo é consolidar, na validação e no teste, o vencedor da comparação entre as três cabeças e o blend, com limiar, precisão, recall, F1, PR-AUC e as duas métricas de evento. Se o F1 de teste se aproximar do Modelo 5, o score de anomalia deixa de ser só experimento e passa a ser candidato a entrar no mesmo painel que a predição atual já consome. Se ficar atrás, o ciclo seguinte volta às features de desvio e ao conjunto em que o Isolation Forest é treinado, em vez de trocar o critério de limiar mais uma vez sem novo sinal.
+Detectar anomalia descreve o desvio da porta. Não descreve, sozinho, a ZM01 dos próximos sete dias. Se o F1 da comparação chegar perto do Modelo 5, o score `iso` pode ser tentado no mesmo painel que a predição atual já consome. Se ficar atrás, o caminho é voltar às features de desvio e ao recorte de dias usados para desenhar o normal da porta.
