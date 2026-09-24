@@ -1,0 +1,31 @@
+---
+title: "Visão Geral e Entregas da Sprint 4"
+description: "Resumo da Sprint 4: detecção de anomalia com Isolation Forest (Modelo 8) sobre o painel porta-dia do Modelo 5."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo Executivo da Sprint 4</h2>
+</div>
+
+A **Sprint 4** abre a linha de **detecção de anomalia** no mesmo problema da Sprint 2: antecipar uma ordem **ZM01** nos próximos 7 dias em uma porta de plataforma (PSD).
+
+O [Modelo 5](/sprints/sprint-2/modelos/modelo-5) já mostrou que o histórico de alarmes e manutenção tem sinal preditivo com Random Forest. O **Modelo 8** testa outra pergunta: o dia da porta se **desvia** do funcionamento normal o bastante para merecer alerta? O detector é um **Isolation Forest** treinado só em dias sem falha; o score de anomalia entra depois em classificadores supervisionados (Random Forest, Extra Trees, HistGradientBoosting e o blend), com limiar escolhido na validação.
+
+Não há deploy nem API nesta entrega. O artefato é o notebook `models/modelo-8/modelo_8.ipynb`, que lê o painel `models/modelo-5/painel.parquet`.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entrega desta sprint</h2>
+</div>
+
+| Entrega | Algoritmo | Granularidade | Código |
+| :--- | :--- | :--- | :--- |
+| [**Modelo 8**](/sprints/sprint-4/modelos/modelo-8) | Isolation Forest + RF / Extra Trees / HGB | Porta × Dia (mesmo painel do Modelo 5) | [`models/modelo-8/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-8/) |
+
+Este Modelo 8 **não** é o Extra Trees citado na [comparação da Sprint 2](/sprints/sprint-2/comparacao_modelos). Aquele item não tinha notebook próprio neste repositório. Aqui, Extra Trees é só uma das cabeças supervisionadas que usam o score do Isolation Forest.
