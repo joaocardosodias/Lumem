@@ -1,0 +1,19 @@
+{
+  "n_trials_total": 40,
+  "n_trials_completos": 22,
+  "n_trials_podados": 10,
+  "best_value_pr_auc_cv": 0.15764486165703429,
+  "best_params": {
+    "layers": 2,
+    "cell": "gru",
+    "hidden": 32,
+    "dropout": 0.3675115587766956,
+    "lr": 0.0047556137113230115,
+    "batch": 512,
+    "weight_decay": 0.0,
+    "pos_weight_mult": 1.4830471273649986
+  },
+  "folds": 2,
+  "epocas_busca": 8,
+  "paciencia_busca": 3
+}

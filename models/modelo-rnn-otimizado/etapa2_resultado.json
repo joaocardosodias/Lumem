@@ -1,0 +1,87 @@
+{
+  "descricao": "Etapa 2: RNN com config vencedora da Etapa 1 (mesma arquitetura/hiperparametros) + features extra (historico ZM01/02/03, ciclo/recorrencia, estacao/via), concatenadas ao estado escondido final",
+  "cfg": {
+    "layers": 2,
+    "cell": "gru",
+    "hidden": 32,
+    "dropout": 0.3675115587766956,
+    "lr": 0.0047556137113230115,
+    "batch": 512,
+    "weight_decay": 0.0,
+    "pos_weight_mult": 1.4830471273649986,
+    "max_epocas": 15,
+    "paciencia": 3
+  },
+  "n_extra": 23,
+  "extras_arquivo": "extras.npz",
+  "melhor_epoca": 6,
+  "limiar": 0.6555,
+  "teste_uma_semente": {
+    "modelo": "RNN otimizada + extras (uma semente)",
+    "precisao": 0.143,
+    "recall": 0.578,
+    "f1": 0.229,
+    "pr_auc": 0.181,
+    "roc_auc": 0.688,
+    "alertas": 25063,
+    "tp": 3585,
+    "fp": 21478,
+    "fn": 2617
+  },
+  "teste_media_5_sementes": {
+    "sementes": [
+      42,
+      7,
+      123,
+      2024,
+      99
+    ],
+    "modelo": "RNN otimizada + extras (media de 5 sementes)",
+    "precisao": 0.15,
+    "recall": 0.577,
+    "f1": 0.237,
+    "pr_auc": 0.179,
+    "pr_auc_desvio": 0.0017,
+    "recall_desvio": 0.057,
+    "roc_auc": 0.691,
+    "alertas": 23989.8,
+    "tp": 3579.0,
+    "fp": 20410.8,
+    "fn": 2623.0
+  },
+  "referencia_baseline_etapa0": {
+    "pr_auc": 0.154,
+    "recall": 0.485,
+    "precisao": 0.137,
+    "f1": 0.214,
+    "roc_auc": 0.661
+  },
+  "referencia_etapa1_so_tuning": {
+    "sementes": [
+      42,
+      7,
+      123,
+      2024,
+      99
+    ],
+    "modelo": "RNN otimizada (media de 5 sementes)",
+    "precisao": 0.136,
+    "recall": 0.612,
+    "f1": 0.222,
+    "pr_auc": 0.1715,
+    "pr_auc_desvio": 0.007,
+    "recall_desvio": 0.033,
+    "roc_auc": 0.665,
+    "alertas": 27980.6,
+    "tp": 3794.0,
+    "fp": 24186.6,
+    "fn": 2408.0
+  },
+  "referencia_random_forest": {
+    "pr_auc": 0.185,
+    "recall": 0.553,
+    "precisao": 0.159,
+    "f1": 0.247,
+    "roc_auc": 0.697
+  }
+}
