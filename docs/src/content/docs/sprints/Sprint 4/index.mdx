@@ -1,6 +1,6 @@
 ---
 title: "Visão Geral e Entregas da Sprint 4"
-description: "Resumo da Sprint 4: detecção de anomalia com Isolation Forest (Modelo 8) sobre o painel porta-dia do Modelo 5."
+description: "Resumo da Sprint 4: Isolation Forest (Modelo 8) e Random Survival Forest (Modelo 9) sobre o painel porta-dia do Modelo 5."
 ---
 
 import { Image } from 'astro:assets';
@@ -13,7 +13,7 @@ import Background from '../../../../assets/sprints/sprint1/background_title.png'
 
 A **Sprint 4** volta ao mesmo problema da Sprint 2, antecipar uma ordem **ZM01** nos próximos 7 dias em uma porta de plataforma, porque o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) não chegou a um resultado útil para a manutenção: precisão de 15,9% no teste, a maior parte dos alertas sem falha na janela.
 
-O **Modelo 8** nasce daí. Em vez de repetir o Random Forest, pergunta se o dia da porta **destoa** do funcionamento normal. O detector é um **Isolation Forest** treinado só em dias sem falha; o score de anomalia entra depois em classificadores supervisionados, com limiar escolhido na validação. O artefato é o notebook `models/modelo-8/modelo_8.ipynb`, que lê o painel `models/modelo-5/painel.parquet`.
+O **Modelo 8** pergunta se o dia da porta destoa do normal. O **Modelo 9** pergunta quando vem a próxima ZM01 e só na hora do alerta lê P(T ≤ 7). Os dois leem o mesmo painel, `models/modelo-5/painel.parquet`.
 
 ---
 
@@ -24,6 +24,5 @@ O **Modelo 8** nasce daí. Em vez de repetir o Random Forest, pergunta se o dia 
 
 | Entrega | Algoritmo | Granularidade | Código |
 | :--- | :--- | :--- | :--- |
-| [**Modelo 8**](/sprints/sprint-4/modelos/modelo-8) | Isolation Forest + RF / Extra Trees / HGB | Porta × Dia (mesmo painel do Modelo 5) | [`models/modelo-8/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-8/) |
-
-Este Modelo 8 **não** é o Extra Trees citado na [comparação da Sprint 2](/sprints/sprint-2/comparacao_modelos). Aquele item não tinha notebook próprio neste repositório. Aqui, Extra Trees é só uma das cabeças supervisionadas que usam o score do Isolation Forest.
+| [**Modelo 8**](/sprints/sprint-4/modelos/modelo-8) | Isolation Forest | Porta × Dia | [`models/modelo-8/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-8/) |
+| [**Modelo 9**](/sprints/sprint-4/modelos/modelo-9) | Random Survival Forest | Porta × Dia | [`models/modelo-9/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-9/) |
