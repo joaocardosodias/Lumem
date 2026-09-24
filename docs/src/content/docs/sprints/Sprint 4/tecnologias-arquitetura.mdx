@@ -78,50 +78,6 @@ Em desenvolvimento, os serviços compartilham a rede Docker `backend-network`. N
 
 ---
 
-### 3.6 Observabilidade: OpenTelemetry, Prometheus, Grafana, Loki e Tempo
-
-A observabilidade foi separada em três sinais. Prometheus coleta métricas, Loki recebe logs estruturados e Tempo armazena traces. O OpenTelemetry Collector recebe os spans da API e do worker e encaminha os dados para o backend de traces. Grafana reúne as fontes em dashboards e permite relacionar um trace aos logs com o mesmo `trace_id`.
-
-#### Justificativa por critérios objetivos
-
-- **Custo:** A stack é composta por projetos abertos e pode rodar nos containers da VPS. Isso reduz custo de licença, mas transfere para a equipe a responsabilidade de retenção e capacidade de disco.
-- **Maturidade:** Os componentes têm integração conhecida com Go, Docker e Grafana. O uso de protocolos OTLP e métricas Prometheus reduz dependência de uma API proprietária.
-- **Aderência aos RNFs:** A propagação de contexto entre HTTP e jobs River permite investigar uma ingestão desde a requisição até o processamento assíncrono. Métricas de rota, runtime e host apoiam a análise de capacidade.
-
-#### Impacto arquitetural e risco
-
-- **Manutenibilidade:** Cada sinal tem uma responsabilidade clara e os dashboards são provisionados por arquivos versionados.
-- **Confiabilidade:** Logs e traces ajudam a diagnosticar falhas, mas não substituem alertas, backup ou um plano de resposta.
-- **Segurança:** Os endpoints de observabilidade ficam na rede interna e os logs devem evitar tokens, senhas e dados pessoais.
-- **Risco:** retenção excessiva pode consumir o disco da VPS. **Mitigação:** definir retenção, rotação, limites de volume e alertas de capacidade.
-
-<figure style="margin: 2rem 0; text-align: center;">
-  <Image
-    src={imagemObservabilidade}
-    alt="Fluxo de métricas, logs e traces entre API, workers, Prometheus, Loki, Tempo e Grafana"
-    width={1400}
-    format="png"
-  />
-  <figcaption><strong>Figura 2: Fluxo de observabilidade</strong></figcaption>
-</figure>
-
-### 3.7 Nuvem e rede: Azure, AWS EC2 e WireGuard
-
-A distribuição em duas VPSs separa o tráfego operacional do processamento de Machine Learning. A VPS 1 concentra frontend, API, worker de ingestão e observabilidade. A VPS 2 concentra inferência, treinamento e o MinIO dos artefatos. O PostgreSQL permanece no Supabase e é acessado por conexão configurada no ambiente.
-
-#### Justificativa por critérios objetivos
-
-- **Custo:** A configuração foi escolhida dentro dos créditos disponíveis e permite dimensionar o serviço de ML separadamente quando o treinamento consumir mais CPU ou memória.
-- **Aprendizado e operação:** VPSs Linux com Docker e Compose são conhecidas pela equipe e permitem controlar manualmente o processo de atualização.
-- **Segurança:** WireGuard cria um túnel privado entre `10.50.0.1` e `10.50.0.2`. A porta da API de ML não precisa ser publicada para a internet; o firewall limita o acesso à rede do túnel.
-
-#### Impacto arquitetural e risco
-
-- **Manutenibilidade:** O mesmo repositório e Compose são usados nos dois hosts; o `.env` define somente endereços e credenciais específicos do ambiente.
-- **Escalabilidade:** É possível trocar o tamanho de uma VPS ou mover o serviço para outro provedor sem mudar o contrato HTTP. A topologia atual não fornece failover automático.
-- **Confiabilidade:** O túnel tem keepalive e healthcheck, mas uma falha de qualquer VPS interrompe parte do fluxo.
-- **Risco:** latência, perda do túnel ou erro de atualização manual. **Mitigação:** monitorar o handshake, manter procedimento de rollback e testar o healthcheck antes de liberar uma versão.
-
 ## 3. Detalhamento e justificativa por camada tecnológica
 
 ### 3.1 Camada de Apresentação: React 19.2 + Vite 8 + CSS próprio
@@ -288,6 +244,52 @@ Como a POC é executada em duas VPSs e também precisa funcionar localmente, a i
   />
   <figcaption><strong>Figura 6: Implantação nas duas VPSs</strong></figcaption>
 </figure>
+
+---
+
+### 3.6 Observabilidade: OpenTelemetry, Prometheus, Grafana, Loki e Tempo
+
+A observabilidade foi separada em três sinais. Prometheus coleta métricas, Loki recebe logs estruturados e Tempo armazena traces. O OpenTelemetry Collector recebe os spans da API e do worker e encaminha os dados para o backend de traces. Grafana reúne as fontes em dashboards e permite relacionar um trace aos logs com o mesmo `trace_id`.
+
+#### Justificativa por critérios objetivos
+
+- **Custo:** A stack é composta por projetos abertos e pode rodar nos containers da VPS. Isso reduz custo de licença, mas transfere para a equipe a responsabilidade de retenção e capacidade de disco.
+- **Maturidade:** Os componentes têm integração conhecida com Go, Docker e Grafana. O uso de protocolos OTLP e métricas Prometheus reduz dependência de uma API proprietária.
+- **Aderência aos RNFs:** A propagação de contexto entre HTTP e jobs River permite investigar uma ingestão desde a requisição até o processamento assíncrono. Métricas de rota, runtime e host apoiam a análise de capacidade.
+
+#### Impacto arquitetural e risco
+
+- **Manutenibilidade:** Cada sinal tem uma responsabilidade clara e os dashboards são provisionados por arquivos versionados.
+- **Confiabilidade:** Logs e traces ajudam a diagnosticar falhas, mas não substituem alertas, backup ou um plano de resposta.
+- **Segurança:** Os endpoints de observabilidade ficam na rede interna e os logs devem evitar tokens, senhas e dados pessoais.
+- **Risco:** retenção excessiva pode consumir o disco da VPS. **Mitigação:** definir retenção, rotação, limites de volume e alertas de capacidade.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={imagemObservabilidade}
+    alt="Fluxo de métricas, logs e traces entre API, workers, Prometheus, Loki, Tempo e Grafana"
+    width={1400}
+    format="png"
+  />
+  <figcaption><strong>Figura 2: Fluxo de observabilidade</strong></figcaption>
+</figure>
+
+### 3.7 Nuvem e rede: Azure, AWS EC2 e WireGuard
+
+A distribuição em duas VPSs separa o tráfego operacional do processamento de Machine Learning. A VPS 1 concentra frontend, API, worker de ingestão e observabilidade. A VPS 2 concentra inferência, treinamento e o MinIO dos artefatos. O PostgreSQL permanece no Supabase e é acessado por conexão configurada no ambiente.
+
+#### Justificativa por critérios objetivos
+
+- **Custo:** A configuração foi escolhida dentro dos créditos disponíveis e permite dimensionar o serviço de ML separadamente quando o treinamento consumir mais CPU ou memória.
+- **Aprendizado e operação:** VPSs Linux com Docker e Compose são conhecidas pela equipe e permitem controlar manualmente o processo de atualização.
+- **Segurança:** WireGuard cria um túnel privado entre `10.50.0.1` e `10.50.0.2`. A porta da API de ML não precisa ser publicada para a internet; o firewall limita o acesso à rede do túnel.
+
+#### Impacto arquitetural e risco
+
+- **Manutenibilidade:** O mesmo repositório e Compose são usados nos dois hosts; o `.env` define somente endereços e credenciais específicos do ambiente.
+- **Escalabilidade:** É possível trocar o tamanho de uma VPS ou mover o serviço para outro provedor sem mudar o contrato HTTP. A topologia atual não fornece failover automático.
+- **Confiabilidade:** O túnel tem keepalive e healthcheck, mas uma falha de qualquer VPS interrompe parte do fluxo.
+- **Risco:** latência, perda do túnel ou erro de atualização manual. **Mitigação:** monitorar o handshake, manter procedimento de rollback e testar o healthcheck antes de liberar uma versão.
 
 ---
 
