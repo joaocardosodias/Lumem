@@ -11,11 +11,9 @@ import Background from '../../../../assets/sprints/sprint1/background_title.png'
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo Executivo da Sprint 4</h2>
 </div>
 
-A **Sprint 4** abre a linha de **detecção de anomalia** no mesmo problema da Sprint 2: antecipar uma ordem **ZM01** nos próximos 7 dias em uma porta de plataforma (PSD).
+A **Sprint 4** volta ao mesmo problema da Sprint 2, antecipar uma ordem **ZM01** nos próximos 7 dias em uma porta de plataforma, porque o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) não chegou a um resultado útil para a manutenção: precisão de 15,9% no teste, a maior parte dos alertas sem falha na janela.
 
-O [Modelo 5](/sprints/sprint-2/modelos/modelo-5) já mostrou que o histórico de alarmes e manutenção tem sinal preditivo com Random Forest. O **Modelo 8** testa outra pergunta: o dia da porta se **desvia** do funcionamento normal o bastante para merecer alerta? O detector é um **Isolation Forest** treinado só em dias sem falha; o score de anomalia entra depois em classificadores supervisionados (Random Forest, Extra Trees, HistGradientBoosting e o blend), com limiar escolhido na validação.
-
-Não há deploy nem API nesta entrega. O artefato é o notebook `models/modelo-8/modelo_8.ipynb`, que lê o painel `models/modelo-5/painel.parquet`.
+O **Modelo 8** nasce daí. Em vez de repetir o Random Forest, pergunta se o dia da porta **destoa** do funcionamento normal. O detector é um **Isolation Forest** treinado só em dias sem falha; o score de anomalia entra depois em classificadores supervisionados, com limiar escolhido na validação. O artefato é o notebook `models/modelo-8/modelo_8.ipynb`, que lê o painel `models/modelo-5/painel.parquet`.
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Modelo 8"
+title: "Modelo 8 - Detecção de anomalia"
 description: "Isolation Forest para detecção de anomalia nas portas de plataforma, usando o mesmo painel e o mesmo alvo do Modelo 5."
 ---
 
@@ -11,9 +11,9 @@ import Background from '../../../../../assets/sprints/sprint1/background_title.p
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
 </div>
 
-O sistema já tem uma forma de prever falha. Para cada porta e cada dia, o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) estima se uma corretiva emergencial ZM01 vai aparecer nos sete dias seguintes, a partir do histórico de alarmes e de manutenção. Esse caminho funciona e já está documentado. Ainda assim, ele olha o problema sempre do mesmo lado: aprende, com o rótulo na mão, quais combinações de features costumam anteceder uma ordem.
+O [Modelo 5](/sprints/sprint-2/modelos/modelo-5) foi a primeira tentativa séria de prever, porta a porta e dia a dia, se uma corretiva emergencial ZM01 aparece nos sete dias seguintes. No teste, a precisão ficou em 15,9%: de cada seis alertas, cinco não viravam falha. O recall chegou a 55,3% e o F1 a 0,245. Por evento o quadro melhorava um pouco, mas ainda assim só um em cada quatro avisos encontrava uma quebra real. Para a manutenção, isso não prioriza. O modelo avisa demais e acerta de menos.
 
-O Modelo 8 nasceu da vontade de experimentar outro olhar sobre a mesma pergunta. Em vez de perguntar direto se a porta quebra em sete dias, perguntamos se o dia de hoje se parece com o cotidiano daquela porta ou se ele destoa. Uma porta que começa a sair do próprio padrão pode estar pedindo atenção antes de o histórico de ZM01 se repetir. Se esse desvio antecipar corretiva, ganhamos um sinal que o Random Forest sozinho não formula. Se a falha se parecer com um dia normal de telemetria, aprendemos o limite dessa ideia.
+O Modelo 8 parte desse resultado. Em vez de insistir no mesmo Random Forest, mudamos a pergunta. Não perguntamos direto se a porta quebra em sete dias; perguntamos se o dia de hoje destoa do cotidiano dela. A hipótese é que o Modelo 5 falha, em parte, porque trata a falha como um padrão que se repete nas features, quando muita ZM01 pode ser justamente o dia que sai do normal. Se esse desvio antecipar corretiva, ganhamos um sinal que o modelo anterior não formulou. Se a falha se parecer com um dia comum de telemetria, entendemos por que o Random Forest também se perdeu.
 
 Como a pergunta é a mesma, o notebook lê o painel porta-dia do Modelo 5, em `models/modelo-5/painel.parquet`. Cada linha é uma porta em um dia: cerca de 480 portas, dez estações, pouco mais de 300 mil observações. O alvo vale 1 quando existe ZM01 depois daquele dia e dentro de uma semana. A contagem que gera esse rótulo, `n_falhas_7d_futuro`, não entra no modelo.
 
@@ -77,4 +77,4 @@ O Isolation Forest sozinho ficou pouco acima do acaso: duas colunas simples, rec
 
 O limiar em F2 pega quase todos os eventos e alerta demais. O limiar em F0,5 acerta mais quando alerta e deixa passar a maior parte das falhas. A comparação entre Random Forest, Extra Trees, HistGradientBoosting e o blend, com limiar de F1 na validação, ainda deve ser lida na saída do notebook.
 
-Detectar anomalia descreve o desvio da porta. Não descreve, sozinho, a ZM01 dos próximos sete dias. Se o F1 da comparação chegar perto do Modelo 5, o score `iso` pode ser tentado no mesmo painel que a predição atual já consome. Se ficar atrás, o caminho é voltar às features de desvio e ao recorte de dias usados para desenhar o normal da porta.
+Detectar anomalia descreve o desvio da porta. Não descreve, sozinho, a ZM01 dos próximos sete dias, e por isso ainda não resolve o que o Modelo 5 deixou aberto: alerta demais, acerto de menos. Se a comparação das árvores subir a precisão sem derrubar o recall ao chão, o score `iso` vira candidato a entrar no mesmo painel. Se ficar atrás do próprio Modelo 5, o caminho não é repetir o Random Forest. É voltar às features de desvio e ao recorte de dias usados para desenhar o normal da porta.
