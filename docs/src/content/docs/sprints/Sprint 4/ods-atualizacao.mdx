@@ -58,7 +58,7 @@ A revisão abaixo verifica quais dessas relações são sustentadas pelo que foi
 
 As relações com as metas são interpretações do grupo sobre o Lumem, fundamentadas nas evidências do projeto e nas definições da ONU. Não representam cumprimento integral das metas.
 
-### 2.1. ODS 9 — Manter com justificativa corrigida
+### 2.1. ODS 9 — Indústria, Inovação e Infraestrutura
 
 A [meta 9.1](https://brasil.un.org/pt-br/sdgs/9) trata de infraestrutura de qualidade, confiável, sustentável e resiliente. O Lumem se relaciona ao apoio à confiabilidade das portas de plataforma: reúne históricos, estima risco e gera inspeções para orientar a manutenção desse ativo.
 
@@ -66,7 +66,7 @@ O fluxo está implementado em `src/backend/internal/usecase/trigger_predictions_
 
 **Correção da justificativa:** mantemos o ODS 9 pelo suporte desenvolvido, retirando afirmações de redução já alcançada de paradas, custos ou substituições. O escopo documentado fica limitado à Linha 4-Amarela. Melhorias de confiabilidade ainda precisam ser verificadas por indicadores de falhas e indisponibilidade; não se demonstram efeitos sobre tarifas ou ampliação do acesso.
 
-### 2.2. ODS 11 — Manter como contribuição indireta
+### 2.2. ODS 11 — Cidades e Comunidades Sustentáveis
 
 A [meta 11.2](https://brasil.un.org/pt-br/sdgs/11) busca acesso a transporte seguro, sustentável e acessível. O Lumem pode contribuir por meio do apoio às equipes que mantêm as portas do transporte metroviário. O contexto dos ativos e a organização das inspeções podem favorecer intervenções oportunas e a continuidade do serviço.
 
@@ -74,7 +74,7 @@ As evidências são `src/frontend/src/pages/Portas.jsx`, `src/frontend/src/pages
 
 **Correção da justificativa:** o sistema não detecta pessoas no vão, não comanda portas nem bloqueia partidas de trens. Por isso, retiramos as afirmações de prevenção de acidentes fatais e de disponibilidade garantida. Também não foram demonstrados efeitos sobre pontualidade, tarifas, expansão da rede ou acessibilidade. O alinhamento permanece restrito ao apoio às condições de funcionamento do transporte existente.
 
-### 2.3. ODS 12 — Retirar do alinhamento positivo atual
+### 2.3. ODS 12 — Consumo e Produção Responsáveis
 
 As [metas 12.2 e 12.5](https://brasil.un.org/pt-br/sdgs/12) tratam do uso eficiente de recursos e da redução de resíduos. A justificativa inicial dependia de estimar a vida útil e otimizar a substituição de componentes. O modelo entregue, porém, estima a ocorrência de uma **corretiva emergencial ZM01 nos próximos sete dias**, conforme `models/modelo-5/construir_painel.py`.
 
