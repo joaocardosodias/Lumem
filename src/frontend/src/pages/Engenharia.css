@@ -707,7 +707,8 @@
 
 .lab-official dl {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(150px, 1.55fr) repeat(3, minmax(92px, 1fr));
+  min-width: 0;
   margin: 0;
   border: 1px solid #e0e7f0;
   border-radius: 9px;
@@ -718,6 +719,7 @@
 .lab-official dl > div {
   display: grid;
   align-content: center;
+  min-width: 0;
   gap: 8px;
   padding: 14px 18px;
   border-right: 1px solid #e1e7ef;
@@ -725,6 +727,15 @@
 
 .lab-official dt { color: #64748a; font-size: 10.5px; font-weight: 700; }
 .lab-official dd { margin: 0; color: #152b49; font-size: 22px; font-weight: 800; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.lab-official dd.lab-official__model-version {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  letter-spacing: -.012em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .lab-official dd.lab-official__date { font-size: 15px; }
 
 .lab-workbench {
@@ -832,6 +843,7 @@
 
 @media (max-width: 650px) {
   .lab-official dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lab-official__model-metric { grid-column: 1 / -1; }
   .lab-official dl > div { padding: 13px; border-top: 1px solid #e1e7ef; }
   .lab-official, .lab-controls, .lab-results { padding: 19px; }
   .lab-results > header { align-items: flex-start; flex-direction: column; gap: 13px; }

@@ -872,7 +872,15 @@ function Engenharia() {
               <p>Esta é a rodada que alimenta Dashboard, Predições e a abertura de inspeções preventivas.</p>
             </div>
             <dl>
-              <div><dt>Modelo</dt><dd>{officialRun?.model_version || model?.version || 'Indisponível'}</dd></div>
+              <div className="lab-official__model-metric">
+                <dt>Modelo</dt>
+                <dd
+                  className="lab-official__model-version"
+                  title={officialRun?.model_version || model?.version || 'Indisponível'}
+                >
+                  {officialRun?.model_version || model?.version || 'Indisponível'}
+                </dd>
+              </div>
               <div><dt>Threshold</dt><dd>{Number(officialRun?.threshold_used ?? config.threshold ?? 0.5).toFixed(2)}</dd></div>
               <div><dt>Portas em risco</dt><dd>{officialRun?.total_doors_at_risk ?? '—'}</dd></div>
               <div><dt>Última publicação</dt><dd className="lab-official__date">{officialRun?.published_at ? new Date(officialRun.published_at).toLocaleDateString('pt-BR') : '—'}</dd></div>
