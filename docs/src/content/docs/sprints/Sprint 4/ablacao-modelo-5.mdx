@@ -3,7 +3,13 @@ title: "Modelo 5.1 — Teste de ablação do número da porta"
 description: "Ablação de num_porta, seleção de atributos com SHAP e critérios para a escolha da versão do Modelo 5."
 ---
 
-## Objetivo
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
 
 Na Sprint 4, foi realizado um teste de **ablação** no Modelo 5, baseado em `RandomForestClassifier`, para avaliar a contribuição da variável `num_porta`. O experimento foi registrado no notebook `models/modelo-5/modelo_5.1/modelo_5.1.ipynb`.
 
@@ -11,7 +17,10 @@ Ablação significa retirar uma parte do modelo e comparar o desempenho com uma 
 
 A versão 5.1 foi criada para teste. Seus artefatos foram salvos separadamente, sem substituir o modelo da aplicação.
 
-## Motivação: identificação e capacidade de generalização
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Motivação: identificação e capacidade de generalização</h2>
+</div>
 
 O feedback recebido solicitava justificar o uso da variável porta como preditor numérico ou testar sua remoção, investigando uma possível dependência de identificadores ou posições físicas.
 
@@ -25,7 +34,10 @@ Por isso, o teste retirou apenas `num_porta`. Foram preservados:
 - os atributos de alarmes e histórico de manutenção, que descrevem o comportamento observado da porta;
 - `id_porta` como chave de junção e avaliação, sem utilizá-lo como preditor.
 
-## Protocolo experimental
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Protocolo experimental</h2>
+</div>
 
 ### Variantes comparadas
 
@@ -75,7 +87,10 @@ A seleção SHAP utilizou uma amostra de **400 registros do treino**, com sement
 
 O notebook inclui verificações da separação temporal e da ausência de `num_porta` nas listas de atributos dos candidatos. Na execução do experimento, as 14 células de código concluíram sem erro, e os dois artefatos exportados foram recarregados para verificar a correspondência entre os atributos declarados e os utilizados pelos modelos.
 
-## Como o SHAP foi utilizado
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Como o SHAP foi utilizado</h2>
+</div>
 
 ### Origem dos 82 atributos
 
@@ -128,7 +143,10 @@ Como exemplo apenas ilustrativo, se a maior importância média fosse `0,04`, o 
 
 **“Modelo com SHAP” designa, nesta documentação, o Random Forest retreinado com atributos selecionados por SHAP.** O SHAP não substitui o classificador, não adiciona um score à previsão e não precisa ser executado para cada nova inferência desse candidato.
 
-## Resultados
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Resultados</h2>
+</div>
 
 As métricas abaixo foram extraídas de `comparacao_modelos.csv`. Todas são calculadas por **registro porta-dia**. Um alerta representa uma classificação positiva em um dia, não necessariamente uma inspeção distinta ou uma falha independente.
 
@@ -171,7 +189,10 @@ Em relação à ablação direta, o candidato selecionado por SHAP passou de **5
 
 O candidato com seleção SHAP foi o melhor **no recall observado**, mas não foi um vencedor geral. Para a prioridade de reduzir falhas não antecipadas, ele é um candidato relevante à próxima avaliação, condicionado à capacidade de manutenção.
 
-## Limites da interpretação
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Limites da interpretação</h2>
+</div>
 
 O teste produziu candidatos sem `num_porta` com desempenho de ordenação próximo ao controle. Isso sustenta a possibilidade de retirar a variável, mas não demonstra que utilizá-la seja incorreto ou que sua contribuição seja irrelevante em qualquer cenário. A ablação foi mantida como experimento, sem promoção automática para o serviço de previsão.
 
@@ -183,7 +204,10 @@ A interpretação está sujeita aos seguintes limites:
 - **Operação:** as variantes foram avaliadas com limiares próprios, sem impor o mesmo orçamento diário de inspeções.
 - **Unidade de avaliação:** os resultados desta comparação são por porta-dia; registros próximos podem se referir à mesma falha futura.
 
-## Direcionamento final
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Direcionamento final</h2>
+</div>
 
 ### Recomendação atual
 
@@ -209,7 +233,10 @@ Se o ganho de recall desaparecer ao igualar a capacidade de inspeção, ou se n�
 
 Para expansão a novas portas ou estações, acrescenta-se uma condição: avaliar equipamentos ou instalações não vistos durante o treinamento. O teste temporal realizado não sustenta, sozinho, essa generalização.
 
-## Evidências e artefatos
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Evidências e artefatos</h2>
+</div>
 
 O notebook está em `models/modelo-5/modelo_5.1/modelo_5.1.ipynb`. Os arquivos abaixo ficam em `models/modelo-5/modelo_5.1/artefatos/modelo_5_1/`:
 
