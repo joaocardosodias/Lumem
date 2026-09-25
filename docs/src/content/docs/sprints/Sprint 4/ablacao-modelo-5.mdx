@@ -1,6 +1,6 @@
 ---
 title: "Modelo 5.1 — Teste de ablação do número da porta"
-description: "Motivação, protocolo e resultados da retirada de num_porta do Random Forest do Modelo 5."
+description: "Ablação de num_porta, seleção de atributos com SHAP e critérios para a escolha da versão do Modelo 5."
 ---
 
 ## Objetivo
@@ -75,6 +75,59 @@ A seleção SHAP utilizou uma amostra de **400 registros do treino**, com sement
 
 O notebook inclui verificações da separação temporal e da ausência de `num_porta` nas listas de atributos dos candidatos. Na execução do experimento, as 14 células de código concluíram sem erro, e os dois artefatos exportados foram recarregados para verificar a correspondência entre os atributos declarados e os utilizados pelos modelos.
 
+## Como o SHAP foi utilizado
+
+### Origem dos 82 atributos
+
+Os atributos foram construídos a partir das bases de alarmes e das ordens de manutenção. Cada registro reúne informações de uma porta em uma data. O script `models/modelo-5/construir_painel.py` gera o painel, e o notebook 5.1 acrescenta indicadores derivados e define as colunas utilizadas no treinamento. **O SHAP não criou os atributos: ele avaliou a influência dos que já existiam.**
+
+| Grupo de atributos | Quantidade sem `num_porta` | Exemplos |
+|---|---:|---|
+| Contagens de alarmes em janelas temporais | 55 | `n_LSD_7d`, `n_total_30d`, `n_tecnicos_3d`. |
+| Duração dos alarmes | 2 | `dur_max_7d`, `dur_max_30d`. |
+| Contagens ponderadas pela recência | 5 | `n_total_decaido_h3`, `n_LSD_decaido_h7`. |
+| Alarmes do módulo da plataforma | 1 | `n_mdu_7d`. |
+| Histórico de ordens SAP | 8 | `dias_desde_zm01`, `zm02_90d`, `zm03_90d`. |
+| Calendário | 2 | `dia_semana`, `fim_de_semana`. |
+| Ciclo e recorrência de manutenção | 4 | `n_corretivas_historico_total`, `intervalo_medio_zm01`. |
+| Indicadores derivados de alarmes | 3 | `rampa_7d`, `razao_7d_30d`, `frac_tecnicos_30d`. |
+| Localização | 2 | `est_cod`, `via_cod`. |
+| **Total** | **82** | |
+
+As 55 contagens correspondem a **11 indicadores calculados em cinco janelas: 1, 3, 7, 14 e 30 dias**. Por exemplo, `n_LSD_1d` e `n_LSD_30d` descrevem o mesmo tipo de alarme em escalas diferentes, permitindo representar tanto alterações recentes quanto comportamentos persistentes. Os históricos de alarmes e manutenção consideram informações anteriores à data da previsão.
+
+Colunas de identificação e organização, como `id_porta` e `Data`, e o alvo futuro `y` não entram como preditores. A quantidade de colunas do painel, portanto, não é igual à quantidade de atributos de entrada.
+
+### Da explicação de uma previsão à seleção de atributos
+
+SHAP significa *SHapley Additive exPlanations*. Neste experimento, foi utilizado `shap.TreeExplainer` para atribuir a cada atributo uma contribuição para a saída do Random Forest, em relação ao valor de referência do explicador. Foram consideradas as contribuições para a classe de falha.
+
+Uma contribuição positiva desloca a saída explicada em direção à classe de falha; uma contribuição negativa a desloca no sentido oposto. Por exemplo, o modelo pode atribuir contribuição positiva a uma duração elevada de alarmes em determinada previsão. Esse valor descreve uma associação aprendida pelo modelo, não prova que o atributo causou a falha e não precisa ter o mesmo sinal para todas as portas.
+
+A seleção seguiu estas etapas:
+
+1. Treinar o Random Forest sem `num_porta`, utilizando os **82 atributos**.
+2. Calcular os valores SHAP em **400 registros do treino**, selecionados com semente 42.
+3. Para cada atributo, calcular a **média dos valores absolutos de SHAP** nessa amostra. O valor absoluto evita que contribuições positivas e negativas se anulem ao medir influência.
+4. Manter os atributos com importância média de pelo menos **1% da importância do atributo mais influente**.
+5. Retreinar o Random Forest com os **70 atributos restantes** e escolher seu limiar pelo mesmo critério de F1 na validação.
+6. Avaliar o candidato no conjunto de teste reservado.
+
+O fluxo do experimento foi:
+
+```text
+83 atributos candidatos
+    → retirada de num_porta
+82 atributos
+    → seleção por importância SHAP no treino
+70 atributos
+    → retreinamento do Random Forest e avaliação
+```
+
+Como exemplo apenas ilustrativo, se a maior importância média fosse `0,04`, o corte seria `0,0004`. Esse corte é uma regra experimental de seleção, não um teste estatístico de relevância. Importância baixa na amostra não demonstra que um atributo nunca seja útil, especialmente em padrões raros ou quando há atributos correlacionados.
+
+**“Modelo com SHAP” designa, nesta documentação, o Random Forest retreinado com atributos selecionados por SHAP.** O SHAP não substitui o classificador, não adiciona um score à previsão e não precisa ser executado para cada nova inferência desse candidato.
+
 ## Resultados
 
 As métricas abaixo foram extraídas de `comparacao_modelos.csv`. Todas são calculadas por **registro porta-dia**. Um alerta representa uma classificação positiva em um dia, não necessariamente uma inspeção distinta ou uma falha independente.
@@ -104,7 +157,21 @@ O candidato com 70 atributos alcançou o maior recall, **70,70%**, mas também e
 
 A PR-AUC permaneceu próxima da referência. Assim, o recall maior não demonstra uma superioridade geral: a escolha depende da capacidade de inspeção e do custo operacional dos alertas. Também não é possível atribuir esse resultado somente à remoção de `num_porta`, pois houve uma segunda mudança na seleção de atributos.
 
-## Conclusão e limites
+Em relação à ablação direta, o candidato selecionado por SHAP passou de **57,24% para 70,70% de recall**, de **15,56% para 13,66% de precisão** e de **22.815 para 32.092 alertas**. O limiar também mudou, de `0,5169` para `0,4684`. Como o modelo foi retreinado e a escala dos scores pode mudar, o efeito da seleção não foi isolado do efeito do limiar. Não se pode atribuir todo o aumento de recall ao SHAP.
+
+### Qual variante foi melhor?
+
+| Critério observado no teste | Variante com melhor resultado | Interpretação |
+|---|---|---|
+| Maior recall | Sem `num_porta` + SHAP: 70,70%. | Detectou a maior proporção de registros positivos, com maior volume de alertas. |
+| Maior precisão | Controle: 16,10%. | Teve a maior proporção de acertos entre seus alertas. |
+| Maior F1 | Controle: 0,2473. | Obteve o maior valor da combinação entre precisão e recall. |
+| PR-AUC e ROC-AUC | Valores próximos nas três variantes. | As pequenas diferenças numéricas não demonstram superioridade estatística. |
+| Menor volume de alertas | Controle: 20.513. | Demandaria menos encaminhamentos se cada alerta gerasse uma ação; o fluxo real precisa tratar repetições. |
+
+O candidato com seleção SHAP foi o melhor **no recall observado**, mas não foi um vencedor geral. Para a prioridade de reduzir falhas não antecipadas, ele é um candidato relevante à próxima avaliação, condicionado à capacidade de manutenção.
+
+## Limites da interpretação
 
 O teste produziu candidatos sem `num_porta` com desempenho de ordenação próximo ao controle. Isso sustenta a possibilidade de retirar a variável, mas não demonstra que utilizá-la seja incorreto ou que sua contribuição seja irrelevante em qualquer cenário. A ablação foi mantida como experimento, sem promoção automática para o serviço de previsão.
 
@@ -116,7 +183,31 @@ A interpretação está sujeita aos seguintes limites:
 - **Operação:** as variantes foram avaliadas com limiares próprios, sem impor o mesmo orçamento diário de inspeções.
 - **Unidade de avaliação:** os resultados desta comparação são por porta-dia; registros próximos podem se referir à mesma falha futura.
 
-Uma próxima decisão sobre adoção pode comparar as variantes sob o mesmo limite de alertas na validação e confirmar os resultados em outro período. Para expansão a novas instalações, será necessária uma avaliação que também reserve equipamentos ou estações não vistos durante o treinamento.
+## Direcionamento final
+
+### Recomendação atual
+
+**Manter o modelo da aplicação e levar o candidato sem `num_porta` com seleção SHAP para uma comparação operacional controlada.** A ablação direta deve continuar como referência intermediária, permitindo distinguir o efeito da retirada do identificador do efeito adicional da seleção de atributos.
+
+Essa é uma recomendação de próximos passos, não uma promoção realizada. O recall de 70,70% justifica investigar o candidato, mas a precisão menor e o aumento de 56,4% nos alertas em relação ao controle impedem recomendar sua adoção apenas com os resultados atuais.
+
+### Protocolo proposto para a próxima decisão
+
+| Etapa | Ação proposta | Evidência esperada |
+|---|---|---|
+| 1. Definir a capacidade operacional | Estabelecer com a operação quantas portas podem ser inspecionadas por dia e como tratar alertas repetidos de uma mesma porta. | Um orçamento de inspeções **K**, aplicável às três variantes. |
+| 2. Comparar sob a mesma capacidade | Na validação, ordenar as portas pelo score de cada modelo e aplicar o mesmo limite K e a mesma regra de repetição. | Recall sob o mesmo orçamento, precisão e quantidade de encaminhamentos. Usar apenas o mesmo limiar numérico não garante uma comparação equivalente entre modelos. |
+| 3. Confirmar a estabilidade | Repetir a comparação em janelas temporais, preservando os intervalos do horizonte, e verificar a sensibilidade à semente e à amostra SHAP. | Consistência do resultado entre períodos e estimativas de incerteza que considerem a dependência dos registros. |
+| 4. Avaliar em período reservado | Fixar atributos, parâmetros e política de alertas antes de avaliar um período ainda não usado para orientar escolhas. | Evidência independente de ganho operacional; o teste já examinado não deve ser reutilizado para escolher a configuração. |
+| 5. Decidir sobre a adoção | Comparar os resultados com os critérios acordados antes da avaliação final. | Registro da decisão e da versão candidata, sem promoção automática por uma única métrica. |
+
+### Critérios para avançar ou manter a referência
+
+O candidato deve avançar somente se **antecipar mais falhas sob o mesmo orçamento operacional**, respeitar o piso de precisão acordado com a operação e apresentar desempenho consistente entre períodos. O valor de K, o piso de precisão e o ganho mínimo aceitável ainda precisam ser definidos; este experimento não estabeleceu esses requisitos.
+
+Se o ganho de recall desaparecer ao igualar a capacidade de inspeção, ou se não houver evidência suficiente de estabilidade, a recomendação é manter a referência em uso. O benefício esperado precisa ser demonstrado antes de uma troca de modelo.
+
+Para expansão a novas portas ou estações, acrescenta-se uma condição: avaliar equipamentos ou instalações não vistos durante o treinamento. O teste temporal realizado não sustenta, sozinho, essa generalização.
 
 ## Evidências e artefatos
 
