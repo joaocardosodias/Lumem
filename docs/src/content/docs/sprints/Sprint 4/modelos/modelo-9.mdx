@@ -1,6 +1,6 @@
 ---
 title: "Modelo 9 — Random Survival Forest"
-description: "Análise de sobrevivência no painel porta-dia do Modelo 5: tempo até a próxima ZM01, com alerta em P(T ≤ 7)."
+description: "Análise de sobrevivência no painel porta-dia, com tempo até a próxima ZM01 e alerta em P(T ≤ 7)."
 ---
 
 import { Image } from 'astro:assets';
@@ -11,13 +11,13 @@ import Background from '../../../../../assets/sprints/sprint1/background_title.p
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
 </div>
 
-O [Modelo 5](/sprints/sprint-2/modelos/modelo-5) foi a primeira tentativa séria de prever, porta a porta e dia a dia, se uma corretiva emergencial ZM01 aparece nos sete dias seguintes. No teste, a precisão ficou em 15,9%: de cada seis alertas, cinco não viravam falha. O recall chegou a 55,3% e o F1 a 0,245. Para a manutenção, isso não prioriza. O modelo avisa demais e acerta de menos.
+A manutenção precisa saber, porta a porta e dia a dia, se uma corretiva emergencial ZM01 aparece na semana seguinte. Cortar o tempo nesse sim ou não deixa o alerta barato demais, porque a maior parte dos avisos não encontra falha e a operação não consegue priorizar. O [Modelo 8](/sprints/sprint-4/modelos/modelo-8) mudou a entrada e perguntou se o dia destoa do cotidiano da porta. A ZM01, na maior parte das vezes, não era um ponto estranho. O Isolation Forest quase não separava falha de dia comum.
 
-O [Modelo 8](/sprints/sprint-4/modelos/modelo-8) partiu desse resultado e mudou a entrada: em vez de insistir no mesmo Random Forest, perguntou se o dia destoa do cotidiano da porta. A ZM01, na maior parte das vezes, não era um ponto estranho. O Isolation Forest quase não separava falha de dia comum, e o alerta continuou barato demais. Os dois modelos ainda tratavam o tempo do mesmo jeito. Se a próxima corretiva cai no oitavo dia, ou daqui a um mês, a linha vira zero e some do aprendizado. O modelo só vê “quebra nesta semana” ou “não quebra”. Ele não vê se a porta está perto ou longe da próxima ordem.
+Os dois jeitos ainda tratam o tempo igual. Se a próxima corretiva cai no oitavo dia, ou daqui a um mês, a linha vira zero e some do aprendizado. O modelo só vê “quebra nesta semana” ou “não quebra”. Ele não vê se a porta está perto ou longe da próxima ordem.
 
-O Modelo 9 nasce daí. A pergunta deixa de ser se a falha cabe em sete dias e passa a ser quando ela vem. Cada porta, em cada dia, ganha o tempo até a próxima ZM01. Se essa ordem ainda não aconteceu no período que o bloco pode olhar, a linha fica em aberto: o modelo sabe que a porta sobreviveu até ali, e não finge que a falha nunca vai existir. Na hora de avisar a operação, a curva é lida no sétimo dia. O score é a probabilidade de a corretiva chegar dentro da semana. A manutenção recebe a mesma decisão de sempre; o treino, no caminho, viu o calendário inteiro da quebra, não só a janela binária.
+O Modelo 9 nasce daí. A pergunta deixa de ser se a falha cabe em sete dias e passa a ser quando ela vem. Cada porta, em cada dia, ganha o tempo até a próxima ZM01. Se essa ordem ainda não aconteceu no período que o bloco pode olhar, a linha fica em aberto. O modelo sabe que a porta sobreviveu até ali e não finge que a falha nunca vai existir. Na hora de avisar a operação, a curva é lida no sétimo dia. O score é a probabilidade de a corretiva chegar dentro da semana. A manutenção recebe a mesma decisão de sempre. O treino, no caminho, viu o calendário inteiro da quebra, não só a janela binária.
 
-O notebook lê o mesmo painel do Modelo 5, em `models/modelo-5/painel.parquet`. As datas de quebra saem do histórico já montado: quando `dias_desde_zm01` vale 1, a ordem foi no dia anterior. Esse calendário coincide com o `y` de sete dias em 99,8% das linhas de teste. Treino, validação e teste acompanham o calendário, com a mesma folga de uma semana entre os blocos, para o rótulo do último dia de treino não atravessar a validação. O trabalho está em `models/modelo-9/modelo_9.ipynb`.
+O notebook lê o painel porta-dia em `models/modelo-5/painel.parquet`. As datas de quebra saem do histórico já montado. Quando `dias_desde_zm01` vale 1, a ordem foi no dia anterior. Esse calendário coincide com o `y` de sete dias em 99,8% das linhas de teste. Treino, validação e teste acompanham o calendário, com uma semana de folga entre os blocos, para o rótulo do último dia de treino não atravessar a validação. O trabalho está em `models/modelo-9/modelo_9.ipynb`.
 
 ---
 
@@ -26,22 +26,11 @@ O notebook lê o mesmo painel do Modelo 5, em `models/modelo-5/painel.parquet`. 
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Features</h2>
 </div>
 
-O painel já chega com janelas defasadas de um dia. O notebook acrescenta ritmo e ciclo, que no Modelo 5 foram o sinal mais forte, e deixa de fora `y` e `n_falhas_7d_futuro`. A seleção acontece só no treino, pelo PR-AUC da janela de sete dias; entre duas colunas quase iguais, fica uma. Sobram 17 features.
+O painel já chega com janelas defasadas de um dia. O notebook acrescenta ritmo e ciclo, o sinal que mais separa corretiva neste painel, e deixa de fora `y` e `n_falhas_7d_futuro`. A seleção acontece só no treino, pelo PR-AUC da janela de sete dias. Entre duas colunas quase iguais, fica uma. Sobram 17 features.
 
-Herdadas do painel:
+Do painel entram as **janelas de 7, 14 e 30 dias**, com totais, técnicos, LSD e duração máxima. O **decaimento** guarda `n_total_decaido_h3` e `n_LSD_decaido_h7`. O **histórico SAP** traz `zm01_30d`, `zm01_90d` e o tempo desde a última ordem, sempre olhando só para trás.
 
-* **Janelas 7, 14 e 30 dias.** Totais, técnicos, LSD e duração máxima.
-* **Decaimento.** `n_total_decaido_h3` e `n_LSD_decaido_h7`.
-* **Histórico SAP.** `zm01_30d`, `zm01_90d` e o tempo desde a última ordem, já causal.
-
-Criadas neste modelo:
-
-* **Rampa.** Última semana contra a anterior, nos totais e nos tipos críticos.
-* **Razão 7/30 e frações.** Se a atividade recente está concentrada ou só inchada.
-* **LSD × duração.** Persistência do alarme crítico.
-* **Frescor do decaimento.** Filtro curto contra o longo.
-* **Recência exponencial.** Troca o sentinela 9999 por um decaimento de trinta dias (`rec_zm01` foi a feature de maior PR-AUC no treino, 0,120).
-* **Concentração de ZM01 e razão de atraso.** Onde a porta está no próprio ciclo de corretiva.
+Em cima disso o notebook cria a **rampa** da última semana contra a anterior, nos totais e nos tipos críticos, e a **razão 7/30** com as frações que mostram se a atividade recente está concentrada ou só inchada. O produto **LSD × duração** marca o alarme crítico que não passa. O **frescor do decaimento** compara o filtro curto com o longo. A **recência exponencial** troca o sentinela 9999 por um decaimento de trinta dias e foi, no treino, a feature de maior PR-AUC (`rec_zm01`, 0,120). A **concentração de ZM01** e a **razão de atraso** situam a porta no próprio ciclo de corretiva.
 
 ---
 
@@ -50,7 +39,7 @@ Criadas neste modelo:
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Resultados</h2>
 </div>
 
-O limiar de P(T ≤ 7) maximiza o F1 na validação. O teste é o mesmo do Modelo 5. Evento e aviso agrupam dias seguidos na mesma porta: basta um acerto na janela para o episódio contar.
+O limiar de P(T ≤ 7) maximiza o F1 na validação. Evento e aviso agrupam dias seguidos na mesma porta. Basta um acerto na janela para o episódio contar.
 
 | Recorte de teste | Valor |
 |---|---:|
@@ -64,8 +53,7 @@ O limiar de P(T ≤ 7) maximiza o F1 na validação. O teste é o mesmo do Model
 |---|---:|---:|---:|---:|---:|---:|
 | Random Survival Forest | 0,128 | 0,493 | 0,203 | 0,149 | 0,61 | 0,20 |
 | [Modelo 8](/sprints/sprint-4/modelos/modelo-8), limiar F0,5 | 0,167 | 0,308 | 0,216 | 0,152 | 0,44 | 0,21 |
-| [Modelo 5](/sprints/sprint-2/modelos/modelo-5), mesmo teste | 0,159 | 0,553 | 0,245 | 0,186 | 0,65 | 0,26 |
 
-A sobrevivência não passou o Random Forest. Precisão, recall e F1 ficaram abaixo, e o PR-AUC (0,149) também. O recall de evento (0,61) chegou perto do Modelo 5 (0,65), com a mesma precisão de aviso perto de 20%. Em outras palavras: olhar o tempo até a falha não tirou o modelo do buraco em que o 5 já estava. As features que mais separam continuam sendo recência e contagem de ZM01, o ciclo que o Modelo 5 já usava como classificação binária.
+A sobrevivência não passou a classificação binária. Precisão, recall e F1 ficaram abaixo, e o PR-AUC (0,149) também. O recall de evento ficou em 0,61, com precisão de aviso perto de 20%. O modelo pega uma fatia parecida de episódios e ainda assim erra quatro avisos em cinco. Olhar o tempo até a falha não tirou o modelo do mesmo buraco. As features que mais separam continuam sendo recência e contagem de ZM01, o ciclo da própria porta.
 
-O que o experimento mostra é o limite da pergunta, não só o da floresta. Enquanto o sinal útil for “essa porta quebra de novo no próprio ritmo”, converter o alvo em tempo até o evento descreve o mesmo fenômeno com mais cerimônia e menos acerto na janela de sete dias. O próximo passo útil não é outra árvore no mesmo painel. É reduzir o universo antes de ranquear a porta, ou tratar o alerta como fila com orçamento, que é o que a precisão de 13% a 16% está pedindo.
+O que o experimento mostra é o limite da pergunta, não só o da floresta. Enquanto o sinal útil for “essa porta quebra de novo no próprio ritmo”, converter o alvo em tempo até o evento descreve o mesmo fenômeno com mais cerimônia e menos acerto na janela de sete dias. O próximo passo útil não é outra árvore no mesmo painel. É reduzir o universo antes de ranquear a porta, ou tratar o alerta como fila com orçamento, que é o que a precisão de 13% está pedindo.
