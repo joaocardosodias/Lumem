@@ -17,10 +17,13 @@ xgboost==3.4.0
 lightgbm==4.7.0
 catboost==1.2.10
 shap==0.52.0
-# Solicitado para otimizacao; nao ha import direto no codigo atual.
-optuna==3.6.1
+# Busca de hiperparametros da RNN otimizada (models/modelo-rnn-otimizado/).
+# O Modelo 4 usa optuna 3.6.1 no ambiente separado por restricao do FLAML.
+optuna==5.0.0
 
-# Redes recorrentes.
+# Redes recorrentes. Instale a build CPU a partir do indice do PyTorch, nao do PyPI
+# (pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu),
+# usada pelos notebooks de RNN em models/modelo-rnn/ e models/modelo-rnn-otimizado/
 torch==2.14.0
 
 # Visualizacao.

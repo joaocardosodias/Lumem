@@ -1,0 +1,35 @@
+{
+  "descricao": "Etapa 3: avaliacao final por evento/episodio (nao por linha), seed=42, mesma metodologia da secao 8 do modelo_5.ipynb",
+  "semente": 42,
+  "resultados": {
+    "RNN baseline (Etapa 0)": {
+      "recall_evento": 0.46,
+      "precisao_evento": 0.294,
+      "f1_evento": 0.359,
+      "episodios": 1093,
+      "alertas_diarios": 16189
+    },
+    "RNN otimizada (Etapa 1)": {
+      "recall_evento": 0.658,
+      "precisao_evento": 0.271,
+      "f1_evento": 0.384,
+      "episodios": 1813,
+      "alertas_diarios": 26042
+    },
+    "RNN otimizada + extras (Etapa 2)": {
+      "recall_evento": 0.691,
+      "precisao_evento": 0.298,
+      "f1_evento": 0.416,
+      "episodios": 1589,
+      "alertas_diarios": 26492
+    },
+    "Random Forest (Modelo 5)": {
+      "recall_evento": 0.65,
+      "precisao_evento": 0.26,
+      "f1_evento": 0.372,
+      "episodios": 1905,
+      "alertas_diarios": 21564
+    }
+  },
+  "conclusao": "Por evento/episodio, a RNN otimizada + extras supera o Random Forest nas tres metricas (recall, precisao e F1), invertendo a ordem observada por linha (PR-AUC), onde o RF ainda vinha um pouco a frente (0.185 vs 0.179)."
+}
