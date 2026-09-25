@@ -44,6 +44,6 @@ Adotar o **MinIO autocontido através da API compatível com Amazon S3** para ar
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go): interface `IngestionStorage` com `Store`, `Open` e `Delete`;
-- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go#L60-L80): configuração do AWS SDK v2 com `UsePathStyle = true` e endpoint customizado;
-- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go#L102-L144): implementação de `Store` com hashing SHA-256 e `PutObject`.
+- [`internal/usecase/port/services.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/services.go): interface `IngestionStorage` com `Store`, `Open` e `Delete`;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go#L60-80): configuração do AWS SDK v2 com `UsePathStyle = true` e endpoint customizado;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go#L102-144): implementação de `Store` com hashing SHA-256 e `PutObject`.

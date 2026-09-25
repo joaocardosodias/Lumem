@@ -1,4 +1,5 @@
 catboost==1.2.10
+ipython==9.16.1
 ipykernel==7.3.0
 joblib==1.5.3
 numpy==2.5.2

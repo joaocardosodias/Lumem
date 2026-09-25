@@ -44,7 +44,7 @@ Adotar estritamente a **Clean Architecture** combinada com o padrão **Hexagonal
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/usecase/port/repository.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/repository.go): contratos abstratos de persistência;
-- [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go): contratos de storage, mensageria e Unit of Work;
-- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go): implementação S3 atendendo à porta de storage;
-- [`cmd/api/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/worker/main.go): composition roots independentes.
+- [`internal/usecase/port/repository.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/repository.go): contratos abstratos de persistência;
+- [`internal/usecase/port/services.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/services.go): contratos de storage, mensageria e Unit of Work;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go): implementação S3 atendendo à porta de storage;
+- [`cmd/api/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/worker/main.go): composition roots independentes.
