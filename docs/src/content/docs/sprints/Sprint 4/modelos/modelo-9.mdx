@@ -19,8 +19,6 @@ O Modelo 9 nasce daí. A pergunta deixa de ser se a falha cabe em sete dias e pa
 
 O notebook lê o painel porta-dia em `models/modelo-5/painel.parquet`. As datas de quebra saem do histórico já montado. Quando `dias_desde_zm01` vale 1, a ordem foi no dia anterior. Esse calendário coincide com o `y` de sete dias em 99,8% das linhas de teste. Treino, validação e teste acompanham o calendário, com uma semana de folga entre os blocos, para o rótulo do último dia de treino não atravessar a validação. O trabalho está em `models/modelo-9/modelo_9.ipynb`.
 
----
-
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
   <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Features</h2>
@@ -31,8 +29,6 @@ O painel já chega com janelas defasadas de um dia. O notebook acrescenta ritmo 
 Do painel entram as **janelas de 7, 14 e 30 dias**, com totais, técnicos, LSD e duração máxima. O **decaimento** guarda `n_total_decaido_h3` e `n_LSD_decaido_h7`. O **histórico SAP** traz `zm01_30d`, `zm01_90d` e o tempo desde a última ordem, sempre olhando só para trás.
 
 Em cima disso o notebook cria a **rampa** da última semana contra a anterior, nos totais e nos tipos críticos, e a **razão 7/30** com as frações que mostram se a atividade recente está concentrada ou só inchada. O produto **LSD × duração** marca o alarme crítico que não passa. O **frescor do decaimento** compara o filtro curto com o longo. A **recência exponencial** troca o sentinela 9999 por um decaimento de trinta dias e foi, no treino, a feature de maior PR-AUC (`rec_zm01`, 0,120). A **concentração de ZM01** e a **razão de atraso** situam a porta no próprio ciclo de corretiva.
-
----
 
 <div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
