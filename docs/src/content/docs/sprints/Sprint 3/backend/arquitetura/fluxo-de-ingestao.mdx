@@ -42,7 +42,7 @@ A etapa síncrona é executada pelo contêiner `backend-linha4` com foco em resp
 
 1. **Validação de cabeçalho e extensão:** o handler inspeciona o multipart e rejeita imediatamente arquivos que não terminem em `.csv` ou `.xlsx`;
 2. **Streaming e hashing simultâneo:** o leitor HTTP é consumido via `io.Copy(io.MultiWriter(tmpFile, hasher), reader)`. O hash SHA-256 é calculado na mesma passagem em que o arquivo temporário é escrito em disco;
-3. **Envio ao Supabase Storage:** o arquivo é enviado ao bucket privado através de `s3.PutObject`, utilizando uma chave segura composta por UUID v4 e prefixo (ex: `ingestion/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.csv`). Isso elimina colisões entre arquivos de nomes idênticos enviados por operadores diferentes;
+3. **Envio ao MinIO:** o arquivo é enviado ao bucket privado `ingestion-uploads` através de `s3.PutObject`, utilizando uma chave composta por UUID v4 e prefixo. Isso elimina colisões entre arquivos de nomes idênticos;
 4. **Verificação de duplicidade:** o caso de uso consulta se o hash SHA-256 já existe em `file_uploads`. Se já tiver sido processado, a remoção do objeto recém-enviado ao S3 é enfileirada e a API retorna `409 Conflict` com o payload de Problem Details correspondente;
 5. **Transação atômica de enfileiramento:** se for inédito, uma transação `sql.Tx` insere o registro em `file_uploads` (com status `processing`) e chama `riverClient.InsertTx` para criar a linha na tabela `river_job`. As duas inserções são confirmadas no mesmo `COMMIT`;
 6. **Resposta ao cliente:** a API responde com código `202 Accepted`, informando o `upload_id` gerado.
@@ -107,12 +107,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10), ...;
 
 Ao executar o `DELETE` do `upload_id` dentro da mesma transação em que os novos registros são inseridos, qualquer reprocessamento substitui integralmente a tentativa anterior sem deixar linhas órfãs ou duplicadas.
 
-## 7. Políticas de segurança do bucket Supabase S3
+## 7. Políticas de segurança do MinIO
 
 Os arquivos de telemetria contêm histórico operacional de estações da Linha 4. Para assegurar a confidencialidade desses dados:
 - **Bucket estritamente privado:** o acesso público anônimo é bloqueado;
 - **Chaves de acesso segregadas:** credenciais de leitura e gravação no S3 são injetadas exclusivamente nas variáveis de ambiente dos contêineres (`S3_ACCESS_KEY_ID` e `S3_SECRET_ACCESS_KEY`);
-- **Restrição de MIME types no provedor:** o Supabase Storage rejeita uploads que não correspondam a `text/csv` ou à especificação OpenXML de planilhas Excel;
+- **Validação de tipo na aplicação:** o handler rejeita extensões e conteúdos diferentes de CSV e planilhas OpenXML antes de enviar o objeto ao MinIO;
 - **Limite de tamanho de arquivo:** evita ataques de negação de serviço por esgotamento de disco nos contêineres temporários.
 
 

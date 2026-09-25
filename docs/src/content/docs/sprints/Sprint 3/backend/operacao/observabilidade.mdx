@@ -117,7 +117,7 @@ Todos os contêineres emitem logs exclusivamente em formato **JSON estruturado**
 
 ### 3.3 Link derivado: Loki para Tempo
 
-No arquivo de provisionamento do datasource Loki no Grafana ([`docker/grafana/provisioning/datasources/datasources.yml`](file:///home/cardoso/GitHub/g04/docker/grafana/provisioning/datasources/datasources.yml)), foi configurado um **campo derivado (Derived Field)** que localiza o `trace_id` no JSON do log e gera um botão clicável que abre diretamente o trace no Grafana Tempo:
+No arquivo de provisionamento do datasource Loki no Grafana ([`src/backend/grafana/provisioning/datasources/loki.yaml`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/grafana/provisioning/datasources/loki.yaml)), foi configurado um **campo derivado (Derived Field)** que localiza o `trace_id` no JSON do log e gera um botão clicável que abre diretamente o trace no Grafana Tempo:
 
 ```yaml
 derivedFields:

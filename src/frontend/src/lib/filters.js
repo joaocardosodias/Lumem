@@ -1,9 +1,9 @@
 export const PAGE_SIZE = 50
 
 export const PERIODS = [
-  { id: '1d', label: '1d', days: 1 },
-  { id: '7d', label: '7d', days: 7 },
-  { id: '30d', label: '30d', days: 30 },
+  { id: '1d', label: '1 dia', days: 1 },
+  { id: '7d', label: '7 dias', days: 7 },
+  { id: '30d', label: '30 dias', days: 30 },
   { id: '6m', label: '6 meses', months: 6 },
   { id: '1y', label: '1 ano', years: 1 },
   { id: 'all', label: 'Tudo', days: null },

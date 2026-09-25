@@ -38,7 +38,7 @@ O operador submeteu uma planilha de alarmes ou manutenção, a API retornou cód
    - **Se `state = 'discarded'`:** o job esgotou as 5 tentativas e falhou definitivamente;
    - **Se nenhum registro for retornado:** a transação conjunta falhou na API ou o `upload_id` informado está incorreto.
 
-3. **Verificar conectividade do Worker com o Supabase Storage (S3):**
+3. **Verificar conectividade do Worker com o MinIO (S3):**
    Execute um teste de abertura de socket a partir da rede do contêiner:
    ```bash
    docker run --rm --network container:worker-linha4 curlimages/curl:8.16.0 -v -I "$S3_ENDPOINT"
@@ -47,7 +47,7 @@ O operador submeteu uma planilha de alarmes ou manutenção, a API retornou cód
 4. **Ação corretiva:**
    Nunca force manualmente o status para `completed` via SQL, pois isso deixaria as tabelas de alarmes vazias sem os registros correspondentes. Se o arquivo estiver corrompido, atualize o status para `failed` registrando o motivo em `error_log`.
 
-## 2. Runbook: Falhas de autorização no Supabase Storage (HTTP 403)
+## 2. Runbook: Falhas de autorização no MinIO (HTTP 403)
 
 ### Sintoma
 A API ou o Worker registram logs de erro ao tentar executar `PutObject`, `GetObject` ou `DeleteObject` retornando código HTTP 403 Forbidden.
@@ -58,8 +58,8 @@ A API ou o Worker registram logs de erro ao tentar executar `PutObject`, `GetObj
 |---|---|---|
 | **Chave S3 com espaços ou quebras de linha** | Inspecione `echo -n "$S3_SECRET_ACCESS_KEY" | wc -c` | Verifique se a variável no `.env` foi colada com espaços adicionais |
 | **Divergência de horário do servidor (Clock Skew)** | Compare `date -u` no host com um servidor NTP | Assinaturas AWS Signature v4 rejeitam requisições com drift > 15 minutos; sincronize com NTP |
-| **Endpoint incorreto** | Verifique se a URL termina com a porta correta | O Supabase Storage exige URL no padrão `https://<ref>.supabase.co/storage/v1/s3` |
-| **Permissões insuficientes no Bucket** | Acesse o painel Supabase Storage | Certifique-se de que o bucket `ingestion-uploads` existe e possui políticas para o usuário técnico |
+| **Endpoint incorreto** | Confirme a variável dentro do contêiner | Na rede Docker, o endpoint deve ser `http://minio:9000` |
+| **Permissões insuficientes no bucket** | Execute novamente o serviço `minio-init` | Confirme que `ingestion-uploads` existe e que a política `g04-app` está anexada ao usuário técnico |
 
 ## 3. Runbook: Indisponibilidade ou Saturação do PostgreSQL
 
@@ -76,7 +76,7 @@ A API falha ao responder endpoints com erro HTTP 500 (`ERR_INTERNAL_SERVER`) e o
    GROUP BY state;
    ```
 2. **Avaliar se `RIVER_MAX_WORKERS` está superdimensionado:**
-   Se o total de conexões estiver próximo do limite contratado no Supabase (ex: limite de 20 conexões na instância compartilhada), reduza a variável `RIVER_MAX_WORKERS` de `5` para `2` no `.env` e reinicie o serviço;
+   Se o total de conexões estiver próximo do limite do pooler Supabase, reduza `RIVER_MAX_WORKERS` no `.env` e reinicie o Worker;
 3. **Verificar transações presas em idle:**
    ```sql
    SELECT pid, now() - xact_start AS duration, query

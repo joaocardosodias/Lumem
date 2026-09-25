@@ -119,7 +119,7 @@ Poluir o código de produção com interfaces adicionais apenas para injetar err
 
 ## 5. Pipeline de Integração Contínua (GitLab CI)
 
-O arquivo [`.gitlab-ci.yml`](file:///home/cardoso/GitHub/g04/.gitlab-ci.yml) automatiza a validação de cada commit e merge request através de estágios independentes:
+O arquivo [`.gitlab-ci.yml`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/.gitlab-ci.yml) automatiza a validação de cada commit e merge request através de estágios independentes:
 
 | Estágio | Ferramentas e Comandos | Finalidade de Engenharia |
 |---|---|---|
@@ -128,8 +128,9 @@ O arquivo [`.gitlab-ci.yml`](file:///home/cardoso/GitHub/g04/.gitlab-ci.yml) aut
 | **Security** | `govulncheck ./...` | Varredura de vulnerabilidades conhecidas no grafo de dependências Go |
 | **Build** | `docker build` (multi-stage Go e Python slim) | Compilação estática dos artefatos Go e empacotamento do container de inferência |
 | **Scan** | `trivy image` | Auditoria de segurança nas imagens geradas da API, Worker e ML (bloqueia severidades alta e crítica) |
-| **Publish** | `docker push` para Azure Container Registry | Publicação independente das tags de `g04-backend-api`, `g04-backend-worker` e `g04-ml-service` no ACR |
 | **Deploy** | Astro Starlight build | Publicação contínua da documentação técnica no GitLab Pages |
+
+As imagens da aplicação não são publicadas em um registry. O pipeline prova que elas compilam e passam pela auditoria; nas VPS, o deploy é iniciado conscientemente por `git pull`, `docker compose build` e `docker compose up -d`.
 
 <figure style="margin: 2rem 0; text-align: center;">
   <Image

@@ -41,7 +41,7 @@ Nenhum arquivo dentro de `internal/domain` ou `internal/usecase` contém `import
 
 | Camada | Pacote Go | Responsabilidade | Exemplo prático |
 |---|---|---|---|
-| **Entidades** | `internal/domain` | Modelagem do negócio do metrô, cálculo de invariantes e validação estrutural | [`Alarm`](file:///home/cardoso/GitHub/g04/src/backend/internal/domain/alarm.go), [`Inspection`](file:///home/cardoso/GitHub/g04/src/backend/internal/domain/inspection.go), [`FileUpload`](file:///home/cardoso/GitHub/g04/src/backend/internal/domain/upload.go) |
+| **Entidades** | `internal/domain` | Modelagem do negócio do metrô, cálculo de invariantes e validação estrutural | [`Alarm`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/alarm.go), [`Inspection`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/inspection.go), [`FileUpload`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/upload.go) |
 | **Casos de Uso** | `internal/usecase` | Coordenação de fluxos de trabalho, orquestração de regras e publicação de DTOs | `IngestAlarmsUseCase`, `CreateInspectionUseCase`, `TriggerPredictionUseCase` |
 | **Portas** | `internal/usecase/port` | Interfaces abstratas consumidas pelos casos de uso | `AlarmRepository`, `IngestionStorage`, `UnitOfWork`, `MLClient` |
 | **Adaptadores** | `internal/adapter` | Implementação tecnológica concreta dos contratos das portas | `GinHandler`, `PostgresAlarmRepository`, `S3Storage`, `RiverQueue` |
@@ -53,7 +53,7 @@ O desacoplamento é alcançado definindo interfaces na camada de casos de uso e 
 
 ### Exemplo: Armazenamento de Arquivos de Ingestão
 
-O caso de uso de ingestão precisa salvar o arquivo bruto para processamento posterior, mas não deve conhecer o SDK da AWS ou a existência do Supabase.
+O caso de uso de ingestão precisa salvar o arquivo bruto para processamento posterior, mas não deve conhecer o SDK da AWS nem a implementação MinIO usada em produção.
 
 1. **A porta declara o contrato em `internal/usecase/port/services.go`:**
 ```go
@@ -106,8 +106,8 @@ func (f *fakeStorage) Store(ctx context.Context, name string, r io.Reader) (stri
 
 Como os casos de uso não instanciam suas dependências, alguém precisa montá-los. Essa responsabilidade pertence exclusivamente aos **Composition Roots**:
 
-- [`cmd/api/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/api/main.go): lê as variáveis de ambiente, conecta ao pool de conexões do PostgreSQL, instancia o cliente S3, cria os repositórios, monta a `RiverQueue` e inicia as rotas HTTP com o framework Gin;
-- [`cmd/worker/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/worker/main.go): instancia os mesmos repositórios e clientes de storage, configura os processadores de alarmes e manutenção (`IngestionProcessor`), registra os workers no River e inicia o loop de consumo assíncrono de jobs.
+- [`cmd/api/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/api/main.go): lê as variáveis de ambiente, conecta ao pool de conexões do PostgreSQL, instancia o cliente S3, cria os repositórios, monta a `RiverQueue` e inicia as rotas HTTP com o framework Gin;
+- [`cmd/worker/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/worker/main.go): instancia os mesmos repositórios e clientes de storage, configura os processadores de alarmes e manutenção (`IngestionProcessor`), registra os workers no River e inicia o loop de consumo assíncrono de jobs.
 
 Ao isolar a composição na borda extrema (`cmd/`), o restante do sistema permanece puro e reutilizável.
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -65,43 +66,45 @@ func checkLiveness(ctx context.Context, endpoint string) error {
 	return nil
 }
 
-func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) {
+func checkDatabaseConnection(db *sql.DB, cfg *config.Config, logger *slog.Logger) error {
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer pingCancel()
 
 	if err := db.PingContext(pingCtx); err != nil {
-		logger.Warn("aviso: conexao inicial com supabase indisponivel ou aguardando credenciais",
-			slog.String("error", err.Error()),
-		)
-		return
+		return fmt.Errorf("conexao inicial com postgres indisponivel: %w", err)
 	}
 
-	logger.Info("conexao com supabase postgres estabelecida com sucesso")
+	logger.Info("conexao com postgres estabelecida com sucesso")
 	if !cfg.RunMigrations {
 		logger.Info("execucao de migracoes desativada por configuracao (RUN_MIGRATIONS=false)")
-		return
+		return nil
 	}
 
 	logger.Info("aplicando migracoes no banco de dados", slog.String("migrations_path", cfg.MigrationsPath))
 	if err := runMigrations(db, cfg.MigrationsPath); err != nil {
-		logger.Error("falha ao aplicar migracoes", slog.String("error", err.Error()))
-		return
+		return fmt.Errorf("aplicar migracoes: %w", err)
 	}
 	logger.Info("migracoes aplicadas com sucesso")
+	return nil
 }
 
 func initDatabase(cfg *config.Config, logger *slog.Logger) *sql.DB {
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("falha ao conectar no postgres/supabase", slog.String("error", err.Error()))
+		logger.Error("falha ao conectar no postgres", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
 	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
 
-	checkDatabaseConnection(db, cfg, logger)
+	if err := checkDatabaseConnection(db, cfg, logger); err != nil {
+		logger.Error("falha ao preparar banco de dados", slog.String("error", err.Error()))
+		_ = db.Close()
+		os.Exit(1)
+	}
 	return db
 }
 
@@ -124,10 +127,12 @@ type appHandlers struct {
 	auth      *httpAdapter.AuthHandler
 	upload    *httpAdapter.UploadHandler
 	maint     *httpAdapter.MaintenanceHandler
+	alarm     *httpAdapter.AlarmHandler
 	ins       *httpAdapter.InspectionHandler
 	dash      *httpAdapter.DashboardHandler
 	health    *httpAdapter.HealthHandler
 	docs      *httpAdapter.DocsHandler
+	mlops     *httpAdapter.MLOpsHandler
 	jwtSecret string
 }
 
@@ -151,6 +156,7 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 		protected.POST("/uploads/maintenance", h.upload.UploadMaintenance)
 		protected.GET("/uploads/:id", h.upload.GetUploadStatus)
 
+		protected.GET("/alarms", h.alarm.List)
 		protected.GET("/maintenance", h.maint.List)
 		protected.POST("/maintenance", h.maint.Create)
 
@@ -161,9 +167,29 @@ func registerRoutes(router *gin.Engine, h appHandlers) {
 
 		protected.GET("/dashboard/summary", h.dash.GetSummary)
 		protected.GET("/doors/:id/timeline", h.dash.GetDoorTimeline)
+		protected.GET("/doors/:id/predictions", h.dash.GetDoorPredictionHistory)
 		protected.GET("/stations/:code/doors/status", h.dash.GetStationDoorsStatus)
-		protected.POST("/predictions/trigger", h.dash.TriggerPredictions)
+		protected.POST("/predictions/trigger", httpAdapter.RequireRole("enginner"), h.dash.TriggerPredictions)
 		protected.GET("/predictions/latest", h.dash.GetLatestPredictions)
+		protected.POST("/predictions/experiments", httpAdapter.RequireRole("enginner"), h.dash.RunPredictionExperiment)
+		protected.GET("/predictions/experiments", httpAdapter.RequireRole("enginner"), h.dash.ListPredictionExperiments)
+		protected.POST("/predictions/experiments/:id/promote", httpAdapter.RequireRole("enginner"), h.dash.PromotePredictionExperiment)
+
+		protected.GET("/ml/config", h.mlops.GetConfig)
+		protected.PUT("/ml/config", httpAdapter.RequireRole("enginner"), h.mlops.UpdateConfig)
+		protected.GET("/ml/prediction-schedule", httpAdapter.RequireRole("enginner"), h.mlops.GetPredictionSchedule)
+		protected.PUT("/ml/prediction-schedule", httpAdapter.RequireRole("enginner"), h.mlops.UpdatePredictionSchedule)
+		protected.GET("/ml/model/active", h.mlops.GetActiveModel)
+		protected.GET("/ml/model/history", httpAdapter.RequireRole("enginner"), h.mlops.ListModelHistory)
+		protected.GET("/ml/models/:version/metrics", httpAdapter.RequireRole("enginner"), h.mlops.GetThresholdMetrics)
+		protected.POST("/ml/models/:version/promote", httpAdapter.RequireRole("enginner"), h.mlops.PromoteModel)
+		protected.POST("/ml/retrain", httpAdapter.RequireRole("enginner"), h.mlops.TriggerRetrain)
+		protected.GET("/ml/training-jobs", httpAdapter.RequireRole("enginner"), h.mlops.ListTrainingJobs)
+		protected.GET("/ml/training-jobs/:id", httpAdapter.RequireRole("enginner"), h.mlops.GetTrainingJob)
+		protected.POST("/ml/training-jobs/:id/resume", httpAdapter.RequireRole("enginner"), h.mlops.ResumeTraining)
+		protected.POST("/ml/training-jobs/:id/cancel", httpAdapter.RequireRole("enginner"), h.mlops.CancelTraining)
+		protected.GET("/ml/drift", httpAdapter.RequireRole("enginner"), h.mlops.GetDrift)
+		protected.GET("/ml/performance", httpAdapter.RequireRole("enginner"), h.mlops.GetProductionPerformance)
 
 		protected.GET("/auth/me", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -351,21 +377,39 @@ func main() {
 	hasher := security.NewBcryptPasswordHasher(0)
 	tokenGen := security.NewJWTTokenGenerator(cfg.JWTSecret)
 
+	mlopsRepo := repository.NewPostgresMLOpsRepository(db)
+	outcomeRepo := repository.NewPostgresPredictionOutcomeRepository(db)
+
 	loginUC := usecase.NewLoginUseCase(userRepo, hasher, tokenGen, cfg.JWTExpiration)
 	ingestAlarmsUC := usecase.NewIngestAlarmsUseCaseWithQueue(alarmRepo, alarmRepo, ingestionStorage, alarmParser, ingestionQueue, uow, logger)
 	ingestMaintUC := usecase.NewIngestMaintenanceUseCaseWithQueue(maintRepo, alarmRepo, ingestionStorage, maintParser, ingestionQueue, uow, logger)
 	createMaintUC := usecase.NewCreateMaintenanceUseCase(maintRepo)
+	listAlarmsUC := usecase.NewListAlarmsUseCase(alarmRepo)
 	insUC := usecase.NewInspectionUseCase(insRepo)
 	dashUC := usecase.NewDashboardUseCase(cachedDashRepo, predRepo, mlClient, bus, uow)
+	dashUC.SetMLOpsRepository(mlopsRepo)
+	mlopsUC := usecase.NewMLOpsUseCase(mlopsRepo, mlClient)
+	mlopsUC.SetPredictionOutcomeRepository(outcomeRepo)
+	promoteModelUC := usecase.NewPromoteModelAndPublishUseCase(mlopsUC, dashUC)
+	reconcilerCtx, stopReconciler := context.WithCancel(context.Background())
+	defer stopReconciler()
+	go usecase.RunTrainingJobReconciler(reconcilerCtx, mlopsUC, 30*time.Second, logger)
+	syncCtx, syncCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	if err := mlopsUC.SyncActiveModel(syncCtx); err != nil {
+		logger.Warn("nao foi possivel sincronizar o manifest ativo do servico de ML", slog.String("error", err.Error()))
+	}
+	syncCancel()
 
 	handlers := appHandlers{
 		auth:      httpAdapter.NewAuthHandler(loginUC),
 		upload:    httpAdapter.NewUploadHandler(ingestAlarmsUC, ingestMaintUC),
 		maint:     httpAdapter.NewMaintenanceHandler(createMaintUC),
+		alarm:     httpAdapter.NewAlarmHandler(listAlarmsUC),
 		ins:       httpAdapter.NewInspectionHandler(insUC),
 		dash:      httpAdapter.NewDashboardHandler(dashUC),
 		health:    httpAdapter.NewHealthHandler(db),
 		docs:      httpAdapter.NewDocsHandler("docs/openapi.json"),
+		mlops:     httpAdapter.NewMLOpsHandler(mlopsUC, promoteModelUC),
 		jwtSecret: cfg.JWTSecret,
 	}
 

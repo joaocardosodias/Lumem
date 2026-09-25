@@ -11,7 +11,6 @@ var (
 	ErrStationCodeRequired     = errors.New("o codigo da estacao (station_code) e obrigatorio")
 	ErrInvalidPlatform         = errors.New("a plataforma deve ser P1 ou P2")
 	ErrInvalidDoorNumber       = errors.New("o numero da porta deve estar entre 1 e 24")
-	ErrInvalidPriority         = errors.New("prioridade invalida (use: low, normal, high, critical)")
 	ErrInvalidInspectionStatus = errors.New("status invalido (use: pending, in_progress, completed, canceled)")
 	ErrInspectionIDRequired    = errors.New("id da inspecao e obrigatorio")
 	ErrInvalidStatusTransition = errors.New("transicao de status invalida")
@@ -23,8 +22,6 @@ type Inspection struct {
 	StationCode  string
 	Platform     string
 	DoorNumber   int
-	ScheduledFor string
-	Priority     string
 	Status       string
 	Notes        string
 	CompletedAt  *time.Time
@@ -38,8 +35,6 @@ type CreateInspectionParams struct {
 	StationCode  string
 	Platform     string
 	DoorNumber   int
-	ScheduledFor string
-	Priority     string
 	Notes        string
 }
 
@@ -58,14 +53,6 @@ func NewInspection(p CreateInspectionParams) (*Inspection, error) {
 		return nil, ErrInvalidDoorNumber
 	}
 
-	priority := strings.ToLower(strings.TrimSpace(p.Priority))
-	if priority == "" {
-		priority = "normal"
-	}
-	if priority != "low" && priority != "normal" && priority != "high" && priority != "critical" {
-		return nil, ErrInvalidPriority
-	}
-
 	now := time.Now()
 	return &Inspection{
 		ID:           p.ID,
@@ -73,8 +60,6 @@ func NewInspection(p CreateInspectionParams) (*Inspection, error) {
 		StationCode:  stationCode,
 		Platform:     platform,
 		DoorNumber:   p.DoorNumber,
-		ScheduledFor: strings.TrimSpace(p.ScheduledFor),
-		Priority:     priority,
 		Status:       "pending",
 		Notes:        strings.TrimSpace(p.Notes),
 		CreatedAt:    now,

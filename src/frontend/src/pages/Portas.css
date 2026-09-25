@@ -1,26 +1,151 @@
+.portas .page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
 .portas .page-head p {
-  margin: 8px 0 0;
-  color: #6b4fe0;
-  font-size: 15px;
+  margin: 4px 0 0;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .portas__title {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+}
+
+.portas__eyebrow {
+  margin: 0 0 2px;
+  color: var(--brand, #3f00ff);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+
+.portas--station {
+  max-width: 1500px;
+  margin-inline: auto;
+}
+
+.portas--station .page-head .portas__eyebrow {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.portas--station .page-head__actions .ui-button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.portas--station .page-head__actions .ui-button--secondary {
+  border: 1px solid var(--interactive-border, #d7dffd);
+  background: var(--interactive, #f0f3ff);
+}
+
+.portas--station .page-head__actions .ui-button:disabled {
+  opacity: .5;
+  cursor: default;
+  transform: none;
+}
+
+.station-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #ffffff;
+  margin-bottom: 22px;
+}
+
+.station-summary article {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 132px;
+  padding: 20px 22px;
+  border: 0;
+  border-left: 1px solid #e8edf4;
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+}
+
+.station-summary article:first-child {
+  border-left: 0;
+}
+
+.station-summary p {
+  margin: 0;
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.station-summary > article > span {
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.station-summary strong {
+  margin: 14px 0 7px;
+  font-size: clamp(30px, 3vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .station-summary { grid-template-columns: 1fr; }
+  .station-summary article {
+    min-height: 122px;
+    padding: 18px;
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+  .station-summary article:first-child { border-top: 0; }
 }
 
 .portas__back {
   display: grid;
   place-items: center;
+  flex: 0 0 42px;
+  align-self: center;
   width: 42px;
   height: 42px;
   border: 0;
-  border-radius: 8px;
-  background: var(--brand);
-  color: var(--white);
-  font-size: 28px;
-  line-height: 1;
+  border-radius: 9px;
+  background: var(--brand, #3f00ff);
+  color: var(--white, #ffffff);
+  cursor: pointer;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.portas__back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.portas__back:hover {
+  background: var(--brand-hover, #3100cd);
+  transform: translateX(-2px);
 }
 
 .linha-map {
@@ -92,7 +217,7 @@
   width: max-content;
   max-width: 84px;
   color: var(--brand);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.25;
   text-align: center;
@@ -260,8 +385,110 @@
 
 .portas__panel h2 {
   margin: 0 0 16px;
-  color: var(--brand);
+  color: var(--ink, #172e52);
   font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.portas__status-risk {
+  color: #ff003b;
+}
+
+.portas__status-ok {
+  color: #475569;
+}
+
+.portas__dossier-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.portas__doors-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.portas__doors-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.portas__doors-search {
+  min-height: 38px;
+  padding: 8px 14px 8px 36px;
+  border-radius: 9px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--white, #ffffff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238997AC' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  color: var(--ink, #172e52);
+  outline: none;
+  box-shadow: 0 1px 2px rgba(23, 46, 82, 0.03);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.portas__doors-search:hover {
+  border-color: #a5b4fa;
+  box-shadow: 0 2px 6px rgba(63, 0, 255, 0.05);
+}
+
+.portas__doors-search:focus {
+  border-color: var(--brand, #3f00ff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px rgba(63, 0, 255, 0.12);
+}
+
+.portas__doors-select {
+  min-height: 38px;
+  padding: 8px 36px 8px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--interactive-border, #d7dffd);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--white, #ffffff);
+  color: var(--ink, #172e52);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2352647F' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  box-shadow: 0 1px 2px rgba(23, 46, 82, 0.03);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.portas__doors-select:hover {
+  border-color: #a5b4fa;
+  box-shadow: 0 2px 6px rgba(63, 0, 255, 0.05);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.portas__doors-select:focus {
+  border-color: var(--brand, #3f00ff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%233F00FF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px rgba(63, 0, 255, 0.12);
+}
+
+.portas__doors-select option {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .portas-tabs {
@@ -327,8 +554,9 @@
 
 .portas-risk-chart__col strong {
   color: var(--brand);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .portas__table {
@@ -339,7 +567,7 @@
 
 .portas__row {
   display: grid;
-  grid-template-columns: 0.4fr 1.6fr 1.3fr 0.7fr 1.1fr;
+  grid-template-columns: 0.5fr 2.2fr 0.9fr 1.2fr;
   gap: 12px;
   align-items: center;
   min-width: 640px;
@@ -386,12 +614,12 @@
   display: block;
   height: 100%;
   border-radius: 99px;
-  background: #e23b4a;
+  background: #ff003b;
 }
 
 .portas-risk em {
   min-width: 36px;
-  color: #e23b4a;
+  color: #ff003b;
   font-style: normal;
   font-weight: 700;
   font-size: 13px;
@@ -403,15 +631,17 @@
   min-width: 88px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, #e23b4a 14%, white);
-  color: #e23b4a;
+  background: #fff0f3;
+  color: #d90032;
+  border: 1px solid #ffb8c6;
   font-size: 13px;
   font-weight: 700;
 }
 
 .portas-status.is-ok {
-  background: var(--brand-soft);
-  color: var(--brand);
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
 }
 
 .portas__actions {
@@ -453,61 +683,510 @@
   text-align: right;
 }
 
-.portas__dossier,
-.portas__insp {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px 16px;
-}
-
-.portas__dossier span,
-.portas__related span,
-.portas__empty {
-  color: #6b4fe0;
+.portas__panel-sub {
+  margin: 4px 0 0;
+  color: var(--muted, #52647f);
   font-size: 12px;
   font-weight: 500;
 }
 
-.portas__dossier strong {
+
+
+.portas-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(23, 46, 82, 0.42);
+  backdrop-filter: blur(5px);
+  animation: modal-fade-in 0.2s ease;
+}
+
+.portas-modal-content {
+  width: min(880px, 100%);
+  max-height: min(92vh, 900px);
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #dfe6f0;
+  box-shadow: 0 24px 64px rgba(23, 46, 82, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-slide-in 0.24s var(--ease-out, ease-out);
+}
+
+.portas-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 28px 22px;
+  border-bottom: 1px solid #e8edf4;
+  background: #fbfcff;
+}
+
+.portas-modal-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.portas-modal-eyebrow span:first-child {
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.portas-modal-car-tag {
+  background: #edf1f7;
+  color: var(--ink, #172e52);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.portas-modal-head h2 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 25px);
+  font-weight: 800;
+  color: var(--ink, #172e52);
+  letter-spacing: -0.65px;
+  line-height: 1.2;
+}
+
+.portas-modal-sub {
+  margin: 7px 0 0;
+  font-size: 13px;
+  color: var(--muted, #52647f);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.portas-modal-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-door-nav {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid #dfe6f0;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.btn-door-nav:hover {
+  border-color: #c7d2e3;
+  background: var(--interactive, #f0f3ff);
+  transform: translateY(-1px);
+}
+
+.portas-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #dfe6f0;
+  background: #ffffff;
+  color: var(--muted, #52647f);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.portas-modal-close:hover {
+  background: #f1f5f9;
+  color: var(--ink, #172e52);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.btn-door-nav:focus-visible,
+.portas-modal-close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #3f00ff) 20%, transparent);
+  outline-offset: 2px;
+}
+
+.portas-modal-body {
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.door-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 22px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.door-status-banner.is-risk {
+  color: var(--ink, #172e52);
+}
+
+.door-status-banner.is-ok {
+  color: var(--ink, #172e52);
+}
+
+.door-status-banner__info {
+  flex: 1;
+}
+
+.banner-kicker {
   display: block;
-  margin-top: 4px;
-  font-size: 16px;
-  word-break: break-all;
+  font-size: 12px;
+  color: var(--muted, #52647f);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  margin-bottom: 6px;
 }
 
-.portas__related {
+.door-status-banner h3 {
+  margin: 0 0 6px;
+  color: var(--ink, #172e52);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.25px;
+}
+
+.door-status-banner.is-risk h3,
+.door-status-banner.is-risk .door-status-banner__metric strong {
+  color: #c9253d;
+}
+
+.door-status-banner p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.door-status-banner__metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 160px;
+  padding-left: 22px;
+  border-left: 1px solid #e8edf4;
+}
+
+.door-status-banner__metric span {
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.door-status-banner__metric strong {
+  color: var(--ink, #172e52);
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin: 5px 0 3px;
+}
+
+.door-status-banner__metric small {
+  color: var(--muted, #52647f);
+  font-size: 12px;
+}
+
+.door-specs-grid {
   display: grid;
-  grid-template-columns: 80px 1.1fr 1.4fr;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+}
+
+.spec-item {
+  min-width: 0;
+  padding: 16px 18px;
+  border-left: 1px solid #e8edf4;
+  border-top: 1px solid #e8edf4;
+}
+
+.spec-item:nth-child(3n + 1) {
+  border-left: 0;
+}
+
+.spec-item:nth-child(-n + 3) {
+  border-top: 0;
+}
+
+.spec-item span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--muted, #52647f);
+  margin-bottom: 7px;
+}
+
+.spec-item strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #172e52);
+  word-break: break-word;
+}
+
+.door-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #e8edf4;
+}
+
+.door-modal-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  align-items: baseline;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(64, 0, 255, 0.14);
-  color: var(--brand);
 }
 
-.portas__related:last-child {
-  border-bottom: 0;
+.door-modal-section__head h4 {
+  margin: 0;
+  color: var(--ink, #172e52);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
-.portas__related em {
+.door-modal-section__head p {
+  margin: 5px 0 0;
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.section-counter {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #edf1f7;
+  color: var(--ink, #172e52);
+  text-align: center;
+}
+
+.door-alarms-list,
+.door-maintenances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.door-alarm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e3e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.alarm-main strong {
+  display: block;
+  color: #c9253d;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.alarm-main span {
+  font-size: 12px;
+  color: #718096;
+}
+
+.alarm-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #718096;
+}
+
+.alarm-meta em {
+  display: block;
   font-style: normal;
 }
 
-.portas__insp {
-  align-items: end;
+.alarm-meta code {
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  background: #edf2f7;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
-.portas__insp .cadastrar-button {
-  justify-self: start;
+.door-maintenance-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e3e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.maint-badge {
+  font-size: 12px;
+  font-weight: 800;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.maint-content {
+  flex: 1;
+}
+
+.maint-content strong {
+  display: block;
+  color: var(--ink, #172e52);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.maint-content span {
+  font-size: 12px;
+  color: var(--muted, #52647f);
+}
+
+.door-empty-state {
+  margin: 0;
+  padding: 13px 14px;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.door-empty-state.is-error {
+  background: #fff4f5;
+  color: #b52539;
+}
+
+.door-modal-section--inspection {
+  padding: 18px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #f7f9ff;
+}
+
+.door-insp-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.door-insp-form input {
+  flex: 1;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #d7dfeb;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--ink, #172e52);
+  outline: none;
+  background: #ffffff;
+}
+
+.door-insp-form input:focus {
+  border-color: var(--brand, #3f00ff);
+  box-shadow: 0 0 0 3px rgba(63, 0, 255, 0.12);
+}
+
+.door-insp-form .cadastrar-button {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.portas-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid #e8edf4;
+  background: #fbfcfe;
+}
+
+.portas-modal-foot .ui-button {
+  min-height: 42px;
+  min-width: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 1100px) {
   .portas__cards,
-  .portas__kpis,
-  .portas__dossier,
-  .portas__insp,
-  .portas__related {
+  .portas__kpis {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .door-specs-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -518,7 +1197,88 @@
   }
 
   .linha-map__name {
-    max-width: 52px;
-    font-size: 9px;
+    max-width: 60px;
+    font-size: 11px;
+  }
+
+  .door-specs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spec-item,
+  .spec-item:nth-child(3n + 1),
+  .spec-item:nth-child(-n + 3) {
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+
+  .spec-item:first-child {
+    border-top: 0;
+  }
+
+  .door-status-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .door-status-banner__metric {
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
+    padding: 16px 0 0;
+    border-top: 1px solid #e8edf4;
+    border-left: 0;
+  }
+
+  .door-insp-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .portas-modal-foot {
+    flex-direction: column-reverse;
+  }
+
+  .portas-modal-foot button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .portas-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .portas-modal-content {
+    max-height: 94dvh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .portas-modal-head {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .portas-modal-nav-actions {
+    width: 100%;
+  }
+
+  .portas-modal-close {
+    margin-left: auto;
+  }
+
+  .portas-modal-body {
+    padding: 20px;
+  }
+
+  .door-status-banner {
+    padding: 18px;
+  }
+
+  .portas-modal-foot {
+    padding: 14px 20px 18px;
   }
 }

@@ -14,8 +14,6 @@ type CreateInspectionInputDTO struct {
 	StationCode  string
 	Platform     string
 	DoorNumber   int
-	ScheduledFor string
-	Priority     string
 	Notes        string
 	PredictionID *string
 }
@@ -31,8 +29,6 @@ type InspectionOutputDTO struct {
 	StationCode  string
 	Platform     string
 	DoorNumber   int
-	ScheduledFor string
-	Priority     string
 	Status       string
 	Notes        string
 	CompletedAt  *time.Time
@@ -55,8 +51,6 @@ func (uc *InspectionUseCase) Create(ctx context.Context, input CreateInspectionI
 		StationCode:  input.StationCode,
 		Platform:     input.Platform,
 		DoorNumber:   input.DoorNumber,
-		ScheduledFor: input.ScheduledFor,
-		Priority:     input.Priority,
 		Notes:        input.Notes,
 	})
 	if err != nil {
@@ -126,8 +120,6 @@ func toInspectionDTO(ins *domain.Inspection) *InspectionOutputDTO {
 		StationCode:  ins.StationCode,
 		Platform:     ins.Platform,
 		DoorNumber:   ins.DoorNumber,
-		ScheduledFor: ins.ScheduledFor,
-		Priority:     ins.Priority,
 		Status:       ins.Status,
 		Notes:        ins.Notes,
 		CompletedAt:  ins.CompletedAt,

@@ -1,0 +1,28 @@
+---
+title: "Visão Geral e Entregas da Sprint 4"
+description: "Resumo da Sprint 4: Isolation Forest (Modelo 8) e Random Survival Forest (Modelo 9) sobre o painel porta-dia do Modelo 5."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Resumo Executivo da Sprint 4</h2>
+</div>
+
+A **Sprint 4** volta ao mesmo problema da Sprint 2, antecipar uma ordem **ZM01** nos próximos 7 dias em uma porta de plataforma, porque o [Modelo 5](/sprints/sprint-2/modelos/modelo-5) não chegou a um resultado útil para a manutenção: precisão de 15,9% no teste, a maior parte dos alertas sem falha na janela.
+
+O **Modelo 8** pergunta se o dia da porta destoa do normal. O **Modelo 9** pergunta quando vem a próxima ZM01 e só na hora do alerta lê P(T ≤ 7). Os dois leem o mesmo painel, `models/modelo-5/painel.parquet`.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entrega desta sprint</h2>
+</div>
+
+| Entrega | Algoritmo | Granularidade | Código |
+| :--- | :--- | :--- | :--- |
+| [**Modelo 8**](/sprints/sprint-4/modelos/modelo-8) | Isolation Forest | Porta × Dia | [`models/modelo-8/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-8/) |
+| [**Modelo 9**](/sprints/sprint-4/modelos/modelo-9) | Random Survival Forest | Porta × Dia | [`models/modelo-9/`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/tree/main/models/modelo-9/) |

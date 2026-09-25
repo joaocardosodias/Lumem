@@ -5,7 +5,7 @@ description: Registro formal da decisão arquitetural de estruturação do backe
 
 ## 1. Contexto e Forças de Decisão
 
-O backend da plataforma precisa integrar uma variedade heterogênea de tecnologias: frameworks web (Gin), bancos relacionais (PostgreSQL 16), mensageria transacional (River), armazenamento em nuvem (Supabase S3), segurança criptográfica (JWT e bcrypt), telemetria (OpenTelemetry) e serviços analíticos externos (modelo preditivo em Python).
+O backend precisa integrar tecnologias heterogêneas: Gin, PostgreSQL 16, River, MinIO compatível com S3, JWT, bcrypt, OpenTelemetry e o serviço preditivo em Python.
 
 Ao planejar a arquitetura na Sprint 3, a equipe estabeleceu que acoplar persistência e lógica de negócios diretamente nos handlers HTTP geraria bloqueios inaceitáveis:
 1. **Dificuldade severa de testes:** seria impossível testar regras de validação de alarmes ou transições de inspeção sem subir instâncias reais do PostgreSQL;
@@ -34,7 +34,7 @@ Adotar estritamente a **Clean Architecture** combinada com o padrão **Hexagonal
 
 ### Consequências Positivas
 - **Velocidade de testes:** casos de uso executam centenas de asserções em menos de 10 milissegundos usando test doubles sem conexões de rede;
-- **Portabilidade de infraestrutura:** a porta `IngestionStorage` permitiu criar `LocalTempStorage` (para testes locais) e `S3Storage` (para nuvem) sem alterar uma linha de `IngestAlarmsUseCase`;
+- **Portabilidade de infraestrutura:** a porta `IngestionStorage` permite alternar entre `LocalTempStorage` e `S3Storage` sem alterar o `IngestAlarmsUseCase`;
 - **Compartilhamento de código limpo:** a API HTTP e o processo Worker compartilham exatamente o mesmo núcleo de negócio;
 - **Erros desacoplados:** o domínio emite erros de negócio (`ErrDuplicateUpload`), e a borda HTTP decide mapeá-los para Problem Details (`409 Conflict`).
 
@@ -44,7 +44,7 @@ Adotar estritamente a **Clean Architecture** combinada com o padrão **Hexagonal
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/usecase/port/repository.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/repository.go): contratos abstratos de persistência;
-- [`internal/usecase/port/services.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/usecase/port/services.go): contratos de storage, mensageria e Unit of Work;
-- [`internal/adapter/storage/s3_storage.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/storage/s3_storage.go): implementação S3 atendendo à porta de storage;
-- [`cmd/api/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](file:///home/cardoso/GitHub/g04/src/backend/cmd/worker/main.go): composition roots independentes.
+- [`internal/usecase/port/repository.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/repository.go): contratos abstratos de persistência;
+- [`internal/usecase/port/services.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/services.go): contratos de storage, mensageria e Unit of Work;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go): implementação S3 atendendo à porta de storage;
+- [`cmd/api/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/api/main.go) e [`cmd/worker/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/worker/main.go): composition roots independentes.

@@ -55,3 +55,22 @@ func applyClaims(c *gin.Context, token *jwt.Token) {
 	c.Set("userEmail", email)
 	c.Set("userRole", role)
 }
+
+func RequireRole(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole := c.GetString("userRole")
+		if userRole == "" {
+			RespondProblem(c, http.StatusForbidden, "ERR_FORBIDDEN", "Acesso Negado", "Papel de usuario nao identificado.")
+			return
+		}
+
+		for _, role := range allowedRoles {
+			if strings.EqualFold(userRole, role) {
+				c.Next()
+				return
+			}
+		}
+
+		RespondProblem(c, http.StatusForbidden, "ERR_FORBIDDEN", "Acesso Negado", "Usuario nao possui permissao para executar esta acao.")
+	}
+}

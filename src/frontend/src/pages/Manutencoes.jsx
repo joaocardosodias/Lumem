@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
-import CadastrarButton from '../components/CadastrarButton'
-import Card from '../components/Card'
+import { CountValue } from '../components/Card'
 import CardManutencao from '../components/CardManutencao'
+import DataPageSkeleton from '../components/DataPageSkeleton'
 import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
-import { lineStations } from '../data/stations'
+import { useToast } from '../context/Toast'
+import { lineStations, mapStation } from '../data/stations'
 import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
 import { api, errorMessage } from '../lib/api'
+import { exportToCsv } from '../lib/exportCsv'
 import { loadMaintenance, getCachedMaintenance } from '../lib/maintenanceCache'
 import { pollUpload } from '../lib/runUpload'
 import './Manutencoes.css'
@@ -60,7 +62,8 @@ function durationFrom(start, end) {
   return Math.round(((ended - started) / 36e5) * 100) / 100
 }
 
-function Manutencoes() {
+function Manutencoes({ params }) {
+  const toast = useToast()
   const [items, setItems] = useState(() => getCachedMaintenance() ?? [])
   const [loading, setLoading] = useState(() => !getCachedMaintenance())
   const [error, setError] = useState('')
@@ -72,7 +75,11 @@ function Manutencoes() {
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [upload, setUpload] = useState(null)
-  const [filters, setFilters] = useState(emptyFilters)
+  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState(() => ({
+    ...emptyFilters,
+    station: params?.station || '',
+  }))
   const [page, setPage] = useState(1)
   const [reloadAt, setReloadAt] = useState(0)
 
@@ -80,13 +87,15 @@ function Manutencoes() {
     let cancelled = false
 
     async function load() {
-      setLoading(true)
+      if (!getCachedMaintenance()?.length) {
+        setLoading(true)
+      }
       setError('')
       try {
         const batch = await loadMaintenance({ force: Boolean(reloadAt) })
         if (!cancelled) setItems(batch)
       } catch (err) {
-        if (!cancelled) setError(errorMessage(err))
+        if (!cancelled && !getCachedMaintenance()?.length) setError(errorMessage(err))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -103,7 +112,7 @@ function Manutencoes() {
       items.filter((item) => {
         if (
           filters.station &&
-          String(item.station_code || '').toUpperCase() !== filters.station.toUpperCase()
+          mapStation(item.station_code) !== mapStation(filters.station)
         ) {
           return false
         }
@@ -111,13 +120,29 @@ function Manutencoes() {
         if (filters.source && item.source !== filters.source) return false
         if (!inPeriod(item.start_timestamp, filters.period)) return false
         if (!inDurationRange(item.duration_hours, filters.durationMin, filters.durationMax)) return false
+        if (search.trim()) {
+          const q = search.trim().toLowerCase()
+          const match =
+            (item.sap_order_number && item.sap_order_number.toLowerCase().includes(q)) ||
+            (item.installation_location && item.installation_location.toLowerCase().includes(q)) ||
+            (item.symptom && item.symptom.toLowerCase().includes(q)) ||
+            (item.description && item.description.toLowerCase().includes(q)) ||
+            (item.station_code && item.station_code.toLowerCase().includes(q))
+          if (!match) return false
+        }
         return true
       }),
-    [items, filters],
+    [items, filters, search],
   )
   const filtersDirty =
-    Boolean(filters.station || filters.orderType || filters.source || filters.durationMin || filters.durationMax) ||
-    filters.period !== DEFAULT_PERIOD
+    Boolean(
+      filters.station ||
+        filters.orderType ||
+        filters.source ||
+        filters.durationMin ||
+        filters.durationMax ||
+        search,
+    ) || filters.period !== DEFAULT_PERIOD
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -135,12 +160,23 @@ function Manutencoes() {
   }, [items])
   const byType = useMemo(() => countBy(visible, 'order_type'), [visible])
   const byStation = useMemo(() => countBy(visible, 'station_code'), [visible])
+  const typeRows = Object.entries(byType).sort((a, b) => b[1] - a[1])
   const maxType = Math.max(...Object.values(byType), 1)
   const maxStation = Math.max(...Object.values(byStation), 1)
   const stationRows = Object.entries(byStation).sort((a, b) => b[1] - a[1])
   const topStations = stationRows.slice(0, 6)
   const otherStations = stationRows.slice(6)
-  const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
+  const topType = typeRows[0]
+  const durations = visible
+    .filter((item) => item.duration_hours != null && item.duration_hours !== '')
+    .map((item) => Number(item.duration_hours))
+    .filter((value) => Number.isFinite(value) && value >= 0)
+  const averageDuration = durations.length
+    ? durations.reduce((total, value) => total + value, 0) / durations.length
+    : null
+  const averageDurationLabel = averageDuration == null
+    ? '—'
+    : averageDuration.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 
   function updateField(field) {
     return (event) => {
@@ -183,9 +219,12 @@ function Manutencoes() {
       setForm(emptyForm)
       setOpen(false)
       setPage(1)
+      toast.success('Ordem de manutenção cadastrada com sucesso.')
       setReloadAt(Date.now())
     } catch (err) {
-      setImportError(errorMessage(err))
+      const msg = errorMessage(err)
+      setImportError(msg)
+      toast.error(msg)
     }
   }
 
@@ -209,12 +248,36 @@ function Manutencoes() {
       setUpload(null)
       setOpen(false)
       setPage(1)
+      toast.success('Planilha de manutenções processada com sucesso.')
       setReloadAt(Date.now())
     } catch (err) {
-      setImportError(errorMessage(err))
+      const msg = errorMessage(err)
+      setImportError(msg)
+      toast.error(msg)
     } finally {
       setImporting(false)
     }
+  }
+
+  function handleExportCsv() {
+    if (!visible.length) {
+      toast.info('Não há registros para exportar com os filtros atuais.')
+      return
+    }
+    const columns = [
+      { label: 'Ordem SAP', key: 'sap_order_number' },
+      { label: 'Tipo', key: 'order_type' },
+      { label: 'Estação', key: 'station_code' },
+      { label: 'Local de Instalação', key: 'installation_location' },
+      { label: 'Início', key: 'start_timestamp' },
+      { label: 'Fim', key: 'end_timestamp' },
+      { label: 'Duração (h)', key: 'duration_hours' },
+      { label: 'Sintoma', key: 'symptom' },
+      { label: 'Descrição', key: 'description' },
+      { label: 'Origem', key: 'source' },
+    ]
+    exportToCsv('manutencoes.csv', columns, visible)
+    toast.success(`${visible.length} manutenções exportadas com sucesso.`)
   }
 
   function updateFilter(field) {
@@ -234,167 +297,285 @@ function Manutencoes() {
 
   return (
     <section className="manutencoes">
-      <div className="page-head">
-        <h1>Manutenções</h1>
-        <CadastrarButton onClick={openCadastro}>Cadastrar Manutenções +</CadastrarButton>
-      </div>
+      <header className="page-head manutencoes__head">
+        <div>
+          <p className="manutencoes__eyebrow"><span aria-hidden="true" />Histórico SAP</p>
+          <h1>Manutenções</h1>
+          <p className="manutencoes__lead">
+            Consulte ordens preventivas e corretivas registradas na Linha 4.
+          </p>
+        </div>
+        <div className="page-head__actions">
+          <Button variant="secondary" onClick={handleExportCsv}>
+            Exportar CSV
+          </Button>
+          <Button onClick={openCadastro}>Nova manutenção</Button>
+        </div>
+      </header>
 
-      {loading ? <p className="page-status">Carregando ordens de manutenção…</p> : null}
+      {loading ? <DataPageSkeleton label="Carregando ordens de manutenção" /> : null}
       {error ? <p className="page-status is-error">{error}</p> : null}
 
       {loading ? null : (
-      <>
-      <div className="manutencoes__hero">
-        <Card
-          layout="banner"
-          label="Ordens de manutenção"
-          value={visible.length}
-          hint={
-            topType
-              ? `${topType[1]} do tipo ${topType[0]}${rangeHint ? ` · ${rangeHint}` : ''}`
-              : 'Nenhuma ordem na linha'
-          }
-        />
-        <div className="manutencoes__charts">
-          <article className="manutencoes__chart">
-            <h2>Ordens por tipo</h2>
-            {Object.entries(byType).map(([label, value]) => (
-              <div key={label} className="manutencoes__bar">
-                <strong>{label}</strong>
-                <i style={{ width: `${(value / maxType) * 100}%` }} />
-                <em>{value}</em>
-              </div>
-            ))}
-          </article>
-          <article className="manutencoes__chart">
-            <h2>Ordens por estação</h2>
-            <div className="manutencoes__bars">
-              <div>
-                {topStations.map(([label, value]) => (
+        <>
+          <div className="manutencoes__hero">
+            <section className="manutencoes__metrics" aria-label="Resumo das manutenções">
+              <article className="manutencoes__metric manutencoes__metric--primary">
+                <span className="manutencoes__metric-top">
+                  <span>Ordens no recorte</span>
+                </span>
+                <strong className="manutencoes__metric-value"><CountValue value={visible.length} /></strong>
+                <span className="manutencoes__metric-description">
+                  {rangeHint || 'Todo o período disponível'}
+                </span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Tipo mais frequente</span>
+                </span>
+                <strong className="manutencoes__metric-value manutencoes__metric-value--code">
+                  {topType?.[0] || '—'}
+                </strong>
+                <span className="manutencoes__metric-description">
+                  {topType ? `${topType[1].toLocaleString('pt-BR')} ordens` : 'Sem ordens no período'}
+                </span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Estações</span>
+                </span>
+                <strong className="manutencoes__metric-value"><CountValue value={stationRows.length} /></strong>
+                <span className="manutencoes__metric-description">Com ordens no recorte</span>
+              </article>
+
+              <article className="manutencoes__metric">
+                <span className="manutencoes__metric-top">
+                  <span>Duração média</span>
+                </span>
+                <strong className="manutencoes__metric-value">
+                  {averageDurationLabel}<small>h</small>
+                </strong>
+                <span className="manutencoes__metric-description">
+                  {durations.length ? `Calculada em ${durations.length.toLocaleString('pt-BR')} ordens` : 'Sem duração informada'}
+                </span>
+              </article>
+            </section>
+          </div>
+
+          <Filtros
+            period={filters.period}
+            onPeriod={(period) => {
+              setPage(1)
+              setFilters((current) => ({ ...current, period }))
+            }}
+            dirty={filtersDirty}
+            onClear={() => {
+              setPage(1)
+              setSearch('')
+              setFilters(emptyFilters)
+            }}
+          >
+            <FiltroCampo label="Busca">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+                placeholder="Buscar por ordem, sintoma..."
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Estação">
+              <select value={filters.station} onChange={updateFilter('station')}>
+                <option value="">Todas</option>
+                {lineStations.map((station) => (
+                  <option key={station.code} value={station.code}>
+                    {station.code} — {station.name}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Tipo">
+              <select value={filters.orderType} onChange={updateFilter('orderType')}>
+                <option value="">Todos</option>
+                {orderTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Origem">
+              <select value={filters.source} onChange={updateFilter('source')}>
+                <option value="">Todas</option>
+                {sources.map((source) => (
+                  <option key={source} value={source}>
+                    {source}
+                  </option>
+                ))}
+              </select>
+            </FiltroCampo>
+            <FiltroCampo label="Mín. (h)">
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={filters.durationMin}
+                onChange={updateFilter('durationMin')}
+              />
+            </FiltroCampo>
+            <FiltroCampo label="Máx. (h)">
+              <input
+                type="number"
+                min="0"
+                step="0.25"
+                value={filters.durationMax}
+                onChange={updateFilter('durationMax')}
+              />
+            </FiltroCampo>
+          </Filtros>
+
+          <section className="manutencoes__list" aria-labelledby="maintenance-records-title">
+            <header className="manutencoes__panel-head manutencoes__list-head">
+              <h2 id="maintenance-records-title">Histórico de manutenção</h2>
+              <span className="manutencoes__record-count">
+                {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </header>
+            <div className="manutencoes__table-head" aria-hidden="true">
+              <span>Ordem</span>
+              <span>Estação e local</span>
+              <span>Período</span>
+              <span>Duração</span>
+              <span>Ocorrência</span>
+              <span>Detalhes</span>
+            </div>
+            <div className="manutencoes__records">
+              {paged.length ? (
+                paged.map((item) => (
+                  <CardManutencao
+                    key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
+                    orderType={item.order_type}
+                    sapOrder={item.sap_order_number}
+                    station={item.station_code}
+                    location={item.installation_location}
+                    startedAt={item.start_timestamp}
+                    endedAt={item.end_timestamp}
+                    durationHours={item.duration_hours}
+                    symptom={item.symptom}
+                    description={item.description}
+                    source={item.source}
+                  />
+                ))
+              ) : (
+                <p className="page-empty">
+                  {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma manutenção cadastrada.'}
+                </p>
+              )}
+            </div>
+            <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+          </section>
+
+          <div className="manutencoes__charts">
+            <article className="manutencoes__chart">
+              <header className="manutencoes__panel-head">
+                <h2>Ordens por tipo</h2>
+              </header>
+              <div className="manutencoes__chart-body">
+                {typeRows.length ? typeRows.map(([label, value]) => (
                   <div key={label} className="manutencoes__bar">
                     <strong>{label}</strong>
-                    <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                    <span className="manutencoes__bar-track">
+                      <i style={{ width: `${(value / maxType) * 100}%` }} />
+                    </span>
                     <em>{value}</em>
                   </div>
-                ))}
+                )) : <p className="manutencoes__empty">Nenhuma ordem neste recorte.</p>}
               </div>
-              {otherStations.length ? (
-                <div>
-                  {otherStations.map(([label, value]) => (
-                    <div key={label} className="manutencoes__bar">
-                      <strong>{label}</strong>
-                      <i style={{ width: `${(value / maxStation) * 100}%` }} />
-                      <em>{value}</em>
+            </article>
+            <article className="manutencoes__chart">
+              <header className="manutencoes__panel-head">
+                <h2>Ordens por estação</h2>
+              </header>
+              <div className="manutencoes__chart-body">
+                {stationRows.length ? (
+                  <div className="manutencoes__bars">
+                    <div>
+                      {topStations.map(([label, value]) => (
+                        <div key={label} className="manutencoes__bar">
+                          <strong>{label}</strong>
+                          <span className="manutencoes__bar-track">
+                            <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                          </span>
+                          <em>{value}</em>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </article>
-        </div>
-      </div>
-
-      <Filtros
-        period={filters.period}
-        onPeriod={(period) => {
-          setPage(1)
-          setFilters((current) => ({ ...current, period }))
-        }}
-        dirty={filtersDirty}
-        onClear={() => {
-          setPage(1)
-          setFilters(emptyFilters)
-        }}
-      >
-        <FiltroCampo label="Estação">
-          <select value={filters.station} onChange={updateFilter('station')}>
-            <option value="">Todas</option>
-            {lineStations.map((station) => (
-              <option key={station.code} value={station.code}>
-                {station.code} — {station.name}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Tipo">
-          <select value={filters.orderType} onChange={updateFilter('orderType')}>
-            <option value="">Todos</option>
-            {orderTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Origem">
-          <select value={filters.source} onChange={updateFilter('source')}>
-            <option value="">Todas</option>
-            {sources.map((source) => (
-              <option key={source} value={source}>
-                {source}
-              </option>
-            ))}
-          </select>
-        </FiltroCampo>
-        <FiltroCampo label="Mín. (h)">
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={filters.durationMin}
-            onChange={updateFilter('durationMin')}
-          />
-        </FiltroCampo>
-        <FiltroCampo label="Máx. (h)">
-          <input
-            type="number"
-            min="0"
-            step="0.25"
-            value={filters.durationMax}
-            onChange={updateFilter('durationMax')}
-          />
-        </FiltroCampo>
-      </Filtros>
-
-      <div className="manutencoes__list">
-        {paged.length ? (
-          paged.map((item) => (
-            <CardManutencao
-              key={item.id ?? `${item.sap_order_number}-${item.start_timestamp}-${item.station_code}`}
-              orderType={item.order_type}
-              sapOrder={item.sap_order_number}
-              station={item.station_code}
-              location={item.installation_location}
-              startedAt={item.start_timestamp}
-              endedAt={item.end_timestamp}
-              durationHours={item.duration_hours}
-              symptom={item.symptom}
-              description={item.description}
-              source={item.source}
-            />
-          ))
-        ) : (
-          <p className="page-empty">
-            {items.length ? 'Nenhuma ordem com esses filtros.' : 'Nenhuma ordem de manutenção retornada pela API.'}
-          </p>
-        )}
-        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
-      </div>
-      </>
+                    {otherStations.length ? (
+                      <div>
+                        {otherStations.map(([label, value]) => (
+                          <div key={label} className="manutencoes__bar">
+                            <strong>{label}</strong>
+                            <span className="manutencoes__bar-track">
+                              <i style={{ width: `${(value / maxStation) * 100}%` }} />
+                            </span>
+                            <em>{value}</em>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="manutencoes__empty">Nenhuma estação com ordens neste recorte.</p>
+                )}
+              </div>
+            </article>
+          </div>
+        </>
       )}
 
       {open ? (
         <div className="manutencoes-modal" onClick={() => !importing && setOpen(false)}>
           <form
+            className="form-modal"
             onClick={(event) => event.stopPropagation()}
             onSubmit={mode === 'import' ? handleImport : handleSubmit}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="maintenance-create-title"
           >
-            <h2>Cadastrar manutenção</h2>
+            <header className="form-modal__head">
+              <div>
+                <span className="form-modal__eyebrow">Registro operacional</span>
+                <h2 id="maintenance-create-title">Cadastrar manutenção</h2>
+                <p>Adicione uma ordem manualmente ou importe registros de uma planilha.</p>
+              </div>
+              <button
+                type="button"
+                className="form-modal__close"
+                onClick={() => setOpen(false)}
+                disabled={importing}
+                aria-label="Fechar cadastro"
+              >
+                ✕
+              </button>
+            </header>
             <div className="cadastro-tabs">
-              <button type="button" className={mode === 'manual' ? 'is-active' : ''} onClick={() => setMode('manual')}>
+              <button
+                type="button"
+                className={mode === 'manual' ? 'is-active' : ''}
+                onClick={() => setMode('manual')}
+              >
                 Manual
               </button>
-              <button type="button" className={mode === 'import' ? 'is-active' : ''} onClick={() => setMode('import')}>
+              <button
+                type="button"
+                className={mode === 'import' ? 'is-active' : ''}
+                onClick={() => setMode('import')}
+              >
                 CSV / XLSX
               </button>
             </div>
@@ -420,9 +601,14 @@ function Manutencoes() {
                   error={importError}
                 />
                 {upload ? <UploadStatus upload={upload} /> : null}
-                <Button type="submit" variant="light">
-                  {importing ? 'Processando upload…' : 'Enviar planilha'}
-                </Button>
+                <div className="form-modal__actions">
+                  <Button type="button" variant="secondary" disabled={importing} onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {importing ? 'Processando upload…' : 'Enviar planilha'}
+                  </Button>
+                </div>
               </>
             ) : (
               <>
@@ -513,9 +699,14 @@ function Manutencoes() {
                   value={form.description}
                   onChange={updateField('description')}
                 />
-                <Button type="submit" variant="light">
-                  Cadastrar
-                </Button>
+                <div className="form-modal__actions">
+                  <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    Cadastrar
+                  </Button>
+                </div>
               </>
             )}
           </form>

@@ -21,7 +21,7 @@ Adotar a biblioteca **River** (`github.com/riverqueue/river`) para prover mensag
 - **Identificador do job:** `process_ingestion_upload`;
 - **Unicidade de agendamento:** `UniqueOpts{ByArgs: true}` utilizando o `upload_id`, impedindo agendamentos duplicados concorrentes;
 - **Política de retentativas:** até 5 tentativas com backoff exponencial para falhas transitórias;
-- **Modo de consumo por polling (`RIVER_POLL_ONLY=true`):** em vez de conexões persistentes `LISTEN/NOTIFY` (incompatíveis com o modo transacional do PgBouncer no Supabase), os workers realizam polling ativo a cada 1 segundo;
+- **Modo de consumo por polling (`RIVER_POLL_ONLY=true`):** os workers consultam a fila em intervalos controlados, mantendo compatibilidade com o pooler transacional do Supabase e consumo previsível de conexões;
 - **Atomicidade transacional (Evitando Outbox Pattern complexo):** a chamada `riverClient.InsertTx(ctx, tx, args, ...)` é executada na mesma transação `sql.Tx` que grava a linha em `file_uploads`.
 
 ## 3. Matriz de Alternativas Avaliadas
@@ -48,5 +48,5 @@ Adotar a biblioteca **River** (`github.com/riverqueue/river`) para prover mensag
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L74-L99): método `Enqueue` gerenciando a transação atômica entre `file_uploads` e `river_job`;
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L130-L180): método `Work` no `IngestionWorker` processando jobs com propagação de telemetria e tratamento de erros.
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L74-99): método `Enqueue` gerenciando a transação atômica entre `file_uploads` e `river_job`;
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L130-180): método `Work` no `IngestionWorker` processando jobs com propagação de telemetria e tratamento de erros.

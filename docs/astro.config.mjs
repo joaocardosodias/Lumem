@@ -83,6 +83,33 @@ function rehypePrefixBase() {
 	};
 }
 
+function rehypeNumberedTitles() {
+	return (tree, file) => {
+		if (!file.path?.replaceAll('\\', '/').includes('/content/docs/sprints/')) return;
+		let section = 0;
+		const text = (node) => node.value ?? (node.children ?? []).map(text).join('');
+		function walk(node) {
+			const heading = node.type === 'element' && node.tagName === 'h2';
+			const existingBanner = node.type === 'mdxJsxFlowElement' && node.name === 'h2';
+			if (heading || existingBanner) {
+				const title = text(node).trim();
+				const number = /^(\d+)(?:\.\d+)*(?:[.)]\s+|\s+)/.exec(title);
+				const subtopic = /^\d+\.\d+/.test(title);
+				section = number ? Number(number[1]) : section + 1;
+				if (heading && !subtopic) {
+					// Keep generated IDs intact so existing links and the TOC still work.
+					if (!number) node.children.unshift({ type: 'text', value: `${section}. ` });
+					node.properties ??= {};
+					const classes = node.properties.className ?? [];
+					node.properties.className = [...(Array.isArray(classes) ? classes : [classes]), 'group-numbered-title'];
+				}
+			}
+			if (Array.isArray(node.children)) node.children.forEach(walk);
+		}
+		walk(tree);
+	};
+}
+
 // https://astro.build/config
 export default defineConfig({
 	site,
@@ -91,7 +118,7 @@ export default defineConfig({
 		'/': readmePath,
 	},
 	markdown: {
-		rehypePlugins: [rehypePrefixBase],
+		rehypePlugins: [rehypePrefixBase, rehypeNumberedTitles],
 	},
 	integrations: [
 		mermaid({
@@ -99,6 +126,7 @@ export default defineConfig({
 			autoTheme: true,
 		}),
 		starlight({
+			components: { Head: './src/components/DocumentationHead.astro' },
 			title: 'Documentação',
 			locales: {
 				root: { label: 'Português', lang: 'pt-BR' },

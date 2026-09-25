@@ -45,6 +45,6 @@ Adotar o padrão aberto **OpenTelemetry (OTel)** para instrumentação do códig
 
 ## 5. Evidências de Conformidade no Código
 
-- [`internal/adapter/telemetry/telemetry.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/telemetry/telemetry.go): inicialização do `TracerProvider` e exportador gRPC OTLP;
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L101-L112): método `newIngestionArgs` injetando o contexto W3C no mapa do job;
-- [`internal/adapter/jobqueue/river.go`](file:///home/cardoso/GitHub/g04/src/backend/internal/adapter/jobqueue/river.go#L130-L144): método `Work` extraindo o contexto W3C e iniciando o span consumidor.
+- [`internal/adapter/telemetry/telemetry.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/telemetry/telemetry.go): inicialização do `TracerProvider` e exportador gRPC OTLP;
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L101-112): método `newIngestionArgs` injetando o contexto W3C no mapa do job;
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L130-144): método `Work` extraindo o contexto W3C e iniciando o span consumidor.

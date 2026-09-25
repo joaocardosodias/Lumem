@@ -1,80 +1,41 @@
-attrs==26.1.0
-audioop-lts==0.2.2
-audioread==3.1.0
-beautifulsoup4==4.15.0
-btrfsutil==7.1
-certifi==2026.6.17
-cffi==2.1.0
-charset-normalizer==3.4.7
-colorama==0.4.6
-contourpy==1.3.3
-cryptography==49.0.0
-cupshelpers==1.0
-cycler==0.12.1
-dbus-python==1.4.0
-decorator==5.3.1
-fastjsonschema==2.21.2
-filelock==3.29.3
-fonttools==4.63.0
-gdown==6.1.0
-gps==3.27.5
-idna==3.18
-importlib_metadata==9.0.0
-joblib==1.5.3
-kiwisolver==1.5.0
-lark==1.3.1
-lazy-loader==0.5
-librosa==0.11.0
-libtorrent==2.1.0
-lit==22.1.8.dev0
-llvmlite==0.48.0
-matplotlib==3.11.0
-msgpack==1.1.2
-narwhals==2.24.0
-nftables==0.1
-numba==0.66.0+0.gaacf44424.dirty
-numpy==2.5.1
-OpenTimelineIO==0.18.1
-packaging==26.2
-perf==0.1
-pillow==12.3.0
-platformdirs==4.10.1
-poetry-core==2.4.1
-pooch==1.9.0
-pwquality==1.4.5
-pyaaf2==1.7.1
-pycairo==1.29.0
-pycparser==3.0
-pycups==2.0.4
-pydub==0.25.1
-PyGObject==3.56.3
-pyparsing==3.3.2
-PySocks==1.7.1
-python-dateutil==2.9.0
-pyxdg==0.28
-requests==2.34.2
-resampy==0.4.3
-scikit-learn==1.9.0
+# Modelagem e EDA: Python 3.14, Windows x86_64.
+# Modelo 4: models/modelo-4/requirements.txt (ambiente separado, XGBoost < 3).
+# Servico de inferencia: src/modelo/requirements.txt (Python 3.11).
+# Auditoria e instrucoes: docs/dependencias-python.md.
+
+# Dados, estatistica e formatos usados pelos notebooks/scripts.
+numpy==2.5.2
+pandas==3.0.5
 scipy==1.18.0
-shtab==1.8.1
-six==1.17.0
-soundfile==0.14.0
-soupsieve==2.9.2
-soxr==1.1.0
-standard-aifc==3.13.0
-standard-chunk==3.13.0
-standard-sunau==3.13.0
-TBB @ file:///build/onetbb/src/build/python/python_build
-termcolor==3.3.0
-terminaltexteffects==0.15.0
-threadpoolctl==3.6.0
-tldr==3.4.4
-tqdm==4.69.0
-typing_extensions==4.16.0
-ufw==0.36.2
-urllib3==2.7.0
-VapourSynth==77
-wheel==0.47.0
-yt-dlp==2026.7.4
-yt-dlp-ejs==0.8.0
-zipp==3.21.0
+joblib==1.5.3
+openpyxl==3.1.5
+pyarrow==25.0.1
+
+# Arvores, ensembles, explicabilidade e otimizacao.
+scikit-learn==1.9.0
+xgboost==3.4.0
+lightgbm==4.7.0
+catboost==1.2.10
+shap==0.52.0
+# Busca de hiperparametros da RNN otimizada (models/modelo-rnn-otimizado/).
+# O Modelo 4 usa optuna 3.6.1 no ambiente separado por restricao do FLAML.
+optuna==5.0.0
+
+# Redes recorrentes. Instale a build CPU a partir do indice do PyTorch, nao do PyPI
+# (pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu),
+# usada pelos notebooks de RNN em models/modelo-rnn/ e models/modelo-rnn-otimizado/
+torch==2.14.0
+
+# Visualizacao.
+matplotlib==3.11.1
+seaborn==0.13.2
+
+# Execucao dos notebooks, testes e auditoria.
+ipython==9.16.1
+ipykernel==7.3.0
+jupyterlab==4.6.4
+nbformat==5.11.1
+nbclient==0.11.0
+nbconvert==7.17.1
+pytest==9.1.1
+packaging==26.3

@@ -211,3 +211,35 @@ starlight-toc a {
 .sl-markdown-content {
 	max-width: 58rem;
 }
+
+/* Sprint 1 pattern: numbered main sections with a banner, plain subheadings. */
+.sl-markdown-content > .group-numbered-title,
+.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) {
+	box-sizing: border-box;
+	background: #3500e8 var(--group-title-background) center / cover no-repeat;
+	border-radius: 8px;
+	padding: 2rem;
+	color: #fff;
+	letter-spacing: 0;
+	overflow-wrap: anywhere;
+}
+
+.sl-markdown-content > .sl-heading-wrapper > .group-numbered-title {
+	color: inherit;
+	margin: 0;
+	min-width: 0;
+	font-size: 1.5rem;
+	line-height: 1.4;
+	letter-spacing: 0;
+}
+
+.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) .sl-anchor-link {
+	color: #fff;
+}
+
+@media (max-width: 50rem) {
+	.sl-markdown-content > .group-numbered-title,
+	.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) {
+		padding: 1.5rem;
+	}
+}
