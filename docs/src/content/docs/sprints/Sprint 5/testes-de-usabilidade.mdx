@@ -1,0 +1,60 @@
+---
+title: "Testes de Usabilidade"
+description: "Planejamento, execução e resultados dos testes de guerrilha feitos com a plataforma, relacionando cada tarefa às personas e aos requisitos que ela valida."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
+
+Os testes de usabilidade verificam se a plataforma consegue ser usada por quem ela foi pensada para atender: uma equipe de manutenção que precisa identificar portas em risco e agir sobre elas, sem precisar de conhecimento técnico de programação ou de aprendizado de máquina.
+
+Os testes foram escolhidos para validar um ou mais requisitos funcionais do ponto de vista de quem usa o sistema. Além disso, todas as tarefas validam o RNF07, que exige que a equipe consiga consultar riscos e executar ações sem conhecimento técnico.
+
+O método escolhido foi o teste de guerrilha. Ou seja, sessões curtas, em que cada participante recebe uma sequência de tarefas e é observado enquanto tenta realizá-las, sem ajuda do grupo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Tarefas, personas e requisitos</h2>
+</div>
+
+As tarefas foram definidas a partir das duas personas do projeto:
+
+- **Marta, a operadora**, analisa os dados das portas e planeja as manutenções. Não tem formação técnica e precisa entender rapidamente quais portas merecem atenção. Ela é a referência para a maior parte das tarefas, porque é quem usa a plataforma no dia a dia.
+- **Ronaldo, o mecânico**, executa a manutenção dentro de uma janela curta durante a madrugada e muitas vezes precisa fazer várias verificações até achar a origem de uma falha. Ele é a referência para a tarefa de consultar o histórico de uma porta antes de uma intervenção.
+
+Como os participantes não são a Marta nem o Ronaldo de verdade, os testes tentam reproduzir o comportamento previsto para essas personas. Essa é uma limitação registrada na análise dos resultados.
+
+| # | Tarefa | Persona | Requisitos validados |
+| --- | --- | --- | --- |
+| T1 | Fazer login na plataforma | Marta | RF01, RF02 |
+| T2 | Identificar no dashboard a estação e a porta com maior risco de falha | Marta | RF09, RF10 |
+| T3 | Abrir uma inspeção para a porta identificada na tarefa anterior | Marta | RF11 |
+| T4 | Cadastrar alarmes a partir de uma planilha | Marta | RF03 |
+| T5 | Encontrar as manutenções de uma estação em um período específico | Marta | RF05, RF06 |
+| T6 | Disparar uma nova rodada de predição | Marta | RF07 |
+| T7 | Consultar o histórico de uma porta para entender o que já aconteceu com ela | Ronaldo | RF05, RF09 |
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Métricas</h2>
+</div>
+
+Para cada tarefa, são registradas quatro métricas:
+
+| Métrica | Como é medida |
+| --- | --- |
+| **Tempo** | Do momento em que a tarefa é lida até o participante dizer que terminou ou desistir. |
+| **Taxa de sucesso** | Quantos participantes concluíram a tarefa sem ajuda. Quem precisou de ajuda não conta como sucesso. Como o número de participantes é pequeno, o resultado é apresentado como "X de Y" (por exemplo, "3 de 5"), e não em porcentagem. |
+| **Erros** | Quantas vezes o participante clicou no lugar errado, voltou de tela ou seguiu um caminho que não levava à tarefa. |
+| **Precisou de ajuda?** | Se foi necessário algum tipo de orientação do grupo para o participante conseguir continuar. |
+
+Além das métricas, são anotadas as hesitações, dúvidas faladas em voz alta e comentários espontâneos dos participantes, que ajudam a explicar os números.
