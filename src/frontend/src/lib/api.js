@@ -75,7 +75,14 @@ export async function request(path, { method = 'GET', body, formData, auth = tru
     headers['Content-Type'] = 'application/json'
   }
 
-  const url = import.meta.env.DEV || !API_ORIGIN ? path : `${API_ORIGIN}${path}`
+  let url = import.meta.env.DEV || !API_ORIGIN ? path : `${API_ORIGIN}${path}`
+  if (typeof window !== 'undefined' && API_ORIGIN) {
+    const isLocalApi = API_ORIGIN.includes('localhost') || API_ORIGIN.includes('127.0.0.1')
+    const isRemoteClient = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    if (isLocalApi && isRemoteClient) {
+      url = path
+    }
+  }
   const response = await fetch(url, {
     method,
     headers,

@@ -210,6 +210,7 @@ func buildRouter(cfg *config.Config, logger *slog.Logger, h appHandlers) *gin.En
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(httpAdapter.CORSMiddleware())
 	if cfg.OTelEnabled {
 		router.Use(otelgin.Middleware(cfg.OTelServiceName))
 	}
