@@ -183,6 +183,8 @@
   padding: 16px 18px 9px;
 }
 
+.threshold-chart-mobile-toggle { display: none; }
+
 .threshold-chart-svg {
   width: 100%;
   height: auto;
@@ -485,6 +487,25 @@
     align-items: flex-start;
     gap: 10px;
   }
+
+  .threshold-chart-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    padding: 12px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .threshold-chart-svg-wrap { display: none; overflow-x: auto; padding-inline: 10px; }
+  .threshold-chart-svg-wrap.is-expanded { display: block; }
+  .threshold-chart-svg { min-width: 520px; }
+  .threshold-chart-card__footer > span:last-child { display: none; }
 
   .threshold-impact-row {
     grid-template-columns: 42px minmax(100px, 1fr) 38px;

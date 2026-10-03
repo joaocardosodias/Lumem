@@ -40,6 +40,7 @@ function formatDelta(value, isPercent = true) {
 
 function TradeoffCurveChart({ selectedThreshold, officialThreshold, thresholdMetrics, onSelectThreshold }) {
   const [hoverTh, setHoverTh] = useState(null)
+  const [mobileChartExpanded, setMobileChartExpanded] = useState(false)
   const activeTh = hoverTh ?? selectedThreshold
   const calibrationPoints = useMemo(() => normalizeThresholdMetrics(thresholdMetrics), [thresholdMetrics])
 
@@ -115,7 +116,17 @@ function TradeoffCurveChart({ selectedThreshold, officialThreshold, thresholdMet
         </div>
       </header>
 
-      <div className="threshold-chart-svg-wrap">
+      <button
+        type="button"
+        className="threshold-chart-mobile-toggle"
+        aria-expanded={mobileChartExpanded}
+        aria-controls="threshold-calibration-plot"
+        onClick={() => setMobileChartExpanded((expanded) => !expanded)}
+      >
+        {mobileChartExpanded ? 'Ocultar gráfico' : 'Ver gráfico de calibração'}
+        <span aria-hidden="true">{mobileChartExpanded ? '−' : '+'}</span>
+      </button>
+      <div id="threshold-calibration-plot" className={`threshold-chart-svg-wrap${mobileChartExpanded ? ' is-expanded' : ''}`}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="threshold-chart-svg"

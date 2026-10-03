@@ -218,25 +218,29 @@
   flex-direction: column;
 }
 
+/* The shell keeps this footer visible while only the page content scrolls. */
+.barra-nav__mobile-label {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .barra-nav, .barra-nav.is-collapsed {
+    order: 2;
     width: 100%;
     height: auto;
-    padding: 15px 20px 12px;
+    padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border-right: 0;
+    border-top: 1px solid var(--brand-hover);
+    box-shadow: 0 -4px 16px #172e520c;
   }
 
-  .barra-nav__brand, .barra-nav.is-collapsed .barra-nav__brand {
-    min-height: 0;
-    padding: 0;
-    margin-bottom: 14px;
-  }
-
-  .barra-nav__logo, .barra-nav.is-collapsed .barra-nav__logo {
-    width: 105px;
-    height: 29px;
-  }
-
-  .barra-nav__brand-caption, .barra-nav__section-label, .barra-nav__user, .barra-nav.is-collapsed .barra-nav__user, .barra-nav button.barra-nav__toggle {
+  .barra-nav__brand,
+  .barra-nav__section-label,
+  .barra-nav__user,
+  .barra-nav.is-collapsed .barra-nav__user,
+  .barra-nav__footer,
+  .barra-nav.is-collapsed .barra-nav__footer,
+  .barra-nav__indicator {
     display: none;
   }
 
@@ -244,86 +248,62 @@
     flex: initial;
     min-width: 0;
     overflow-x: auto;
-    scrollbar-width: thin;
+    scrollbar-width: none;
   }
+
+  .barra-nav nav::-webkit-scrollbar { display: none; }
 
   .barra-nav ul {
     display: flex;
-    gap: 6px;
-    width: max-content;
+    gap: 2px;
+    width: 100%;
   }
 
   .barra-nav li {
-    height: 40px;
+    flex: 1 0 44px;
+    min-width: 0;
+    height: 56px;
   }
 
-  .barra-nav li + li {
-    margin-top: 0;
-  }
+  .barra-nav li + li { margin-top: 0; }
 
   .barra-nav li button, .barra-nav.is-collapsed li button {
-    gap: 8px;
-    padding: 0 12px;
-    font-size: 12px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 2px;
+    border-radius: 8px;
+    font-size: 9px;
+    text-align: center;
   }
 
-  .barra-nav.is-collapsed .barra-nav__label {
-    display: inline;
+  .barra-nav li button svg { width: 21px; height: 21px; }
+
+  .barra-nav .barra-nav__label,
+  .barra-nav.is-collapsed .barra-nav__label { display: none; }
+
+  .barra-nav__mobile-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .barra-nav li button.is-active {
-    background: white;
-    box-shadow: inset 0 0 0 1px white;
-  }
+  .barra-nav li button.is-active { background: white; }
 
-  .barra-nav__indicator {
-    display: none;
-  }
+  .barra-nav li button:active { background: #ffffff30; }
+  .barra-nav li button.is-active:active { background: #eeeaff; }
 
-  .barra-nav__footer {
-    position: absolute;
-    top: 12px;
-    right: 20px;
-  }
-
-  .barra-nav__sair {
-    font-size: 12px;
-  }
+  .app-shell .barra-nav button:focus-visible { outline-offset: -3px; }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 360px) {
   .barra-nav, .barra-nav.is-collapsed {
-    padding: 12px 14px 10px;
+    padding-inline: max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-right));
   }
 
-  .barra-nav__brand, .barra-nav.is-collapsed .barra-nav__brand {
-    margin-bottom: 10px;
-  }
-
-  .barra-nav__logo, .barra-nav.is-collapsed .barra-nav__logo {
-    width: 90px;
-    height: 25px;
-  }
-
-  .barra-nav__footer {
-    top: 8px;
-    right: 14px;
-  }
-
-  .barra-nav li {
-    height: 36px;
-  }
-
-  .barra-nav li button, .barra-nav.is-collapsed li button {
-    gap: 6px;
-    padding: 0 10px;
-    font-size: 11.5px;
-  }
-
-  .barra-nav li button svg {
-    width: 16px;
-    height: 16px;
-  }
+  .barra-nav ul { gap: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

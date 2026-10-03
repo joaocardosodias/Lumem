@@ -82,6 +82,11 @@
   background: #e5b530;
 }
 
+.app-topbar__mobile-brand,
+.app-topbar__mobile-account {
+  display: none;
+}
+
 .app-main__body {
   position: relative;
   flex: 1;
@@ -133,9 +138,63 @@
   }
 
   .app-topbar {
-    min-height: 56px;
-    padding: 12px 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 12px;
+    min-height: 0;
+    padding: max(12px, env(safe-area-inset-top)) 20px 12px;
   }
+
+  .app-topbar__mobile-brand {
+    display: flex;
+    align-items: center;
+  }
+
+  .app-topbar__mobile-brand img {
+    width: 92px;
+    height: 25px;
+    /* The existing logo is white; display it in the brand color on this surface. */
+    filter: brightness(0) saturate(100%) invert(15%) sepia(100%) saturate(7000%) hue-rotate(255deg);
+  }
+
+  .app-topbar__mobile-account {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .app-topbar__user {
+    max-width: 120px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-topbar__mobile-account button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    color: var(--muted);
+  }
+
+  .app-topbar__mobile-account button svg { width: 19px; height: 19px; }
+  .app-topbar__mobile-account button:active { background: var(--interactive); }
+
+  .app-topbar__breadcrumb { grid-row: 2; min-width: 0; }
+  .app-topbar__breadcrumb > span { display: none; }
+  .app-topbar__breadcrumb strong { font-size: 13px; }
+  .app-topbar__line { grid-row: 2; padding: 5px 8px; font-size: 11px; }
 
   .app-page-cache {
     padding: 26px 20px;
@@ -144,8 +203,7 @@
 
 @media (max-width: 520px) {
   .app-topbar {
-    min-height: 48px;
-    padding: 10px 14px;
+    padding-inline: 14px;
     gap: 8px;
   }
 
@@ -165,7 +223,13 @@
   }
 
   .app-page-cache {
-    padding: 16px 12px 28px;
+    padding: 20px max(14px, env(safe-area-inset-right)) 28px max(14px, env(safe-area-inset-left));
+    scroll-padding-block: 20px;
   }
-}
 
+  .app-page-cache .dashboard__kicker { display: none; }
+  .app-page-cache .dashboard__lead { font-size: 13.5px; line-height: 1.45; }
+  .app-shell input:not([type='range']):not([type='checkbox']),
+  .app-shell select,
+  .app-shell textarea { font-size: 16px; }
+}

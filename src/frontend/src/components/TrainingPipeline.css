@@ -712,6 +712,13 @@
 
 @media (max-width: 480px) {
   .pipeline-flow-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
+  .pipeline-flow-row.is-reverse { direction: ltr; }
+  .pipeline-flow-card { min-height: 76px; padding: 10px 6px; }
+  .pipeline-flow-card__title { font-size: 11px; overflow-wrap: anywhere; }
+  .pipeline-meta-pill { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .pipeline-meta-pill strong { min-width: 0; overflow-wrap: anywhere; }
+  .pipeline-stage-detail-panel__metrics { flex-wrap: wrap; gap: 12px; }
 }

@@ -254,18 +254,27 @@
 
   .filtros__periodos button {
     padding-inline: 6px;
+    min-height: 44px;
   }
 
   .filtros__campos {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filtros__campo:first-child {
-    grid-column: auto;
+    grid-column: 1 / -1;
+  }
+
+  .filtros__campo input,
+  .filtros__campo select {
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .filtros__clear {
     width: 100%;
+    min-height: 44px;
+    grid-column: 1 / -1;
   }
 }
 

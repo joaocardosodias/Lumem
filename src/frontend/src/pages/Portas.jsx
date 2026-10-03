@@ -812,12 +812,22 @@ function Portas({ onNavigate, params = {} }) {
           <p className="dashboard__kicker">Linha 4 Amarela</p>
           <h1>Portas de Plataforma</h1>
           <p className="dashboard__lead">
-            Visão topográfica, status operacional e dossiê detalhado das portas por estação.
+            Consulte o diagnóstico e o histórico das portas por estação.
           </p>
         </div>
       </div>
 
       {error ? <p className="page-status is-error">{error}</p> : null}
+
+      <nav className="portas__mobile-stations" aria-label="Escolher estação">
+        {lineStations.map((station) => (
+          <button key={station.code} type="button" onClick={() => handleOpenStation(station.code)}>
+            <span>{station.name}</span>
+            <small>{station.code}</small>
+            <span aria-hidden="true">›</span>
+          </button>
+        ))}
+      </nav>
 
       <div className="linha-map" onClick={(event) => event.stopPropagation()}>
         <div className="linha-map__rail" />
