@@ -1196,8 +1196,24 @@
     grid-template-columns: 1fr;
   }
 
+  .linha-map {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 16px 12px;
+  }
+
+  .linha-map__rail {
+    right: auto;
+    left: 18px;
+    width: 820px;
+  }
+
+  .linha-map__stops {
+    min-width: 820px;
+  }
+
   .linha-map__name {
-    max-width: 60px;
+    max-width: 68px;
     font-size: 11px;
   }
 
@@ -1247,6 +1263,20 @@
 }
 
 @media (max-width: 600px) {
+  .portas .page-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .portas--station .page-head__actions {
+    width: 100%;
+  }
+
+  .portas--station .page-head__actions .ui-button {
+    width: 100%;
+  }
+
   .portas-modal-backdrop {
     align-items: flex-end;
     padding: 0;
@@ -1282,3 +1312,4 @@
     padding: 14px 20px 18px;
   }
 }
+

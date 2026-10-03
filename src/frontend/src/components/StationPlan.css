@@ -892,6 +892,10 @@
   .station-plan__foot { padding-inline: 16px; }
 }
 
+@container station-plan (max-width: 460px) {
+  .station-plan__filters button { flex: 1 1 calc(50% - 4px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .station-plan *, .station-plan *::before, .station-plan *::after { transition: none; }
   .station-plan__door:not(:disabled):hover, .station-plan__door:not(:disabled):active { transform: none; }

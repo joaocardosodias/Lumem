@@ -144,14 +144,28 @@
 
 @media (max-width: 520px) {
   .app-topbar {
-    padding-inline: 16px;
+    min-height: 48px;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .app-topbar__breadcrumb {
+    gap: 8px;
+    font-size: 11px;
   }
 
   .app-topbar__breadcrumb > span {
     display: none;
   }
 
+  .app-topbar__line {
+    padding: 6px 10px;
+    font-size: 11.5px;
+    gap: 6px;
+  }
+
   .app-page-cache {
-    padding: 24px 16px;
+    padding: 16px 12px 28px;
   }
 }
+

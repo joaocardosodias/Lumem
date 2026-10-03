@@ -10,7 +10,7 @@
 .prediction-history__visuals > section + section { border-left: 1px solid #e6ebf2; }
 .prediction-history__visuals header h5 { margin: 0; color: #17263c; font-size: 22px; font-weight: 800; letter-spacing: -.025em; line-height: 1.2; }
 .prediction-history__visuals header p { margin: 7px 0 0; color: #526178; font-size: 15px; font-weight: 500; line-height: 1.55; }
-.prediction-history-chart { margin-top: 12px; overflow: hidden; }
+.prediction-history-chart { margin-top: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .prediction-chart-empty { display: grid; min-height: 170px; margin: 12px 0 0; place-items: center; padding: 24px; background: #f7f9fc; color: #6c798d; font-size: 11px; line-height: 1.55; text-align: center; }
 .prediction-history-chart svg { display: block; width: 100%; min-width: 420px; }
 .prediction-chart-grid { stroke: #e8edf4; stroke-width: 1; }

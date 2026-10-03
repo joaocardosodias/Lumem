@@ -263,7 +263,12 @@
   .filtros__campo:first-child {
     grid-column: auto;
   }
+
+  .filtros__clear {
+    width: 100%;
+  }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .filtros__periodos button,
