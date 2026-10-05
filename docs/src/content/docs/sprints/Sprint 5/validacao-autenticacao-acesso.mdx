@@ -7,7 +7,7 @@ description: "Cenários, reprodução e evidências de validação dos requisito
 
 Validar o login por e-mail e senha (RF01) e a restrição dos recursos protegidos a usuários autenticados (RF02), complementando o [mapeamento de cobertura](/sprints/sprint-5/mapeamento-testes-rf/).
 
-Data: 05/10/2026. Base do trabalho: commit `9f0e80cc85fa2f51c08921fe44894f326e1c1817`, com os arquivos de testes desta entrega ainda sem commit.
+Data: 05/10/2026. Versão dos testes: commit `8a41c4add2fec4929b98c4ebda4e92d97c3ebfd0`. As evidências de execução foram acrescentadas posteriormente à documentação.
 
 ## Implementação dos testes
 
@@ -18,6 +18,7 @@ Os caminhos são relativos à raiz do repositório.
 | `src/backend/tests/integration/auth_requirements_test.go` | `TestRF01_LoginContract`: login pelo handler HTTP com caso de uso, bcrypt e JWT reais; repositório de usuários em memória. |
 | `src/backend/tests/integration/api_test.go` | Fixture compartilhada de autenticação; permite configurar usuário ativo ou inativo. Mantém a fixture anterior para os testes existentes. |
 | `src/backend/cmd/api/auth_requirements_test.go` | `TestRF02_AllProtectedRoutesRejectUnauthorizedAccess`: percorre as rotas do router real em configuração de produção e desenvolvimento e verifica quatro formas de acesso não autorizado. |
+| `src/backend/tests/unit/http/health_test.go` | Ajuste da fixture de armazenamento temporário para Windows e Unix, identificado na regressão: usa diretório inexistente dentro de `t.TempDir()` e configura `TMPDIR`, `TMP` e `TEMP`. |
 
 Os novos testes usam as implementações existentes. Não alteram a lógica de autenticação nem os requisitos. As suítes anteriores de login, middleware e controle de papel também fazem parte da validação.
 
@@ -66,7 +67,28 @@ O pipeline existente em `.gitlab-ci.yml` já descobre arquivos `*_test.go` com `
 
 ## Evidências de execução
 
-Execução em preparação. Esta seção será preenchida com os resultados efetivamente obtidos, incluindo limitações do ambiente.
+**Resultado: os cenários automatizados de RF01/RF02 passaram.** Execução em Windows amd64 com Go 1.26.0, em 05/10/2026, usando os comandos acima e `-count=1`. O Go e seus caches foram preparados em diretório temporário; nenhuma dependência do projeto foi alterada.
+
+Os resultados extraídos dos eventos JSON do Go estão no [arquivo de evidências](/evidencias/rf01-rf02.json). Ele registra versão do código, horários, resultados por pacote, casos novos, falha inicial e reteste da regressão.
+
+| Verificação | Resultado obtido |
+| --- | --- |
+| Seleção RF01/RF02 | 4 pacotes aprovados; 19 funções de teste de nível superior aprovadas; nenhum teste falho ou ignorado. |
+| AUT-01 a AUT-08 | 8 subcasos novos de login aprovados, incluindo acesso autenticado com o token emitido. |
+| ACE-01 a ACE-04 | 35 rotas protegidas × 4 entradas × 2 configurações = **280 subcasos aprovados**. |
+| Demais testes selecionados | Login, handler HTTP, middleware, controle de papel e fluxo de autenticação existentes aprovados. |
+| Regressão final | 3 pacotes aprovados; 166 funções de teste de nível superior aprovadas e 1 ignorada por ausência de PostgreSQL. Nenhuma falha após o ajuste da fixture. |
+| Documentação | Build Astro concluído. |
+
+O Go emitiu 312 eventos de aprovação de testes/subtestes na seleção RF e 477 na regressão final. Essas contagens incluem os testes pais e seus subtestes; **não representam 312 ou 477 cenários independentes**.
+
+### Falha encontrada e reteste
+
+Na primeira regressão, `TestHealthHandler_Ready_StorageDown` esperava HTTP 503, mas recebia 200 no Windows. A fixture configurava somente `TMPDIR`, enquanto o diretório temporário usado nesse ambiente depende de `TMP`/`TEMP`. A preparação foi corrigida para as três variáveis, com restauração automática por `t.Setenv`; o handler de produção não foi alterado. A regressão completa dos três pacotes foi repetida e passou.
+
+`TestCheckDatabaseConnection_AndMigrations` permaneceu ignorado porque não havia PostgreSQL disponível na porta 5439. Esse teste não faz parte da seleção de RF01/RF02; sua ausência não foi contada como aprovação.
+
+Não foram executados o detector de corrida (`-race`), o pipeline remoto, a suíte completa do sistema ou testes no navegador. O resultado comprova os cenários automatizados descritos nesta página, dentro dos limites abaixo. A lacuna L02 do mapeamento inicial foi coberta na API quanto a token expirado e enumeração das rotas protegidas.
 
 ## Limites da validação e roteiro da interface
 
