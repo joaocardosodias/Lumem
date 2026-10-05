@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -79,7 +80,10 @@ func TestLocalTempStorage_StoreReaderError(t *testing.T) {
 }
 
 func TestLocalTempStorage_StoreCreateTempError(t *testing.T) {
-	t.Setenv("TMPDIR", "/nonexistent_dir_for_test")
+	missingTempDir := filepath.Join(t.TempDir(), "nonexistent")
+	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(variable, missingTempDir)
+	}
 	s := storage.NewLocalTempStorage()
 	ctx := context.Background()
 	if _, _, err := s.Store(ctx, "falha.csv", strings.NewReader("dados")); err == nil {

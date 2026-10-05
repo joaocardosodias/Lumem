@@ -101,7 +101,8 @@
     },
     "/api/v1/uploads/alarms": {
       "post": {
-        "summary": "Upload de CSV de Alarmes de Telemetria",
+        "summary": "Upload de CSV ou XLSX de Alarmes de Telemetria",
+        "description": "Aceita extensoes .csv e .xlsx, sem distinguir maiusculas de minusculas. A validacao do conteudo ocorre no processamento; consulte o status do upload apos receber 202.",
         "security": [
           {
             "BearerAuth": []
@@ -128,6 +129,14 @@
           "202": {
             "description": "Arquivo aceito para processamento em lote"
           },
+          "415": {
+            "description": "Extensao nao permitida (ERR_UNSUPPORTED_FILE_TYPE). Envie CSV ou XLSX.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          },
           "409": {
             "description": "Arquivo duplicado detectado por SHA-256",
             "content": {
@@ -144,6 +153,7 @@
     "/api/v1/uploads/maintenance": {
       "post": {
         "summary": "Upload de Planilha de Manutencao (ZM01, ZM02, ZM03)",
+        "description": "Aceita CSV ou XLSX. Quando informado, order_type prevalece sobre o tipo de cada linha; quando omitido, o tipo vem da planilha. A resposta 202 indica recebimento, nao conclusao da importacao.",
         "security": [
           {
             "BearerAuth": []
@@ -173,6 +183,14 @@
         "responses": {
           "202": {
             "description": "Planilha aceita para processamento"
+          },
+          "415": {
+            "description": "Extensao nao permitida (ERR_UNSUPPORTED_FILE_TYPE). Envie CSV ou XLSX.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
           },
           "409": {
             "description": "Arquivo duplicado"
