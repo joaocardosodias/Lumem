@@ -1,0 +1,269 @@
+---
+title: "Economia Circular"
+description: "Mapeamento preliminar do ciclo de vida, componentes, recursos, riscos e oportunidades de circularidade do sistema de Portas de Plataforma (PSD) da Linha 4 Amarela."
+---
+
+# Economia Circular
+
+## 1. Objetivo e escopo
+
+Este artefato tem como objetivo mapear o ciclo físico e operacional relacionado ao sistema de **Portas de Plataforma (PSD)** da Linha 4 Amarela, considerando componentes, materiais, recursos, processos, manutenção, riscos, impactos e possibilidades de circularidade.
+
+A análise tem como foco principal os ativos físicos e sua operação. A aplicação desenvolvida pelo grupo entra como uma **camada de apoio à manutenção e à tomada de decisão**, e não como o objeto físico principal do ciclo de economia circular.
+
+O mapeamento será construído em duas categorias de informação:
+
+- **Informações confirmadas pelo parceiro**, obtidas nos arquivos de materiais e ordens corretivas;
+- **Informações a validar ou pesquisar**, principalmente matérias-primas não explicitadas, fabricação, logística, impactos ambientais e sociais, reciclagem e destinação final.
+
+---
+
+## 2. Fontes internas utilizadas nesta etapa
+
+Nesta versão inicial foram utilizados os seguintes arquivos fornecidos no contexto do projeto:
+
+| Fonte | Utilização |
+|---|---|
+| **Lista de materiais do sistema PSD.xlsx** | Identificação de componentes, subconjuntos, materiais explicitamente descritos e fornecedores |
+| **Custos das ordens corretivas emergenciais (Z1).xlsx** | Identificação de componentes efetivamente associados a ordens corretivas e tipos de falha |
+| **Bases ZM01, ZM02 e ZM03** | Contextualização das atividades de manutenção corretiva emergencial, corretiva programada e preventiva |
+| **Base de alarmes PSD** | Contextualização do monitoramento e comportamento operacional das portas |
+
+As informações de impactos ambientais, sociais, processos de fabricação e destinação final ainda precisarão ser complementadas com documentação técnica do parceiro ou fontes externas confiáveis.
+
+---
+
+## 3. Requisitos de visualização
+
+A visualização deverá permitir que o usuário compreenda o ciclo completo do sistema PSD, partindo dos materiais e componentes até operação, manutenção e fim de vida.
+
+Ela deverá apresentar:
+
+- as etapas principais do ciclo;
+- as famílias de componentes;
+- materiais identificados;
+- processos associados;
+- relações com manutenção e falhas;
+- principais pontos de fragilidade;
+- impactos ambientais e sociais;
+- caminhos de reparo, reutilização, reciclagem e descarte;
+- fontes utilizadas.
+
+A visualização será estruturada em dois níveis:
+
+1. **Visão geral**, mostrando o ciclo completo;
+2. **Visão detalhada**, permitindo aprofundar cada etapa, família de componentes, risco ou oportunidade circular.
+
+### 3.1. Usuários considerados
+
+| Perfil | Necessidade principal |
+|---|---|
+| Equipe de Engenharia e Manutenção | Visualizar falhas, componentes, intervenções e possibilidades de reaproveitamento |
+| Gestão técnica e operacional | Identificar riscos, impactos e pontos críticos do ciclo |
+| Parceiros e fornecedores | Compreender fornecimento, reposição, manutenção e possíveis responsabilidades de destinação |
+
+A necessidade de permissões diferentes entre esses perfis ainda deverá ser validada com o parceiro.
+
+---
+
+## 4. Famílias de componentes identificadas
+
+A Lista de Materiais do sistema PSD permite organizar os itens em famílias funcionais, evitando representar individualmente centenas de códigos no infográfico.
+
+| Família | Exemplos confirmados nos arquivos | Materiais explicitamente identificados | Função no sistema |
+|---|---|---|---|
+| **Estrutura e fechamento** | PDM, PSE, PFX/PFP, header box, suportes, tampas, soleiras | Aço, aço inox e alumínio aparecem em itens específicos | Estrutura física, sustentação, proteção e fechamento |
+| **Vidros e painéis** | Vidros laminados, temperados, refletivos e porta de vidro do PCM | Vidro laminado e vidro temperado | Barreira física, fechamento e visibilidade |
+| **Acionamento mecânico** | Motor DC, correia dentada, polias, roletes, trolley e rolamentos | Alumínio, aço, resina acetal e outros materiais descritos em peças específicas | Movimentação de abertura e fechamento |
+| **Travas e segurança** | Electronic Lock, fechaduras, linguetas, barras antipânico, barras de segurança, travas e mecanismos de destravamento | Metais e subconjuntos eletromecânicos | Travamento, destravamento e segurança operacional |
+| **Sensoriamento** | Sensor magnético aberto/fechado, atuadores de sensores e suportes | Materiais não completamente descritos para todos os itens | Detecção de posição e estado da porta |
+| **Eletrônica e controle** | DCU, MDU, PCM, placas e terminal blocks | Componentes eletrônicos e estruturas associadas | Controle e processamento dos comandos do sistema |
+| **Energia e cabeamento** | Cabos de alimentação do DCU e MDU, conectores, terminais e fontes | Cobre, nylon e outros materiais aparecem em itens específicos | Alimentação elétrica e comunicação |
+| **Sinalização** | Barra LED, lâmpadas de indicação e elementos de sinalização | Componentes eletrônicos | Sinalização visual e operacional |
+| **Polímeros e proteção** | Borrachas de proteção e vedação, escovas, perfis, piso/cobertura de soleira | PVC, nylon, borracha, resina acetal e polímeros descritos nos cadastros | Vedação, acabamento, proteção e redução de contato/desgaste |
+
+> **Observação:** a classificação acima é uma organização analítica do grupo. Os exemplos e materiais foram identificados na lista de materiais, mas nem todos os itens possuem composição completa informada.
+
+---
+
+## 5. Evidência de uso em manutenção corretiva
+
+O arquivo de custos das ordens corretivas permite identificar componentes que efetivamente aparecem associados a intervenções emergenciais.
+
+Nesta primeira análise, alguns itens aparecem ligados repetidamente a ocorrências como falha de abertura, falha de fechamento, falha de trava e falha de circuito.
+
+| Componente / família | Evidência nas ordens corretivas | Leitura preliminar |
+|---|---|---|
+| **Electronic Lock / travamento** | Associado a diversas ordens de falha de abertura, fechamento, trava e circuito | Família relevante para análise de fragilidade operacional |
+| **Sensor magnético aberto/fechado** | Associado a diversas ordens de falha de abertura e fechamento | Sensoriamento deve ser tratado como ponto importante do ciclo de manutenção |
+| **Motor DC da PDM** | Aparece associado a ordens corretivas de PDM | Componente de acionamento com potencial importância operacional e econômica |
+| **Terminais e conectores** | Há registros de materiais de conexão em algumas ordens | Componentes menores também podem participar de falhas do sistema |
+| **Outros subconjuntos** | A base apresenta outros materiais e conjuntos associados a ordens específicas | Precisam ser classificados nas famílias antes da análise final |
+
+Neste estágio, essa evidência **não significa que esses componentes sejam, isoladamente, os principais causadores de falha**. Ela indica que aparecem associados a intervenções corretivas e, portanto, merecem atenção no levantamento de riscos e circularidade.
+
+---
+
+## 6. Espinha dorsal do ciclo de Economia Circular
+
+O ciclo será estruturado da seguinte forma:
+
+```text
+Matérias-primas e recursos
+        ↓
+Fabricação de componentes
+        ↓
+Fornecimento e transporte
+        ↓
+Instalação no sistema PSD
+        ↓
+Operação
+        ↓
+Monitoramento e inspeção
+        ↓
+Manutenção
+        ↓
+┌─────────────────────────────┐
+│ Reparo possível?            │
+└──────────────┬──────────────┘
+               │
+        Sim    │    Não
+         ↓     │     ↓
+      Reparo   │  Substituição
+         ↓     │     ↓
+     Reutilização   Componente retirado
+                        ↓
+             ┌──────────┼───────────┐
+             ↓          ↓           ↓
+          Reuso     Reciclagem   Descarte
+```
+
+A aplicação preditiva desenvolvida pelo grupo atua principalmente entre **monitoramento, inspeção e manutenção**, apoiando a identificação de portas com maior risco de falha.
+
+---
+
+## 7. Cruzamento inicial das famílias com o ciclo
+
+A tabela abaixo é a espinha principal para o desenvolvimento do infográfico e das análises posteriores.
+
+| Família | Fabricação | Instalação | Operação | Manutenção | Possível saída do ciclo | Fragilidade preliminar | Circularidade a investigar |
+|---|---|---|---|---|---|---|---|
+| **Estrutura e fechamento** | Produção e conformação de estruturas e suportes | Fixação e montagem na plataforma | Exposição contínua ao ambiente e esforços mecânicos | Ajustes, reparos e substituição de elementos | Reparo, reaproveitamento, reciclagem ou descarte | Desgaste, deformação ou dano físico | Reparo de estruturas e reciclagem de metais |
+| **Vidros e painéis** | Produção de vidro laminado/temperado | Montagem em portas e painéis | Barreira física e contato com ambiente da estação | Substituição em caso de dano | Reuso limitado, reciclagem ou descarte | Quebra, trinca e dano superficial | Possibilidade de reciclagem deverá ser validada conforme tipo de vidro |
+| **Acionamento mecânico** | Produção de motores, roletes, rolamentos, polias e correias | Montagem no mecanismo da PDM | Ciclos repetidos de abertura e fechamento | Ajuste, lubrificação, reparo ou substituição | Reparo, remanufatura, reciclagem ou descarte | Desgaste mecânico e perda de desempenho | Reparo, recuperação de subconjuntos e reciclagem de metais |
+| **Travas e segurança** | Produção de mecanismos mecânicos/eletromecânicos | Integração ao sistema de porta | Travamento e destravamento contínuos | Ajuste ou substituição após falha | Reparo, reutilização de partes, reciclagem ou descarte | Evidência de ordens ligadas a Electronic Lock e falhas de trava | Avaliar reparabilidade e reaproveitamento de subconjuntos |
+| **Sensoriamento** | Produção de sensores e atuadores | Posicionamento e calibração | Leitura contínua do estado da porta | Ajuste, reposicionamento ou substituição | Reuso, reciclagem eletrônica ou descarte | Sensor magnético aparece repetidamente em corretivas | Avaliar vida útil, recalibração e logística reversa |
+| **Eletrônica e controle** | Produção de placas, módulos e dispositivos eletrônicos | Instalação em painéis e header boxes | Controle lógico e acionamento | Diagnóstico, reparo ou substituição | Reparo, remanufatura, reciclagem eletrônica ou descarte | Falhas de circuito e MDU aparecem no histórico operacional | Avaliar reparo de placas e destinação de resíduos eletrônicos |
+| **Energia e cabeamento** | Produção de cabos, conectores, terminais e fontes | Distribuição de energia e sinais | Alimentação e comunicação contínuas | Reparo de conexão ou substituição | Reuso parcial, reciclagem de metais/polímeros ou descarte | Mau contato, dano físico ou degradação | Recuperação de cobre e segregação adequada |
+| **Sinalização** | Produção de LEDs e elementos indicadores | Instalação em módulos e portas | Comunicação visual | Substituição após falha | Reciclagem eletrônica ou descarte | Há registros de LED da PDM apagado | Avaliar reparabilidade dos módulos e logística reversa |
+| **Polímeros e proteção** | Produção de borrachas, escovas, perfis e coberturas | Montagem em áreas de contato e vedação | Proteção, vedação e acabamento | Troca por desgaste | Reuso limitado, reciclagem quando aplicável ou descarte | Desgaste natural e envelhecimento | Identificar tipo de polímero e rota de reciclagem correspondente |
+
+### 7.1. Interpretação desta matriz
+
+Neste momento, três níveis de informação estão misturados propositalmente na matriz:
+
+- **Confirmado:** famílias, exemplos de componentes e alguns materiais presentes nos arquivos do parceiro;
+- **Derivado do funcionamento dos componentes:** posição provável de cada família no ciclo;
+- **A validar:** processos industriais específicos, impactos ambientais, impactos sociais e destinação real adotada pelo parceiro.
+
+As informações a validar não serão apresentadas como fatos definitivos no infográfico final até que exista uma fonte adequada.
+
+---
+
+## 8. Priorização preliminar para análise
+
+A partir do cruzamento entre a lista de materiais e as ordens corretivas, quatro famílias merecem prioridade inicial:
+
+### 8.1. Travas e segurança
+
+O **Electronic Lock** aparece associado a diversas ordens corretivas, especialmente em ocorrências relacionadas a abertura, fechamento e trava.
+
+**Questões para investigar:**
+
+- o componente é reparado ou substituído integralmente?
+- existe recuperação de partes?
+- qual é sua vida útil esperada?
+- qual é o destino após retirada?
+
+### 8.2. Sensoriamento
+
+O **sensor magnético aberto/fechado da PDM** aparece repetidamente no histórico de materiais associados às corretivas.
+
+**Questões para investigar:**
+
+- falhas são resolvidas por ajuste/reposicionamento ou troca?
+- sensores retirados podem ser testados e reaproveitados?
+- existe logística reversa para componentes eletrônicos?
+
+### 8.3. Acionamento mecânico
+
+O **motor DC da PDM**, além de polias, correias, roletes e rolamentos, forma o conjunto responsável pelo movimento.
+
+**Questões para investigar:**
+
+- quais elementos sofrem desgaste com maior frequência?
+- existe manutenção que prolongue a vida útil?
+- motores são reparáveis ou remanufaturáveis?
+- metais e subconjuntos são separados ao final da vida útil?
+
+### 8.4. Eletrônica e controle
+
+Falhas relacionadas a circuito e MDU aparecem no contexto operacional, e a lista possui diferentes módulos e placas eletrônicas.
+
+**Questões para investigar:**
+
+- placas defeituosas são reparadas?
+- módulos completos são substituídos?
+- existe destinação específica para resíduos eletroeletrônicos?
+- fornecedores recebem componentes defeituosos de volta?
+
+---
+
+## 9. Relação da aplicação preditiva com o ciclo
+
+A aplicação desenvolvida pelo grupo atua sobre uma parte específica do ciclo:
+
+```text
+Operação
+   ↓
+Alarmes + histórico de manutenção
+   ↓
+Aplicação preditiva
+   ↓
+Identificação de risco
+   ↓
+Priorização de inspeções
+   ↓
+Decisão técnica de manutenção
+```
+
+A solução pode contribuir potencialmente para:
+
+- antecipar situações de risco;
+- apoiar inspeções antes da falha completa;
+- melhorar o planejamento das intervenções;
+- reduzir a dependência exclusiva de manutenção reativa;
+- evitar substituições prematuras quando a avaliação técnica indicar possibilidade de reparo;
+- aumentar a rastreabilidade das decisões de manutenção.
+
+Esses efeitos ainda não devem ser apresentados como redução ambiental quantitativamente comprovada, pois não há, até o momento, medição específica de economia de materiais, emissões ou resíduos gerada pela aplicação.
+
+---
+
+## 10. Matriz de levantamento para a próxima etapa
+
+A próxima etapa consiste em completar a matriz abaixo para cada família prioritária.
+
+| Família | Matéria-prima | Processo de fabricação | Transporte/logística | Uso | Manutenção | Impacto ambiental | Impacto social | Destino atual | Opção circular | Fonte |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Estrutura e fechamento | Parcialmente identificado | A pesquisar | A levantar | Confirmado | Confirmado | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
+| Vidros e painéis | Vidro identificado | A pesquisar | A levantar | Confirmado | Parcial | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
+| Acionamento mecânico | Parcialmente identificado | A pesquisar | A levantar | Confirmado | Evidência em corretivas | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
+| Travas e segurança | Parcialmente identificado | A pesquisar | A levantar | Confirmado | Forte evidência em corretivas | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
+| Sensoriamento | Composição incompleta | A pesquisar | A levantar | Confirmado | Forte evidência em corretivas | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
+| Eletrônica e controle | Composição incompleta | A pesquisar | A levantar | Confirmado | Evidência operacional | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
+| Energia e cabeamento | Cobre/nylon em itens específicos | A pesquisar | A levantar | Confirmado | Parcial | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
+| Sinalização | Composição incompleta | A pesquisar | A levantar | Confirmado | Evidência em corretivas | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
+| Polímeros e proteção | PVC, nylon, borracha, resina acetal em itens específicos | A pesquisar | A levantar | Confirmado | Parcial | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
+
+---
