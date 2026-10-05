@@ -6,7 +6,7 @@ sidebar:
 ---
 
 import { Image } from 'astro:assets';
-import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
 
 :::caution[Resultados históricos, não operacionais]
 Os valores de I4 e I5 desta página foram calculados com o **conjunto de teste histórico** do Modelo 5 (1º de maio a 31 de outubro de 2025). Eles **não** medem o desempenho do Lumem em uso na Motiva. Não há predições operacionais avaliadas nem dados de produção nesta coleta.
@@ -95,7 +95,7 @@ Sem Postgres, ficam pulados `TestPostgresRepositories`, `TestStreamingIngestionC
 | `PostgresDashboardRepository.GetDoorTimeline` | R2 | 0% | 100% | Idem; o erro descartado com `_ =` não é exercitado. |
 | `ml_service/domain/feature_builder.py` | R4 | — | 93% das linhas | Executado via `test_predict.py`, mas nenhuma asserção verifica os valores substitutos. |
 
-**Leitura.** Linhas executadas não equivalem a comportamento verificado. As funções de R2 e R4 têm cobertura alta, e mesmo assim as lacunas L1 e L2 da [Matriz de rastreabilidade](/sprints/sprint-5/matriz-rastreabilidade-ods) continuam abertas. Além disso, o código dos riscos R1 e R2 fica com **0% de cobertura** quando o Postgres não está disponível, o que reforça a dependência do job `test_suite` do CI.
+**Leitura.** Linhas executadas não equivalem a comportamento verificado. As funções de R2 e R4 têm cobertura alta, e mesmo assim as lacunas L1 e L2 da [Matriz de rastreabilidade](/sprints/sprint-5/validacao-ods/matriz-rastreabilidade-ods) continuam abertas. Além disso, o código dos riscos R1 e R2 fica com **0% de cobertura** quando o Postgres não está disponível, o que reforça a dependência do job `test_suite` do CI.
 
 <div id="3-i4--desempenho-das-previsões" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
   <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
@@ -198,7 +198,7 @@ O critério é **por estação**, não por porta. Ele não verifica se cada port
 ### 4.3. Leitura
 
 - **Duas das 11 estações da Linha 4 não têm nenhuma avaliação no período de teste.** Paulista perdeu a telemetria em fevereiro de 2025, e Oscar Freire nunca teve telemetria no painel. As duas continuam com ordens ZM01 até abril de 2026 na fonte, ou seja, há falhas, mas não há dados de alarme para estimá-las.
-- **Oscar Freire não está nas categorias do modelo.** O `est_categorias` do artefato vai de BUT a VSO, sem OFR ou FRE. Na inferência, `feature_builder.py` aplica o alias `OFR → FRA`, e as portas de Oscar Freire recebem o código de estação de Fradique Coutinho. O modelo produz uma probabilidade para uma estação que nunca viu, sem nenhum sinal disso na saída. É uma evidência concreta do risco **R4**, que deve ser incluída no CT-R4-03 e no CT-R4-07 dos [Casos de teste dos riscos ODS](/sprints/sprint-5/casos-de-teste-riscos-ods).
+- **Oscar Freire não está nas categorias do modelo.** O `est_categorias` do artefato vai de BUT a VSO, sem OFR ou FRE. Na inferência, `feature_builder.py` aplica o alias `OFR → FRA`, e as portas de Oscar Freire recebem o código de estação de Fradique Coutinho. O modelo produz uma probabilidade para uma estação que nunca viu, sem nenhum sinal disso na saída. É uma evidência concreta do risco **R4**, que deve ser incluída no CT-R4-03 e no CT-R4-07 dos [Casos de teste dos riscos ODS](/sprints/sprint-5/validacao-ods/casos-de-teste-riscos-ods).
 - Faria Lima tem dados em apenas 40 dos 184 dias. As métricas de I4 dessa estação se referem só a maio e junho de 2025.
 - Na interface atual, uma porta dessas estações sem predição publicada apareceria como “Estável” (risco **R2**, CT-R2-01). As lacunas de cobertura e de exibição se somam.
 
