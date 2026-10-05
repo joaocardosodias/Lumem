@@ -1,0 +1,84 @@
+---
+title: "Testes RF [2]: Autenticação e acesso"
+description: "Cenários, reprodução e evidências de validação dos requisitos RF01 e RF02."
+---
+
+## Objetivo
+
+Validar o login por e-mail e senha (RF01) e a restrição dos recursos protegidos a usuários autenticados (RF02), complementando o [mapeamento de cobertura](/sprints/sprint-5/mapeamento-testes-rf/).
+
+Data: 05/10/2026. Base do trabalho: commit `9f0e80cc85fa2f51c08921fe44894f326e1c1817`, com os arquivos de testes desta entrega ainda sem commit.
+
+## Implementação dos testes
+
+Os caminhos são relativos à raiz do repositório.
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `src/backend/tests/integration/auth_requirements_test.go` | `TestRF01_LoginContract`: login pelo handler HTTP com caso de uso, bcrypt e JWT reais; repositório de usuários em memória. |
+| `src/backend/tests/integration/api_test.go` | Fixture compartilhada de autenticação; permite configurar usuário ativo ou inativo. Mantém a fixture anterior para os testes existentes. |
+| `src/backend/cmd/api/auth_requirements_test.go` | `TestRF02_AllProtectedRoutesRejectUnauthorizedAccess`: percorre as rotas do router real em configuração de produção e desenvolvimento e verifica quatro formas de acesso não autorizado. |
+
+Os novos testes usam as implementações existentes. Não alteram a lógica de autenticação nem os requisitos. As suítes anteriores de login, middleware e controle de papel também fazem parte da validação.
+
+## Cenários e resultados esperados
+
+| ID | RF | Entrada ou ação | Resultado esperado | Teste |
+| --- | --- | --- | --- | --- |
+| AUT-01 | RF01, RF02 | E-mail e senha válidos de usuário ativo; acessar `/auth/me` com o token retornado. | HTTP 200; JWT HS256 válido com expiração e identidade correta; acesso autenticado retorna o ID do usuário. Resposta de usuário contém somente os campos públicos permitidos. | `TestRF01_LoginContract/success` |
+| AUT-02 | RF01 | Senha incorreta. | HTTP 401 e `ERR_INVALID_CREDENTIALS`, sem token ou usuário na resposta. | `TestRF01_LoginContract/wrong_password` |
+| AUT-03 | RF01 | E-mail não cadastrado. | HTTP 401 e o mesmo código de credenciais inválidas, sem token ou usuário na resposta. | `TestRF01_LoginContract/unknown_user` |
+| AUT-04 | RF01 | Usuário inativo com senha correta. | HTTP 403 e `ERR_USER_INACTIVE`, sem sessão ou usuário na resposta. | `TestRF01_LoginContract/inactive_user` |
+| AUT-05 | RF01 | E-mail ausente. | HTTP 400 e `ERR_VALIDATION`, sem sessão. | `TestRF01_LoginContract/missing_email` |
+| AUT-06 | RF01 | Senha ausente. | HTTP 400 e `ERR_VALIDATION`, sem sessão. | `TestRF01_LoginContract/missing_password` |
+| AUT-07 | RF01 | E-mail e senha vazios. | HTTP 400 e `ERR_VALIDATION`, sem sessão. | `TestRF01_LoginContract/empty_fields` |
+| AUT-08 | RF01 | JSON malformado. | HTTP 400 e `ERR_INVALID_PAYLOAD`, sem sessão. | `TestRF01_LoginContract/malformed_json` |
+| ACE-01 | RF02 | Cada rota protegida sem Authorization. | HTTP 401 e `ERR_MISSING_TOKEN`; resposta contém somente campos de erro. | `TestRF02_AllProtectedRoutesRejectUnauthorizedAccess`, caso `missing` |
+| ACE-02 | RF02 | Cada rota protegida com JWT malformado. | HTTP 401 e `ERR_INVALID_TOKEN`; resposta contém somente campos de erro. | Mesmo teste, caso `malformed` |
+| ACE-03 | RF02 | Cada rota protegida com JWT assinado corretamente, mas expirado há uma hora. | HTTP 401 e `ERR_INVALID_TOKEN`; nenhum retorno operacional. Sem espera ou dependência de expiração durante a execução. | Mesmo teste, caso `expired` |
+| ACE-04 | RF02 | Cada rota protegida com JWT ainda válido no tempo, assinado com outra chave. | HTTP 401 e `ERR_INVALID_TOKEN`; nenhum retorno operacional. | Mesmo teste, caso `wrong_signature` |
+| ACE-05 | RF02 | Middleware com token válido, header inválido ou algoritmo `none`. | Aceitação do válido e rejeição dos inválidos, conforme testes existentes. | `TestAuthMiddleware_*` |
+| ACE-06 | RF02 / controle de papel complementar | Papel permitido, proibido ou ausente. | HTTP 200 para papel permitido e 403 para os demais. | `TestRequireRole_*` |
+
+O teste de rotas considera todo caminho `/api/v1/` protegido, exceto `/api/v1/auth/login`. Essa regra deve ser revisada explicitamente se surgir uma nova API pública. A enumeração inclui rotas de alarmes, uploads, manutenção, inspeções, predições, dashboard e MLOps; parâmetros de caminho recebem valores de teste. O log informa a quantidade de rotas verificadas.
+
+Os handlers desse teste têm dependências de negócio ausentes: se a autenticação permitir indevidamente chegar a eles, uma falha ou resposta diferente de 401 reprovará o caso. O teste confere também o código de erro e os campos da resposta. Acesso bem-sucedido é validado no fluxo AUT-01.
+
+## Como reproduzir
+
+Pré-requisitos: Go 1.26 ou compatível com `src/backend/go.mod` e dependências Go disponíveis. Esta seleção não requer PostgreSQL, serviço de modelo, credenciais reais nem servidor externo. As contas e chaves usadas nos testes são fictícias.
+
+Na pasta `src/backend`, executar:
+
+```sh
+go test -count=1 -json ./tests/unit/usecase ./tests/unit/http ./tests/integration ./cmd/api -run '^(TestLoginUseCase_.*|TestAuthHandler_Login|TestAuthMiddleware_.*|TestRequireRole_.*|TestIntegration_FullAuthFlow|TestRF01_LoginContract|TestRF02_AllProtectedRoutesRejectUnauthorizedAccess)$' > auth-rf-results.json
+```
+
+`-count=1` impede reutilização do cache de resultados. O filtro evita os testes de banco do pacote de integração. Verificar o código de saída e os eventos `pass`, `fail` e `skip` do JSON; um caso ignorado não conta como aprovado.
+
+Para regressão dos pacotes unitários e do router:
+
+```sh
+go test -count=1 ./tests/unit/usecase ./tests/unit/http ./cmd/api
+```
+
+O pipeline existente em `.gitlab-ci.yml` já descobre arquivos `*_test.go` com `go test -race ... ./...`; não é necessário adicionar um job para estes casos. A execução local não comprova execução do pipeline remoto.
+
+## Evidências de execução
+
+Execução em preparação. Esta seção será preenchida com os resultados efetivamente obtidos, incluindo limitações do ambiente.
+
+## Limites da validação e roteiro da interface
+
+Os testes automatizados desta entrega validam os contratos HTTP, a autenticação e o bloqueio das rotas. O repositório de usuários é simulado, e a suíte não exercita o navegador nem o PostgreSQL.
+
+Para complementar a validação visual, executar o roteiro abaixo em ambiente integrado e registrar data, versão, resultado e captura de tela sem credenciais. **Este roteiro permanece não executado nesta entrega.**
+
+1. Abrir a aplicação sem sessão, inclusive por um endereço de página interna: deve exibir o login, sem conteúdo operacional.
+2. Informar credenciais incorretas: deve apresentar erro e manter a pessoa fora da aplicação.
+3. Enviar campos vazios: deve impedir login e informar os campos necessários.
+4. Entrar com usuário ativo e credenciais válidas: deve apresentar a aplicação para o perfil retornado.
+5. Encerrar a sessão e tentar voltar à página interna: deve exigir autenticação novamente.
+6. Usar uma sessão expirada e solicitar dados protegidos: a API deve retornar 401, e a interface deve descartar a sessão e exibir login.
+
+A aprovação desses cenários visuais e a persistência real dos usuários continuam necessárias para declarar validação integral de RF01/RF02 em todo o sistema.

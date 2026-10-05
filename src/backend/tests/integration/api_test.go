@@ -39,6 +39,10 @@ func (m *memoryUserRepo) Create(ctx context.Context, user *domain.User) error {
 }
 
 func setupIntegrationServer(jwtSecret string) *gin.Engine {
+	return setupAuthIntegrationServer(jwtSecret, true)
+}
+
+func setupAuthIntegrationServer(jwtSecret string, userActive bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
@@ -50,7 +54,7 @@ func setupIntegrationServer(jwtSecret string) *gin.Engine {
 		Email:        "operador@motiva.com",
 		PasswordHash: string(hash),
 		Role:         "operator",
-		IsActive:     true,
+		IsActive:     userActive,
 	}
 
 	hasher := security.NewBcryptPasswordHasher(bcrypt.MinCost)
