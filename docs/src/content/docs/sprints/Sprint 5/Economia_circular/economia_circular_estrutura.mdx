@@ -3,6 +3,10 @@ title: "Economia Circular"
 description: "Mapeamento preliminar do ciclo de vida, componentes, recursos, riscos e oportunidades de circularidade do sistema de Portas de Plataforma (PSD) da Linha 4 Amarela."
 ---
 
+import { Image } from 'astro:assets';
+import InfograficoEstatico from './economia_circular_infografico_estatico.png';
+
+
 # Economia Circular
 
 ## 1. Objetivo e escopo
@@ -265,6 +269,21 @@ A próxima etapa consiste em completar a matriz abaixo para cada família priori
 | Energia e cabeamento | Cobre/nylon em itens específicos | A pesquisar | A levantar | Confirmado | Parcial | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
 | Sinalização | Composição incompleta | A pesquisar | A levantar | Confirmado | Evidência em corretivas | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + Z1 |
 | Polímeros e proteção | PVC, nylon, borracha, resina acetal em itens específicos | A pesquisar | A levantar | Confirmado | Parcial | A pesquisar | A pesquisar | A confirmar | A pesquisar | Lista PSD + fontes futuras |
+
+---
+
+## 11. Próximos passos
+
+Para transformar esta estrutura em uma análise completa de Economia Circular, ainda será necessário:
+
+1. pesquisar matérias-primas e processos de fabricação das famílias prioritárias;
+2. levantar impactos ambientais e sociais associados;
+3. confirmar com o parceiro como ocorre a destinação de peças retiradas;
+4. identificar práticas já existentes de reparo, reutilização, reciclagem e logística reversa;
+5. classificar os principais pontos de risco e fragilidade;
+6. construir o infográfico interativo a partir desta matriz;
+7. gerar uma representação estática de alta resolução do mesmo infográfico;
+8. referenciar todas as fontes utilizadas.
 
 ---
 
@@ -778,3 +797,26 @@ A solução preditiva do projeto se conecta ao ciclo ao transformar alarmes e hi
 Os principais pontos de fragilidade estão nas famílias ligadas a travamento, sensoriamento, acionamento mecânico e eletrônica de controle, pois essas áreas aparecem associadas a falhas operacionais e possuem impacto direto na disponibilidade da porta.
 
 A oportunidade circular está em tratar a manutenção como uma etapa de decisão: reparar quando possível, reutilizar componentes funcionais, reciclar materiais segregados e destinar corretamente resíduos eletroeletrônicos, vidros, metais e polímeros.
+
+---
+
+## 24. Versão estática do infográfico
+
+Além da visualização interativa construída no próprio arquivo `.mdx`, também foi gerada uma versão estática em alta resolução do infográfico. Essa imagem atende ao requisito de incluir uma representação estática do ciclo de Economia Circular.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={InfograficoEstatico}
+    alt="Infográfico estático de Economia Circular do sistema PSD"
+    width={1400}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: elaborado pelos autores a partir da lista de materiais PSD, custos de ordens corretivas emergenciais e referências de economia circular.</em></p>
+</figure>
+
+Para utilizar esta seção no repositório, mantenha o arquivo da imagem na **mesma pasta** deste arquivo `.mdx`:
+
+```text
+economia_circular.mdx
+economia_circular_infografico_estatico.png
+```
