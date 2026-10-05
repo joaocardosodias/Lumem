@@ -1,0 +1,232 @@
+---
+title: "Evidências de execução dos testes e indicadores I4/I5"
+description: "Resultados da execução das suítes de teste do backend e do serviço de modelo, com cobertura, e cálculo histórico dos indicadores I4 (desempenho das previsões) e I5 (cobertura válida) a partir do conjunto de teste do Modelo 5."
+sidebar:
+  order: 4
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+:::caution[Resultados históricos, não operacionais]
+Os valores de I4 e I5 desta página foram calculados com o **conjunto de teste histórico** do Modelo 5 (1º de maio a 31 de outubro de 2025). Eles **não** medem o desempenho do Lumem em uso na Motiva. Não há predições operacionais avaliadas nem dados de produção nesta coleta.
+:::
+
+<div id="1-ambiente-de-execução" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 1. Ambiente de execução
+
+  </div>
+</div>
+
+| Item | Execução local | CI (`.gitlab-ci.yml`) |
+| --- | --- | --- |
+| Go | 1.26.8 (linux/amd64) | `golang:1.26-alpine3.23` |
+| Postgres | 16.2, instância local temporária na porta 5439 | `postgres:16-alpine` |
+| Python | 3.12.3, com as versões fixadas em `src/modelo/requirements.txt` | `python:3.11-slim` |
+| pytest | 9.1.1, com `pytest-cov` | pytest sem cobertura |
+
+As diferenças em relação ao CI são as versões de Python e de pytest e o uso de cobertura no pytest, que o CI não mede. As suítes Go foram executadas **com e sem Postgres**, porque seis testes são pulados quando o banco não está disponível.
+
+<div id="2-resultados-dos-testes" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 2. Resultados dos testes
+
+  </div>
+</div>
+
+### 2.1. Resumo
+
+As contagens consideram funções de teste de primeiro nível. Os 29 subtestes (`t.Run`) da suíte `./tests/...` também passaram. A cobertura Go é de instruções em `./internal/...` (`-coverpkg=./internal/...`), como no CI. A cobertura Python é de linhas em `ml_service/` e `app.py`.
+
+| Suíte | Comando | Postgres | Passaram | Falharam | Pulados | Cobertura |
+| --- | --- | --- | --- | --- | --- | --- |
+| Backend — testes em `tests/` | `go test -coverpkg=./internal/... ./tests/...` | Não | 203 | 0 | 2 | 54,5% |
+| Backend — testes em `tests/` | idem, com `TEST_DATABASE_URL` | Sim | **205** | **0** | **0** | **71,4%** |
+| Backend — comando do CI | `go test -race -coverpkg=./internal/... ./...` | Não | 247 | 0 | 6 | 60,1% |
+| Backend — comando do CI | idem, com `TEST_DATABASE_URL` | Sim | **253** | **0** | **0** | **76,8%** |
+| Serviço de modelo | `pytest src/modelo/tests` | — | **21** | **0** | **0** | **71%** |
+| Manifesto do modelo | `python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib` | — | válido | — | — | — |
+
+Sem Postgres, ficam pulados `TestPostgresRepositories`, `TestStreamingIngestionCommitsAllBatchesOrRollsBack`, `TestCheckDatabaseConnection_AndMigrations`, `TestRiverQueueEnqueueTransaction`, `TestRiverMigrationsSuccess` e `TestCleanupJobSurvivesProducerAndRunsInSeparateWorker`.
+
+### 2.2. Testes por pacote (com Postgres)
+
+| Pacote | Passaram | | Pacote | Passaram |
+| --- | --- | --- | --- | --- |
+| `tests/unit/usecase` | 118 | | `internal/usecase` | 8 |
+| `tests/unit/http` | 44 | | `internal/adapter/storage` | 7 |
+| `tests/unit/adapter` | 27 | | `internal/adapter/telemetry` | 4 |
+| `tests/integration` | 6 | | `cmd/api` | 4 |
+| `tests/unit/config` | 5 | | `internal/adapter/http` | 3 |
+| `tests/unit/domain` | 5 | | `internal/adapter/parser` | 3 |
+| `internal/adapter/jobqueue` | 18 | | `internal/adapter/repository` | 1 |
+| `src/modelo/tests/test_predict.py` | 11 | | `src/modelo/tests/test_training_progress.py` | 5 |
+| `src/modelo/tests/test_training_service.py` | 5 | | | |
+
+### 2.3. Cobertura por camada do backend (com Postgres)
+
+| Camada | Instruções | `./tests/...` | `./...` (CI) |
+| --- | --- | --- | --- |
+| `internal/domain` | 74 | 100,0% | 100,0% |
+| `internal/config` | 79 | 97,5% | 97,5% |
+| `internal/adapter/parser` | 177 | 93,8% | 94,4% |
+| `internal/adapter/http` | 511 | 75,5% | 77,3% |
+| `internal/adapter/repository` | 688 | 74,7% | 75,7% |
+| `internal/usecase` | 1.086 | 62,6% | 68,8% |
+| `internal/adapter/mlclient` | 114 | 55,3% | 55,3% |
+| `internal/adapter/storage` | 69 | 29,0% | 98,6% |
+| `internal/adapter/jobqueue` | 101 | não exercitada | 97,0% |
+| `internal/adapter/telemetry` | 18 | não exercitada | 94,4% |
+| `internal/adapter/eventbus`, `scheduler`, `security` | 58 | 100,0% | 100,0% |
+| **Total** | **2.975** | **71,4%** | **76,8%** |
+
+### 2.4. Cobertura do código ligado aos riscos
+
+| Função | Risco | Sem Postgres | Com Postgres | Observação |
+| --- | --- | --- | --- | --- |
+| `PostgresInspectionRepository.Create` | R1 | 0% | 100% | Executada pelo CT-R1-01. |
+| `PostgresInspectionRepository.UpdateStatus` | R1 | 0% | 100% | Nenhum teste cobre a violação do índice único (CT-R1-05). |
+| `PostgresDashboardRepository.GetStationDoorsStatus` | R2 | 0% | 100% | Executada, mas nenhuma asserção verifica a porta sem predição. |
+| `PostgresDashboardRepository.GetDoorTimeline` | R2 | 0% | 100% | Idem; o erro descartado com `_ =` não é exercitado. |
+| `ml_service/domain/feature_builder.py` | R4 | — | 93% das linhas | Executado via `test_predict.py`, mas nenhuma asserção verifica os valores substitutos. |
+
+**Leitura.** Linhas executadas não equivalem a comportamento verificado. As funções de R2 e R4 têm cobertura alta, e mesmo assim as lacunas L1 e L2 da [Matriz de rastreabilidade](/sprints/sprint-5/matriz-rastreabilidade-ods) continuam abertas. Além disso, o código dos riscos R1 e R2 fica com **0% de cobertura** quando o Postgres não está disponível, o que reforça a dependência do job `test_suite` do CI.
+
+<div id="3-i4--desempenho-das-previsões" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 3. I4 — Desempenho das previsões
+
+  </div>
+</div>
+
+O I4 foi definido na seção 5.2 da [Atualização do alinhamento com os ODS](/sprints/sprint-4/ods-atualizacao). Ele está ligado aos ODS 8, 9 e 11 e aos riscos R1 e R2, e pede precisão e recall **separados por janela e por episódio**.
+
+### 3.1. Fonte e reprodução
+
+| Item | Valor |
+| --- | --- |
+| Modelo | Modelo 5 — `RandomForestClassifier`, versão **v1.0.0** (`src/modelo/artifacts/modelo_5.joblib`) |
+| Dados | `models/modelo-5/painel.parquet` e `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` |
+| Período | **1º de maio a 31 de outubro de 2025** (184 dias); o treino termina em 23 de abril de 2025 |
+| Unidade | Porta-dia; alvo: ZM01 nos sete dias seguintes |
+| Limiar | **0,48** (`recommended_threshold` do manifesto) |
+| Verificação | O split de teste foi reconstruído com as mesmas etapas de `src/modelo/exportar_modelo.py`. A matriz de confusão reproduzida é **idêntica** à de `test_metrics` no manifesto: 71.184 linhas e os mesmos VP, FP, FN e VN. |
+
+O `dataset_sha256` recalculado **não** coincide com o do manifesto. O hash usa `pd.util.hash_pandas_object` e depende da representação interna do DataFrame. Como a matriz de confusão confere linha a linha, consideramos a reprodução válida. A divergência do hash fica registrada como limitação de rastreabilidade do artefato.
+
+### 3.2. Por janela e por episódio
+
+| Avaliação | Definição | Precisão | Recall | Contagens |
+| --- | --- | --- | --- | --- |
+| **Por janela** (porta-dia) | Cada porta-dia é uma amostra. Positivo se houve ZM01 em (t, t+7]. | **15,1%** | **60,0%** | VP 3.724 · FP 20.898 · FN 2.478 · VN 44.084 |
+| **Por episódio** | Falha: cada ZM01 distinta (porta, dia) com ao menos um porta-dia de teste nos sete dias anteriores. É detectada se houve alerta em algum desses dias. Alerta: sequência de dias consecutivos com alerta na mesma porta. É verdadeiro se houve ZM01 entre o início da sequência e o último dia + 7. | **25,0%** | **73,4%** | 802 de 1.093 falhas detectadas · 506 de 2.023 episódios de alerta verdadeiros |
+
+A janela de 7 dias faz uma mesma ZM01 aparecer em até sete amostras. Por isso, a contagem por episódio é a mais próxima do que a equipe vivenciaria: **cerca de três em cada quatro corretivas tiveram ao menos um alerta prévio, e cerca de um em cada quatro episódios de alerta antecedeu uma corretiva**.
+
+Para o risco **R1**, o dado relevante é o volume. Os 2.023 episódios de alerta em 184 dias equivalem a **cerca de 11 novos episódios por dia** nas 432 portas avaliadas, com duração média de **12,2 dias**. Como a deduplicação mantém uma inspeção aberta por porta, cada episódio corresponderia a no máximo uma inspeção aberta. Mesmo assim, três em cada quatro não antecederam uma ZM01.
+
+### 3.3. Por estação
+
+| Estação | Porta-dias | Positivos | Precisão (janela) | Recall (janela) | Falhas (episódios) | Recall (episódio) | Alertas (episódios) | Precisão (episódio) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BUT | 8.832 | 698 | 16,3% | 55,2% | 120 | 68,3% | 175 | 28,0% |
+| FAL | 1.920 | 152 | 12,7% | 66,4% | 31 | 71,0% | 53 | 26,4% |
+| FRA | 8.832 | 847 | 14,9% | 62,9% | 150 | 74,7% | 236 | 28,0% |
+| HIG | 8.832 | 800 | 12,0% | 65,1% | 127 | 78,7% | 380 | 17,9% |
+| LUZ | 8.832 | 558 | 11,9% | 53,9% | 90 | 58,9% | 186 | 20,4% |
+| MBI | 8.832 | 593 | 15,5% | 43,8% | 106 | 62,3% | 209 | 21,1% |
+| PIN | 8.832 | 1.104 | 19,4% | 63,5% | 210 | 78,6% | 324 | 33,3% |
+| REP | 8.832 | 1.014 | 16,5% | 76,3% | 187 | 88,2% | 344 | 25,6% |
+| VSO | 7.440 | 436 | 14,5% | 33,9% | 72 | 51,4% | 116 | 26,7% |
+| FRE (Oscar Freire) | 0 | — | não disponível | não disponível | — | não disponível | — | não disponível |
+| PTA (Paulista) | 0 | — | não disponível | não disponível | — | não disponível | — | não disponível |
+
+O recall por episódio varia de **51,4% (VSO)** a **88,2% (REP)**. Em VSO e MBI, mais de um terço das corretivas não teve alerta prévio. HIG concentra o maior número de episódios de alerta (380) com a menor precisão (17,9%), ou seja, a maior carga relativa de verificações sem corretiva. Essas diferenças são evidência histórica para o risco **R4**: a qualidade da estimativa não é uniforme entre estações.
+
+### 3.4. Limites do I4 histórico
+
+- Uma intervenção que tenha evitado a ZM01 aparece como falso positivo. O teste histórico não registra ações decorrentes de alertas, porque o modelo não estava em uso.
+- O alvo considera apenas ordens ZM01 registradas. Ordens ausentes ou tardias na fonte alteram as contagens.
+- A definição de episódio é uma escolha desta análise. Outras regras de agrupamento, como tolerar um dia sem alerta dentro da sequência, mudam os números.
+- **Não disponível:** I4 operacional (predições do Lumem avaliadas após sete dias em `prediction_outcome_repository.go`), I4 por versão além da v1.0.0 e I4 com limiares diferentes por estação.
+
+<div id="4-i5--cobertura-válida" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 4. I5 — Cobertura válida por estação
+
+  </div>
+</div>
+
+O I5 foi definido na Sprint 4 como “portas com avaliação vigente e dados completos e atuais ÷ portas do escopo × 100, por estação”, ligado aos ODS 9 e 11 e aos riscos R2 e R4.
+
+### 4.1. Adaptação para dados históricos
+
+Não há avaliações vigentes no histórico. Por isso, o I5 foi aproximado pelo critério de dados usado na construção do painel (`models/modelo-5/construir_painel.py`):
+
+- **Escopo:** portas que aparecem nos alarmes PDM ou nas ordens ZM01. São 528 portas, 48 por estação, em 11 estações.
+- **Porta-dia válido:** a estação teve ao menos um alarme nos 30 dias anteriores. Linhas sem essa cobertura são removidas do painel e nunca recebem predição.
+- **Cálculo:** porta-dias válidos ÷ (portas do escopo × 184 dias) × 100, no período de teste.
+
+O critério é **por estação**, não por porta. Ele não verifica se cada porta individualmente tem dados atuais.
+
+### 4.2. Resultado
+
+| Estação | Portas no escopo | Porta-dias esperados | Porta-dias válidos | Cobertura válida | Período com dados no teste |
+| --- | --- | --- | --- | --- | --- |
+| BUT — Butantã | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| FRA — Fradique Coutinho | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| HIG — Higienópolis | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| LUZ — Luz | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| MBI — São Paulo-Morumbi | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| PIN — Pinheiros | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| REP — República | 48 | 8.832 | 8.832 | 100,0% | período inteiro |
+| VSO — Vila Sônia | 48 | 8.832 | 7.440 | **84,2%** | a partir de 30/05/2025 |
+| FAL — Faria Lima | 48 | 8.832 | 1.920 | **21,7%** | até 09/06/2025 |
+| PTA — Paulista | 48 | 8.832 | 0 | **0,0%** | sem dados; último dia no painel: 25/02/2025 |
+| FRE — Oscar Freire | 48 | 8.832 | 0 | **0,0%** | sem dados em nenhum período |
+| **Total** | **528** | **97.152** | **71.184** | **73,3%** | |
+
+### 4.3. Leitura
+
+- **Duas das 11 estações da Linha 4 não têm nenhuma avaliação no período de teste.** Paulista perdeu a telemetria em fevereiro de 2025, e Oscar Freire nunca teve telemetria no painel. As duas continuam com ordens ZM01 até abril de 2026 na fonte, ou seja, há falhas, mas não há dados de alarme para estimá-las.
+- **Oscar Freire não está nas categorias do modelo.** O `est_categorias` do artefato vai de BUT a VSO, sem OFR ou FRE. Na inferência, `feature_builder.py` aplica o alias `OFR → FRA`, e as portas de Oscar Freire recebem o código de estação de Fradique Coutinho. O modelo produz uma probabilidade para uma estação que nunca viu, sem nenhum sinal disso na saída. É uma evidência concreta do risco **R4**, que deve ser incluída no CT-R4-03 e no CT-R4-07 dos [Casos de teste dos riscos ODS](/sprints/sprint-5/casos-de-teste-riscos-ods).
+- Faria Lima tem dados em apenas 40 dos 184 dias. As métricas de I4 dessa estação se referem só a maio e junho de 2025.
+- Na interface atual, uma porta dessas estações sem predição publicada apareceria como “Estável” (risco **R2**, CT-R2-01). As lacunas de cobertura e de exibição se somam.
+
+### 4.4. Limites do I5 histórico
+
+- **Não disponível:** I5 operacional, que exige avaliação vigente por rodada publicada, data real dos dados em todo o fluxo e reconciliação das fontes. O backend ainda não guarda `reference_date` (CT-R4-05).
+- **Não disponível:** completude por porta. O critério do painel é por estação.
+- O escopo foi derivado dos dados. O cadastro de portas do sistema (`src/backend/migrations/000008_seed_stations_and_doors.up.sql`) não foi conciliado com ele.
+
+<div id="5-reprodução" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 5. Reprodução
+
+  </div>
+</div>
+
+```bash
+# Backend (a partir de src/backend). Sem TEST_DATABASE_URL, os testes de Postgres são pulados.
+export TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5439/postgres?sslmode=disable"
+go test -count=1 -coverpkg=./internal/... -coverprofile=coverage_tests.out ./tests/...
+go test -count=1 -race -coverpkg=./internal/... -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out | tail -1
+
+# Serviço de modelo (a partir de src/modelo, com requirements.txt instalado)
+python validate_manifest.py artifacts/manifest.json artifacts/modelo_5.joblib
+python -m pytest tests/ -v --cov=ml_service --cov=app
+```
+
+O cálculo de I4 e I5 reconstrói o split de teste com as mesmas etapas de feature engineering de `src/modelo/exportar_modelo.py` e aplica `modelo_5.joblib` com o limiar 0,48. Antes de calcular os indicadores, o script confere a matriz de confusão contra o manifesto e interrompe a execução se ela divergir.
