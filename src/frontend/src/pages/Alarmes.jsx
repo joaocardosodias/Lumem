@@ -104,7 +104,7 @@ function Alarmes({ onNavigate, params }) {
     try {
       const result = await api.uploadAlarms(file)
       const done = await pollUpload(result, setUpload)
-      if (done.status === 2) {
+      if (done.status === 'failed') {
         throw new Error('A API recusou o processamento da planilha de alarmes.')
       }
       setFile(null)

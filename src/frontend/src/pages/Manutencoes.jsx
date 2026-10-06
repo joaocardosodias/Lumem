@@ -216,7 +216,7 @@ function Manutencoes({ params }) {
     try {
       const result = await api.uploadMaintenance(file, orderType)
       const done = await pollUpload(result, setUpload)
-      if (done.status === 2) {
+      if (done.status === 'failed') {
         throw new Error('A API recusou o processamento deste arquivo.')
       }
       setFile(null)

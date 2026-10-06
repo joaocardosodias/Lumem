@@ -196,7 +196,7 @@ function Inspecoes({ onNavigate, params }) {
       await api.createInspection({
         station_code: form.station_code,
         platform: form.platform,
-        door_number: String(form.door_number),
+        door_number: Number(form.door_number),
         notes: form.notes.trim() || undefined,
       })
       setForm(emptyForm)

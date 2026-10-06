@@ -124,7 +124,7 @@ export default defineConfig({
 		'/sprints/sprint-5/validacao-classificacao-portas': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#8-classificação-das-portas--rf09`,
 		'/sprints/sprint-5/validacao-dashboard-inspecoes': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#9-dashboard-e-inspeções--rf10-e-rf11`,
 		'/sprints/sprint-5/validacao-integracoes-fluxo-completo': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#10-integrações-e-fluxo-operacional`,
-		'/sprints/sprint-5/validacao-postgresql-regressao-completa': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#11-postgresql-real-e-regressão-completa`,
+		'/sprints/sprint-5/validacao-postgresql-regressao-completa': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#12-postgresql-real-e-regressão-completa`,
 	},
 	markdown: {
 		rehypePlugins: [rehypePrefixBase, rehypeNumberedTitles],
