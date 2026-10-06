@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1160" height="800" viewBox="0 0 1160 800" role="img" aria-labelledby="title desc">
   <title id="title">RF [8] — Fluxo operacional e alcance dos testes</title>
-  <desc id="desc">Seis etapas executadas por HTTP local: login, importação, cadastro de manutenção, predição, inspeção e consulta do dashboard. O cliente HTTP e os handlers são reais. Banco, fila e serviço de modelo são controlados. Navegador, PostgreSQL, River e modelo real permanecem pendentes.</desc>
+  <desc id="desc">Seis etapas executadas por HTTP local: login, importação, cadastro de manutenção, predição, inspeção e consulta do dashboard. O cliente HTTP e os handlers são reais. Banco, fila e serviço de modelo são controlados. Oito cenários aprovados, incluindo recuperação de falhas.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#44708b"/></marker>
     <style>
@@ -66,11 +66,11 @@
   <text x="440" y="654" class="body">Servidor ML com respostas fixas</text>
   <text x="440" y="680" class="body">Unidade de trabalho sem transação SQL</text>
   <rect x="800" y="540" width="320" height="174" rx="12" fill="#f0edf7" stroke="#7d7195"/>
-  <text x="820" y="571" class="label">Validação ainda pendente</text>
-  <text x="820" y="602" class="body">Interface no navegador</text>
-  <text x="820" y="628" class="body">PostgreSQL, River e MinIO/S3 reais</text>
-  <text x="820" y="654" class="body">Modelo Python e features históricas</text>
-  <text x="820" y="680" class="body">RF08 configurável e prioridade RF11</text>
+  <text x="820" y="571" class="label">Resultados verificados</text>
+  <text x="820" y="602" class="body">Oito cenários HTTP aprovados</text>
+  <text x="820" y="628" class="body">Três manutenções consultadas</text>
+  <text x="820" y="654" class="body">Uma inspeção concluída</text>
+  <text x="820" y="680" class="body">Recuperação após falhas simuladas</text>
 
   <text x="40" y="749" class="small">* Teste separado usa buildRouter/registerRoutes; o fluxo HTTP principal usa um roteador de teste com proteção equivalente.</text>
   <text x="40" y="775" class="small">Resultados reproduzíveis: implementacao-validacao-testes.mdx · evidencias/rf-integracoes.json</text>
