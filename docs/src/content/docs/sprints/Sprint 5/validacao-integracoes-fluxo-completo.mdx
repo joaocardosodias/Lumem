@@ -1,0 +1,114 @@
+---
+title: "Testes RF [8]: Integrações e fluxo completo"
+description: "Fluxo autenticado por HTTP local, falhas e recuperação, permissões nas rotas reais e limites de integração."
+---
+
+## Objetivo e versão
+
+Executar uma sequência operacional que conecte autenticação, importação, cadastro, predição, inspeções e consulta dos resultados, complementando os testes por requisito das tasks anteriores e a lacuna L09 do [mapeamento](/sprints/sprint-5/mapeamento-testes-rf/).
+
+**Data:** 05/10/2026. **Commit base:** `956a492798add7c894784d15b002f32d890a4272`. Os resultados incluem os arquivos locais desta task. O [arquivo de evidências](/evidencias/rf-integracoes.json) registra a execução focada, a regressão, os testes ignorados, a saída do frontend e os hashes dos arquivos utilizados.
+
+**O fluxo foi validado com componentes controlados. Não é uma aprovação de ponta a ponta com navegador, infraestrutura e modelo reais.**
+
+## Diagrama SVG
+
+![Fluxo operacional com componentes reais, substitutos controlados e verificações pendentes](/evidencias/rf-fluxo-completo.svg)
+
+[Abrir ou baixar o SVG](/evidencias/rf-fluxo-completo.svg).
+
+## Cobertura adicionada
+
+O teste anterior `TestIntegration_CompleteOperationalPipeline` exercita a sequência operacional, mas usa um roteador de teste que deixa várias rotas públicas e um cliente de ML substituto chamado diretamente. Esta entrega adiciona:
+
+- `src/backend/tests/integration/authenticated_workflow_test.go`: login com bcrypt e JWT reais; chamadas por `http.Client` a um servidor local; rotas protegidas; importação em fila controlada; cliente HTTP real de ML; falhas e recuperação no mesmo fluxo.
+- `src/backend/cmd/api/workflow_routes_test.go`: usa `buildRouter`/`registerRoutes` da aplicação para verificar autorização do disparo de predição em configuração `production` e `development`.
+- Diagrama SVG e este relatório. Não houve alteração de código de produção nesta task.
+
+O fluxo principal monta um roteador de teste com proteção equivalente nas rotas usadas. O teste separado de permissões verifica o registro real da aplicação, sem substituí-lo por uma cópia. O papel de engenharia segue o identificador existente no sistema, **`enginner`**.
+
+## Componentes reais e substituídos
+
+| Camada | Execução desta task | Limite da evidência |
+| --- | --- | --- |
+| Login, JWT e autorização | Handler e caso de uso reais; senha de teste verificada com bcrypt; token usado nas chamadas seguintes. | Usuários em repositório de memória. Não valida banco de usuários. |
+| Transporte HTTP | Cliente e servidor HTTP locais para a API, e outro servidor local para o contrato ML. Correlation ID verificado em todas as chamadas do fluxo. | Não inclui proxy, TLS ou rede entre VPS. |
+| Importação | Multipart, parser CSV, storage temporário e `ProcessJob` reais. | Fila em memória; o teste chama o processamento explicitamente, sem River/worker concorrente. |
+| Predição | Orquestração, cliente HTTP, validação de resposta e classificação reais. | Servidor ML retorna probabilidades controladas; não calcula features nem carrega o modelo. |
+| Persistência e consultas | Repositórios em memória compartilhados pelas etapas. | Sem PostgreSQL, constraints, agregação SQL, transações ou durabilidade entre processos. |
+| Rotas da aplicação | Permissão verificada com `buildRouter`/`registerRoutes` reais. | Nesse teste separado, ML e persistência são substitutos em memória. |
+| Frontend | Suíte existente de 40 testes reexecutada. | Funções testadas isoladamente; não há navegação do frontend conectado à API. |
+
+O dashboard e a linha do tempo do fluxo usam os substitutos existentes do repositório. Eles permitem verificar a passagem dos dados entre etapas, mas não comprovam os filtros e joins do PostgreSQL. O substituto de linha do tempo retorna a coleção de manutenções do teste; não foi utilizado para afirmar isolamento de manutenções por porta.
+
+## Sequência operacional verificada
+
+1. Acesso ao dashboard sem token retorna **401**. Login de operador e engenharia retorna tokens utilizáveis.
+2. Operador tenta disparar predição e recebe **403**, sem chamada ao ML.
+3. Operador importa dois alarmes e duas manutenções ZM01 em CSV. Antes de processar o job, o status é `processing`, sem linhas inseridas; depois, `completed`, com duas linhas processadas/inseridas por arquivo. Arquivo temporário é removido.
+4. Reenvio do mesmo conteúdo retorna **409**, sem enfileirar outro job.
+5. Cadastro manual de manutenção retorna **201**, ID e origem `manual_form`. A consulta reúne as duas manutenções importadas e a manual, totalizando três.
+6. Engenharia inicia a predição. O servidor ML recebe exatamente FAL/P1/4 e PIN/P2/8 e responde com probabilidades 0,8 e 0,2. A API retorna duas portas avaliadas, uma em risco e horizonte de sete dias. A consulta da última rodada é idêntica à resposta de criação.
+7. Uma inspeção pendente é gerada para FAL/P1/4, ligada ao ID da previsão em risco. O operador passa a inspeção para `in_progress` e depois `completed`; a conclusão passa a ter data.
+8. O dashboard retorna duas portas, uma em risco, zero inspeções pendentes, uma concluída e FAL como estação crítica com uma porta em risco. A linha do tempo confirma o alarme importado, a classificação de risco e a inspeção concluída.
+
+Os históricos importados ficam disponíveis na mesma base controlada, mas **não alimentam um modelo real nesta execução**: o serviço de ML simulado recebe apenas as identidades das portas e fornece probabilidades fixas.
+
+## Matriz de cenários
+
+| ID | Teste | Resultado |
+| --- | --- | --- |
+| FLX-01 | `TestRFIntegration_AuthenticatedOperationalFlow/success` | Sequência completa acima aprovada. |
+| FLX-02 | Mesmo teste, `recover_after_ml_503` | Após importar e cadastrar, serviço ML retorna 503. API responde 503/`ERR_PREDICTION_UNAVAILABLE`; não há rodada ou inspeção salva e a consulta da última rodada retorna 404. Os dois alarmes e três manutenções são preservados. Nova tentativa válida conclui o fluxo. |
+| FLX-03 | Mesmo teste, `recover_after_invalid_ml_response` | Resposta ML tem versão, mas não contém as previsões solicitadas. Mesmas verificações de rejeição, preservação dos dados e recuperação de FLX-02. |
+| FLX-04 | `TestRFIntegration_IngestionFailureAndRecovery` | CSV sem colunas exigidas termina em `failed`, com erro e zero linhas. Novo arquivo válido termina em `completed`, insere dois alarmes e preserva o registro da falha anterior. Ambos os arquivos temporários são removidos. |
+| FLX-05 | `TestRFIntegration_ActualPredictionRouteRoles` | Quatro subcasos nas rotas reais: operador recebe 403 sem inferência/persistência; `enginner` recebe 201 com uma execução e uma rodada salva. Repetido em `production` e `development`. |
+
+São **oito cenários executados**, agrupados em três funções principais: três fluxos operacionais, uma recuperação de importação e quatro combinações de ambiente/perfil. O teste de permissão usa uma porta estável para isolar autorização e disparo da predição.
+
+## Reprodução
+
+Ambiente: **Go 1.26.0, Windows amd64; Node 22.15.0**. Os cenários novos usam somente serviços locais temporários e dados de teste.
+
+Na pasta `src/backend`, para os novos cenários:
+
+```sh
+go test -count=1 -json ./tests/integration ./cmd/api -run '^TestRFIntegration_' > workflow-results.json
+```
+
+Para repetir a regressão realizada:
+
+```sh
+go test -count=1 -json ./tests/... ./cmd/api ./internal/usecase > workflow-regression.json
+```
+
+Na pasta `src/frontend`:
+
+```sh
+npm test
+```
+
+Verificar código de saída e eventos `pass`, `fail` e `skip`. Não publicar tokens ou credenciais em evidências; o artefato desta task armazena resultados dos testes, sem respostas de login.
+
+## Resultados
+
+| Verificação | Resultado |
+| --- | --- |
+| Novos cenários | Oito aprovados; nenhuma falha ou cenário novo ignorado. |
+| Regressão Go | Oito pacotes aprovados; 239 testes de nível superior aprovados, cinco ignorados e nenhuma falha. |
+| Frontend | 40 testes existentes aprovados. |
+| SVG | Documento XML válido, com título e descrição acessíveis; artefato incluído na documentação. |
+
+Os testes ignorados continuam sendo `TestPostgresRepositories`, `TestStreamingIngestionCommitsAllBatchesOrRollsBack`, `TestCheckDatabaseConnection_AndMigrations`, `TestRF07_PostgresActiveDoorSelection` e `TestRF10_PostgresIndicatorsAndInspectionDeduplication`. O banco de teste não estava configurado; a tentativa de consultar o Docker confirmou daemon indisponível. Não foram executados detector de corrida nem pipeline remoto.
+
+## Validação completa ainda pendente
+
+A sequência local aumenta a cobertura das integrações internas, mas a lacuna L09 permanece parcialmente aberta. Para fechar a validação com infraestrutura real:
+
+1. Preparar ambiente isolado com PostgreSQL, migrations, storage configurado, River/worker, serviço Python com artefato compatível e frontend conectado à API. Registrar versões e hashes do modelo, sem usar credenciais ou dados operacionais reais nas evidências.
+2. Repetir o roteiro FLX-01 no navegador, usando os dois perfis, e aguardar o processamento assíncrono pelo worker. Conferir os registros efetivamente persistidos, sem acionar `ProcessJob` manualmente.
+3. Confirmar a construção das features a partir dos históricos importados e a identidade dos resultados retornados pelo modelo. Testar repetição de rodada, prevenção de inspeções abertas duplicadas e comportamento transacional.
+4. Repetir falha/recuperação do serviço de ML e do worker; verificar feedback da interface e ausência de perda ou duplicação dos dados.
+5. Registrar resultados por etapa, capturas da interface, logs com IDs de correlação e os testes SQL executados. Diferenciar esse registro dos testes com substitutos desta entrega.
+
+As divergências já documentadas continuam abertas: horizonte configurável do RF08, prioridade explícita das inspeções no RF11 e demais limites registrados nas tasks anteriores. A aprovação do fluxo com probabilidades fixas não comprova qualidade preditiva sobre históricos reais nem resolve essas divergências.
