@@ -1,0 +1,102 @@
+---
+title: "Testes RF [7]: Dashboard e inspeções prioritárias"
+description: "Indicadores, destaques de criticidade e ciclo de inspeções de RF10/RF11, com evidências e limites de priorização."
+---
+
+## Objetivo e versão
+
+Validar os indicadores operacionais do **RF10** e a geração de inspeções ligadas a portas em risco do **RF11**, conforme os [requisitos](/sprints/sprint-3/requisitos/). A entrega complementa as lacunas L06/L08 do [mapeamento](/sprints/sprint-5/mapeamento-testes-rf/).
+
+**Data:** 05/10/2026. **Commit base:** `e4fe84de41eb3e99f1e0a8fb3eb2a38eb91a3a51`. Os testes incluem as alterações locais desta task. O [arquivo de evidências](/evidencias/rf10-rf11.json) contém resultados antes/depois, regressão, saída do frontend e hashes dos arquivos utilizados.
+
+## Arquivos e alcance dos testes
+
+| Arquivo | Verificação |
+| --- | --- |
+| `src/backend/tests/unit/adapter/dashboard_requirements_test.go` | Repositório real com transporte SQL simulado: leitura de todos os indicadores, ausência de rodada e propagação de erros. Não executa agregação SQL. |
+| `src/backend/tests/integration/dashboard_inspection_requirements_test.go` | Contrato HTTP do resumo e ciclo de uma inspeção gerada por predição. Middleware, handlers e casos de uso reais; repositórios em memória e serviço ML simulado. |
+| `src/backend/tests/integration/dashboard_postgres_requirements_test.go` | Consulta SQL de indicadores e prevenção de inspeções abertas duplicadas, com repositórios reais e tabelas temporárias. Preparado, mas ignorado nesta execução. |
+| `src/frontend/src/lib/dashboardHighlights.js` | Seleção e ordenação extraídas do componente Dashboard; a página utiliza diretamente essas funções. |
+| `src/frontend/tests/dashboardHighlights.test.js` | Seis testes dos destaques exibidos pelo dashboard: ranking, base vazia, empate, portas em risco e limite de cinco registros. |
+
+O transporte SQL simulado entrega resultados e falhas controlados por consulta. Ele permite testar `Scan`, ausência de linhas e falhas durante a leitura sem instalar dependências adicionais. Não comprova contagens ou filtros realizados pelo PostgreSQL. As verificações do frontend executam funções usadas pela página, sem montar React ou abrir navegador.
+
+## Matriz de cenários
+
+| ID | RF | Cenário | Resultado esperado e verificado |
+| --- | --- | --- | --- |
+| DAS-01 | RF10 | Resumo preenchido no repositório e na API. | Todos os valores preservados: 10 portas, quatro em risco, três inspeções pendentes, duas concluídas; ranking FAL com três e PIN com uma. Os valores de origem são controlados. |
+| DAS-02 | RF10 | Resumo vazio e ausência de rodada. | Indicadores zero; API retorna lista de estações vazia, não nula. Ausência legítima de rodada não produz erro. |
+| DAS-03 | RF10 | Falha em cada uma das cinco consultas; erro de conversão e erro durante iteração do ranking. | Sete subcasos retornam erro e nenhum resumo parcial. |
+| DAS-04 | RF10 | Repositório indisponível na chamada HTTP. | HTTP 500/`ERR_INTERNAL_SERVER`; não retorna indicadores como se a leitura tivesse sido concluída. |
+| DAS-05 | RF10 | Ranking das estações no frontend. | Ordem decrescente de risco; maior estação destacada; coleção original preservada; empates mantêm a ordem recebida. |
+| DAS-06 | RF10 | Base SQL vazia e base com rodadas antigas, oficial, experimental e não publicada. | Esperado: oito portas ativas, quatro em risco, três inspeções pendentes, duas concluídas; ranking FAL/PIN da rodada oficial mais recente. **Ignorado: PostgreSQL não configurado.** |
+| INS-01 | RF11 | Predição com uma porta em risco e outra estável. | Uma inspeção automática pendente, ligada ao ID da previsão e à porta FAL/P1/4; a porta estável não gera inspeção. |
+| INS-02 | RF11 | Ciclo da inspeção automática. | `pending → in_progress → completed → pending → canceled`; vínculo preservado; data de conclusão presente somente em `completed`; observação preservada e GET consistente com cada atualização. |
+| INS-03 | RF11 | Status desconhecido, reabertura de cancelada e JSON malformado. | Três subcasos retornam HTTP 400 e preservam o estado anterior. |
+| INS-04 | RF11 | Consulta inexistente e filtro de pendentes após cancelamento. | HTTP 404 para ID inexistente; lista de pendentes vazia com HTTP 200 após cancelamento. |
+| INS-05 | RF11 | Painel de portas em atenção. | Apenas portas com `will_fail: true`; identidade preservada; no máximo cinco exibidas, com total completo disponível para o rodapé. Portas estáveis deixam o painel vazio. |
+| INS-06 | RF11 | Repetição de inspeção aberta e criação após conclusão no PostgreSQL. | Esperado: reutilizar inspeção `pending` ou `in_progress`, preservando vínculo e notas originais; após concluir, criar uma nova inspeção ligada à nova previsão. **Ignorado nesta execução.** |
+
+Os testes do backend estão organizados em quatro funções principais aprovadas, com 15 subcasos e verificações adicionais no corpo do teste de ciclo de inspeção. O cenário PostgreSQL é uma quinta função, ignorada. Os seis testes novos do frontend complementam os 34 anteriores; não são testes visuais.
+
+## Falha encontrada e correção
+
+`PostgresDashboardRepository.GetSummary` ignorava erros nas consultas de portas em risco, inspeções pendentes e concluídas. Também ignorava erros de consulta, conversão e iteração do ranking. Nesses casos, podia devolver HTTP 200 com zeros ou um ranking incompleto.
+
+A execução inicial confirmou **seis subcasos com falha**. O erro da primeira consulta, de portas ativas, já era propagado corretamente.
+
+O repositório agora interrompe a operação e retorna o erro em qualquer uma dessas falhas. O fluxo HTTP já converte erros de repositório em HTTP 500. A ausência de uma rodada, representada por `sql.ErrNoRows` na consulta da última predição, continua válida e resulta em zero portas em risco. As regras de contagem e a ordenação SQL não foram alteradas.
+
+No frontend, a extração para `dashboardHighlights` preserva o comportamento existente e permite executar diretamente as regras usadas pelo componente. Não foi introduzida uma nova regra de prioridade.
+
+## Reprodução
+
+Ambiente: **Go 1.26.0, Windows amd64; Node 22.15.0**. Na pasta `src/backend`:
+
+```sh
+go test -count=1 -json ./tests/unit/adapter ./tests/integration -run '^TestRF1[01]_' > dashboard-results.json
+go test -count=1 -json ./tests/... ./cmd/api ./internal/usecase > dashboard-regression.json
+```
+
+Na pasta `src/frontend`:
+
+```sh
+npm test
+npm run lint
+npm run build
+```
+
+Para executar a agregação SQL e a prevenção de duplicatas, configurar um PostgreSQL de teste e executar somente o cenário preparado, na pasta `src/backend`:
+
+```powershell
+$env:TEST_DATABASE_URL = 'postgres://usuario:senha@localhost:5432/banco_de_testes?sslmode=disable'
+go test -count=1 -v ./tests/integration -run '^TestRF10_PostgresIndicatorsAndInspectionDeduplication$'
+```
+
+O cenário usa tabelas temporárias dentro de uma transação revertida ao final, com timeout de 30 segundos. Elas substituem as tabelas da aplicação apenas nessa conexão. O usuário do banco precisa de permissão para tabelas temporárias. O cenário não depende de migrations e não comprova constraints do esquema completo, concorrência ou rollback da unidade de trabalho de produção. Variável ausente produz `skip`; conexão ou SQL inválidos com a variável configurada produzem falha.
+
+## Resultados
+
+| Verificação | Resultado |
+| --- | --- |
+| Novos testes Go executáveis | Quatro funções principais aprovadas, com todos os 15 subcasos aprovados. |
+| Cenário SQL novo | Ignorado por ausência de `TEST_DATABASE_URL`. |
+| Regressão Go | Oito pacotes aprovados; 236 testes de nível superior aprovados, cinco ignorados e nenhuma falha. |
+| Frontend | 40 testes aprovados, incluindo seis novos; nenhum falho ou ignorado. |
+| Frontend build/lint | Build concluído, com aviso de tamanho de bundle; lint sem erros, com avisos nos componentes e páginas. |
+
+Os cinco testes ignorados são `TestPostgresRepositories`, `TestStreamingIngestionCommitsAllBatchesOrRollsBack`, `TestCheckDatabaseConnection_AndMigrations`, `TestRF07_PostgresActiveDoorSelection` e `TestRF10_PostgresIndicatorsAndInspectionDeduplication`. Não contam como aprovação. Detector de corrida e pipeline remoto não foram executados.
+
+## Situação de RF10/RF11
+
+**RF10 parcialmente validado:** contrato dos indicadores, tratamento de falhas e regras do ranking no frontend estão testados. A agregação sobre uma base PostgreSQL controlada tem cenário preparado, ainda não executado. A correspondência visual dos cards com a API também permanece pendente.
+
+**RF11 parcialmente validado:** a geração automática, o vínculo com a previsão, o ciclo da inspeção e a seleção de portas em risco para destaque estão testados com os substitutos descritos. Permanecem abertos:
+
+- **Prioridade explícita:** não foi localizado campo de prioridade nem ordenação de inspeções por criticidade. O repositório lista por `created_at DESC`; origem IA e status não comprovam prioridade. É necessário definir e implementar a regra ou revisar formalmente o requisito.
+- **Destaque visual:** os testes verificam os dados destinados ao painel, sem validar badges, cores, navegação ou acessibilidade no navegador. As cinco portas exibidas seguem a ordem recebida, sem ordenação adicional por probabilidade.
+- **Duplicatas e transações reais:** executar o cenário PostgreSQL e validar concorrência/rollback com a infraestrutura real. O repositório em memória usado no ciclo HTTP não implementa a restrição de duplicatas.
+- **Rodadas repetidas:** a implementação SQL preserva o vínculo da inspeção aberta com a previsão original ao reutilizá-la. O teste preparado registra esse comportamento; o requisito não define se uma nova rodada deve atualizar esse vínculo.
+
+Os resultados não comprovam integração completa com modelo de ML, dados históricos e banco operacional reais.
