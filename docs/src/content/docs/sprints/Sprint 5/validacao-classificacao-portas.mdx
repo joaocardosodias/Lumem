@@ -1,0 +1,99 @@
+---
+title: "Testes RF [6]: Classificação das portas"
+description: "Testes de limiar, associação de previsões às portas e rejeição de probabilidades inválidas no RF09."
+---
+
+## Objetivo e versão
+
+Validar a classificação das portas como estáveis ou em risco prevista no **RF09**, complementando a lacuna L05 do [mapeamento](/sprints/sprint-5/mapeamento-testes-rf/) e a [validação de execução da predição](/sprints/sprint-5/validacao-execucao-horizonte-predicao/).
+
+**Data:** 05/10/2026. **Commit base:** `540d09b82eb2e6521dc9172e40c902b7a83f2204`. Os testes incluem as alterações locais desta task. O [arquivo de evidências](/evidencias/rf09.json) registra hashes dos arquivos, resultados antes/depois da correção e a regressão executada.
+
+## Regra e responsabilidades
+
+O serviço de ML fornece a probabilidade. O backend aplica o limiar em `applyPredictionThreshold`, dentro de `TriggerPredictionsUseCase`:
+
+| Condição | Classificação | Campo retornado |
+| --- | --- | --- |
+| Probabilidade menor que o limiar | Estável | `will_fail: false` |
+| Probabilidade igual ou maior que o limiar | Em risco | `will_fail: true` |
+
+Na execução oficial, o backend usa o limiar obtido de `MLOpsRepository.GetConfig`. Quando esse repositório não está configurado no caso de uso, usa 0,5. A API de produção injeta esse repositório; portanto, 0,5 não deve ser presumido como o limiar de todas as instalações.
+
+As telas Portas e Predições exibem o diagnóstico a partir de `will_fail`. Esta task verifica a classificação retornada e consultada pela API; não verifica cliques, cores ou renderização no navegador.
+
+## Implementação
+
+Os testes novos estão em `src/backend/tests/integration/classification_requirements_test.go`. Eles executam middleware JWT, handler, cliente HTTP de ML e casos de uso reais. O servidor de ML é simulado com `httptest`; configuração, métricas, persistência e unidade de trabalho são substitutos em memória.
+
+Os cinco conjuntos de classificação usam as mesmas identidades: FAL/P1/1, FAL/P2/1, PIN/P1/1, FAL/P1/2 e PIN/P2/1. Repetir o número da porta em estações e plataformas diferentes permite verificar a identidade completa. Cada previsão deve preservar sua probabilidade, classificação, ID e vínculo com a rodada. O teste também compara a consulta posterior com a resposta de criação e verifica que somente previsões em risco geram inspeções, ligadas às portas corretas.
+
+O servidor simulado envia propositalmente um `will_fail` contrário ao esperado. Esse campo é ignorado pelo cliente: a classificação deve continuar sendo calculada pelo backend a partir da probabilidade e do limiar vigente. As métricas devolvidas pelo substituto de MLOps apenas satisfazem o contrato da orquestração; não são evidência de desempenho do modelo.
+
+## Matriz de cenários
+
+| ID | Cenário | Entrada | Resultado esperado e verificado |
+| --- | --- | --- | --- |
+| CLA-01 | Limiar de fallback 0,5 | Probabilidades 0; 0,499999; 0,5; 0,500001; 1. | Duas portas estáveis e três em risco; igualdade classificada como risco. |
+| CLA-02 | Limiar configurado 0,27 | Probabilidades 0; 0,269999; 0,27; 0,270001; 1. | Duas estáveis e três em risco; configuração prevalece sobre 0,5. |
+| CLA-03 | Limiar configurado 0,75 | Probabilidades 0; 0,749999; 0,75; 0,750001; 1. | Duas estáveis e três em risco, sem usar um limiar fixo indevido. |
+| CLA-04 | Todas estáveis | Cinco probabilidades zero, limiar 0,27. | Zero portas em risco e nenhuma inspeção automática. |
+| CLA-05 | Todas em risco | Cinco probabilidades um, limiar 0,27. | Cinco portas em risco e cinco inspeções corretamente vinculadas. |
+| CLA-06 | Probabilidade ausente ou `null` | Dois subcasos, após uma rodada válida. | HTTP 503/`ERR_PREDICTION_UNAVAILABLE`; classificação anterior preservada. |
+| CLA-07 | Probabilidade inválida | -0,01; 1,01; texto `"0.8"`. | Três subcasos rejeitados com HTTP 503, sem substituir a rodada válida. |
+| CLA-08 | Identidade incompatível | Estação, plataforma ou número da porta incorreto. | Três subcasos rejeitados, sem associar resultados à porta errada. |
+| CLA-09 | Duplicação ou reordenação | Porta repetida ou posições invertidas na resposta. | Dois subcasos rejeitados. O cliente atual exige a mesma ordem das portas solicitadas; não reorganiza a resposta. |
+
+CLA-01 a CLA-05 são subcasos de `TestRF09_ClassificationBoundariesAndAssociation`. CLA-06 a CLA-09 correspondem aos dez subcasos de `TestRF09_InvalidMLResponsePreservesLatestClassification`.
+
+São **15 cenários novos**, organizados em dois testes pais. Os cinco cenários de limiar verificam 25 classificações individuais. Essa contagem não é somada à quantidade de cenários. Nos dez cenários de resposta inválida, o teste cria uma rodada válida antes da falha e verifica que não surgem novas rodadas, previsões ou inspeções e que a consulta continua retornando o resultado anterior.
+
+## Falha encontrada e correção
+
+Na primeira execução, os subcasos de probabilidade ausente e nula falharam. O cliente de ML decodificava `probability` em `float64`: tanto a ausência quanto `null` deixavam o campo com zero. A resposta era aceita e a porta poderia ser classificada como estável sem que o modelo tivesse informado uma probabilidade.
+
+Em `src/backend/internal/adapter/mlclient/client.go`, o campo passou a ser `*float64`. O cliente agora rejeita valor ausente ou nulo antes de gerar os itens da predição, preservando a validação do intervalo entre zero e um. **Zero explícito continua válido**, como comprova CLA-04. O teste unitário existente em `tests/unit/adapter/mlclient_test.go` foi adaptado ao tipo opcional do campo.
+
+O tratamento de erro já existente converte essa resposta incompatível em HTTP 503. A classificação e a persistência não são executadas com esses dados inválidos. Não foi alterada a regra de comparação com o limiar.
+
+## Reprodução
+
+Ambiente utilizado: **Go 1.26.0, Windows amd64; Node 22.15.0**. Os novos testes não precisam de PostgreSQL, artefato de modelo ou credenciais reais.
+
+Na pasta `src/backend`, executar os novos testes:
+
+```sh
+go test -count=1 -json ./tests/integration -run '^TestRF09_' > classification-results.json
+```
+
+Para repetir a regressão executada:
+
+```sh
+go test -count=1 -json ./tests/... ./cmd/api ./internal/usecase > classification-regression.json
+```
+
+Na pasta `src/frontend`, executar a suíte de filtros existente:
+
+```sh
+npm test
+```
+
+Essa suíte inclui seleção de previsões em risco/estáveis e combinações de filtros da task RF [4]. Ela foi reexecutada nesta task e não monta componentes React. Os novos testes Go seguem a descoberta normal dos pacotes; não houve alteração de pipeline.
+
+## Resultados e limites
+
+| Verificação | Resultado |
+| --- | --- |
+| Primeira execução RF09 | 13 cenários passaram e dois falharam: probabilidade ausente e nula. |
+| RF09 após correção | 15 cenários passaram; nenhuma falha ou cenário ignorado nessa bateria. |
+| Regressão Go | Oito pacotes aprovados; 232 testes de nível superior aprovados e quatro ignorados; nenhuma falha. |
+| Frontend | 34 testes existentes de filtros aprovados. |
+
+Os testes ignorados foram `TestPostgresRepositories`, `TestStreamingIngestionCommitsAllBatchesOrRollsBack`, `TestCheckDatabaseConnection_AndMigrations` e `TestRF07_PostgresActiveDoorSelection`. Eles dependem de banco/configuração e não contam como aprovados. Não foram executados detector de corrida nem pipeline remoto.
+
+**A regra de classificação e o contrato HTTP estão validados nos cenários descritos. O RF09 permanece parcialmente validado de ponta a ponta:**
+
+- Não houve execução do modelo Python, construção de features com históricos reais ou avaliação de qualidade preditiva. Essas verificações precisam de dados de avaliação separados do treinamento e métricas do modelo; as probabilidades desta task são controladas.
+- Persistência, joins por identidade e consulta do status da estação com PostgreSQL real continuam pendentes. O GET testado é `/predictions/latest`, com repositório em memória.
+- Na análise estática, a consulta de status da estação usa `COALESCE(..., FALSE)` quando não há previsão, e a tela interpreta `false` como estável. A distinção entre porta não avaliada e estável precisa ser alinhada e validada em uma entrega própria; esta task não comprova classificação de portas sem inferência.
+- A validação visual das telas permanece pendente. O horizonte configurável também continua com a divergência do RF08 documentada na task anterior.

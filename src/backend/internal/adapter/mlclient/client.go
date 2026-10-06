@@ -24,10 +24,10 @@ type PredictionRequest struct {
 }
 
 type PredictionResponse struct {
-	StationCode string  `json:"station_code"`
-	Platform    string  `json:"platform"`
-	DoorNumber  int     `json:"door_number"`
-	Probability float64 `json:"probability"`
+	StationCode string   `json:"station_code"`
+	Platform    string   `json:"platform"`
+	DoorNumber  int      `json:"door_number"`
+	Probability *float64 `json:"probability"`
 }
 
 type BatchPredictionResponse struct {
@@ -103,10 +103,10 @@ func (c *Client) PredictBatch(ctx context.Context, doors []domain.Door) (*port.M
 
 	items := make([]domain.PredictionItem, len(mlResp.Predictions))
 	for i, r := range mlResp.Predictions {
-		if r.StationCode != doors[i].StationCode || r.Platform != doors[i].Platform || r.DoorNumber != doors[i].DoorNumber || r.Probability < 0 || r.Probability > 1 {
+		if r.StationCode != doors[i].StationCode || r.Platform != doors[i].Platform || r.DoorNumber != doors[i].DoorNumber || r.Probability == nil || *r.Probability < 0 || *r.Probability > 1 {
 			return nil, domain.ErrPredictionServiceUnavailable
 		}
-		probability := r.Probability
+		probability := *r.Probability
 		items[i] = domain.PredictionItem{
 			StationCode: r.StationCode,
 			Platform:    r.Platform,
