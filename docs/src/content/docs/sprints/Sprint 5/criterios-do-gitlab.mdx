@@ -1,0 +1,98 @@
+---
+title: "Critérios do Gitlab"
+description: "Revisão do repositório conforme os critérios de GitLab aplicáveis ao Módulo 7."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
+
+Esta página registra a revisão do repositório do **Lumem** com base na planilha `2026_GITLAB_COMPILADO_CRITÉRIOS_CURSO_EC.xlsx - Página1.csv`. A análise considera somente os itens marcados com `x` na coluna do **Módulo 7** e relaciona cada critério a uma evidência verificável.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Escopo do Módulo 7</h2>
+</div>
+
+A planilha define **16 critérios aplicáveis** ao módulo:
+
+| Grupo | Aplicáveis | Itens avaliados |
+| :--- | :---: | :--- |
+| README | 8 | 1, 2, 3, 4, 6, 7, 8 e 9 |
+| Documentação | 4 | 1, 2, 4 e 12 |
+| Código-fonte | 4 | 1, 2, 6 e 8 |
+| Mídia | 0 | Não se aplica ao Módulo 7 |
+
+Os demais itens da planilha estão marcados como “não se aplica” para este módulo e, por isso, não entram no resultado desta revisão.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Revisão do README</h2>
+</div>
+
+| Item | Critério | Evidência no repositório | Situação |
+| :---: | :--- | :--- | :---: |
+| 1 | Título, objetivo e descrição breve | O `README.md` apresenta o Lumem, o problema de manutenção das PSDs e o objetivo da solução preditiva. | Atendido |
+| 2 | Estrutura do repositório | A árvore descreve `data`, `docs`, `eda`, `models`, `scripts` e os componentes em `src`. | Atendido |
+| 3 | Integrantes da equipe | Os sete integrantes estão identificados no início do arquivo. | Atendido |
+| 4 | Links profissionais | Cada integrante possui um link de LinkedIn. | Atendido |
+| 6 | Execução do projeto e da documentação | Há instruções para aplicação, portal Astro e notebooks, com pré-requisitos e comandos. | Atendido |
+| 7 | Link da documentação publicada | O README aponta para a documentação do grupo no GitLab Pages. | Atendido |
+| 8 | Licença Inteli/CC0 | A seção de licença do README adota a CC0 1.0 Universal e direciona ao texto legal completo. | Atendido |
+| 9 | Identificação na licença | A seção identifica o projeto, o Grupo 4, os integrantes e o Inteli. | Atendido |
+
+**Resultado do grupo:** 8 de 8 critérios atendidos.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Revisão da documentação</h2>
+</div>
+
+| Item | Critério | Evidência no repositório | Situação |
+| :---: | :--- | :--- | :---: |
+| 1 | Diretório separado do código | O portal está em `docs/`, enquanto a aplicação está em `src/`. | Atendido |
+| 2 | Documentação completa e funcional | O build do Astro foi concluído e a versão publicada respondeu `HTTP 200`. | Atendido |
+| 4 | Sumário navegável | O Starlight oferece menu lateral por sprint, páginas autogeradas, busca e sumário interno. | Atendido |
+| 12 | Ausência de dados sensíveis | A documentação não contém tokens, chaves privadas ou credenciais reais; os valores de configuração são exemplos. | Atendido |
+
+O arquivo genérico `Sprint 5/example.mdx` foi removido e uma referência interna da otimização da RNN foi corrigida para o endereço existente.
+
+**Resultado do grupo:** 4 de 4 critérios atendidos.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Revisão do código-fonte</h2>
+</div>
+
+| Item | Critério | Evidência no repositório | Situação |
+| :---: | :--- | :--- | :---: |
+| 1 | Diretório de código na raiz | O diretório `src/` está na raiz do repositório. | Atendido |
+| 2 | Código completo e alinhado à documentação | `src/backend`, `src/frontend` e `src/modelo` reúnem API, interface e serviço preditivo descritos na arquitetura. | Atendido |
+| 6 | Instruções claras de execução | O README documenta variáveis, ordem de inicialização, endereços, healthchecks e encerramento dos serviços. | Atendido |
+| 8 | Ausência de dados sensíveis | Arquivos `.env` estão ignorados; somente `.env.example` com marcadores de substituição é versionado. | Atendido |
+
+**Resultado do grupo:** 4 de 4 critérios atendidos.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Validações realizadas</h2>
+</div>
+
+A revisão foi atualizada em **5 de outubro de 2026** com as seguintes verificações:
+
+- `npm run build` em `docs/`: concluído com **70 páginas geradas**;
+- documentação publicada: resposta `HTTP 200`, com redirecionamento para o domínio de publicação do grupo;
+- varredura dos **738 arquivos versionados**: nenhum token, chave privada ou credencial real identificado;
+- arquivos de ambiente: os três `.env` locais estão ignorados pelo Git e os exemplos usam valores substituíveis;
+- conteúdo: remoção da página de exemplo da Sprint 5 e correção do link interno da RNN.
+
+Os avisos do build sobre linguagens de realce, tamanho de pacote e rota `404` não interromperam a geração do portal.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Conclusão</h2>
+</div>
