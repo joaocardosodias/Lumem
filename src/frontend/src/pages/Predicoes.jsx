@@ -1,3 +1,4 @@
+import { filterPredictions } from '../lib/recordFilters'
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import DataPageSkeleton from '../components/DataPageSkeleton'
@@ -6,7 +7,7 @@ import Paginacao from '../components/Paginacao'
 import { usePredictionLoad } from '../components/PredictionLoad'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
-import { lineStations, mapStation } from '../data/stations'
+import { lineStations } from '../data/stations'
 import { api, asList, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
 import { PAGE_SIZE } from '../lib/filters'
@@ -161,26 +162,7 @@ function Predicoes({ onNavigate, params }) {
     return [...new Set(items.map((i) => i.platform).filter(Boolean))]
   }, [items, filters.station])
 
-  const visible = useMemo(() => {
-    return items.filter((item) => {
-      if (statusTab === 'fail' && !item.will_fail) return false
-      if (statusTab === 'ok' && item.will_fail) return false
-      if (filters.station && mapStation(item.station_code) !== mapStation(filters.station)) {
-        return false
-      }
-      if (filters.platform && item.platform !== filters.platform) return false
-      if (filters.search.trim()) {
-        const q = filters.search.trim().toLowerCase()
-        const match =
-          item.sap_tag.toLowerCase().includes(q) ||
-          item.station_name.toLowerCase().includes(q) ||
-          item.station_code.toLowerCase().includes(q) ||
-          String(item.door_number).includes(q)
-        if (!match) return false
-      }
-      return true
-    })
-  }, [items, statusTab, filters])
+  const visible = useMemo(() => filterPredictions(items, filters, statusTab), [items, statusTab, filters])
 
   const filtersDirty = Boolean(filters.station || filters.platform || filters.search)
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))

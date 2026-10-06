@@ -1,3 +1,4 @@
+import { filterAlarms } from '../lib/recordFilters'
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
@@ -7,10 +8,10 @@ import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
 import { useToast } from '../context/Toast'
-import { lineStations, mapStation, stationLabel } from '../data/stations'
+import { lineStations, stationLabel } from '../data/stations'
 import { api, asList, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
-import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod, periodHint } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE, periodHint } from '../lib/filters'
 import { pollUpload } from '../lib/runUpload'
 import { getCachedAlarms, invalidateAlarms, setCachedAlarms } from '../lib/alarmCache'
 import './Alarmes.css'
@@ -132,29 +133,7 @@ function Alarmes({ onNavigate, params }) {
     return [...new Set(items.map((i) => i.alarm_type).filter(Boolean))].sort()
   }, [items])
 
-  const visible = useMemo(() => {
-    return items.filter((item) => {
-      if (filters.station && mapStation(item.station_code) !== mapStation(filters.station)) {
-        return false
-      }
-      if (filters.platform && item.platform !== filters.platform) return false
-      if (filters.alarmType && item.alarm_type !== filters.alarmType) return false
-      if (filters.normalization === 'open' && item.normalization_timestamp) return false
-      if (filters.normalization === 'normalized' && !item.normalization_timestamp) return false
-      if (!inPeriod(item.event_timestamp, filters.period)) return false
-      if (filters.search.trim()) {
-        const q = filters.search.trim().toLowerCase()
-        const match =
-          item.tag.toLowerCase().includes(q) ||
-          item.alarm_type.toLowerCase().includes(q) ||
-          item.station_name.toLowerCase().includes(q) ||
-          item.station_code.toLowerCase().includes(q) ||
-          String(item.door_number).includes(q)
-        if (!match) return false
-      }
-      return true
-    })
-  }, [items, filters])
+  const visible = useMemo(() => filterAlarms(items, filters), [items, filters])
 
   const filtersDirty =
     Boolean(filters.station || filters.platform || filters.alarmType || filters.normalization || filters.search) ||
