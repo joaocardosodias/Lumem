@@ -601,6 +601,7 @@
     "/api/v1/predictions/trigger": {
       "post": {
         "summary": "Disparo Sob Demanda de Predicao por IA",
+        "description": "Corpo vazio, campo omitido ou nulo utilizam sete dias. JSON invalido, tipo nao inteiro ou horizonte menor que um retornam 400. Limitacao conhecida: inteiros positivos diferentes de sete ainda sao sobrescritos para sete pelo caso de uso; horizonte configuravel do RF08 nao implementado.",
         "security": [
           {
             "BearerAuth": []
@@ -615,6 +616,7 @@
                   "horizon_days": {
                     "type": "integer",
                     "enum": [7],
+                    "nullable": true,
                     "default": 7,
                     "description": "Horizonte fixo do artefato atualmente em producao"
                   }
@@ -633,6 +635,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "JSON ou horizonte invalidos, ou nenhuma porta ativa. A inferencia nao e iniciada."
+          },
+          "503": {
+            "description": "Servico de inferencia indisponivel ou resposta incompatível com as portas solicitadas."
           }
         }
       }

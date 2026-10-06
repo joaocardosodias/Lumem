@@ -1,6 +1,8 @@
 package http
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -343,11 +345,22 @@ func (h *DashboardHandler) GetStationDoorsStatus(c *gin.Context) {
 
 func (h *DashboardHandler) TriggerPredictions(c *gin.Context) {
 	var input struct {
-		HorizonDays int `json:"horizon_days"`
+		HorizonDays *int `json:"horizon_days"`
 	}
-	_ = c.ShouldBindJSON(&input)
+	if err := c.ShouldBindJSON(&input); err != nil && !errors.Is(err, io.EOF) {
+		RespondProblem(c, http.StatusBadRequest, "ERR_INVALID_PAYLOAD", "Payload Invalido", "Informe um JSON valido com horizon_days inteiro.")
+		return
+	}
+	horizonDays := 7
+	if input.HorizonDays != nil {
+		if *input.HorizonDays <= 0 {
+			RespondProblem(c, http.StatusBadRequest, "ERR_VALIDATION", "Horizonte Invalido", "horizon_days deve ser um numero inteiro positivo.")
+			return
+		}
+		horizonDays = *input.HorizonDays
+	}
 
-	run, err := h.uc.TriggerPredictions(c.Request.Context(), input.HorizonDays)
+	run, err := h.uc.TriggerPredictions(c.Request.Context(), horizonDays)
 	if err != nil {
 		RespondDomainError(c, err)
 		return
