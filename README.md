@@ -338,6 +338,16 @@ Os documentos de cada sprint registram as decisões e evidências. A presença d
 
 ## Licença
 
-O projeto **Lumem**, desenvolvido pelo **Grupo 4** no **Inteli — Instituto de Tecnologia e Liderança**, é disponibilizado sob a licença [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). A equipe é formada por Joseph Mansur, João Pedro Gonçalves Corrêa Araujo, Maria Vitória dos Santos, Maria Arielly, Kaian Moura, Leandro Precaro Barankiewicz Filho e João Cardoso Dias.
+O projeto **Lumem**, desenvolvido pelo **Grupo 4** no **Inteli — Instituto de Tecnologia e Liderança**, é disponibilizado sob a licença [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
+### Créditos
+
+- [Joseph Mansur](https://www.linkedin.com/in/joseph-marcelo-mansur/)
+- [João Pedro Gonçalves Corrêa Araujo](https://www.linkedin.com/in/jo%C3%A3o-pedro-gon%C3%A7alves-corr%C3%AAa-araujo/)
+- [Maria Vitória dos Santos](https://www.linkedin.com/in/maria-vit%C3%B3ria-dos-santos/)
+- [Maria Arielly](https://www.linkedin.com/in/maria-arielly/)
+- [Kaian Moura](https://www.linkedin.com/in/kaian-moura-56b8871b4/)
+- [Leandro Precaro Barankiewicz Filho](https://www.linkedin.com/in/leandro-precaro-barankiewicz-filho/)
+- [João Cardoso Dias](https://www.linkedin.com/in/jo%C3%A3ocardosodias/)
 
 Na medida permitida por lei, os autores identificados acima dedicam este trabalho ao domínio público, renunciando aos direitos autorais e direitos conexos sobre ele conforme a declaração CC0 1.0 Universal. O [texto legal completo](https://creativecommons.org/publicdomain/zero/1.0/legalcode) está disponível no site da Creative Commons.
