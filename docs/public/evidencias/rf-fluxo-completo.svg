@@ -73,5 +73,5 @@
   <text x="820" y="680" class="body">RF08 configurável e prioridade RF11</text>
 
   <text x="40" y="749" class="small">* Teste separado usa buildRouter/registerRoutes; o fluxo HTTP principal usa um roteador de teste com proteção equivalente.</text>
-  <text x="40" y="775" class="small">Resultados reproduzíveis: validacao-integracoes-fluxo-completo.mdx · evidencias/rf-integracoes.json</text>
+  <text x="40" y="775" class="small">Resultados reproduzíveis: implementacao-validacao-testes.mdx · evidencias/rf-integracoes.json</text>
 </svg>
