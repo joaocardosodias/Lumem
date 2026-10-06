@@ -103,6 +103,8 @@ Os testes ignorados continuam sendo `TestPostgresRepositories`, `TestStreamingIn
 
 ## Validação completa ainda pendente
 
+**Execução posterior:** os cinco testes PostgreSQL listados acima já passaram na [validação de PostgreSQL e regressão completa](/sprints/sprint-5/validacao-postgresql-regressao-completa/), que também executou todos os pacotes Go. Os resultados desta página permanecem como registro da task RF [8].
+
 A sequência local aumenta a cobertura das integrações internas, mas a lacuna L09 permanece parcialmente aberta. Para fechar a validação com infraestrutura real:
 
 1. Preparar ambiente isolado com PostgreSQL, migrations, storage configurado, River/worker, serviço Python com artefato compatível e frontend conectado à API. Registrar versões e hashes do modelo, sem usar credenciais ou dados operacionais reais nas evidências.

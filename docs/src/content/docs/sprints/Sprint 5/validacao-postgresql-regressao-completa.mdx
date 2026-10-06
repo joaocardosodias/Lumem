@@ -1,0 +1,123 @@
+---
+title: "Testes RF: PostgreSQL real e regressão completa"
+description: "Execução dos testes de banco antes ignorados, correção da limpeza de arquivos no Windows e regressão de todos os pacotes Go."
+---
+
+## Objetivo e versão
+
+Executar os cinco testes dependentes de PostgreSQL que permaneceram ignorados nas tasks RF [2] a RF [8], e ampliar a regressão para todos os pacotes Go do backend. Esta entrega atualiza os resultados de execução registrados no [mapeamento](/sprints/sprint-5/mapeamento-testes-rf/) e na [validação do fluxo](/sprints/sprint-5/validacao-integracoes-fluxo-completo/).
+
+**Data:** 05/10/2026. **Commit base:** `9ed70f5a83285f3abb020a7332a24d5511edd4de`, com as alterações locais descritas abaixo. O [arquivo de evidências](/evidencias/rf-postgresql.json) contém resultados iniciais, retestes, regressão completa e hashes dos arquivos.
+
+## Ambiente isolado
+
+- Windows amd64, Go 1.26.0.
+- Docker Desktop com engine 29.7.2.
+- PostgreSQL **16.15**, imagem `postgres:16-alpine`, digest `sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea`.
+- Contêiner temporário `g04-rf-pg-20261005`, publicado somente em `127.0.0.1:55439`, sem montagem de dados do projeto.
+- Cinco bancos separados na primeira execução: `rf_repositories`, `rf_streaming`, `rf_api`, `rf_active` e `rf_dashboard`.
+- Regressões completas em bancos novos: `rf_regression` e `rf_regression_final`. Os pacotes foram executados sequencialmente com `-p 1`, evitando migrations simultâneas entre pacotes.
+
+As credenciais foram exclusivas desse ambiente descartável. Não houve acesso ao banco operacional nem alteração de `.env`. O contêiner é removido ao ser encerrado por ter sido criado com `--rm`.
+
+## Cinco testes anteriormente ignorados
+
+| Teste | Verificação | Resultado final |
+| --- | --- | --- |
+| `TestPostgresRepositories` | Migrations e repositórios reais: usuários, alarmes, manutenção, previsões, inspeções, dashboard, governança do modelo e caminhos de erro/transação já implementados. | Aprovado. |
+| `TestStreamingIngestionCommitsAllBatchesOrRollsBack` | Alarmes e manutenção em lotes de 500: gravar 501 linhas no sucesso; reverter todas as linhas quando o parser falha após o primeiro lote. | Quatro subcasos aprovados após a correção de fechamento do arquivo. |
+| `TestCheckDatabaseConnection_AndMigrations` | Conexão, migrations válidas, reaplicação e caminhos inválidos. | Aprovado. |
+| `TestRF07_PostgresActiveDoorSelection` | Consulta SQL seleciona as duas portas ativas e exclui a inativa. | Aprovado. |
+| `TestRF10_PostgresIndicatorsAndInspectionDeduplication` | Base vazia, indicadores/ranking da rodada oficial, exclusão de rodadas experimentais/não publicadas, reutilização de inspeções abertas e nova inspeção após conclusão. | Aprovado. |
+
+Os dois últimos usam tabelas temporárias com repositórios reais. Eles validam as consultas e o comportamento descrito, mas não substituem verificações concorrentes nem todas as constraints do esquema de produção.
+
+## Falhas encontradas e correções
+
+### 1. Remoção do arquivo antes do fechamento da leitura
+
+Na primeira execução com PostgreSQL, os quatro subcasos da importação em lotes falharam com erro do Windows: o arquivo estava em uso quando o processamento tentava removê-lo. O status e a transação já haviam sido tratados, mas a finalização retornava `CleanupPendingError`.
+
+Nos casos de uso de alarmes e manutenção, o `defer rc.Close()` estava no escopo de `ProcessJob`, sendo executado somente depois da tentativa de limpeza. Agora, o processamento transacional fica em um escopo que fecha o leitor **antes** de executar a limpeza do arquivo, inclusive nos caminhos de erro.
+
+Arquivos alterados:
+
+- `src/backend/internal/usecase/ingest_alarms_usecase.go`.
+- `src/backend/internal/usecase/ingest_maintenance_usecase.go`.
+
+O teste `src/backend/tests/integration/streaming_ingestion_test.go` também passou a conferir explicitamente que o arquivo temporário não existe após a finalização. Os quatro subcasos passaram no reteste, verificando tanto os dados no PostgreSQL quanto a limpeza do arquivo.
+
+### 2. Preparação do teste de erro de arquivo temporário no S3
+
+A primeira regressão de todos os pacotes encontrou falha em `TestS3StorageStoreTempFileError`: o teste configurava apenas `TMPDIR`, enquanto o Windows utiliza `TMP`/`TEMP`. Por isso, a operação conseguia criar o arquivo quando o teste esperava erro.
+
+A fixture em `src/backend/internal/adapter/storage/s3_storage_test.go` agora configura as três variáveis para o mesmo diretório inexistente, usando `t.Setenv` para restauração automática. O adaptador S3 de produção não foi alterado. Esse teste usa uma API S3 simulada; sua aprovação não comprova acesso ao MinIO/S3 real.
+
+## Regressão de todos os pacotes
+
+Com um banco novo, foi executado em `src/backend`:
+
+```sh
+go test -p 1 -count=1 -json ./... > postgres-full-results.json
+```
+
+| Resultado | Quantidade |
+| --- | --- |
+| Pacotes com testes aprovados | 14 |
+| Funções de teste de nível superior aprovadas | 280 |
+| Testes falhos | 0 |
+| Testes ignorados | 0 |
+| Pacotes sem arquivos de teste | 8 |
+
+O JSON do Go registra os pacotes sem arquivos de teste como eventos `skip` **sem campo `Test`**. Eles não representam testes ignorados. A contagem de 280 não soma novamente subtestes aos testes pais.
+
+Além dos cinco testes anteriores, passaram os testes internos de PostgreSQL/River que não estavam na seleção de pacotes da task RF [8], incluindo:
+
+- `TestRiverQueueEnqueueTransaction`: transação de upload e propagação de falha de enfileiramento, com inseridor River simulado.
+- `TestRiverMigrationsSuccess`: migrations River via `database/sql` e `pgx`.
+- `TestCleanupJobSurvivesProducerAndRunsInSeparateWorker`: job persistido e consumo por um cliente worker separado, usando PostgreSQL e storage temporário reais.
+
+Isso amplia a evidência da fila, mas não equivale a um teste completo de importação pelo worker de produção, conectado ao frontend, MinIO e serviço de modelo.
+
+## Reprodução
+
+Executar em PowerShell com Docker iniciado e Go 1.26 disponível. Usar um nome de contêiner e uma porta livres. Os valores abaixo são credenciais exclusivas de teste local:
+
+```powershell
+docker run --detach --rm --name g04-rf-postgres-test `
+  --env POSTGRES_USER=rf_test --env POSTGRES_PASSWORD=rf_local_only `
+  --env POSTGRES_DB=rf_test --publish 127.0.0.1:55439:5432 `
+  postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+
+docker exec g04-rf-postgres-test pg_isready -U rf_test -d rf_test
+```
+
+Aguardar `accepting connections`. Na pasta `src/backend`, executar:
+
+```powershell
+$previousTestDsn = $env:TEST_DATABASE_URL
+try {
+  $env:TEST_DATABASE_URL = 'postgres://rf_test:rf_local_only@127.0.0.1:55439/rf_test?sslmode=disable'
+  go test -p 1 -count=1 -json ./... > postgres-full-results.json
+  if ($LASTEXITCODE -ne 0) { throw 'A regressão falhou; consultar o arquivo de resultados.' }
+} finally {
+  $env:TEST_DATABASE_URL = $previousTestDsn
+  docker stop g04-rf-postgres-test
+}
+```
+
+Para reproduzir somente os cinco testes anteriores, trocar o comando Go por:
+
+```sh
+go test -p 1 -count=1 -json ./tests/integration ./cmd/api -run '^(TestPostgresRepositories|TestStreamingIngestionCommitsAllBatchesOrRollsBack|TestCheckDatabaseConnection_AndMigrations|TestRF07_PostgresActiveDoorSelection|TestRF10_PostgresIndicatorsAndInspectionDeduplication)$'
+```
+
+Usar um contêiner/banco novo para cada repetição completa. Os testes executam migrations e alteram registros; não utilizar banco compartilhado ou operacional. O código de saída e a ausência de eventos `skip` com campo `Test` devem ser conferidos, pois alguns testes antigos ainda ignoram indisponibilidade de banco.
+
+## Atualização das pendências
+
+**Concluído nesta entrega:** execução dos cinco testes de banco antes ignorados e regressão conjunta de todos os pacotes Go. As lacunas L03, L05, L06, L07 e L08 ganham evidências reais de persistência/consulta nos cenários existentes; L10 ganha evidência da suíte completa do backend.
+
+**Ainda pendente:** testes Python/modelo real, qualidade preditiva com dados de avaliação, fluxo no navegador com infraestrutura integrada, detector de corrida (`-race`), pipeline remoto e cenários adicionais de concorrência. Também continuam abertas as definições/implementações de horizonte configurável e prioridade previstas em RF08/RF06/RF11.
+
+Os relatórios anteriores preservam seus resultados históricos com `skip`; esta página registra a execução posterior que resolveu essa pendência. Não é necessário reinterpretar testes anteriormente ignorados como aprovados naquela data de execução.
