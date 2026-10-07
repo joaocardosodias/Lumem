@@ -690,6 +690,11 @@
     font-size: 30px;
   }
 
+  .overview button.overview-action {
+    width: 100%;
+  }
+
+
   .overview-metrics {
     margin-bottom: 20px;
   }

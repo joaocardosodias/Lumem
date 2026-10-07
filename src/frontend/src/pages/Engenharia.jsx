@@ -627,7 +627,7 @@ function Engenharia() {
         <div className="page-head__actions">
           <div className="engenharia-model-state">
             <span className="engenharia-status-dot" aria-hidden="true" />
-            <span><small>Modelo em produção</small><strong>{model?.version || 'Indisponível'}</strong></span>
+            <span><small>Modelo em produção</small><strong title={model?.version}>{model?.version || 'Indisponível'}</strong></span>
           </div>
           <div className="engenharia-model-state">
             <span className="engenharia-status-dot" aria-hidden="true" />
@@ -970,20 +970,20 @@ function Engenharia() {
                         const delta = risk - officialRisk
                         return (
                           <tr key={run.id}>
-                            <td className="lab-scenarios-table__identity">
+                            <td className="lab-scenarios-table__identity" data-label="Cenário">
                               <strong>Cenário {run.id.slice(0, 4).toUpperCase()}</strong>
                               <time dateTime={run.created_at}>{new Date(String(run.created_at).replace(' ', 'T')).toLocaleString('pt-BR')}</time>
                               <small>ID {run.id.slice(0, 8)}</small>
                             </td>
-                            <td className="lab-scenarios-table__threshold">{Number(run.threshold_used).toFixed(2)}</td>
-                            <td><span className="lab-scenario__kind">{thresholdProfile(run.threshold_used).label}</span></td>
-                            <td><strong>{risk}</strong><small>{delta > 0 ? '+' : ''}{delta} versus o oficial</small></td>
-                            <td><strong>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</strong><small>{risk} de {total} portas</small></td>
-                            <td title="Precisão do teste histórico da versão informada">{percent(run.estimated_precision)}</td>
-                            <td title="Recall do teste histórico da versão informada">{percent(run.estimated_recall)}</td>
-                            <td title="F1 do teste histórico da versão informada">{percent(run.estimated_f1)}</td>
-                            <td>{percent(run.maximum_probability)}</td>
-                            <td className="lab-scenarios-table__action">
+                            <td className="lab-scenarios-table__threshold" data-label="Threshold">{Number(run.threshold_used).toFixed(2)}</td>
+                            <td data-label="Perfil"><span className="lab-scenario__kind">{thresholdProfile(run.threshold_used).label}</span></td>
+                            <td data-label="Portas em risco"><strong>{risk}</strong><small>{delta > 0 ? '+' : ''}{delta} versus o oficial</small></td>
+                            <td data-label="Taxa de alerta"><strong>{total ? ((risk / total) * 100).toFixed(1) : '0,0'}%</strong><small>{risk} de {total} portas</small></td>
+                            <td data-label="Precisão" title="Precisão do teste histórico da versão informada">{percent(run.estimated_precision)}</td>
+                            <td data-label="Recall" title="Recall do teste histórico da versão informada">{percent(run.estimated_recall)}</td>
+                            <td data-label="F1-Score" title="F1 do teste histórico da versão informada">{percent(run.estimated_f1)}</td>
+                            <td data-label="Maior risco">{percent(run.maximum_probability)}</td>
+                            <td className="lab-scenarios-table__action" data-label="Ação">
                               <button type="button" onClick={() => handlePromoteExperiment(run)} disabled={Boolean(promotingExperiment)}>{promotingExperiment === run.id ? 'Publicando…' : 'Usar na operação'}</button>
                             </td>
                           </tr>

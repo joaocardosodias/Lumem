@@ -10,7 +10,8 @@
 .prediction-history__visuals > section + section { border-left: 1px solid #e6ebf2; }
 .prediction-history__visuals header h5 { margin: 0; color: #17263c; font-size: 22px; font-weight: 800; letter-spacing: -.025em; line-height: 1.2; }
 .prediction-history__visuals header p { margin: 7px 0 0; color: #526178; font-size: 15px; font-weight: 500; line-height: 1.55; }
-.prediction-history-chart { margin-top: 12px; overflow: hidden; }
+.prediction-history-chart { margin-top: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.prediction-history-chart-toggle { display: none; }
 .prediction-chart-empty { display: grid; min-height: 170px; margin: 12px 0 0; place-items: center; padding: 24px; background: #f7f9fc; color: #6c798d; font-size: 11px; line-height: 1.55; text-align: center; }
 .prediction-history-chart svg { display: block; width: 100%; min-width: 420px; }
 .prediction-chart-grid { stroke: #e8edf4; stroke-width: 1; }
@@ -58,7 +59,28 @@
   .prediction-history__visuals > section + section { border-top: 1px solid #e6ebf2; border-left: 0; }
 }
 @media (max-width: 560px) {
-  .prediction-history__summary { grid-template-columns: 1fr; }
-  .prediction-history__summary > div { border-top: 1px solid #e3e9f2; border-left: 0; }
-  .prediction-history__summary > div:first-child { border-top: 0; }
+  .prediction-history__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prediction-history__summary > div { padding: 12px; }
+  .prediction-history__summary > div:last-child { grid-column: 1 / -1; border-left: 0; }
+  .prediction-history__summary > div:last-child strong { font-size: 13px; }
+  .prediction-history__visuals > section { padding: 14px; }
+  .prediction-history__visuals header h5 { font-size: 17px; }
+  .prediction-history__visuals header p { font-size: 13px; }
+  .prediction-history-chart-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 10px 0;
+    border: 0;
+    background: transparent;
+    color: var(--brand, #3f00ff);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .prediction-history-chart { display: none; }
+  .prediction-history-chart.is-expanded { display: block; }
+  .prediction-history-chart svg { min-width: 660px; }
 }

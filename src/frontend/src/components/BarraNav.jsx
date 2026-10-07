@@ -4,11 +4,11 @@ import logo from '../assets/logo.svg'
 import './BarraNav.css'
 
 const items = [
-  { id: 'dashboard', label: 'Visão geral' },
+  { id: 'dashboard', label: 'Visão geral', mobileLabel: 'Início' },
   { id: 'predicoes', label: 'Predições' },
   { id: 'portas', label: 'Portas' },
   { id: 'alarmes', label: 'Alarmes' },
-  { id: 'manutencoes', label: 'Manutenções' },
+  { id: 'manutencoes', label: 'Manutenções', mobileLabel: 'Manut.' },
   { id: 'inspecoes', label: 'Inspeções' },
 ]
 
@@ -16,7 +16,7 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
   const [collapsed, setCollapsed] = useState(false)
   const navItems = [
     ...items,
-    ...(user?.role === 'enginner' ? [{ id: 'engenharia', label: 'Engenharia de Dados' }] : []),
+    ...(user?.role === 'enginner' ? [{ id: 'engenharia', label: 'Engenharia de Dados', mobileLabel: 'Dados' }] : []),
   ]
   const activeIndex = Math.max(
     navItems.findIndex((item) => item.id === current),
@@ -50,6 +50,7 @@ function BarraNav({ current, user, onNavigate, onLogout }) {
               >
                 <NavIcon id={item.id} />
                 <span className="barra-nav__label">{item.label}</span>
+                <span className="barra-nav__mobile-label" aria-hidden="true">{item.mobileLabel || item.label}</span>
               </button>
             </li>
           ))}

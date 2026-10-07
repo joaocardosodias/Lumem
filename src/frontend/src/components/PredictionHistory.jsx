@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import './PredictionHistory.css'
 
 function parseDate(value) {
@@ -28,6 +29,7 @@ function formatDate(value, withTime = false) {
 }
 
 function RiskChart({ history }) {
+  const [mobileExpanded, setMobileExpanded] = useState(false)
   const points = history
     .filter((item) => item.probability != null && Number.isFinite(Number(item.probability)))
     .reverse()
@@ -46,31 +48,43 @@ function RiskChart({ history }) {
   const safeThreshold = Number.isFinite(threshold) ? threshold : 0.28
 
   return (
-    <div className="prediction-history-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolução da probabilidade de falha desta porta">
-        {[0, 0.5, 1].map((tick) => (
-          <g key={tick}>
-            <line x1={inset.left} x2={width - inset.right} y1={y(tick)} y2={y(tick)} className="prediction-chart-grid" />
-            <text x={inset.left - 10} y={y(tick) + 4} textAnchor="end" className="prediction-chart-label">{formatPercent(tick)}</text>
-          </g>
-        ))}
-        <line x1={inset.left} x2={width - inset.right} y1={y(safeThreshold)} y2={y(safeThreshold)} className="prediction-chart-threshold" />
-        <text x={width - inset.right} y={y(safeThreshold) - 7} textAnchor="end" className="prediction-chart-threshold-label">
-          limiar {formatPercent(safeThreshold)}
-        </text>
-        {points.length > 1 ? <polyline points={polyline} className="prediction-chart-line" /> : null}
-        {points.map((item, index) => (
-          <g key={item.id || `${item.run_id}-${index}`}>
-            <circle cx={x(index)} cy={y(percent(item))} r="5" className={item.will_fail ? 'prediction-chart-point is-risk' : 'prediction-chart-point'} />
-            {(index === 0 || index === points.length - 1) ? (
-              <text x={x(index)} y={height - 12} textAnchor={index === 0 ? 'start' : 'end'} className="prediction-chart-date">
-                {formatDate(item.created_at)}
-              </text>
-            ) : null}
-          </g>
-        ))}
-      </svg>
-    </div>
+    <>
+      <button
+        type="button"
+        className="prediction-history-chart-toggle"
+        aria-expanded={mobileExpanded}
+        aria-controls="door-risk-chart"
+        onClick={() => setMobileExpanded((expanded) => !expanded)}
+      >
+        {mobileExpanded ? 'Ocultar gráfico' : 'Ver evolução do risco'}
+        <span aria-hidden="true">{mobileExpanded ? '−' : '+'}</span>
+      </button>
+      <div id="door-risk-chart" className={`prediction-history-chart${mobileExpanded ? ' is-expanded' : ''}`}>
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolução da probabilidade de falha desta porta">
+          {[0, 0.5, 1].map((tick) => (
+            <g key={tick}>
+              <line x1={inset.left} x2={width - inset.right} y1={y(tick)} y2={y(tick)} className="prediction-chart-grid" />
+              <text x={inset.left - 10} y={y(tick) + 4} textAnchor="end" className="prediction-chart-label">{formatPercent(tick)}</text>
+            </g>
+          ))}
+          <line x1={inset.left} x2={width - inset.right} y1={y(safeThreshold)} y2={y(safeThreshold)} className="prediction-chart-threshold" />
+          <text x={width - inset.right} y={y(safeThreshold) - 7} textAnchor="end" className="prediction-chart-threshold-label">
+            limiar {formatPercent(safeThreshold)}
+          </text>
+          {points.length > 1 ? <polyline points={polyline} className="prediction-chart-line" /> : null}
+          {points.map((item, index) => (
+            <g key={item.id || `${item.run_id}-${index}`}>
+              <circle cx={x(index)} cy={y(percent(item))} r="5" className={item.will_fail ? 'prediction-chart-point is-risk' : 'prediction-chart-point'} />
+              {(index === 0 || index === points.length - 1) ? (
+                <text x={x(index)} y={height - 12} textAnchor={index === 0 ? 'start' : 'end'} className="prediction-chart-date">
+                  {formatDate(item.created_at)}
+                </text>
+              ) : null}
+            </g>
+          ))}
+        </svg>
+      </div>
+    </>
   )
 }
 
