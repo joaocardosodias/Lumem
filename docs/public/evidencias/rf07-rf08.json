@@ -1,0 +1,2091 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-05",
+  "timezone": "America/Sao_Paulo",
+  "baseCommit": "545cd269778aefd2752cfb793302ac289e205962",
+  "environment": "Go 1.26.0 windows/amd64; real JWT middleware, HTTP handlers, use cases and ML HTTP client; local simulated ML server; in-memory repositories and UnitOfWork",
+  "limitations": [
+    "No PostgreSQL: TEST_DATABASE_URL absent; Docker daemon unavailable",
+    "Python inference service, model artifact, historical feature construction and browser not executed",
+    "RF08 configurable horizon remains unimplemented; 14-to-7 scenario characterizes divergence, not acceptance",
+    "Race detector and remote CI not executed"
+  ],
+  "fileHashes": [
+    {
+      "path": "src/backend/tests/integration/prediction_requirements_test.go",
+      "sha256": "581cf0bfaf901f14703053b825a1326131ecb5fbfe2adf0f883045131c1284ef"
+    },
+    {
+      "path": "src/backend/internal/adapter/http/dashboard_handler.go",
+      "sha256": "d0fa5b1168cc95fadbea859c9f9a461ece9a3f2719c2768205bf80ccea86c9bc"
+    },
+    {
+      "path": "src/backend/internal/usecase/trigger_predictions_usecase.go",
+      "sha256": "e1c441ad23830876175a726b34467c7ce545d1bc5872b34081b27bbd758275d4"
+    },
+    {
+      "path": "src/backend/internal/adapter/mlclient/client.go",
+      "sha256": "7dd5a3f340fe80cd702b966c25e0a2794fb3d21ff061dc7f17feb2d3c7c379a6"
+    },
+    {
+      "path": "src/backend/internal/adapter/repository/prediction_repository.go",
+      "sha256": "ff8c0f38f045f800741283dd9777d33b0ea14793a8e97f70e107667feb450c75"
+    },
+    {
+      "path": "src/backend/docs/openapi.json",
+      "sha256": "afbf74de787f889ac56d1f4acaeebc69a94543954a3c5b006b5b8a104d710742"
+    }
+  ],
+  "initial": {
+    "command": "go test -count=1 -json ./tests/integration -run ^TestRF0[78]_",
+    "exitCode": 1,
+    "results": [
+      {
+        "Time": "2026-10-05T22:33:29.7024402-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_TriggerAndQueryPrediction",
+        "Elapsed": 0.03
+      },
+      {
+        "Time": "2026-10-05T22:33:29.8578433-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/unavailable",
+        "Elapsed": 0.16
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0142406-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/malformed",
+        "Elapsed": 0.16
+      },
+      {
+        "Time": "2026-10-05T22:33:30.016183-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/missing_version",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0178823-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/missing_prediction",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0211263-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/wrong_door",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0211263-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist",
+        "Elapsed": 0.32
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0245549-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication/no_active_doors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0258575-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication/unauthenticated",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0258575-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0290008-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/omitted",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0313249-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/empty_body",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.034035-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/null",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0367408-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/seven",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0400677-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/fourteen_current_divergence",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0400677-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0424168-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/malformed",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0448422-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/string",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0471231-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/fractional",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.049201-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/zero",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0519413-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/negative",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0519413-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0524574-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_PostgresActiveDoorSelection",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:33:30.057572-03:00",
+        "Action": "fail",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Elapsed": 1.163
+      }
+    ],
+    "invalidInputEvidence": [
+      {
+        "Time": "2026-10-05T22:33:30.0424168-03:00",
+        "Action": "output",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/malformed",
+        "Output": "    prediction_requirements_test.go:182: invalid input executed inference: 201 {\"id\":\"5725d5e2-a94f-44f3-8b9c-fa7846bef45e\",\"horizon_days\":7,\"threshold_used\":0.5,\"model_version\":\"rf-test-v1\",\"is_experiment\":false,\"published_at\":\"2026-10-05T22:33:30-03:00\",\"total_doors_evaluated\":2,\"total_doors_at_risk\":1,\"average_probability\":0.5,\"p95_probability\":0.8,\"maximum_probability\":0.8,\"created_at\":\"2026-10-05 22:33:30\",\"predictions\":[{\"id\":\"d9ac0abd-50d5-4e11-88f0-b2133515a847\",\"run_id\":\"5725d5e2-a94f-44f3-8b9c-fa7846bef45e\",\"station_code\":\"FAL\",\"platform\":\"P1\",\"door_number\":4,\"will_fail\":true,\"probability\":0.8},{\"id\":\"4147648a-ee6d-49a3-b320-7fc996344285\",\"run_id\":\"5725d5e2-a94f-44f3-8b9c-fa7846bef45e\",\"station_code\":\"PIN\",\"platform\":\"P2\",\"door_number\":8,\"will_fail\":false,\"probability\":0.2}]}\n"
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0448422-03:00",
+        "Action": "output",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/string",
+        "Output": "    prediction_requirements_test.go:182: invalid input executed inference: 201 {\"id\":\"d726f8eb-ca3f-41af-85d8-13fe8df891a4\",\"horizon_days\":7,\"threshold_used\":0.5,\"model_version\":\"rf-test-v1\",\"is_experiment\":false,\"published_at\":\"2026-10-05T22:33:30-03:00\",\"total_doors_evaluated\":2,\"total_doors_at_risk\":1,\"average_probability\":0.5,\"p95_probability\":0.8,\"maximum_probability\":0.8,\"created_at\":\"2026-10-05 22:33:30\",\"predictions\":[{\"id\":\"65365c32-8e40-4732-bbf4-323d6e89d594\",\"run_id\":\"d726f8eb-ca3f-41af-85d8-13fe8df891a4\",\"station_code\":\"FAL\",\"platform\":\"P1\",\"door_number\":4,\"will_fail\":true,\"probability\":0.8},{\"id\":\"2464ecea-ef1f-4f1b-bead-7b6700257d42\",\"run_id\":\"d726f8eb-ca3f-41af-85d8-13fe8df891a4\",\"station_code\":\"PIN\",\"platform\":\"P2\",\"door_number\":8,\"will_fail\":false,\"probability\":0.2}]}\n"
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0471231-03:00",
+        "Action": "output",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/fractional",
+        "Output": "    prediction_requirements_test.go:182: invalid input executed inference: 201 {\"id\":\"d5d14d54-3902-40b6-9880-a9893e4749f7\",\"horizon_days\":7,\"threshold_used\":0.5,\"model_version\":\"rf-test-v1\",\"is_experiment\":false,\"published_at\":\"2026-10-05T22:33:30-03:00\",\"total_doors_evaluated\":2,\"total_doors_at_risk\":1,\"average_probability\":0.5,\"p95_probability\":0.8,\"maximum_probability\":0.8,\"created_at\":\"2026-10-05 22:33:30\",\"predictions\":[{\"id\":\"2a42e13a-21e1-4f4b-b69c-16f8eaf96e8d\",\"run_id\":\"d5d14d54-3902-40b6-9880-a9893e4749f7\",\"station_code\":\"FAL\",\"platform\":\"P1\",\"door_number\":4,\"will_fail\":true,\"probability\":0.8},{\"id\":\"a294fec1-0965-4da0-a3d1-cf5956953e0e\",\"run_id\":\"d5d14d54-3902-40b6-9880-a9893e4749f7\",\"station_code\":\"PIN\",\"platform\":\"P2\",\"door_number\":8,\"will_fail\":false,\"probability\":0.2}]}\n"
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0486827-03:00",
+        "Action": "output",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/zero",
+        "Output": "    prediction_requirements_test.go:182: invalid input executed inference: 201 {\"id\":\"2b189871-688d-4ba1-ac81-f6567197f314\",\"horizon_days\":7,\"threshold_used\":0.5,\"model_version\":\"rf-test-v1\",\"is_experiment\":false,\"published_at\":\"2026-10-05T22:33:30-03:00\",\"total_doors_evaluated\":2,\"total_doors_at_risk\":1,\"average_probability\":0.5,\"p95_probability\":0.8,\"maximum_probability\":0.8,\"created_at\":\"2026-10-05 22:33:30\",\"predictions\":[{\"id\":\"a0feec34-3d98-434c-afda-5f55af921450\",\"run_id\":\"2b189871-688d-4ba1-ac81-f6567197f314\",\"station_code\":\"FAL\",\"platform\":\"P1\",\"door_number\":4,\"will_fail\":true,\"probability\":0.8},{\"id\":\"3acbb6e5-e0f6-4373-b5c5-43fb75bd6391\",\"run_id\":\"2b189871-688d-4ba1-ac81-f6567197f314\",\"station_code\":\"PIN\",\"platform\":\"P2\",\"door_number\":8,\"will_fail\":false,\"probability\":0.2}]}\n"
+      },
+      {
+        "Time": "2026-10-05T22:33:30.0519413-03:00",
+        "Action": "output",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/negative",
+        "Output": "    prediction_requirements_test.go:182: invalid input executed inference: 201 {\"id\":\"b85c5367-6aef-48cf-9149-2428125b38c0\",\"horizon_days\":7,\"threshold_used\":0.5,\"model_version\":\"rf-test-v1\",\"is_experiment\":false,\"published_at\":\"2026-10-05T22:33:30-03:00\",\"total_doors_evaluated\":2,\"total_doors_at_risk\":1,\"average_probability\":0.5,\"p95_probability\":0.8,\"maximum_probability\":0.8,\"created_at\":\"2026-10-05 22:33:30\",\"predictions\":[{\"id\":\"74ad3da8-e0f8-4d1f-aaee-b24d92980719\",\"run_id\":\"b85c5367-6aef-48cf-9149-2428125b38c0\",\"station_code\":\"FAL\",\"platform\":\"P1\",\"door_number\":4,\"will_fail\":true,\"probability\":0.8},{\"id\":\"8f1bb4f9-518a-4017-b98f-ee989078ac18\",\"run_id\":\"b85c5367-6aef-48cf-9149-2428125b38c0\",\"station_code\":\"PIN\",\"platform\":\"P2\",\"door_number\":8,\"will_fail\":false,\"probability\":0.2}]}\n"
+      }
+    ]
+  },
+  "regression": {
+    "command": "go test -count=1 -json ./tests/... ./cmd/api",
+    "exitCode": 0,
+    "firstEvent": "2026-10-05T22:34:16.7971671-03:00",
+    "lastEvent": "2026-10-05T22:34:18.5174421-03:00",
+    "packages": [
+      {
+        "Time": "2026-10-05T22:34:17.6814903-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Elapsed": 0.884
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6874209-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Elapsed": 0.89
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9818531-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Elapsed": 1.185
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1652326-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Elapsed": 0.846
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2811733-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Elapsed": 1.484
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3464555-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Elapsed": 1.548
+      },
+      {
+        "Time": "2026-10-05T22:34:18.5174421-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Elapsed": 1.72
+      }
+    ],
+    "topLevelTests": [
+      {
+        "Time": "2026-10-05T22:34:17.2181909-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_CacheHitAndInvalidate",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.2181909-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_StationDoorsStatusCacheHit",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.2181909-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_GetDoorTimeline",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.2181909-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_Errors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.2214595-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMLClient_PredictBatch_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.375033-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMLClient_PredictBatch_NonOKStatus",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAlarmHandler_List",
+        "Elapsed": 0.03
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_ValidToken",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_MissingHeader",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_InvalidFormat",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_WrongSecret",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_UnexpectedSigningMethod",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_AllowedRole",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_ForbiddenRole",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_MissingRole",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestCorrelationIDMiddleware_GeneratesNewID",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4048574-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestCorrelationIDMiddleware_PreservesExistingID",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_LogsJSON",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestGetRequestID_NilAndEmpty",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_WarnAndErrorLogs",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_WithTraceSpan",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthHandler_Login",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_Alarms",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_Maintenance",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_GetStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Summary",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Timeline",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4053255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_StationDoorsStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Predictions",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_PredictionExperimentLifecycle",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_Create",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_UpdateStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_ListAndGetByID",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4063255-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestMaintenanceHandler",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4080622-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestMetricsMiddlewareAndHandler",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4080622-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Live",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4085815-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4098321-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_DatabaseDown",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4098321-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_NilDatabase",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4110239-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_StorageDown",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_OpenAPISpec",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_SwaggerUI",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_OpenAPISpec_NotFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondProblem_RFC7807Structure",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_DuplicateUpload",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_NotFoundErrors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4133137-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_ValidationErrors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.413912-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_RemainingErrors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.413912-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRateLimiterMiddleware_AllowsUnderBurst",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4372758-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_HealthEndpoint",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.439525-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_FullAuthFlow",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.4483093-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF01_LoginContract",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:17.5276361-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMLClient_PredictBatch_BadJSON",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6395905-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_ImportFormatsAndTypes",
+        "Elapsed": 0.19
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6782379-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Test": "TestAlarm_Validation",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6782379-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Test": "TestInspection_CreationValidation",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6782379-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Test": "TestInspection_StatusTransitions",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6782379-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Test": "TestMaintenanceEvent_Validation",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6782379-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/domain",
+        "Test": "TestEvents",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6798916-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMLClient_PredictBatch_NetworkError",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6814903-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Test": "TestConfig_Validate",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6814903-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Test": "TestConfigValidateStorage",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6814903-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Test": "TestConfigValidateTelemetry",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6852664-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Test": "TestConfig_LoadConfig_DefaultsAndEnv",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.6857931-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/config",
+        "Test": "TestConfig_LoadConfig_InvalidRiverNumbers",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.7106861-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_InvalidFiles",
+        "Elapsed": 0.07
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMLClient_PredictBatch_InvalidURL",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestAlarmParser_CSV_EmptyError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestAlarmParser_CSV_OnlyHeaderError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestAlarmParser_CSV_MissingRequiredColumns",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestAlarmParser_CSV_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8310818-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestAlarmParser_NormalizesConsolidatedPlatform",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.831628-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMaintenanceParser_CSV_EmptyError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.831628-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMaintenanceParser_CSV_MissingStartDateError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.831628-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMaintenanceParser_CSV_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8361754-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_InvalidRowsAreNotPersisted",
+        "Elapsed": 0.13
+      },
+      {
+        "Time": "2026-10-05T22:34:17.870911-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF04_OrderTypesFromFile",
+        "Elapsed": 0.03
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8720446-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_AlarmFilterParameters",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8737561-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestParser_Excel",
+        "Elapsed": 0.04
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8737561-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestParser_PanicRecovery",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8737561-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMaintenanceParser_OnlyHeader",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8758155-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestMaintenanceParser_CorruptedExcel",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8758155-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestGoroutineJobRunner_NormalRun",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8767358-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8789607-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_CreateAndQueryAllFields",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8856731-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:17.8868121-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_QueryEmptyCollection",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9019421-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestPostgresRepositories",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9049937-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_TriggerAndQueryPrediction",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9257973-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestGoroutineJobRunner_NilWaitGroupAndLogger",
+        "Elapsed": 0.05
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9563851-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestGoroutineJobRunner_PanicRecovery",
+        "Elapsed": 0.03
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9591508-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestBcryptPasswordHasher",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9591508-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestJWTTokenGenerator",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9756893-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestLocalTempStorage_StoreWithExtensionAndOpen",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9761175-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestLocalTempStorage_StoreWithoutExtensionDefaultsToCSV",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9766563-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestLocalTempStorage_DeleteFile",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9772683-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestLocalTempStorage_StoreReaderError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:17.9784318-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/adapter",
+        "Test": "TestLocalTempStorage_StoreCreateTempError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.0924966-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCircuitBreaker_StateTransitions",
+        "Elapsed": 0.88
+      },
+      {
+        "Time": "2026-10-05T22:34:18.093806-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.093806-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_MissingOrderType",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.093806-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_MissingStationCode",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.0949264-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_RepoCreateError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.0965977-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_List",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.09773-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetSummary",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.09773-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetDoorTimeline",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.0988371-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetStationDoorsStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1005315-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1005315-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_WithUnitOfWork",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1005315-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictionsForModelRejectsStaleInferenceService",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1016919-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_UnitOfWorkRollbackOnInspectionFailure",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1016919-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_NoActiveDoors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1016919-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_NoPredictions",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1027911-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1027911-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetDoorPredictionHistory",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1038723-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_AsyncEventPublishingDoesNotFail",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1038723-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1044069-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetDashboardSummaryUseCase_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1044069-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetDoorTimelineUseCase_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1044069-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetStationDoorsStatusUseCase_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1054966-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestTriggerPredictionsUseCase_Errors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1054966-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_FixedHorizon",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.10719-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_PredictionExperimentIsIsolatedUntilPromotion",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.10719-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_PredictionExperimentRejectsInvalidThreshold",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1081976-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestEventBus_PublishAndSubscribe",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1081976-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_DoorRiskAlertReceived",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1270685-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_CacheInvalidationOnPredictionRun",
+        "Elapsed": 0.03
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1286531-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_FileUploadCompleted",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1428292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestRF02_AllProtectedRoutesRejectUnauthorizedAccess",
+        "Elapsed": 0.13
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1428292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckLiveness",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1461266-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestWaitForUploads",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1585118-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckDatabaseConnection_AndMigrations",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1603356-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestBuildRouter_AndRoutes",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1774949-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInMemoryEventBus_EdgeBranches",
+        "Elapsed": 0.05
+      },
+      {
+        "Time": "2026-10-05T22:34:18.178632-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_EnqueuesDurableJob",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1989958-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ValidCSV",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2235367-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ValidXLSX",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2235367-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist",
+        "Elapsed": 0.32
+      },
+      {
+        "Time": "2026-10-05T22:34:18.228702-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2432858-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ShortRowNoPanic",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2444134-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_PostgresActiveDoorSelection",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestStreamingIngestionCommitsAllBatchesOrRollsBack",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2615293-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_UnknownPlatformNoFallback",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2640246-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_RollbackOnBatchFailure",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2667833-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_IdempotencyDuplicate",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2667833-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestAlarmRepo_ReconcileStaleUploads",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2700842-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_FailUploadErrorLogged",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2729084-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ConcurrentDuplicateUploads",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2734435-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_CreateUploadGeneralError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_CreateUploadDuplicateError_HashFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_GetStatus_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_CheckDuplicateHash_DeleteError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_HandleCreateUploadError_DeleteErrorAndHashNotFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_HandleCreateUploadError_DuplicateFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2745752-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_StorageOpenError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2751292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_ParserError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2751292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_EmptyRecords",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2751292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ConvertRaw_FallbackSourceAndInvalidAlarm",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2751292-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_BatchInsertion_Over500AndBatchInsertError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2756862-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FinalizeUpload_GetByID_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2756862-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FinalizeUpload_Update_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FailUpload_GetUploadByID_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FailUpload_UpdateUpload_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessFileAsync_StorageDeleteError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_CheckDuplicateHash_DeleteError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_HandleCreateUploadError_DeleteErrorAndHashNotFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_CompleteOperationalPipeline",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_HandleCreateUploadError_DuplicateFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_StorageOpenError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_ParserError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2762176-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_EmptyRecords",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ConvertRaw_FallbackSourceAndInvalidEvent",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_BatchInsertion_Over500",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FinalizeUpload_GetByID_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FinalizeUpload_Update_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FailUpload_GetUploadByID_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FailUpload_UpdateUpload_Error",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessFileAsync_StorageDeleteError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2768284-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_SecurityAndProblemDetailsRFC7807",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_And_FailJob",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessJob_And_FailJob",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_WithQueue_SuccessAndError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_WithQueue_SuccessAndError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_BatchInsertError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessJob_DeleteByUploadIDError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2773605-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_DeleteByUploadIDError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2888955-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ValidCSV",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3070258-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ValidXLSX",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3194274-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ShortRowNoPanic",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3311434-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_RollbackOnBatchFailure",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3333279-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_FailUploadErrorLogged",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3349624-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ConcurrentDuplicateUploads",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3355236-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_CreateUploadGeneralError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_CreateUploadDuplicateError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestTerminalUploadRetryOnlyCleansUp",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_Create",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_ValidationErrors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_InvalidStatus",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_GetByID_NotFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_ReopenFromCompletedClearsCompletedAt",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_InvalidTransitions",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_ErrorPaths",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_List_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3366116-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestListAlarmsUseCase_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3382082-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_Success",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3399783-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_WrongPassword",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3399783-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_UserNotFound",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3411106-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_InactiveUser",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3411106-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_EmptyFields",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3411106-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_DBError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3422767-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_TokenGenError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3422767-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_GetAndBuildConfig",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3422767-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_UpdatePredictionSchedule",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3422767-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_TriggerRetrainAndDrift",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_ResumeTrainingFromFailedStage",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_ResumeTrainingFromCancelledStage",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_CancelTrainingPersistsTerminalState",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_PromoteValidatesCandidateBeforeExternalActivation",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestPromoteModelAndPublishUseCasePublishesOfficialRun",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestPromoteModelAndPublishUseCaseRestoresPreviousModelWhenRunFails",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestUnitOfWork_CommitOnSuccess",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.3428229-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestUnitOfWork_RollbackOnError",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.5140954-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRateLimiterMiddleware_BlocksOverBurst",
+        "Elapsed": 1.1
+      }
+    ],
+    "newCases": [
+      {
+        "Time": "2026-10-05T22:34:17.9049937-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_TriggerAndQueryPrediction",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.0791104-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/unavailable",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2129876-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/malformed",
+        "Elapsed": 0.15
+      },
+      {
+        "Time": "2026-10-05T22:34:18.216419-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/missing_version",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2210194-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/missing_prediction",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2235367-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist/wrong_door",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2235367-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_FailuresDoNotPersist",
+        "Elapsed": 0.32
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2265806-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication/no_active_doors",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.228702-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication/unauthenticated",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.228702-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_NoActiveDoorsOrAuthentication",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2322076-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/omitted",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2351959-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/empty_body",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2380899-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/null",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.240731-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/seven",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2444134-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon/fourteen_current_divergence",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2444134-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_DefaultAndCurrentFixedHorizon",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2468312-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/malformed",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2491017-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/string",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2502653-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/fractional",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.252548-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/zero",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference/negative",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "pass",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF08_InvalidInputDoesNotRunInference",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_PostgresActiveDoorSelection",
+        "Elapsed": 0
+      }
+    ],
+    "skipped": [
+      {
+        "Time": "2026-10-05T22:34:17.9019421-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestPostgresRepositories",
+        "Elapsed": 0.02
+      },
+      {
+        "Time": "2026-10-05T22:34:18.1585118-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckDatabaseConnection_AndMigrations",
+        "Elapsed": 0.01
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF07_PostgresActiveDoorSelection",
+        "Elapsed": 0
+      },
+      {
+        "Time": "2026-10-05T22:34:18.2542191-03:00",
+        "Action": "skip",
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestStreamingIngestionCommitsAllBatchesOrRollsBack",
+        "Elapsed": 0
+      }
+    ],
+    "summary": {
+      "passedPackages": 7,
+      "passedTopLevelTests": 222,
+      "skippedTopLevelTests": 4,
+      "newExecutedScenarios": 18,
+      "newCharacterizationScenarios": 1,
+      "newSkippedScenarios": 1
+    }
+  },
+  "documentation": {
+    "command": "npm run build",
+    "workingDirectory": "docs",
+    "exitCode": 0,
+    "pagesBuilt": 74,
+    "warnings": true
+  }
+}

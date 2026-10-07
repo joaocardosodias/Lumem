@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	httpAdapter "github.com/g04/backend/internal/adapter/http"
@@ -88,7 +89,11 @@ func TestHealthHandler_Ready_NilDatabase(t *testing.T) {
 }
 
 func TestHealthHandler_Ready_StorageDown(t *testing.T) {
-	t.Setenv("TMPDIR", "/nonexistent_dir_for_test")
+	missingTempDir := filepath.Join(t.TempDir(), "nonexistent")
+	// Unix uses TMPDIR; Windows resolves its temporary directory via TMP/TEMP.
+	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(variable, missingTempDir)
+	}
 	gin.SetMode(gin.TestMode)
 	h := httpAdapter.NewHealthHandler(&mockHealthyDB{})
 

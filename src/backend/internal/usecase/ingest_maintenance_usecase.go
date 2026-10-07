@@ -236,24 +236,27 @@ func (uc *IngestMaintenanceUseCase) ProcessJob(ctx context.Context, job port.Ing
 	if err != nil {
 		return fmt.Errorf("falha ao abrir arquivo: %w", err)
 	}
-	defer rc.Close()
-	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
-		if err := store.Maintenances().DeleteByUploadID(ctx, job.UploadID); err != nil {
-			return fmt.Errorf("falha ao preparar nova tentativa de manutencao: %w", err)
-		}
-		processed, inserted, err := consumeBatches(ctx,
-			func(yield func(port.RawMaintenanceRecord) error) error {
-				return uc.maintParser.StreamMaintenance(ctx, rc, job.FileName, job.OrderType, yield)
-			},
-			func(batch []port.RawMaintenanceRecord) (int, error) {
-				records, _ := convertRawMaintenanceEvents(batch, job.UploadID, job.FileName)
-				return insertMaintenanceBatches(ctx, store, records, 500)
-			})
-		if err != nil {
-			return err
-		}
-		return finalizeMaintenanceUpload(ctx, store, job.UploadID, processed, inserted)
-	})
+	// Close the input before final cleanup; Windows cannot delete an open file.
+	err = func() error {
+		defer rc.Close()
+		return uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+			if err := store.Maintenances().DeleteByUploadID(ctx, job.UploadID); err != nil {
+				return fmt.Errorf("falha ao preparar nova tentativa de manutencao: %w", err)
+			}
+			processed, inserted, err := consumeBatches(ctx,
+				func(yield func(port.RawMaintenanceRecord) error) error {
+					return uc.maintParser.StreamMaintenance(ctx, rc, job.FileName, job.OrderType, yield)
+				},
+				func(batch []port.RawMaintenanceRecord) (int, error) {
+					records, _ := convertRawMaintenanceEvents(batch, job.UploadID, job.FileName)
+					return insertMaintenanceBatches(ctx, store, records, 500)
+				})
+			if err != nil {
+				return err
+			}
+			return finalizeMaintenanceUpload(ctx, store, job.UploadID, processed, inserted)
+		})
+	}()
 	if err != nil {
 		var permanentErr *permanentIngestionError
 		if !errors.As(err, &permanentErr) {

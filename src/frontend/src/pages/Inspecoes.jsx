@@ -1,3 +1,4 @@
+import { filterInspections, filterInspectionStatus, isAiInspection, inspectionStation } from '../lib/recordFilters'
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
@@ -6,10 +7,10 @@ import Filtros, { FiltroCampo } from '../components/Filtros'
 import Input from '../components/Input'
 import Paginacao from '../components/Paginacao'
 import { useToast } from '../context/Toast'
-import { lineStations, mapStation, resolveStation, stationLabel } from '../data/stations'
+import { lineStations, stationLabel } from '../data/stations'
 import { api, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
-import { DEFAULT_PERIOD, PAGE_SIZE, inPeriod } from '../lib/filters'
+import { DEFAULT_PERIOD, PAGE_SIZE } from '../lib/filters'
 import { getCachedInspections, loadInspections, patchCachedInspection } from '../lib/inspectionCache'
 import './Inspecoes.css'
 
@@ -31,16 +32,6 @@ const emptyFilters = {
   platform: '',
   origin: '',
   period: DEFAULT_PERIOD,
-}
-
-function isAiInspection(item) {
-  if (item.prediction_id) return true
-  const notes = String(item.notes || '').toLowerCase()
-  return notes.includes('automaticamente pela ia') || notes.includes('rodada #')
-}
-
-function inspectionStation(item) {
-  return resolveStation(item) || String(item.station_code || '').toUpperCase()
 }
 
 function formatDateTime(value) {
@@ -135,30 +126,10 @@ function Inspecoes({ onNavigate, params }) {
     setPage(1)
   }, [filter, filters, search])
 
-  const scoped = useMemo(
-    () =>
-      items.filter((item) => {
-        if (filters.station && mapStation(inspectionStation(item)) !== mapStation(filters.station)) return false
-        if (filters.platform && item.platform !== filters.platform) return false
-        if (filters.origin === 'ai' && !isAiInspection(item)) return false
-        if (filters.origin === 'manual' && isAiInspection(item)) return false
-        if (!inPeriod(item.created_at, filters.period)) return false
-        if (search.trim()) {
-          const q = search.trim().toLowerCase()
-          const match =
-            String(item.door_number).includes(q) ||
-            (item.notes && item.notes.toLowerCase().includes(q)) ||
-            (item.station_code && item.station_code.toLowerCase().includes(q)) ||
-            (item.platform && item.platform.toLowerCase().includes(q))
-          if (!match) return false
-        }
-        return true
-      }),
-    [items, filters, search],
-  )
+  const scoped = useMemo(() => filterInspections(items, filters, search), [items, filters, search])
 
   const visible = useMemo(
-    () => (filter ? scoped.filter((item) => item.status === filter) : scoped),
+    () => (filterInspectionStatus(scoped, filter)),
     [scoped, filter],
   )
   const filtersDirty =
@@ -225,7 +196,7 @@ function Inspecoes({ onNavigate, params }) {
       await api.createInspection({
         station_code: form.station_code,
         platform: form.platform,
-        door_number: String(form.door_number),
+        door_number: Number(form.door_number),
         notes: form.notes.trim() || undefined,
       })
       setForm(emptyForm)

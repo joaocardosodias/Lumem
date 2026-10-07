@@ -1,3 +1,4 @@
+import { filterMaintenance } from '../lib/recordFilters'
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/Button'
 import { CountValue } from '../components/Card'
@@ -9,8 +10,8 @@ import Paginacao from '../components/Paginacao'
 import PlanilhaImport from '../components/PlanilhaImport'
 import UploadStatus from '../components/UploadStatus'
 import { useToast } from '../context/Toast'
-import { lineStations, mapStation } from '../data/stations'
-import { DEFAULT_PERIOD, PAGE_SIZE, inDurationRange, inPeriod, periodHint } from '../lib/filters'
+import { lineStations } from '../data/stations'
+import { DEFAULT_PERIOD, PAGE_SIZE, periodHint } from '../lib/filters'
 import { api, errorMessage } from '../lib/api'
 import { exportToCsv } from '../lib/exportCsv'
 import { loadMaintenance, getCachedMaintenance } from '../lib/maintenanceCache'
@@ -107,33 +108,7 @@ function Manutencoes({ params }) {
     }
   }, [reloadAt])
 
-  const visible = useMemo(
-    () =>
-      items.filter((item) => {
-        if (
-          filters.station &&
-          mapStation(item.station_code) !== mapStation(filters.station)
-        ) {
-          return false
-        }
-        if (filters.orderType && item.order_type !== filters.orderType) return false
-        if (filters.source && item.source !== filters.source) return false
-        if (!inPeriod(item.start_timestamp, filters.period)) return false
-        if (!inDurationRange(item.duration_hours, filters.durationMin, filters.durationMax)) return false
-        if (search.trim()) {
-          const q = search.trim().toLowerCase()
-          const match =
-            (item.sap_order_number && item.sap_order_number.toLowerCase().includes(q)) ||
-            (item.installation_location && item.installation_location.toLowerCase().includes(q)) ||
-            (item.symptom && item.symptom.toLowerCase().includes(q)) ||
-            (item.description && item.description.toLowerCase().includes(q)) ||
-            (item.station_code && item.station_code.toLowerCase().includes(q))
-          if (!match) return false
-        }
-        return true
-      }),
-    [items, filters, search],
-  )
+  const visible = useMemo(() => filterMaintenance(items, filters, search), [items, filters, search])
   const filtersDirty =
     Boolean(
       filters.station ||
@@ -241,7 +216,7 @@ function Manutencoes({ params }) {
     try {
       const result = await api.uploadMaintenance(file, orderType)
       const done = await pollUpload(result, setUpload)
-      if (done.status === 2) {
+      if (done.status === 'failed') {
         throw new Error('A API recusou o processamento deste arquivo.')
       }
       setFile(null)

@@ -694,3 +694,47 @@
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 480px) {
+  .predicoes-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .predicoes-kpi-card {
+    border-left: 0;
+    border-top: 1px solid #e8edf4;
+  }
+
+  .predicoes-kpi-card:nth-child(1) {
+    border-top: 0;
+  }
+
+  .predicoes-model-profile__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .predicoes-model-profile__item {
+    border-left: 0;
+    border-top: 1px solid #e8edf4;
+  }
+
+  .predicoes-model-profile__item:first-child {
+    border-top: 0;
+  }
+
+  .card-predicao {
+    grid-template-columns: 1fr;
+  }
+
+  .card-predicao-actions {
+    border-left: 0;
+    padding-left: 0;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-predicao-action {
+    width: 100%;
+  }
+}
+

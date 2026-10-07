@@ -7,7 +7,7 @@ export function wait(ms) {
 export async function pollUpload(result, onTick) {
   const initial = result?.data && typeof result.data === 'object' ? result.data : null
   if (initial?.id) onTick(initial)
-  if (initial && (initial.status === 1 || initial.status === 2)) return initial
+  if (initial && (initial.status === 'completed' || initial.status === 'failed')) return initial
 
   const id = uploadIdFrom(result) || initial?.id
   if (!id) {
@@ -18,7 +18,7 @@ export async function pollUpload(result, onTick) {
   while (Date.now() - started < 90000) {
     const status = await api.uploadStatus(id)
     onTick(status)
-    if (status.status === 1 || status.status === 2) return status
+    if (status.status === 'completed' || status.status === 'failed') return status
     await wait(800)
   }
 

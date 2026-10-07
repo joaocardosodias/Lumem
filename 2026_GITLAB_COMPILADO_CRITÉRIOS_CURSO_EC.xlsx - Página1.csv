@@ -1,0 +1,42 @@
+,,,,Módulo 5,Módulo 6,Módulo 7,Módulo 8,Módulo 9,Módulo 10,Módulo 11
+,,,,,,,,,,
+,README,,,,,,,,,
+,1,"Apresenta título, objetivo e descrição breve do projeto?",,x,x,x,x,x,x,não se aplica
+,2,Apresenta a estrutura do repositório com descrição das pastas/componentes?,,x,x,x,x,x,x,não se aplica
+,3,Apresenta os integrantes da equipe de desenvolvimento?,,x,x,x,x,x,x,não se aplica
+,4,Apresenta links do LinkedIn ou GitHub dos integrantes?,,x,x,x,x,x,x,não se aplica
+,5,"Apresenta professores/orientadores do módulo e, quando houver, seus links?",,x,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica
+,6,Apresenta instruções de como executar o projeto e a documentação?,,x,não se aplica,x,não se aplica,não se aplica,x,não se aplica
+,7,Apresenta link para o manual de instalação ou para a documentação publicada?,,x,x,x,x,x,x,não se aplica
+,8,Apresenta a licença Inteli/CC-0 do projeto?,,x,x,x,x,x,x,não se aplica
+,9,"A licença identifica integrantes, equipe e Inteli?",,x,x,x,x,x,x,não se aplica
+,DOCUMENTAÇÃO,,,,,,,,,
+,1,Apresenta diretório docs na raiz e separado do código-fonte?,,x,x,x,x,x,x,não se aplica
+,2,A documentação está completa e funcional localmente e/ou publicada?,,x,x,x,x,x,x,x
+,3,A documentação está organizada por sprints/entregas quando aplicável?,,x,não se aplica,não se aplica,não se aplica,x,x,x
+,4,Apresenta sumário navegável?,,x,x,x,x,não se aplica,x,não se aplica
+,5,Apresenta manual de instalação/operação e pré-requisitos da plataforma?,,não se aplica,x,não se aplica,x,não se aplica,não se aplica,x
+,6,Descreve avanços da sprint e roadmap quando aplicável?,,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,x
+,7,O index e as seções obrigatórias estão preenchidos?,,não se aplica,x,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica
+,8,Seções e instruções padrão não utilizadas foram removidas?,,não se aplica,x,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica
+,9,"Links, anexos e referências estão válidos e acessíveis?",,não se aplica,x,não se aplica,x,x,não se aplica,x
+,10,Figuras/telas estão referenciadas no texto e salvas no local correto?,,não se aplica,não se aplica,não se aplica,não se aplica,x,não se aplica,não se aplica
+,11,A formatação está consistente e há referências quando aplicável?,,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica
+,12,Não compartilha dados sensíveis na documentação?,,x,x,x,x,não se aplica,x,não se aplica
+,SOURCE,,,,,,,,,
+,1,Apresenta diretório de código-fonte na raiz do repositório?,,x,x,x,x,x,x,não se aplica
+,2,O repositório reúne todo o código-fonte da solução e está alinhado à documentação?,,x,x,x,x,x,x,não se aplica
+,3,Apresenta arquivos de configuração do projeto?,,não se aplica,x,não se aplica,x,x,não se aplica,não se aplica
+,4,O código está separado por módulos/componentes da solução?,,não se aplica,x,não se aplica,x,x,não se aplica,não se aplica
+,5,Inclui os componentes implementados do projeto quando aplicável?,,não se aplica,x,não se aplica,x,não se aplica,não se aplica,não se aplica
+,6,Apresenta instruções claras para executar a plataforma/sistema?,,x,não se aplica,x,não se aplica,não se aplica,x,não se aplica
+,7,Inclui testes ou evidências técnicas de funcionamento e integração?,,não se aplica,não se aplica,não se aplica,não se aplica,x,não se aplica,não se aplica
+,8,Não compartilha dados sensíveis no repositório?,,x,x,x,x,não se aplica,x,não se aplica
+,9,A branch/tag principal reflete a entrega avaliada quando aplicável?,,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica,não se aplica
+,MEDIA,,,,,,,,,
+,1,Possui vídeo do protótipo ou da prova de conceito funcionando?,,não se aplica,x,não se aplica,x,x,não se aplica,x
+,2,A demonstração cobre os principais componentes do sistema?,,não se aplica,x,não se aplica,x,x,não se aplica,x
+,3,Há links para apresentações das sprints/entregas quando aplicável?,,não se aplica,não se aplica,não se aplica,não se aplica,x,não se aplica,x
+,4,As mídias da sprint/entrega estão atualizadas na documentação?,,não se aplica,não se aplica,não se aplica,x,x,não se aplica,x
+,5,Os arquivos de mídia estão organizados por tipo e no local previsto?,,não se aplica,x,não se aplica,x,x,não se aplica,não se aplica
+,6,Os links de vídeo são acessíveis sem solicitar permissão?,,não se aplica,não se aplica,não se aplica,x,x,não se aplica,x

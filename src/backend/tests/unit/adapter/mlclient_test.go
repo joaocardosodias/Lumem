@@ -22,13 +22,14 @@ func TestMLClient_PredictBatch_Success(t *testing.T) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		probability := 0.72
 		resps := mlclient.BatchPredictionResponse{
 			ModelVersion: "v1.0.0",
 			Predictions: []mlclient.PredictionResponse{{
 				StationCode: reqBody.Doors[0].StationCode,
 				Platform:    reqBody.Doors[0].Platform,
 				DoorNumber:  reqBody.Doors[0].DoorNumber,
-				Probability: 0.72,
+				Probability: &probability,
 			}},
 		}
 		w.Header().Set("Content-Type", "application/json")

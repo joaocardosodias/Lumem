@@ -1,0 +1,183 @@
+---
+title: "Validação do alinhamento ODS"
+description: "Consolidação da matriz de rastreabilidade, dos casos de teste dos riscos e das evidências de execução: para cada ODS, o que foi afirmado na Sprint 4, qual teste valida, qual foi o resultado e qual limitação continua."
+sidebar:
+  order: 5
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div id="1-objetivo-e-fontes" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 1. Objetivo e fontes
+
+  </div>
+</div>
+
+A [Atualização do alinhamento com os ODS](/sprints/sprint-4/ods-atualizacao) da Sprint 4 manteve os ODS **9** (meta 9.1) e **11** (meta 11.2), incluiu o **8** (meta 8.2) e o **4** (meta 4.4) e retirou o **12**. Esta página verifica cada uma dessas afirmações contra os testes do sistema e contra os [Requisitos do Sistema](/sprints/sprint-3/requisitos).
+
+A página consolida três levantamentos da Sprint 5:
+
+| Fonte | O que contribui |
+| --- | --- |
+| [Matriz de rastreabilidade](/sprints/sprint-5/validacao-ods/matriz-rastreabilidade-ods) | Requisito e arquivo de teste por meta, com status **Coberto**, **Parcial** ou **Sem teste** e as lacunas L1 a L8. |
+| [Casos de teste dos riscos ODS](/sprints/sprint-5/validacao-ods/casos-de-teste-riscos-ods) | 22 casos para os riscos R1, R2 e R4, com a situação de cada um. |
+| [Evidências de execução e indicadores I4/I5](/sprints/sprint-5/validacao-ods/evidencias-testes-indicadores) | Resultado das suítes, cobertura e valores **históricos** de I4 e I5. |
+
+### 1.1. Como ler as tabelas
+
+Cada afirmação recebe uma classificação:
+
+| Classificação | Significado |
+| --- | --- |
+| **Evidência** | Um teste automatizado verifica o comportamento, e a execução registrada passou. |
+| **Evidência parcial** | Há teste que passou, mas ele cobre só parte da afirmação ou depende de Postgres. |
+| **Limitação** | Nenhum teste verifica a afirmação, o código atual a contradiz ou ela não pode ser medida por teste de software. |
+
+Um teste aprovado confirma que o **software** se comporta como descrito. Ele não demonstra efeito sobre a meta ODS. Confiabilidade, produtividade e continuidade do transporte só podem ser medidas em operação, pelos indicadores I1 a I8 da Sprint 4.
+
+### 1.2. Resultado geral da execução
+
+| Suíte | Passaram | Falharam | Pulados | Cobertura |
+| --- | --- | --- | --- | --- |
+| Backend, comando do CI com Postgres (`go test -race ./...`) | 253 | 0 | 0 | 76,8% das instruções de `internal/` |
+| Backend, somente `./tests/...` com Postgres | 205 | 0 | 0 | 71,4% |
+| Serviço de modelo (`pytest src/modelo/tests`) | 21 | 0 | 0 | 71% das linhas |
+
+Todos os testes citados nas seções seguintes fazem parte dessas suítes. Por isso, a coluna **Resultado** indica “passou” sempre que há teste. Sem Postgres, seis testes são pulados, e o código dos riscos R1 e R2 fica com 0% de cobertura.
+
+<div id="2-validação-por-ods" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 2. Validação por ODS
+
+  </div>
+</div>
+
+### 2.1. ODS 9 — Indústria, Inovação e Infraestrutura (meta 9.1)
+
+**Afirmado na Sprint 4:** o Lumem apoia a confiabilidade das portas de plataforma ao reunir históricos, estimar risco e gerar inspeções. Melhorias de confiabilidade ainda precisam ser verificadas por indicadores.
+
+| Afirmação | Teste que valida | Resultado | Classificação |
+| --- | --- | --- | --- |
+| Rodada de predição para as portas ativas (RF07) | `dashboard_usecase_test.go` (`TestDashboardUseCase_TriggerPredictions`, `_NoActiveDoors`); `handlers_test.go`; `workflow_integration_test.go` (etapa 6); `mlclient_test.go` | Passou | **Evidência** |
+| Classificação de porta **com** predição como estável ou em risco (RF09) | `test_predict.py` (3 testes de contrato); `dashboard_usecase_test.go` (limiares 0,5 e 0,35, `_RejectsInvalidThreshold`) | Passou | **Evidência** |
+| Versão e procedência do modelo (RNF09) | `test_predict.py` (`test_metadata_e_metricas_possuem_procedencia`, `test_promocao_nao_altera_ponteiro_antes_de_validar_candidata`); `validate_manifest.py` | Passou; manifesto válido | **Evidência** |
+| Integridade da rodada (RNF05) | `dashboard_usecase_test.go` (`_WithUnitOfWork`, `_UnitOfWorkRollbackOnInspectionFailure`); `unit_of_work_test.go`; `promote_model_usecase_test.go` | Passou | **Evidência** |
+| Desempenho registrado do Modelo 5: precisão 15,12% e recall 60,05% no teste histórico | Reconstrução do split de teste com `exportar_modelo.py` | Matriz de confusão **idêntica** à do manifesto (VP 3.724, FP 20.898, FN 2.478, VN 44.084) | **Evidência** (histórica) |
+| Horizonte informado pelo usuário, com sete dias como padrão (RF08) | `TestDashboardUseCase_TriggerPredictions_FixedHorizon` | Passou, mas confirma horizonte **fixo** em 7 dias | **Evidência parcial** — L4 |
+| Porta **sem** predição não é tratada como estável (RF09) | CT-R2-01, CT-R2-04, CT-R2-05 e CT-R2-06 | Não implementados. O código atual devolve `will_fail = false` | **Limitação** — L1, risco R2 |
+| Apoio à confiabilidade da infraestrutura | I3 (indisponibilidade das portas) | Não disponível | **Limitação** — sem dados operacionais |
+
+**I4 histórico (ODS 9 e 11).** No período de teste (1º de maio a 31 de outubro de 2025, limiar 0,48), a avaliação **por episódio** mostra que **73,4%** das corretivas ZM01 tiveram alerta nos sete dias anteriores (802 de 1.093) e que **25,0%** dos episódios de alerta antecederam uma ZM01. Por janela, a precisão é 15,1% e o recall, 60,0%.
+
+**Limitação que continua.** A estimativa de risco funciona e foi verificada, mas o sistema ainda não diferencia “sem avaliação” de “estável”, e o efeito sobre a confiabilidade das portas não foi medido. O escopo continua restrito à Linha 4-Amarela.
+
+### 2.2. ODS 11 — Cidades e Comunidades Sustentáveis (meta 11.2)
+
+**Afirmado na Sprint 4:** contribuição **indireta**, por meio do apoio às equipes que mantêm as portas do transporte metroviário. O sistema não detecta pessoas, não comanda portas e não garante disponibilidade.
+
+| Afirmação | Teste que valida | Resultado | Classificação |
+| --- | --- | --- | --- |
+| Indicadores de portas monitoradas, em risco, inspeções e estações críticas (RF10) | `dashboard_usecase_test.go` (`GetSummary`, `GetStationDoorsStatus`); `handlers_test.go`; `workflow_integration_test.go` (etapa 10); `postgres_repository_test.go` | Passou (o teste em Postgres só roda com `TEST_DATABASE_URL`) | **Evidência** |
+| Inspeções prioritárias vinculadas à predição (RF11) | `inspection_usecase_test.go` (9 testes); `workflow_integration_test.go` (etapas 7 e 8, inspeção com `prediction_id`); `domain_test.go` (`TestInspection_StatusTransitions`) | Passou | **Evidência** |
+| Resiliência diante de falha do serviço de IA (RNF04) | `circuit_breaker_test.go`; `mlclient_test.go` (`_NonOKStatus`, `_NetworkError`, `_BadJSON`); `health_test.go` | Passou | **Evidência parcial** — não cobre a exibição de falha na interface |
+| Estado exibido à equipe em `Portas.jsx` (RNF07) | CT-R2-07 e CT-R2-08 | Não implementados. O frontend não tem testes | **Limitação** — L6, risco R2 |
+| Dados ausentes identificados na inferência (RNF05) | CT-R4-01 a CT-R4-07 | `feature_builder.py` tem 93% das linhas executadas, mas nenhuma asserção verifica os valores substitutos. CT-R4-01 é parcial | **Limitação** — L2, risco R4 |
+| Cobertura das estações da linha | I5 histórico | **73,3%** dos porta-dias esperados; Paulista e Oscar Freire com **0%** | **Limitação** — ver seção 3.2 |
+| Efeito sobre a continuidade do transporte | I3 | Não disponível | **Limitação** |
+
+**Limitação que continua.** As funções que apoiam a equipe estão verificadas no backend. O que a equipe **vê** não está: a porta sem avaliação aparece como “Estável”, a falta de dados não é sinalizada e duas das onze estações não tinham dados no período de teste. É nessa meta que se concentram as lacunas abertas.
+
+### 2.3. ODS 8 — Trabalho Decente e Crescimento Econômico (meta 8.2)
+
+**Afirmado na Sprint 4:** a centralização dos registros e a organização das inspeções dão apoio tecnológico à produtividade da manutenção. Gerar mais inspeções não comprova maior produtividade.
+
+| Afirmação | Teste que valida | Resultado | Classificação |
+| --- | --- | --- | --- |
+| Importação de alarmes em CSV/XLSX (RF03) | `parser_test.go` (`TestAlarmParser_*`, `TestParser_Excel`); `ingest_alarms_usecase_test.go`; `streaming_test.go`; `workflow_integration_test.go` (etapas 3 e 4) | Passou | **Evidência** |
+| Importação de manutenções (RF04) e cadastro manual (RF05) | `parser_test.go` (`TestMaintenanceParser_*`); `ingest_maintenance_usecase_test.go`; `create_maintenance_usecase_test.go`; `workflow_integration_test.go` (etapa 5) | Passou | **Evidência** |
+| Importação sem duplicidade ou perda (RNF05) | `ingest_alarms_usecase_test.go` (`_IdempotencyDuplicate`, `_ConcurrentDuplicateUploads`, `_RollbackOnBatchFailure`); `ingestion_retry_test.go`; `streaming_ingestion_test.go` | Passou | **Evidência** |
+| Validação de formato e colunas (RNF06) | `parser_test.go` (6 casos de erro); `s3_storage_test.go`; `ingest_coverage_extra_test.go` (33 testes) | Passou | **Evidência** |
+| Filtros por estação, período, prioridade ou status (RF06) | `alarm_handler_test.go`; `list_alarms_usecase_test.go`; `workflow_integration_test.go` | Passou para estação e status; período e prioridade sem teste | **Evidência parcial** — L5 |
+| Uma inspeção aberta por porta (migração `000015`) | CT-R1-01 (`postgres_repository_test.go`, `testInspectionRepo`) | Passou, somente com Postgres | **Evidência parcial** — L3 |
+| Reabertura de inspeção quando já existe outra aberta | CT-R1-05 | Não implementado. O código atual responde **500**, com a mensagem do banco, em vez de 409 | **Limitação** — risco R1 |
+| Volume de alertas compatível com a capacidade da equipe | I4 histórico por episódio; I2 | Cerca de **11 novos episódios de alerta por dia** nas 432 portas avaliadas, e três em cada quatro não antecederam uma ZM01. I2 não disponível | **Limitação** — risco R1 |
+| Ganho de produtividade | I1 e I2 | Não disponível | **Limitação** |
+
+**Limitação que continua.** A base que sustenta a centralização dos registros é a mais verificada do sistema. A deduplicação garante uma inspeção por porta, mas não limita o número de portas sinalizadas. Com a precisão histórica por episódio de 25%, a carga de verificações sem corretiva é um risco concreto para a meta. O ganho líquido de produtividade continua sem medição.
+
+### 2.4. ODS 4 — Educação de Qualidade (meta 4.4)
+
+**Afirmado na Sprint 4:** contribuição **complementar**, pela prática orientada de competências técnicas pelos estudantes durante o desenvolvimento. Não é uma funcionalidade do produto.
+
+| Afirmação | Teste que valida | Resultado | Classificação |
+| --- | --- | --- | --- |
+| Código modular e testável, com verificação contínua (RNF09) | `.gitlab-ci.yml`: `lint_format`, `lint_vet`, `test_suite`, `test_migrations`, `test_modelo`, `security_audit`, `trivy_scan*` | 274 testes executados (253 em Go e 21 em Python), nenhuma falha; cobertura de 76,8% no backend e 71% no serviço de modelo | **Evidência** de prática de engenharia |
+| Rastreabilidade entre requisitos, testes e ODS | Matriz e casos de teste desta sprint | Produzidos e verificados contra o código | **Evidência** de prática de engenharia |
+| Testabilidade do frontend | — | Sem testes e sem job de CI para `src/frontend/` | **Limitação** — L6 |
+| Execução contínua dos testes do modelo | `test_modelo` | Só roda quando há mudanças em `src/modelo/**`; a cobertura Python não é medida no CI | **Limitação** — L7 |
+| Ganho individual de competências | I8 | Não disponível; exige rubrica e avaliação individual | **Limitação** |
+
+**Limitação que continua.** Os artefatos demonstram a **prática** de competências técnicas, como testes, CI e rastreabilidade. Eles não medem aprendizagem individual, e entrega coletiva não comprova domínio individual.
+
+### 2.5. ODS 12 e ODS 10
+
+O **ODS 12** foi retirado do alinhamento positivo na Sprint 4, e esta validação não encontrou evidência que mude a decisão. O risco R3, de trocas prematuras, depende de processo de manutenção e não foi testado.
+
+O **ODS 10** aparece apenas como vínculo **condicional** do risco R4. A variação do recall por estação (seção 3.1) mostra que a qualidade da estimativa não é uniforme, mas isso não comprova efeito desigual entre grupos sociais. Essa relação continua sem investigação.
+
+<div id="3-riscos-e-indicadores" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 3. Riscos e indicadores
+
+  </div>
+</div>
+
+### 3.1. Situação dos riscos verificáveis por teste
+
+| Risco | ODS | Controle no código | Casos | Coberto | Parcial | A implementar | Falha esperada | Evidência adicional da Sprint 5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **R1** — sobrecarga por inspeções duplicadas ou excessivas | 8 | Sim (migração `000015`) | 7 | 1 | 1 | 4 | 1 | Reabertura de inspeção gera erro 500. Cerca de 11 episódios de alerta por dia no histórico, com precisão por episódio de 25,0%. |
+| **R2** — porta sem predição exibida como “Estável” | 9, 11 | Não | 8 | 0 | 1 | 1 | 6 | `GetStationDoorsStatus` e `GetDoorTimeline` têm 100% de cobertura com Postgres, mas nenhuma asserção verifica a porta sem predição. |
+| **R4** — preenchimento de dados ausentes | 11 (10 condicional) | Não | 7 | 0 | 1 | 2 | 4 | O recall por episódio varia de **51,4% (VSO)** a **88,2% (REP)**. As portas de Oscar Freire recebem o código de Fradique Coutinho (alias `OFR → FRA`). |
+
+Os casos com **falha esperada** são os critérios de aceite das mitigações propostas na Sprint 4. Enquanto não forem implementados e aprovados, os riscos R2 e R4 continuam sem controle verificado.
+
+### 3.2. Indicadores I4 e I5
+
+Os valores abaixo são **históricos**, calculados com o conjunto de teste do Modelo 5 v1.0.0 (1º de maio a 31 de outubro de 2025). **Não** medem o Lumem em operação.
+
+| Indicador | Valor histórico | Fonte e período | Não disponível |
+| --- | --- | --- | --- |
+| **I4** por janela | Precisão 15,1%; recall 60,0% | Split de teste reconstruído; 71.184 porta-dias; limiar 0,48 | I4 operacional; outras versões; limiar por estação |
+| **I4** por episódio | Precisão 25,0% (506 de 2.023 episódios); recall 73,4% (802 de 1.093 falhas) | Idem | Idem |
+| **I5** cobertura válida | **73,3%** no total. Sete estações com 100%, VSO com 84,2%, FAL com 21,7%, PTA e FRE com 0% | `construir_painel.py`; critério de telemetria por estação nos 30 dias anteriores | I5 operacional; completude por porta |
+
+<div id="4-tabela-final" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 4. Tabela final dos ODS
+
+  </div>
+</div>
+
+A validação **não altera** a seleção de ODS da Sprint 4. Ela qualifica cada decisão com o que foi verificado e o que continua em aberto.
+
+| ODS e meta | Decisão da Sprint 4 | Situação após a validação | Evidência principal | Limitação que continua |
+| --- | --- | --- | --- | --- |
+| **9 — Indústria, Inovação e Infraestrutura** (9.1) | Mantido, com justificativa corrigida | **Mantido. Funcionalidade verificada; efeito não medido.** Na matriz: 4 requisitos cobertos, 1 parcial e 1 sem teste | Rodada de predição, classificação e procedência do modelo testadas; métricas do manifesto reproduzidas; I4 histórico | Porta sem predição tratada como estável (R2); horizonte fixo (RF08); I3 não disponível |
+| **11 — Cidades e Comunidades Sustentáveis** (11.2) | Mantido como contribuição indireta | **Mantido como contribuição indireta, com as principais lacunas.** Na matriz: 3 cobertos e 2 sem teste | Dashboard, inspeções e resiliência do serviço de IA testados no backend | Frontend sem testes; dados ausentes não sinalizados (R4); I5 histórico de 73,3%, com duas estações sem dados |
+| **8 — Trabalho Decente e Crescimento Econômico** (8.2) | Adicionado ao alinhamento do produto | **Mantido. É a base funcional mais verificada.** Na matriz: 5 cobertos e 2 parciais | Ingestão, validação e deduplicação de registros testadas; uma inspeção aberta por porta testada com Postgres | Volume de alertas sem limite por capacidade (R1); reabertura gera erro 500; filtros por período e prioridade sem teste; I1 e I2 não disponíveis |
+| **4 — Educação de Qualidade** (4.4) | Adicionado como contribuição complementar | **Mantido como contribuição complementar.** Na matriz: 1 coberto e 2 sem teste | CI com lint, testes, migrações e varreduras de segurança; 274 testes sem falha; rastreabilidade documentada | Frontend fora do CI; `test_modelo` condicional; I8 não disponível |
+| **12 — Consumo e Produção Responsáveis** (12.2, 12.5) | Retirado do alinhamento positivo | **Retirada mantida** | Nenhuma nova evidência de gestão de componentes ou resíduos | R3 depende de processo e não é verificável por teste |
+| **10 — Redução das Desigualdades** (10.2, 10.3) | Não incluído; vínculo condicional de R4 | **Não incluído. Risco condicional com nova evidência histórica** | Desempenho e cobertura variam entre estações | Efeito sobre grupos sociais não investigado |
+
+**Síntese.** Os testes confirmam que o Lumem **faz o que a Sprint 4 afirmou** nos ODS 8, 9 e 11: centraliza registros, estima risco e organiza inspeções. Nenhuma afirmação de efeito sobre as metas foi medida, e essas afirmações continuam como limitação até a coleta dos indicadores I1 a I8 em um piloto. As lacunas abertas mais relevantes estão nos riscos R2 e R4, que afetam o que a equipe vê quando falta avaliação ou faltam dados. Os 11 casos de teste com falha esperada definem o que precisa ser corrigido para fechar essas lacunas.

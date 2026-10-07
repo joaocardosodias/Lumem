@@ -33,11 +33,11 @@ function localDateKey(date) {
   return `${year}-${month}-${day}`
 }
 
-export function periodCutoff(periodId) {
+export function periodCutoff(periodId, now = new Date()) {
   const period = PERIODS.find((item) => item.id === periodId)
   if (!period || period.id === 'all') return null
 
-  const start = new Date()
+  const start = new Date(now)
   start.setHours(0, 0, 0, 0)
   if (period.years) start.setFullYear(start.getFullYear() - period.years)
   else if (period.months) start.setMonth(start.getMonth() - period.months)
@@ -45,12 +45,12 @@ export function periodCutoff(periodId) {
   return localDateKey(start)
 }
 
-export function inPeriod(value, periodId) {
-  const cutoff = periodCutoff(periodId)
+export function inPeriod(value, periodId, now = new Date()) {
+  const cutoff = periodCutoff(periodId, now)
   if (!cutoff) return true
   const key = dateKey(value)
   if (!key) return false
-  return key >= cutoff
+  return key >= cutoff && key <= localDateKey(now)
 }
 
 export function periodHint(periodId) {
@@ -81,6 +81,7 @@ export function inDateRange(value, from, to) {
 
 export function inDurationRange(hours, min, max) {
   if (min === '' && max === '') return true
+  if (hours == null || String(hours).trim() === '') return false
   const value = Number(hours)
   if (!Number.isFinite(value)) return false
   if (min !== '' && value < Number(min)) return false

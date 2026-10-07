@@ -2498,6 +2498,64 @@
   }
 }
 
+@media (max-width: 600px) {
+  .engenharia-head .page-head__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 105px;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .engenharia-model-state { min-width: 0; padding: 10px; gap: 8px; }
+  .engenharia-model-state > span:last-child { min-width: 0; }
+  .engenharia-model-state strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .engenharia-head .overview-eyebrow { display: none; }
+  .model-card-title-row { min-width: 0; }
+  .model-card-title-row h2 { overflow-wrap: anywhere; }
+  .engenharia-card__footer { flex-wrap: wrap; gap: 8px; overflow-wrap: anywhere; }
+  .lab-results { padding: 16px; }
+  .lab-scenarios-table-wrap { border: 0; overflow: visible; }
+  .lab-scenarios-table { display: block; min-width: 0; }
+  .lab-scenarios-table thead { display: none; }
+  .lab-scenarios-table tbody { display: grid; gap: 14px; }
+  .lab-scenarios-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .lab-scenarios-table td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    height: auto;
+    padding: 10px 6px;
+    font-size: 13px;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .lab-scenarios-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .lab-scenarios-table .lab-scenarios-table__identity,
+  .lab-scenarios-table .lab-scenarios-table__action {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .lab-scenarios-table__identity::before,
+  .lab-scenarios-table__action::before { display: none; }
+  .lab-scenarios-table__action { border: 0; }
+  .lab-scenarios-table__action button { width: 100%; min-height: 44px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .engenharia *,
   .engenharia *::before,

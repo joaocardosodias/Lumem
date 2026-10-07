@@ -1,0 +1,5874 @@
+{
+  "browser": "Microsoft Edge / Chromium",
+  "environment": "isolated Docker compose",
+  "simulatedServices": [],
+  "storage": "real local filesystem shared by API and River worker",
+  "cases": [
+    {
+      "name": "Login obrigatório e credenciais inválidas",
+      "status": "passed",
+      "details": "Página interna exige login; credenciais inválidas retornam 401 e exibem mensagem."
+    },
+    {
+      "name": "Login válido e persistência da sessão",
+      "status": "passed",
+      "details": "Login pela interface e sessão mantida após recarregar."
+    },
+    {
+      "name": "Sessão expirada",
+      "status": "passed",
+      "details": "JWT corretamente assinado e já expirado: API 401, token removido e retorno ao login."
+    },
+    {
+      "name": "Upload inválido apresenta falha e permite nova tentativa",
+      "status": "passed",
+      "details": {
+        "status": "failed",
+        "inserted": 0
+      }
+    },
+    {
+      "name": "Upload alarmes csv pelo worker",
+      "status": "passed",
+      "details": {
+        "uploadId": "550a1464-dcb7-4070-979a-0642cef737d6",
+        "id": "550a1464-dcb7-4070-979a-0642cef737d6",
+        "file_name": "alarmes-1.csv",
+        "file_type": "alarms_csv",
+        "status": "completed",
+        "rows_processed": 2,
+        "rows_inserted": 2,
+        "created_at": "2026-10-06 03:52:59",
+        "completed_at": "2026-10-06 03:53:00"
+      }
+    },
+    {
+      "name": "Upload alarmes xlsx pelo worker",
+      "status": "passed",
+      "details": {
+        "uploadId": "1bba3283-027c-4a5d-a7f0-facedca48f57",
+        "id": "1bba3283-027c-4a5d-a7f0-facedca48f57",
+        "file_name": "alarmes-2.xlsx",
+        "file_type": "alarms_xlsx",
+        "status": "completed",
+        "rows_processed": 2,
+        "rows_inserted": 2,
+        "created_at": "2026-10-06 03:53:01",
+        "completed_at": "2026-10-06 03:53:02"
+      }
+    },
+    {
+      "name": "Upload manutencoes csv pelo worker",
+      "status": "passed",
+      "details": {
+        "uploadId": "79d43089-635f-4662-bf91-b0172da73177",
+        "id": "79d43089-635f-4662-bf91-b0172da73177",
+        "file_name": "manutencoes-1.csv",
+        "file_type": "maintenance_zm01",
+        "status": "completed",
+        "rows_processed": 2,
+        "rows_inserted": 2,
+        "created_at": "2026-10-06 03:53:04",
+        "completed_at": "2026-10-06 03:53:04"
+      }
+    },
+    {
+      "name": "Upload manutencoes xlsx pelo worker",
+      "status": "passed",
+      "details": {
+        "uploadId": "88d6851b-f47d-4975-9de0-13ff2a4863cc",
+        "id": "88d6851b-f47d-4975-9de0-13ff2a4863cc",
+        "file_name": "manutencoes-2.xlsx",
+        "file_type": "maintenance_zm01",
+        "status": "completed",
+        "rows_processed": 2,
+        "rows_inserted": 2,
+        "created_at": "2026-10-06 03:53:06",
+        "completed_at": "2026-10-06 03:53:06"
+      }
+    },
+    {
+      "name": "Cadastro manual e consulta após recarregar",
+      "status": "passed",
+      "details": "Registro persistido, campos e duração conferidos após recarregar; cinco manutenções no total."
+    },
+    {
+      "name": "Filtros combinados, vazio e limpeza",
+      "status": "passed",
+      "details": "Manutenção: 5 → 3 → 1 → 0 → 5 registros; alarmes PIN: dois registros."
+    },
+    {
+      "name": "Predição com modelo real",
+      "status": "passed",
+      "details": {
+        "runId": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "model": "v1.0.0",
+        "evaluated": 528,
+        "risk": 0
+      }
+    },
+    {
+      "name": "Inspeções e atualização de status",
+      "status": "passed",
+      "details": {
+        "automatic": 0,
+        "manualCreated": true,
+        "completed": 1
+      }
+    },
+    {
+      "name": "Dashboard consistente com API e inspeções",
+      "status": "passed",
+      "details": {
+        "total_doors": 528,
+        "doors_at_risk": 0,
+        "pending_inspections": 0,
+        "completed_inspections": 1,
+        "critical_stations": []
+      }
+    },
+    {
+      "name": "Logout bloqueia novo acesso à página interna",
+      "status": "passed",
+      "details": "Sessão removida e página interna protegida após logout."
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/v1/auth/login",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/dashboard/summary",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/latest",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/ml/config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/ml/model/active",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/VSO/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/BUT/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/MBI/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/FAL/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/FRA/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/PIN/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/PAU/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/OFR/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/HIG/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/LUZ/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/REP/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/dashboard/summary",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/latest",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/ml/config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/ml/model/active",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/VSO/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/MBI/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/BUT/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/PIN/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/FAL/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/FRA/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/OFR/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/PAU/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/HIG/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/REP/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/LUZ/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/alarms",
+      "method": "POST",
+      "status": 202
+    },
+    {
+      "path": "/api/v1/uploads/48127a02-c91c-42ee-b4e8-706d67c6d868",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/48127a02-c91c-42ee-b4e8-706d67c6d868",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/48127a02-c91c-42ee-b4e8-706d67c6d868",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/alarms",
+      "method": "POST",
+      "status": 202
+    },
+    {
+      "path": "/api/v1/uploads/550a1464-dcb7-4070-979a-0642cef737d6",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/550a1464-dcb7-4070-979a-0642cef737d6",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/550a1464-dcb7-4070-979a-0642cef737d6",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/alarms",
+      "method": "POST",
+      "status": 202
+    },
+    {
+      "path": "/api/v1/uploads/1bba3283-027c-4a5d-a7f0-facedca48f57",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/1bba3283-027c-4a5d-a7f0-facedca48f57",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/1bba3283-027c-4a5d-a7f0-facedca48f57",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/maintenance",
+      "method": "POST",
+      "status": 202
+    },
+    {
+      "path": "/api/v1/uploads/79d43089-635f-4662-bf91-b0172da73177",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/79d43089-635f-4662-bf91-b0172da73177",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/79d43089-635f-4662-bf91-b0172da73177",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/maintenance",
+      "method": "POST",
+      "status": 202
+    },
+    {
+      "path": "/api/v1/uploads/88d6851b-f47d-4975-9de0-13ff2a4863cc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/88d6851b-f47d-4975-9de0-13ff2a4863cc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/uploads/88d6851b-f47d-4975-9de0-13ff2a4863cc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/login",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/dashboard/summary",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/ml/config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/latest",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/ml/model/active",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/BUT/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/VSO/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/MBI/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/alarms",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/maintenance",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/PIN/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/stations/FRA/doors/status",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/latest",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/ml/config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/ml/model/active",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/trigger",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/v1/ml/config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "POST",
+      "status": 201
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections/c3cc559b-52de-4153-a560-09b4fb7b61af/status",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections/c3cc559b-52de-4153-a560-09b4fb7b61af/status",
+      "method": "PATCH",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/inspections",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/predictions/latest",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/dashboard/summary",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/dashboard/summary",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "pageErrors": [],
+  "prediction": {
+    "id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+    "horizon_days": 7,
+    "threshold_used": 0.47999998927116394,
+    "model_version": "v1.0.0",
+    "is_experiment": false,
+    "published_at": "2026-10-06T03:53:14Z",
+    "total_doors_evaluated": 528,
+    "total_doors_at_risk": 0,
+    "average_probability": 0.20649006933232747,
+    "p95_probability": 0.2787235610047693,
+    "maximum_probability": 0.3943409833284751,
+    "estimated_precision": 0.1512468457221985,
+    "estimated_recall": 0.6004514694213867,
+    "estimated_f1": 0.24162989854812622,
+    "validation_source": "historical_test",
+    "created_at": "2026-10-06 03:53:14",
+    "predictions": [
+      {
+        "id": "1642b983-77b8-40da-829f-2897665199f9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2855478097050534
+      },
+      {
+        "id": "de2cddda-93d2-4b25-bfbe-52a56066e305",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2855891275263959
+      },
+      {
+        "id": "ec754b19-4f9e-4c99-a4d3-39102ef616ce",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2558478396033104
+      },
+      {
+        "id": "159b4c1c-c59d-4490-9d68-3daff81e1953",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.16921456402177978
+      },
+      {
+        "id": "66cd4cf2-b881-4c40-a0a7-1fb8a1367ea5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.16393708756966885
+      },
+      {
+        "id": "3ce70739-686f-4fab-bc12-7a2ac30798aa",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.16180899726449433
+      },
+      {
+        "id": "1c75209f-0f30-435c-92d6-d81acbba5685",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.15742274239882267
+      },
+      {
+        "id": "723e5ad8-9862-4bde-8e37-ba6e845c11d5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.15799806321756196
+      },
+      {
+        "id": "82d1bb61-735a-4912-a3c8-e1b4fd2c060c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.15763219213458288
+      },
+      {
+        "id": "fcb36c70-f7d5-4f5e-b7f1-5bccec995da4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.15331879029670387
+      },
+      {
+        "id": "676777de-dbda-4966-b82b-e4109b45cc4e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.1495466046409301
+      },
+      {
+        "id": "6675853e-cbef-443d-9ef0-d7ebb66aaa5a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.1498829807233356
+      },
+      {
+        "id": "b0f6e9d5-8b7d-4a16-b221-b3d5d3cb4a35",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.1498829807233356
+      },
+      {
+        "id": "5575b9c6-984e-41a6-8419-abebf4377f7b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.1498829807233356
+      },
+      {
+        "id": "2afefe6c-2151-4976-aae5-e10661c9896a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.14980903956683023
+      },
+      {
+        "id": "7d05b16c-d2cc-4f1e-a13c-75b58b83b6cc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.15004373500500257
+      },
+      {
+        "id": "2441354b-a5bc-4d94-bb25-83a42fdf5c81",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.14859277642831253
+      },
+      {
+        "id": "3b967473-aade-45d0-bc8b-183d9491d4d1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.1534742876285997
+      },
+      {
+        "id": "2af23af2-ad13-4c9c-9d71-301ab6aa919e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.1751053042246823
+      },
+      {
+        "id": "c9048b92-947d-4be9-b5c0-fb551f1aad5a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.19026546833478772
+      },
+      {
+        "id": "21aa26fe-de73-476a-969f-88c977c5e541",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.19374694968759595
+      },
+      {
+        "id": "1ab35215-1678-4941-94f9-e33407fbda6c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.16194883558920117
+      },
+      {
+        "id": "595a2fa0-b92c-4482-becd-6b16ed031e11",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.16262153833370255
+      },
+      {
+        "id": "a8d12c57-f457-46df-af88-2b94a2235723",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.16262153833370255
+      },
+      {
+        "id": "38f13948-b70f-4d39-99df-6d5b531ef83a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2927746159239384
+      },
+      {
+        "id": "b43d3866-c769-431b-819f-5e46dcd1da13",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2928159337452809
+      },
+      {
+        "id": "9a0e2e63-84b6-45e2-8b62-a11eeb1e7f39",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.26629930622167536
+      },
+      {
+        "id": "f8410d73-2fd7-44c5-9474-fa91660e844a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.18618723504415136
+      },
+      {
+        "id": "6ceaf1fc-79d1-4928-9758-8796101a18ab",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.18442055611455696
+      },
+      {
+        "id": "270ffbca-a37b-4348-a20c-5e9d9ae75baa",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.18362787036069622
+      },
+      {
+        "id": "957ea550-5893-4dc8-806b-f6d088f157a9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.17922262706119
+      },
+      {
+        "id": "23359168-d55a-428a-94da-95047700ca97",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.17979794787992925
+      },
+      {
+        "id": "5dd4dc30-8e5c-4c5a-955c-edb17a5974ef",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.181117298187093
+      },
+      {
+        "id": "9fa3f7db-10ac-4b9f-ab56-e88cbfb4f5c2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.1812872638330024
+      },
+      {
+        "id": "9591379d-ae7c-410e-b82e-5e60e8220a4c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.17933066686428345
+      },
+      {
+        "id": "42c0d81b-00da-45b8-b266-635692475559",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.1795133741594453
+      },
+      {
+        "id": "c6e4ada5-9f40-465b-afe8-61462dc190e3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.1795133741594453
+      },
+      {
+        "id": "792a492c-b218-48d0-9967-0a016961aa13",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.1795133741594453
+      },
+      {
+        "id": "db4ba1c8-fafb-466b-854c-6e1fcff8b280",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.1794394330029399
+      },
+      {
+        "id": "9a9aa19a-8da8-472d-8388-7202c573ac3d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.1790417703520949
+      },
+      {
+        "id": "f6e38a70-e0df-4e39-848b-72b233a1633e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.17759081177540492
+      },
+      {
+        "id": "e2cadd4a-df8a-4460-b82b-a0b91a333757",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.18226889982488553
+      },
+      {
+        "id": "8c07bade-c945-40cd-b7db-4267e916c5a9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.20551783559681244
+      },
+      {
+        "id": "d2c78f55-020a-42fb-9655-4af275348a0d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2215104570214128
+      },
+      {
+        "id": "0180daa7-0ac0-4042-9814-2421ce8c29fc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.22293858031785924
+      },
+      {
+        "id": "70c6279d-d445-440f-91e1-5e1dd42c7cbc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.1920125906922306
+      },
+      {
+        "id": "7e8994ea-f39c-4d03-a4a0-0edfd68e2896",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.19315740645897145
+      },
+      {
+        "id": "7b8a7120-e411-473c-a558-d84968ace10f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "VSO",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.19315740645897145
+      },
+      {
+        "id": "e330948a-0c1b-4444-90af-3608ed956573",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.26427102374888206
+      },
+      {
+        "id": "a3cc4088-f6f1-476f-ac78-65ddd7931640",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.26263329846321753
+      },
+      {
+        "id": "0db4062d-31e7-4967-b02b-52a1e6d24243",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.23977743175772473
+      },
+      {
+        "id": "a8f49c07-1661-4a06-874f-c3f7ac1f2a40",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.17941810707479697
+      },
+      {
+        "id": "8c376eff-91be-4016-aa33-cc097ef8e93a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.17156981299746657
+      },
+      {
+        "id": "8e34e2ee-f84a-48e9-bb61-017b1e2d9006",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.1718214406665994
+      },
+      {
+        "id": "bb997de8-1b9f-4e10-8f68-9e800eb7d90b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.1683804040956274
+      },
+      {
+        "id": "b81d62ef-c7c3-4847-a38c-c8a8af335a78",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.1689557249143667
+      },
+      {
+        "id": "9c007cbe-89fa-4d8b-a8fa-e0e51463ff92",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.1685898538313876
+      },
+      {
+        "id": "40533924-b4c3-448e-b8cc-4db64b785ef9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.1665892104806247
+      },
+      {
+        "id": "2b201af7-b14a-44c4-8ccb-3fc9991cf4b8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.16714941232245661
+      },
+      {
+        "id": "b2fa4aa4-8699-440e-85e0-76c58a527528",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.1674857884048621
+      },
+      {
+        "id": "49d76351-049d-464a-a7bc-ea2658e77672",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.16809338155428832
+      },
+      {
+        "id": "dcc0b573-038c-430f-8293-93d54b820302",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.16809338155428832
+      },
+      {
+        "id": "fc915ff5-39bb-4913-a44c-e462f16cf111",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.16691759225756583
+      },
+      {
+        "id": "6f2eb565-e21a-4a84-8998-7fa00c1f2e2f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.16555741835525364
+      },
+      {
+        "id": "20fbb5fb-4aab-45ec-bc01-3a7fab97538a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.16513721347676086
+      },
+      {
+        "id": "34d06dd4-66d4-4d5c-b7ae-a7245635b1bd",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.17030485381997035
+      },
+      {
+        "id": "5852e7da-cbd5-43d1-bffb-ddbc58eb14b2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.18760269776740185
+      },
+      {
+        "id": "e8f65964-a861-4d88-ac25-35dfaf1034e8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.20245369071633043
+      },
+      {
+        "id": "17f13b03-306d-4dfa-8cf7-d2477894e770",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.20049279047130425
+      },
+      {
+        "id": "3a217dab-e591-489d-b9ac-a32fc02c4a06",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.17304432218634083
+      },
+      {
+        "id": "809c3c16-8099-475c-a284-2da0597915a8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.17423878709492652
+      },
+      {
+        "id": "730ee638-5ee6-450c-a433-45fc3b3f9ec5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.17423878709492652
+      },
+      {
+        "id": "47f4222e-d83a-468e-92f6-d37276ea9383",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.28385854287336293
+      },
+      {
+        "id": "680faaf1-3ea7-46f4-b7d9-d0ad89a74253",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2829341136543191
+      },
+      {
+        "id": "62323bda-0970-4836-960e-b645150ba1f1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2635612537674884
+      },
+      {
+        "id": "a3a3665f-30de-4a87-a23f-81d417dec338",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.20408036030823687
+      },
+      {
+        "id": "d5b487e0-97be-4d73-9322-c1733b821446",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.20050565271904092
+      },
+      {
+        "id": "239a0dc0-52e8-4250-af68-975c41ee8c2f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.2007572803881737
+      },
+      {
+        "id": "8d87cf26-0268-4714-bd1b-df61382bce2b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.19862253915143818
+      },
+      {
+        "id": "97bc62a0-b80c-4e84-8aa8-70141d53916e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.19919785997017747
+      },
+      {
+        "id": "b6c115fc-f0d1-4b6e-ae1e-aa7207a1daa3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.2010240469123453
+      },
+      {
+        "id": "57c14424-f09d-4c0e-8687-68cf7c2b81f7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.2001242206212906
+      },
+      {
+        "id": "7e2c5942-1950-4553-a33f-237d5e6bcf13",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.2017557280669789
+      },
+      {
+        "id": "cb42d64d-95dc-42eb-b356-a8a39e14fd30",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.20193843536214076
+      },
+      {
+        "id": "62e9e28a-720f-46b2-8184-135b119c6840",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.20176384446726808
+      },
+      {
+        "id": "2455aefe-805f-492e-990a-df4ef81e85d2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.20176384446726808
+      },
+      {
+        "id": "1eaebc53-4cfc-4de2-9f62-a62d79b885a1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.2007132894734777
+      },
+      {
+        "id": "93677dfe-cc09-42dd-b1da-0d49d2ef724a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.19982223409337935
+      },
+      {
+        "id": "b742d086-b022-47f0-a980-88af810487f6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.19940202921488656
+      },
+      {
+        "id": "96a2a752-2a48-4a6a-87ba-8ca331485dea",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.20436624640728948
+      },
+      {
+        "id": "68d6bcfa-e784-4f44-9193-38503b2dbe38",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.22162723234175227
+      },
+      {
+        "id": "874387af-d549-46b6-bde3-1845f2630ca3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2382613212521799
+      },
+      {
+        "id": "35154a6e-1044-49f6-a062-d149574ba273",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.23436804093049723
+      },
+      {
+        "id": "5bb8a1c9-1c1c-407d-ac8d-e584befc102b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.20703882412979002
+      },
+      {
+        "id": "f91ef68b-60da-44ea-86d0-3b982ea00a83",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.20870540206061516
+      },
+      {
+        "id": "d0b088f5-d4ba-47d7-b4c3-e51b85b198cc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "MBI",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.20870540206061516
+      },
+      {
+        "id": "adddf164-fd1b-4fc0-bb0b-fcf90481f134",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.26004835238127555
+      },
+      {
+        "id": "f01a1a43-bb12-40d7-86f0-97cd1d843aae",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2584106270956109
+      },
+      {
+        "id": "c1092b1d-a55c-49c2-842e-46df37a980ef",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2403211849584237
+      },
+      {
+        "id": "14359eae-499f-4d60-ad4d-5f36ea1d2701",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.1879198404151673
+      },
+      {
+        "id": "bc19552e-f773-45de-9a69-e4b47aeb504f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.1800715463378369
+      },
+      {
+        "id": "786bc121-41a8-401f-b927-a8896453fb06",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.18002172040319778
+      },
+      {
+        "id": "2fb138b3-f0bc-4f30-bb0e-90ccdf5710d8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.17751136363692538
+      },
+      {
+        "id": "585a1749-a555-4efb-bec4-fad4a787fc05",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.17751136363692538
+      },
+      {
+        "id": "d2161e83-f20c-457b-b474-c6d301d06dd8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.1771454925539463
+      },
+      {
+        "id": "841bbc8d-db4b-4e02-8b18-d9cdd261eab8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.17858063886106493
+      },
+      {
+        "id": "5afc9cc2-8cdc-4922-952d-be66cf855764",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.18182218824048124
+      },
+      {
+        "id": "0984a1e2-9ac5-4a5e-9d99-8ff08e051037",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.18139142510610504
+      },
+      {
+        "id": "4cab99c0-792e-459a-be8f-0ecede5e52d8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.1819990182555313
+      },
+      {
+        "id": "54510a45-a8ee-4bd0-b60b-8be2a9a086d6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.1819990182555313
+      },
+      {
+        "id": "91838f1e-d6a5-4f69-8331-ae4c876b3011",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.1839822213858975
+      },
+      {
+        "id": "7f957f34-1d3f-4790-a63a-916c40ce1ef6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.18262204748358526
+      },
+      {
+        "id": "0ab805ef-6a33-4f03-b786-9d9ac6a4b133",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.18220184260509253
+      },
+      {
+        "id": "eeb772c9-778f-4e53-af93-ae1882f8630b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.18652614321995878
+      },
+      {
+        "id": "f6b91d45-501a-4b35-af03-b17909c90e5d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.20191642193151207
+      },
+      {
+        "id": "729aed5d-e6bd-4f15-9162-c103f57f620a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2158347222116776
+      },
+      {
+        "id": "3daf9d26-c6c3-4f7e-b2ff-aa3ad8ec6ff6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.2147944320314333
+      },
+      {
+        "id": "01536474-16de-4ffd-9d75-e72e96e61e00",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.19031651044758147
+      },
+      {
+        "id": "99f31fbd-7531-4071-a4f6-8d5a1b265720",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.19148569021951023
+      },
+      {
+        "id": "0553bdbc-31d3-493e-8d2e-3d8b373e6b99",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.19148569021951023
+      },
+      {
+        "id": "054c27d8-2230-440a-9692-6855713b8593",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.28075997014450277
+      },
+      {
+        "id": "8c973ae6-38e3-41dc-82b7-ade308d597d2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.27912224485883813
+      },
+      {
+        "id": "fa535034-2cc2-4fc1-8571-64ff29d25110",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2631725329314563
+      },
+      {
+        "id": "4a449bf8-47f9-43b9-bcf3-735108b2acca",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.20986317613581498
+      },
+      {
+        "id": "783132e4-bbfc-4d67-b9d3-cbab945ca821",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.20628846854661897
+      },
+      {
+        "id": "75c3deda-84ab-4cd0-a91f-67f6575f9ebd",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.2062386426119799
+      },
+      {
+        "id": "e85ee49e-20d5-4372-a626-5d369401ad99",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.20503458117994394
+      },
+      {
+        "id": "39744770-89f5-4994-9985-7d33d08fd1e6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.20503458117994394
+      },
+      {
+        "id": "2ae2ddc4-0562-4db6-9a88-4e8a06bb94c8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.2068607681221118
+      },
+      {
+        "id": "3d01ef74-7251-4fec-a280-50b1a83f4ad3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.20965203147549455
+      },
+      {
+        "id": "98d4fd35-a50c-4dab-9231-29e65f40007e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.21302942899797592
+      },
+      {
+        "id": "e45f9fa2-da5a-47ee-aebe-78bfec9ad052",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.2124449970763561
+      },
+      {
+        "id": "a0f97177-96b8-41f8-a877-b4471a517f62",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.21227040618148343
+      },
+      {
+        "id": "fd18e550-3dea-4360-bb28-e92adf55b937",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.21227040618148343
+      },
+      {
+        "id": "14c6344e-358e-4e75-9ba6-648211eebfd5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.21437884361478177
+      },
+      {
+        "id": "3cc73c6a-840b-42ad-a231-88767aafcfdf",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.21277096420757446
+      },
+      {
+        "id": "9625cb44-9377-4283-a293-ccb14dac26d5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.21133629338898247
+      },
+      {
+        "id": "c6e30f30-199a-4e40-91a2-c60a9a2bb106",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.21545717085304222
+      },
+      {
+        "id": "0a9acf99-44d9-46d5-8854-93ed72a8a5b1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.23309355623875835
+      },
+      {
+        "id": "c4cf700e-f9eb-46dd-987c-d5ebf6a5af01",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.24912755871222347
+      },
+      {
+        "id": "f9faf866-3ea9-437f-915f-df83b29c3049",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.24615488845532266
+      },
+      {
+        "id": "3490e10e-230a-4cab-abde-910ebf974458",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.22145346490745613
+      },
+      {
+        "id": "e5532b29-c115-45bf-9b5a-12a5a045fc7a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.22392765123078873
+      },
+      {
+        "id": "ab089dee-6493-4b3b-a026-ab57b365a845",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "BUT",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.22392765123078873
+      },
+      {
+        "id": "a93972a8-769d-49a0-8fbf-c5c871b8df9b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2622608584656223
+      },
+      {
+        "id": "6cf770ef-9e2e-41bc-9374-e37082c11e9b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2606231331799578
+      },
+      {
+        "id": "2992d7fe-8f3d-4c90-8e8a-883eda62d3db",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.23776726647446494
+      },
+      {
+        "id": "634224ef-b736-40dd-b9af-39deb904ce27",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.17902641143876885
+      },
+      {
+        "id": "a9d2a190-b8c3-472c-94fa-27e1415cdaf1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.17117811736143845
+      },
+      {
+        "id": "7ff12918-0969-468c-bfd7-ea26cabed60f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.17142974503057126
+      },
+      {
+        "id": "f8ebf60a-d692-4c25-847b-1e33bebb8a97",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.16752144035550526
+      },
+      {
+        "id": "12b260b4-217a-4f58-b77d-405d6ff61182",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.16809676117424455
+      },
+      {
+        "id": "b3997805-57f6-40b1-8d6a-674062a65331",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.16773089009126546
+      },
+      {
+        "id": "9163fed0-74ba-42d9-9fa5-d67bedfbc8ef",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.16573024674050255
+      },
+      {
+        "id": "495dfc20-8e2e-40b3-8d02-9b874e3bf01d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.1662904485823345
+      },
+      {
+        "id": "e02b4ac9-fcf4-4f81-a746-23a92be6ed92",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.16561863691258735
+      },
+      {
+        "id": "e0271809-d18f-4e06-bee0-f23af0e13cde",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.1643819714304308
+      },
+      {
+        "id": "bad30cbc-0a17-408a-b15b-b7c4184239aa",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.1643819714304308
+      },
+      {
+        "id": "45fbc2b9-b2e8-410f-9384-804e1331ac04",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.16347689623811693
+      },
+      {
+        "id": "bfdba447-3fe5-405f-8455-0cc85a54a04f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.16211672233580474
+      },
+      {
+        "id": "a1103c5b-d86e-4aa7-bfea-7ae48693f14b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.16169651745731195
+      },
+      {
+        "id": "63f147fb-b45c-4269-8d0f-e201491869de",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.1668641578005214
+      },
+      {
+        "id": "03479f53-5248-4bfb-aa92-f873acf28f83",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.18416200174795286
+      },
+      {
+        "id": "610cd861-aff0-4cdc-96a7-1c61fa18a64b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.1990129946968814
+      },
+      {
+        "id": "c9ff34fd-b1f4-4e22-9b35-b890d06b81ed",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.1970212098628802
+      },
+      {
+        "id": "ed98b169-ad09-4ecb-9133-1997e1369074",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.16982781812239556
+      },
+      {
+        "id": "52146e37-c014-4ea6-84b2-bc130f029eaf",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.17008689961466633
+      },
+      {
+        "id": "21b3493f-c43d-4aff-837b-c1c2a1292076",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.1707622002010797
+      },
+      {
+        "id": "267412ea-498b-48ee-8c21-e35249a02426",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.28186993003025274
+      },
+      {
+        "id": "6b04ed37-f86e-44da-a491-e1e6066d5bb0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2809455008112089
+      },
+      {
+        "id": "870ac8a4-641b-4343-ac6a-200581c675f1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.26157264092437815
+      },
+      {
+        "id": "55e9f46f-c120-4ebd-a5cf-d52f972e0f4b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.2037219035348394
+      },
+      {
+        "id": "cf880d71-ffd2-478f-b0e2-9af4de7b2552",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.20014719594564345
+      },
+      {
+        "id": "89fdc4a7-ee38-4692-88f3-b9aa6497a95c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.20039882361477623
+      },
+      {
+        "id": "76166ef4-916e-4eea-91c4-93ba2cb2d38c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.19779681427394663
+      },
+      {
+        "id": "3955f0fb-0c4e-40b1-80cf-a4489a5316bf",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.3704735106333412
+      },
+      {
+        "id": "e38500fe-3730-4fe6-9e6c-d18c7c17f669",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.2001983220348538
+      },
+      {
+        "id": "48bb4832-251b-40ea-a5dd-d4beaefe5163",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.19929849574379907
+      },
+      {
+        "id": "57401281-7548-42c7-970d-1d3f9644c7af",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.2009300031894874
+      },
+      {
+        "id": "19a2fbdc-cd53-46f8-80f1-72fe67d2aa57",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.20010452273249663
+      },
+      {
+        "id": "2c696d85-c16b-44bd-b4a1-35ecbece9cc3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.19860464806955286
+      },
+      {
+        "id": "cdc0e7e9-821c-484c-ba85-c3d2b0cb5e45",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.19860464806955286
+      },
+      {
+        "id": "4d5269dc-6d1f-4290-86bd-9a6ea6081f02",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.19755409307576252
+      },
+      {
+        "id": "458c6095-4ec1-4591-b7d3-936a17073c7a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.19666303769566415
+      },
+      {
+        "id": "587135dd-432d-4616-84b9-81bd398f275b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.19624283281717136
+      },
+      {
+        "id": "e927dd48-a278-43ba-84c8-1f406693a6a0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.20120705000957423
+      },
+      {
+        "id": "b270c356-0a7a-4b54-8045-8051a634d487",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.2184680359440371
+      },
+      {
+        "id": "27712aa1-863d-4c83-931b-657c6b0c7d33",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2351021248544647
+      },
+      {
+        "id": "cc43f77c-af02-4bb9-9b67-83479721c519",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.23117795994380688
+      },
+      {
+        "id": "8cd44a6f-50e2-4756-8f8d-2c7f22d50514",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.20410381968757846
+      },
+      {
+        "id": "d2035629-b3ee-4df2-be0b-1e2477dea921",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.20483501420208874
+      },
+      {
+        "id": "062ba5e4-5dfd-4779-bed8-6c18e3b75a4c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PIN",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.20551031478850212
+      },
+      {
+        "id": "1465255a-2ee2-45b1-96d8-eebfc43a5313",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2467516721946578
+      },
+      {
+        "id": "4866d922-79db-4a0c-803b-835ee3681971",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2454403695561473
+      },
+      {
+        "id": "02d07c35-60e9-43e2-ba2c-3b514bac04e1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2314669396359418
+      },
+      {
+        "id": "93e7eb11-da52-4c4e-9da5-f39422a01abf",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.3943409833284751
+      },
+      {
+        "id": "c37a22b9-8572-4368-9c1b-015f7a9655eb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.17617049488161687
+      },
+      {
+        "id": "880d0346-3f0c-47f4-b32b-9318b0b69223",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.1736108705580371
+      },
+      {
+        "id": "03a77104-8dfc-4991-8a3f-11bd72803e55",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.17049895993066624
+      },
+      {
+        "id": "876c7a65-cf04-474c-a595-5cef7d0b5e52",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.17049895993066624
+      },
+      {
+        "id": "7cf265c4-427f-4ccb-8f12-8a5b5af029d5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.17101089303957326
+      },
+      {
+        "id": "68ad31a6-1f48-45e3-adb3-57cc3645b8ff",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.168116949198936
+      },
+      {
+        "id": "1f2863ac-d8ea-4de9-9e64-87cf972e51b8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.16751852458835828
+      },
+      {
+        "id": "4d30a493-057f-4036-be9e-7737d124f0c2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.16751852458835828
+      },
+      {
+        "id": "6a4415e4-2f34-437f-8038-f9a6adc02988",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.1676071428742728
+      },
+      {
+        "id": "94bc5e46-0522-475f-96f6-6a1be313c334",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.1676071428742728
+      },
+      {
+        "id": "507864ae-8a75-4020-8370-0a6db78af0ae",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.16664324476835346
+      },
+      {
+        "id": "c05e6d1d-74ac-4c12-af2d-f00338bcf619",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.16713169209357626
+      },
+      {
+        "id": "361acce4-950d-4264-a6d2-bbd0f9547b3f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.16671148721508353
+      },
+      {
+        "id": "29ecb613-468e-49c1-b912-960d129525cc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.17545075436706503
+      },
+      {
+        "id": "c32a2fcd-4992-47ed-95f7-17b14700ca42",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.19033207839764074
+      },
+      {
+        "id": "ff7f2e5d-14c5-4a85-95d4-9fe7ef524088",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.20365293075903146
+      },
+      {
+        "id": "19bba1b8-eeaa-486c-a99c-34f03d5a9a53",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.20550604179016227
+      },
+      {
+        "id": "f11e418f-a16e-4e99-b97d-4f43d37cd752",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.1775371895660075
+      },
+      {
+        "id": "8d2c5146-92b9-4ed5-ba60-b5938843ebe3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.17657953971292312
+      },
+      {
+        "id": "ac980bae-4e9b-4267-8aeb-497b76d3e013",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.17657953971292312
+      },
+      {
+        "id": "395371f5-f6b9-407e-a393-76fb9cd31d9e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2652196213158583
+      },
+      {
+        "id": "73bca8d7-77da-416d-b793-9f3727a7283a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2658032766613656
+      },
+      {
+        "id": "d557222c-b74f-4c57-a5ed-e94f8c8af63c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2516192847506775
+      },
+      {
+        "id": "82f74c56-6e06-484a-be85-79da0152a73b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.19381010776745605
+      },
+      {
+        "id": "7745607a-7799-4baa-b0c9-baf641a6401d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.1946824878044786
+      },
+      {
+        "id": "dcd3a752-37c8-4013-a792-a3c108fd3663",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.19212286348089885
+      },
+      {
+        "id": "7e81da42-4723-43aa-a81a-0e24a8c92ecd",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.1898478273348558
+      },
+      {
+        "id": "b5d01336-09e4-40fa-bcc7-630e0de187e9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.18839600829584313
+      },
+      {
+        "id": "80693ed6-5c5a-4749-8c54-fadc64f34d63",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.19037586632213752
+      },
+      {
+        "id": "b348f841-d7b9-426a-b866-8f238e0e7d5a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.18571764960162793
+      },
+      {
+        "id": "7795167f-e975-4061-9648-7c208a48a6ca",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.1856063498749273
+      },
+      {
+        "id": "a1ae8b9e-e705-49af-8264-5732ba8ea8ab",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.18545268108768362
+      },
+      {
+        "id": "d305efb1-4e2b-41f7-b24f-88bc4cdc7fbf",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.18496024344589887
+      },
+      {
+        "id": "9deedeb1-411b-4525-85c8-90de2f3e3351",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.18496024344589887
+      },
+      {
+        "id": "f2496b9b-4ad1-4ad0-b8ee-f0bed777fef9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.18412157964291162
+      },
+      {
+        "id": "b2780bde-49c6-49c9-9096-3faac1253855",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.1829113628865493
+      },
+      {
+        "id": "bef208e3-b507-4b6d-98d7-cf81af33c56f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.18249115800805651
+      },
+      {
+        "id": "a9858ac5-71cc-4989-92c4-8fbeb2870c92",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.18973412951779076
+      },
+      {
+        "id": "4eb048fd-746e-4a25-bb2c-facbc7574bdc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.20686156022252927
+      },
+      {
+        "id": "a569be91-4b01-46cb-8e27-b19cd0af6a0e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2228058473290001
+      },
+      {
+        "id": "bf4d25c1-7075-48ff-8c94-6e95178ecac9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.22289963652306313
+      },
+      {
+        "id": "253b3469-fd48-48fc-a95e-628895a44b0c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.1934547320597476
+      },
+      {
+        "id": "284b25ce-0b5d-4ed2-853e-87a38b7bbb0a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.193802088758067
+      },
+      {
+        "id": "0782c129-4f1b-4614-921b-b96c8d979080",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FAL",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.193802088758067
+      },
+      {
+        "id": "d86f8871-8a4e-42ab-b348-561283716eba",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2728808278079301
+      },
+      {
+        "id": "a2f4bd4c-af4b-4ab4-8596-7916f64a0555",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2712431025222655
+      },
+      {
+        "id": "26c4f69c-8469-49c2-99fb-afc28d3e224c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.252786467588124
+      },
+      {
+        "id": "ab80fde2-ddb0-4b6e-96a5-d227429b9d6f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.19843922264536715
+      },
+      {
+        "id": "bbb585e2-8f73-46e0-829a-19b5cf2a896b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.19059092856803678
+      },
+      {
+        "id": "f3f8d135-3f50-449c-a5dc-1be26b963a65",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.19054110263339766
+      },
+      {
+        "id": "27cfbcb6-6ac9-4e79-bc84-3c2dcc90c65c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.18826625931114763
+      },
+      {
+        "id": "b31a85c5-314c-438b-8cd5-53a2c46db599",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.18884158012988692
+      },
+      {
+        "id": "bf8c1d0d-27ea-46a1-a2d7-cf522b085dea",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.18847570904690783
+      },
+      {
+        "id": "c7cac9cb-1e61-4554-9ebc-e90f8d16c187",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.1898316101503498
+      },
+      {
+        "id": "617359e5-fef0-47e7-879d-0a7fd6b75c28",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.19183756565244497
+      },
+      {
+        "id": "11df9d7d-3b90-4a11-8fb6-1ba366d96387",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.19140680251806877
+      },
+      {
+        "id": "5e3c2aa5-e36c-44a7-b6a6-d14563fade6f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.19201439566749495
+      },
+      {
+        "id": "b4fe7e3a-9cce-40fb-80fb-eb2409f90400",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.19201439566749495
+      },
+      {
+        "id": "266677e8-c6ac-4a15-88ca-1e4db3e0dd6c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.19399759879786121
+      },
+      {
+        "id": "328708fa-15da-4d44-a71b-fd420de2160a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.192637424895549
+      },
+      {
+        "id": "64269d89-5b95-45da-8477-0a57b9918c5d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.1922172200170562
+      },
+      {
+        "id": "b4f9756c-1ad5-43e1-8928-6898f177e2a0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.19869035591137427
+      },
+      {
+        "id": "07ebe450-a4ac-4c51-b3b0-df35bb25233c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.21549769337031996
+      },
+      {
+        "id": "3548feb7-1aae-4b21-bd76-45aaf9c7389a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.23335957346107888
+      },
+      {
+        "id": "7429507d-be22-4cae-912b-f1988f8ee77f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.23139867321605276
+      },
+      {
+        "id": "a5bfd29f-1dbc-4cd0-a3bf-52d46666a709",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.20484240776391005
+      },
+      {
+        "id": "68fc7d5f-aa39-433d-9e5d-37f87722e1cb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.2060115875358388
+      },
+      {
+        "id": "108e740d-2a77-4072-888d-e8725e3d2ef2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.2060115875358388
+      },
+      {
+        "id": "fcd5f1b4-7fe5-4aa5-8db2-e9f62f6d13fe",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.29957768979467836
+      },
+      {
+        "id": "dcaf3bac-d46e-4832-a6c9-6cc632b4089b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.29783148863192094
+      },
+      {
+        "id": "9b94ddd8-1bc3-4bf5-8464-8a920af4c4fe",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2815145839075849
+      },
+      {
+        "id": "ad34277f-9ebd-4e37-9e45-44f78f002c60",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.22654105782138
+      },
+      {
+        "id": "76e66f8c-1a46-4007-b145-4b4a8aa51ddb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.22296635023218397
+      },
+      {
+        "id": "91fcd0d9-bdfd-4b0f-bedf-ac406c2dc480",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.22291652429754488
+      },
+      {
+        "id": "2e8387d4-36e7-4d9c-bcc1-f9530e7837e0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.22194797630953128
+      },
+      {
+        "id": "34dc0dc3-9ab5-4a06-a8b8-0a07076e84f0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.2225232971282706
+      },
+      {
+        "id": "be72ba18-02de-4804-b1b4-f391813f4a40",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.22434948407043848
+      },
+      {
+        "id": "39e28bd3-1f64-41b1-b99d-122dc5718289",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.2268062022335886
+      },
+      {
+        "id": "47031664-0cef-481c-a11a-e0524a581b4c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.22894800587874875
+      },
+      {
+        "id": "9211e0fd-72a2-4915-8cab-2d6a3177da98",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.22836357395712895
+      },
+      {
+        "id": "717893e3-9473-4986-8726-36fc30308494",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.22818898306225627
+      },
+      {
+        "id": "97518da1-10a5-4ac8-8dd1-a7f8378faf16",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.22818898306225627
+      },
+      {
+        "id": "dc4ef7e3-fc0a-48dd-b958-02af5dfe4d47",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.23029742049555452
+      },
+      {
+        "id": "8ab4ab78-4b89-4870-89cc-3c21c2d205e6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.22940636511545617
+      },
+      {
+        "id": "52ae19c7-7f1b-4c94-9ff9-5bf36ad7ce8c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.2289861602369634
+      },
+      {
+        "id": "ac87886a-fa82-478d-b9fa-6328e3cb2fd4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.23525587298047484
+      },
+      {
+        "id": "74710160-05bf-4e6c-9a61-24b75646d14c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.252892258366191
+      },
+      {
+        "id": "57712f04-6cd9-49a7-a49a-22f29d5e9dfe",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.27251724857226256
+      },
+      {
+        "id": "9eafea1a-3bb4-4184-93b0-7629e1b28aff",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.26862396825057977
+      },
+      {
+        "id": "285e2252-d7cc-49c2-b754-4155914c948f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.24184420083442235
+      },
+      {
+        "id": "99f8faeb-f62c-4357-a1a8-a004edee4e34",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.24431838715775495
+      },
+      {
+        "id": "06798fe0-697a-4da2-ab4c-94907c325c5a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "FRA",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.24431838715775495
+      },
+      {
+        "id": "81bc3561-0fea-4b71-8fa5-820ef57fb900",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2728808278079301
+      },
+      {
+        "id": "f152f5e3-6aca-4bd0-a12f-976356a833b7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2712431025222655
+      },
+      {
+        "id": "28468d18-2725-4e9c-a5ea-4b0642f45124",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.252786467588124
+      },
+      {
+        "id": "e8182445-95cc-4efd-ab3b-590aefd44f37",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.19843922264536715
+      },
+      {
+        "id": "913d5eb5-e0d3-4b8d-a893-a84cf139f70d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.19059092856803678
+      },
+      {
+        "id": "1c0f8897-454a-4cd1-bc32-e8dd57f2cbf5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.19054110263339766
+      },
+      {
+        "id": "1117ddbc-614e-4a18-8083-7c3c5b490b85",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.18826625931114763
+      },
+      {
+        "id": "6097b78e-46bd-4394-83d0-5eb319a8811a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.18884158012988692
+      },
+      {
+        "id": "2cc8a94a-8833-4f65-b996-5eb600bd5e48",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.18847570904690783
+      },
+      {
+        "id": "bc5bb67d-475f-49d7-a877-d79b6eb40488",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.1898316101503498
+      },
+      {
+        "id": "f9997643-8b45-4154-ae24-d6ed81a59191",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.19183756565244497
+      },
+      {
+        "id": "ee99b0ea-1e7e-45dd-8ed4-a04583402a36",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.19140680251806877
+      },
+      {
+        "id": "03d76f70-fd72-43bc-8662-439bb67582f9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.19201439566749495
+      },
+      {
+        "id": "7189f6ce-329e-4b6f-8ba8-113fe95abcb8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.19201439566749495
+      },
+      {
+        "id": "7640d339-24d4-465d-9867-0219e29f32f4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.19399759879786121
+      },
+      {
+        "id": "74a872af-ac3c-443f-8211-4d3ececd67e2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.192637424895549
+      },
+      {
+        "id": "fee8d166-0f06-4159-959f-457dd7117764",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.1922172200170562
+      },
+      {
+        "id": "2e7f5c03-90cc-47b9-a1d0-e4d3542e8453",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.19869035591137427
+      },
+      {
+        "id": "9e4be231-af7f-4a74-a750-357c3c489e50",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.21549769337031996
+      },
+      {
+        "id": "8b345786-5204-4260-b295-52e3990e1ab4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.23335957346107888
+      },
+      {
+        "id": "8936be0f-1dd6-425d-8bba-ebeaba59977a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.23139867321605276
+      },
+      {
+        "id": "c9fcc9b5-249d-407c-b37a-0c276dbd41f8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.20484240776391005
+      },
+      {
+        "id": "a37b78c5-19b9-44d1-9858-faaaa8092d0e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.2060115875358388
+      },
+      {
+        "id": "11b6eab1-8d64-4ffc-bdad-0c204a41d7ab",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.2060115875358388
+      },
+      {
+        "id": "59feb09c-3831-4e06-9af1-60ebcc026e3d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.29957768979467836
+      },
+      {
+        "id": "2adcbdd1-a202-4708-83de-c76aea9cbdde",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.29783148863192094
+      },
+      {
+        "id": "e96578aa-f2e7-4f5a-9ed2-b10166d9196d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2815145839075849
+      },
+      {
+        "id": "e258c417-7c6a-4652-8833-2832fe68d375",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.22654105782138
+      },
+      {
+        "id": "4e1a9ee2-b3b1-4f62-b78d-6d961af11d7a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.22296635023218397
+      },
+      {
+        "id": "9aa8f191-ebba-4803-9da8-22ff0f9428ce",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.22291652429754488
+      },
+      {
+        "id": "7035ecb3-30d2-4a80-9eb0-9c3145610768",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.22194797630953128
+      },
+      {
+        "id": "a0ed95c3-68ec-458f-b6ed-ffe673d213ba",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.2225232971282706
+      },
+      {
+        "id": "6ec7a12c-a3d8-4f90-a232-6a5a4d534c8a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.22434948407043848
+      },
+      {
+        "id": "af7e51f8-fddc-4410-a5d1-cad6919bec94",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.2268062022335886
+      },
+      {
+        "id": "4b4a984e-481a-4de7-8190-91f17c409791",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.22894800587874875
+      },
+      {
+        "id": "0ddb7d67-843f-4d1b-96aa-01dfaacd2be0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.22836357395712895
+      },
+      {
+        "id": "7750eeb8-2178-4258-b93e-a00c2aae65c2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.22818898306225627
+      },
+      {
+        "id": "7f9115d6-e111-4de2-baa7-1793da4f1e40",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.22818898306225627
+      },
+      {
+        "id": "ed832e86-c090-4db3-ab52-add88bf2bc30",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.23029742049555452
+      },
+      {
+        "id": "4fa59f32-f06d-4a13-8d9f-95ba48437f01",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.22940636511545617
+      },
+      {
+        "id": "00a3ada4-487c-4d72-9c5f-322662618037",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.2289861602369634
+      },
+      {
+        "id": "614c1e5d-8956-4a91-9769-15076a21eeeb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.23525587298047484
+      },
+      {
+        "id": "71e03614-a83e-4a23-ad41-01216f0648d8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.252892258366191
+      },
+      {
+        "id": "7cb598b6-c367-490d-a08e-84d2d198c2c2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.27251724857226256
+      },
+      {
+        "id": "a5b175e0-b7f8-425a-ad2c-cc6ff579e332",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.26862396825057977
+      },
+      {
+        "id": "bffe9710-ba59-49c7-8a13-f672bf8bd244",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.24184420083442235
+      },
+      {
+        "id": "c86f3ac2-6288-4579-8453-311ceb792435",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.24431838715775495
+      },
+      {
+        "id": "437883c8-742a-4a60-b926-dbcd157b3750",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "OFR",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.24431838715775495
+      },
+      {
+        "id": "afa96021-a0d0-440e-9e63-076d417a506b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2694622359098652
+      },
+      {
+        "id": "bb1e345e-1f9a-4c48-8426-f78680c68ac3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2678245106242006
+      },
+      {
+        "id": "c878ec87-d65c-401a-93b1-3a8b73b12d08",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2456627068187006
+      },
+      {
+        "id": "c77314e4-eb12-4a7a-92f6-5da002606c5d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.18719508971918342
+      },
+      {
+        "id": "797ccaaf-100f-4701-98be-2c99cc103ca3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.17963428836916337
+      },
+      {
+        "id": "49a81d55-e914-4292-aab0-40abb249934f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.17988591603829615
+      },
+      {
+        "id": "066bd32b-8c2f-4e31-a83b-36876255eb47",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.1752835484632374
+      },
+      {
+        "id": "4f66d37d-f0db-42d2-a869-2a5d2cd5e6ce",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.1758588692819767
+      },
+      {
+        "id": "a930843d-3196-4da8-b24d-bd60c22d2157",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.1754929981989976
+      },
+      {
+        "id": "a494cc9f-c123-41ac-8843-c9ac683be797",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.17349235484823466
+      },
+      {
+        "id": "72614429-d706-46ab-bdcf-b5eeea13256e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.17330827360686826
+      },
+      {
+        "id": "cff76b4b-b126-46a1-90ae-012e9644586a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.17263646193712112
+      },
+      {
+        "id": "ddc71cff-7ae4-4151-87d3-d0e1ee36765e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.17099496207511763
+      },
+      {
+        "id": "dd1e10ae-4e64-4e83-8af1-3fb4dc532f7b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.17099496207511763
+      },
+      {
+        "id": "63a102c0-710a-4cc4-96e0-1574fdb1442a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.17008988688280371
+      },
+      {
+        "id": "f72de5c1-bcc9-4482-99f2-88957aeb40b0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.16872971298049153
+      },
+      {
+        "id": "8abcf7b2-73fe-4722-b139-183911dbf6d7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.16830950810199877
+      },
+      {
+        "id": "c9aaac58-1bfd-4b2a-9c91-39e13a9286c3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.1734771484452082
+      },
+      {
+        "id": "6b908a85-551a-40cb-862a-5209879acfa8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.19077499239263973
+      },
+      {
+        "id": "6b3a3834-cca9-4c98-aca6-f6e41ac28ad9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2056259853415683
+      },
+      {
+        "id": "48106373-915c-4fbe-afd3-754193893a2c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.20274584629168216
+      },
+      {
+        "id": "57c1e1dd-b33a-45eb-9257-ee7065ba85a6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.1755524545511975
+      },
+      {
+        "id": "81725475-5b1d-42ce-abc1-3723c4fe04e3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.1758115360434683
+      },
+      {
+        "id": "bbe5d0f9-9e16-47b8-93ff-ae9213d69469",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.17492959767836783
+      },
+      {
+        "id": "59f767ee-586f-49de-9dff-d91e16be47c7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.28900065906665157
+      },
+      {
+        "id": "89594235-e8c6-407c-912f-2b8b794cb817",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2880762298476077
+      },
+      {
+        "id": "4e0fd3be-436c-47c5-8c7f-247d078ac797",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2693974328607698
+      },
+      {
+        "id": "6faef9d0-30aa-4235-9292-65eb09fb5d50",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.2123729289476074
+      },
+      {
+        "id": "3f71fc6f-92e3-4c0c-a84e-6f9050fa1afe",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.20908571408572174
+      },
+      {
+        "id": "bffb6574-9877-4732-8307-0440b5f42abc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.20933734175485458
+      },
+      {
+        "id": "25559481-88e1-419f-91df-c990dbb3a52d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.2060412695140322
+      },
+      {
+        "id": "d0bb6db7-12fb-4b50-acc3-9ec4a9d17b28",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.2066165903327715
+      },
+      {
+        "id": "532d9825-2974-44b7-ab08-aff1febc723e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.2084427772749394
+      },
+      {
+        "id": "cb0c80e2-1664-4560-81ea-baca9a32cc98",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.20754295098388462
+      },
+      {
+        "id": "c70fa5c5-0f04-4afc-b1e5-0c52b6c62a49",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.2091744584295729
+      },
+      {
+        "id": "8bf4205c-7e42-4365-9467-19b9bb4b0b5b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.20834897797258223
+      },
+      {
+        "id": "0a029a65-c6c5-49e3-8719-ca0d697a59f2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.2064442689297914
+      },
+      {
+        "id": "dbd0bdf9-881c-45b1-85c7-3255fd25a3cb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.2064442689297914
+      },
+      {
+        "id": "f51a819b-0825-45df-ad4a-0058a84564c1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.205393713936001
+      },
+      {
+        "id": "35622ddb-edab-4475-9530-131ea444dfb6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.20450265855590263
+      },
+      {
+        "id": "04a9a992-e9f4-44c6-b888-dc6c8e2b7392",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.20408245367740985
+      },
+      {
+        "id": "38e5139e-fe4e-4438-ad8b-a5fb2e87ec27",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.20904667086981285
+      },
+      {
+        "id": "bbef2156-4c89-4209-994a-c947edb9596b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.2263076568042756
+      },
+      {
+        "id": "4db8bac7-ed97-4daa-ad6a-bc5d4d0dd115",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2429417457147033
+      },
+      {
+        "id": "3aee027c-5e03-4b5d-8b9f-290fcbd603cb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.23812922658816066
+      },
+      {
+        "id": "8907f181-f958-4c9f-a383-1ea69a312b9d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.21105508633193223
+      },
+      {
+        "id": "d6cd9657-dbdf-4580-8fa7-98827deab968",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.21178628084644252
+      },
+      {
+        "id": "3493f118-521b-4166-9bb5-16673af0b081",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "PAU",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.21090434248134202
+      },
+      {
+        "id": "5a5d12e7-4684-4a83-b323-fc5d82822b66",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2717231438673611
+      },
+      {
+        "id": "f04d9ad0-f960-43d6-89ed-46a74f36a4d6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.27008541858169655
+      },
+      {
+        "id": "98616cd7-5346-4372-9bd1-8aba6de974c9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2492641474760121
+      },
+      {
+        "id": "5d8d487c-52f8-4df8-a34b-d098e9fb9ea7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.19268530571508027
+      },
+      {
+        "id": "05583384-de56-4eda-bdea-12c288fb39c4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.18483701163774982
+      },
+      {
+        "id": "738f8fa7-0c5b-4b2d-97ad-64cd77020849",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.1850886393068826
+      },
+      {
+        "id": "4a183503-0db2-4939-ab1d-f506f262a22b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.1816476027359105
+      },
+      {
+        "id": "3669385c-2598-49e8-98aa-54378e584de7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.1822229235546498
+      },
+      {
+        "id": "bd484c35-9654-47d4-a71d-0ab6c42cd787",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.18185705247167072
+      },
+      {
+        "id": "50433208-9076-4392-8b59-62293f53fc36",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.18230383039039338
+      },
+      {
+        "id": "27e784c0-71a8-45bf-99ce-6ea9b2467d5b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.18430978589248861
+      },
+      {
+        "id": "18ea5987-3166-429c-a07a-0814f29eaab1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.18387902275811246
+      },
+      {
+        "id": "ad00d1d0-b795-4601-a450-b58c17640cd0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.18448661590753865
+      },
+      {
+        "id": "ac1188dc-54f8-47e2-b49e-41e4ff37825c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.18448661590753865
+      },
+      {
+        "id": "3caa6836-3527-4c85-8fee-87a54e4ca7e5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.18467222256428187
+      },
+      {
+        "id": "6642a488-0116-4ee3-9568-1a51def4544c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.18331204866196965
+      },
+      {
+        "id": "18a7f6fd-5141-4b4b-9536-4b5c3cab5bf4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.1828918437834769
+      },
+      {
+        "id": "66c6dabf-9f5c-4f57-8421-7870c7be9e83",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.18936497967779486
+      },
+      {
+        "id": "f90a75bf-36ad-4e07-902e-53cff01d280f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.2061723171367406
+      },
+      {
+        "id": "2a1befcf-ab57-435e-8bcf-0643e40c1796",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.22294091531835133
+      },
+      {
+        "id": "ac8a9516-64b0-4053-ba79-7b33b13273fb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.22098001507332518
+      },
+      {
+        "id": "c4779260-068d-44c0-bbb5-7e6339860979",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.19442374962118247
+      },
+      {
+        "id": "524855a0-2536-4860-8f1c-cea2f42901fb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.19559292939311126
+      },
+      {
+        "id": "7677041f-8e73-4fe0-9a36-74df1ef3531d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.19559292939311126
+      },
+      {
+        "id": "db946015-1950-4687-90fb-3e6322562b27",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2991513030634057
+      },
+      {
+        "id": "c1e5edaa-1ba1-412e-ba4a-70dffc5caf58",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.29740510190064834
+      },
+      {
+        "id": "eff9ab27-a2cc-42df-8cac-1368ec7434db",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2787235610047693
+      },
+      {
+        "id": "51efd132-4d77-4e22-8d61-edd66e893803",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.22151843810038932
+      },
+      {
+        "id": "8e2f63c8-ffe8-434b-bab2-bf89350732b8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.21794373051119337
+      },
+      {
+        "id": "5dfbf35c-95fe-4497-b086-ce7837202478",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.21819535818032612
+      },
+      {
+        "id": "477e9a31-f9ea-4420-a449-07b04e0277d0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.21606061694359063
+      },
+      {
+        "id": "4d4c8646-bd83-497a-8208-187179e7948d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.21663593776232992
+      },
+      {
+        "id": "616f1e1f-3ddf-4d8a-a190-74cb126cc9e3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.21846212470449775
+      },
+      {
+        "id": "ffee9ea1-07ea-462f-ad52-58d73c0e3c5e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.2200097196829286
+      },
+      {
+        "id": "6f7db142-dc1d-4fdb-add1-4cbf720b0ea3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.2221515233280888
+      },
+      {
+        "id": "22577329-d6bb-4bdd-8f3e-7c19a2875c8f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.221567091406469
+      },
+      {
+        "id": "d44df29b-420d-4f69-b185-a3aa6817ff69",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.2213925005115963
+      },
+      {
+        "id": "f6cec4a1-96f9-4e31-be93-ba460db98a1b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.2213925005115963
+      },
+      {
+        "id": "021ffca9-7bad-4dd9-b223-968585432854",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.2217033414712716
+      },
+      {
+        "id": "b152e24b-cbcb-4696-87bc-9de4c8029ad0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.22081228609117326
+      },
+      {
+        "id": "cc9d77c5-b471-4ed4-ae59-334f59bac153",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.22039208121268047
+      },
+      {
+        "id": "bc143219-1659-4042-98c7-88d682dfe61b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.22666179395619185
+      },
+      {
+        "id": "b922178a-d7af-4941-b254-9a035fb29718",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.24429817934190798
+      },
+      {
+        "id": "a4750fc7-f067-4a71-b550-a45f49d62c1c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2628298876388312
+      },
+      {
+        "id": "4e290294-77d1-4070-877f-f92944a71f21",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.25893660731714846
+      },
+      {
+        "id": "63340eca-a9fd-4df6-87de-ebffcd840485",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.23215683990099098
+      },
+      {
+        "id": "6942bdf6-ba80-4bb5-ad21-c07eeada1771",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.23463102622432352
+      },
+      {
+        "id": "a50f8299-340d-4c01-b246-0837740e04ae",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "HIG",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.23463102622432352
+      },
+      {
+        "id": "4206372e-45b5-4ad4-9d8c-efe4c1cde6e1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.27630397856105476
+      },
+      {
+        "id": "c734cf7d-405d-4090-ad09-df5f2b814606",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2746662532753902
+      },
+      {
+        "id": "8f883e2d-9555-47b2-86b2-3c617861cf61",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2525044494698902
+      },
+      {
+        "id": "b11848c3-4a2f-4d54-afaa-fa07ea562521",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.19021908142813893
+      },
+      {
+        "id": "710b9cf0-edd1-43f1-8911-6847d569d4c0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.18265828007811888
+      },
+      {
+        "id": "c2f24536-93f3-4da4-b9d3-c6680d845a66",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.18157450319593788
+      },
+      {
+        "id": "d9c5b56c-6350-4a43-bbff-5d5c940311e4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.1771882483302663
+      },
+      {
+        "id": "483cf848-8742-4ee8-b2b0-4c86c9bb4999",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.17776356914900557
+      },
+      {
+        "id": "9ec16629-42f7-405e-8bde-0ea5ff29d58f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.17739769806602648
+      },
+      {
+        "id": "b34c8eef-a38d-4ef3-8881-c1b92c3b699f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.1750755767480812
+      },
+      {
+        "id": "736682a3-173f-47b4-9243-de41f0385ab2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.1746820931914661
+      },
+      {
+        "id": "f07ae41e-41e4-483d-b146-b11a426dd898",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.17401028152171896
+      },
+      {
+        "id": "1e0571bc-0e6a-45bd-839b-281a82249eac",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.17236878165971548
+      },
+      {
+        "id": "30bb33f5-5eca-4ca1-9bea-f1141e7ddcc6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.17236878165971548
+      },
+      {
+        "id": "37aae70c-0913-4b13-b56d-beb3e5c4ae1a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.17146370646740156
+      },
+      {
+        "id": "895a567d-f0ff-450d-931c-69dcbc231566",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.17010353256508937
+      },
+      {
+        "id": "d66425d6-e163-4ad8-83b2-ec5b77d80119",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.17010353256508937
+      },
+      {
+        "id": "6520c018-70a5-4e5f-82fc-44fd765cb10e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.17498504376537657
+      },
+      {
+        "id": "19038e4a-da1d-4a1f-ae01-cc1b2734812a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.19074967503679374
+      },
+      {
+        "id": "c4b286a2-4a67-45d3-824e-e1cf726795c8",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.20478223726125588
+      },
+      {
+        "id": "c2d94ba5-1820-4107-a357-55d069459d3e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.201444605720169
+      },
+      {
+        "id": "5182a742-566f-4b8d-b90e-0f62cab43c7c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.17489062266517436
+      },
+      {
+        "id": "9da4473b-f754-4cc5-8fec-dbc81777d9a5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.17514970415744519
+      },
+      {
+        "id": "e99a64c0-d83d-4e6b-88ed-339698ac74a5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.1742677657923447
+      },
+      {
+        "id": "8622d2af-0ddf-47f7-81a6-be69a99bdf4a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.29229652207554485
+      },
+      {
+        "id": "696ad0c8-3ef0-4134-8786-74da0fd27cec",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.29065879678988027
+      },
+      {
+        "id": "4c46d2dd-7267-492b-a185-d81877b97c6b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.27197999980304227
+      },
+      {
+        "id": "06e15c31-43e7-40a3-be9e-f257ccbfe3a6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.21183755920875544
+      },
+      {
+        "id": "a9b335a9-4973-4b9c-84c2-89d461b0a176",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.2085503443468698
+      },
+      {
+        "id": "0ed9c590-0c30-44b2-9dde-50441e21195f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.20880197201600256
+      },
+      {
+        "id": "b11d0d8e-4eb0-42c3-aa3f-575aec241ccb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.2043967287164963
+      },
+      {
+        "id": "0af66656-fc51-418f-9a3d-fbc71478f4d9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.2049720495352356
+      },
+      {
+        "id": "cc1a5bc2-3f8f-43d9-a7c0-3b7deef94868",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.2067982364774035
+      },
+      {
+        "id": "d48a2852-2f47-48bc-b65f-174a473df569",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.20557693221916637
+      },
+      {
+        "id": "a25f8f8c-286e-4faa-9abf-d066b537de39",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.20699903734960606
+      },
+      {
+        "id": "844b0845-e28d-4407-9961-166da460b31a",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.2061735568926153
+      },
+      {
+        "id": "a01b596d-e146-4ce9-b6ef-c82e1191c8dc",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.20426884784982455
+      },
+      {
+        "id": "ddc7d309-b0e5-44bb-8322-17f21a61d1f3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.20426884784982455
+      },
+      {
+        "id": "a88b0326-f216-4b58-a4af-29d56a227086",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.20321829285603413
+      },
+      {
+        "id": "319bd30e-2675-4fe1-b078-7f3e6a6cc3fb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.20232723747593578
+      },
+      {
+        "id": "87533402-7aa1-4b92-be1d-7ac61f62eb04",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.20232723747593578
+      },
+      {
+        "id": "2e66a4c6-6dd8-4244-a17c-fe60c8140469",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.20700532552541653
+      },
+      {
+        "id": "acd165f9-080f-4c9a-9999-487f5c64166c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.2227330987838649
+      },
+      {
+        "id": "d530bad2-cee4-4406-beee-99eff316a333",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.23854875696982605
+      },
+      {
+        "id": "ecc63529-d50e-41ab-923d-5d4c4737ae08",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.2331331378161148
+      },
+      {
+        "id": "6ab7ad67-647a-4e55-bd58-54dacd20c200",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.20669840624537655
+      },
+      {
+        "id": "00653771-4495-41c2-9dc4-5734bc97e4d9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.20742960075988684
+      },
+      {
+        "id": "b4fdcdd3-4878-47d2-a73c-4a5f5625ed11",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "REP",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.20654766239478634
+      },
+      {
+        "id": "b674db74-5440-4bf4-b681-0fc6139d59b3",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.26369473975732644
+      },
+      {
+        "id": "d51ec662-75ef-4750-b100-2fb6652193f7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.26205701447166185
+      },
+      {
+        "id": "12812c5a-9410-4c6b-9af6-63badf8930c5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.2392011477661691
+      },
+      {
+        "id": "a895f62b-f0ba-4a58-92e5-662e7227e0aa",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.17884182308324134
+      },
+      {
+        "id": "7cb541cc-da9e-4e93-aa2a-7cc1258479fb",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.17099352900591097
+      },
+      {
+        "id": "8336013d-2ebc-467e-a70b-452d7e679973",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.17124515667504372
+      },
+      {
+        "id": "e9b0d8fc-da1a-4418-ad96-642cadf89bde",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.16780412010407175
+      },
+      {
+        "id": "6048e918-92f6-4263-80eb-b8c7bc8d771f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.16837944092281107
+      },
+      {
+        "id": "35f0a999-227d-44f1-a94c-2da9e7501ad1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.16801356983983198
+      },
+      {
+        "id": "e283b213-4ab4-44ec-8158-6745d01d144d",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.16601292648906907
+      },
+      {
+        "id": "04edec0e-ac6b-48c2-874d-f44af1d4a3d0",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.16657312833090096
+      },
+      {
+        "id": "47523612-d598-470e-b2c8-2366af7ad485",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.16614236519652478
+      },
+      {
+        "id": "7d01f64e-7633-4959-9907-f59184391fab",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.16674995834595097
+      },
+      {
+        "id": "200b1351-d481-4844-8bee-e34826e85386",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.16674995834595097
+      },
+      {
+        "id": "d1e3c801-17b4-4cf4-b64d-ac896732591e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.1669355650026942
+      },
+      {
+        "id": "784edf35-f99f-437e-b7dc-a6bdb4bab452",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.165575391100382
+      },
+      {
+        "id": "6a462be8-781c-4e82-a3f3-f836623f01f4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.1651551862218892
+      },
+      {
+        "id": "c88ea371-d122-4c72-8e3b-c87595ffe2e9",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.1703228265650987
+      },
+      {
+        "id": "08685ea6-d602-4ddc-9c7e-f1c3d4eb9f07",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.18902180377295696
+      },
+      {
+        "id": "53b4e81a-e669-4e34-af75-a8451f3a4ae4",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.20387279672188552
+      },
+      {
+        "id": "0cccf237-3a4e-4555-9be1-93996ef6df40",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.20191189647685942
+      },
+      {
+        "id": "1b9243b6-6e7d-4764-bf42-4bd5914f6939",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.17446342819189603
+      },
+      {
+        "id": "6d164c33-6ed8-46a1-a8a4-282381b1b19b",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.1756578931004816
+      },
+      {
+        "id": "84fd0ea1-b567-44a0-85de-1aed9649a83f",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P1",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.1756578931004816
+      },
+      {
+        "id": "8cbf56f1-2ae4-4749-a4a7-c3d43fde7387",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 1,
+        "will_fail": false,
+        "probability": 0.2860760600171373
+      },
+      {
+        "id": "42a7b7ac-8c17-4216-b5e0-b39a545b2a27",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 2,
+        "will_fail": false,
+        "probability": 0.2851516307980934
+      },
+      {
+        "id": "23302cbe-752a-4149-aa04-326898bb7da2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 3,
+        "will_fail": false,
+        "probability": 0.26577877091126273
+      },
+      {
+        "id": "89dc4b5b-9ebb-4d11-87b3-7e66d67d5a03",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 4,
+        "will_fail": false,
+        "probability": 0.2062978774520112
+      },
+      {
+        "id": "9af79dac-11e5-496f-b24e-dbc0e1ab5a7c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 5,
+        "will_fail": false,
+        "probability": 0.20272316986281524
+      },
+      {
+        "id": "73a1ff78-b8c9-4585-bb85-c2e1ff6afbe1",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 6,
+        "will_fail": false,
+        "probability": 0.202974797531948
+      },
+      {
+        "id": "a0b762b5-4b8e-429b-a295-60067fba837c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 7,
+        "will_fail": false,
+        "probability": 0.20084005629521248
+      },
+      {
+        "id": "231b2305-afeb-4f00-b92b-e29ed6466d01",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 8,
+        "will_fail": false,
+        "probability": 0.20141537711395177
+      },
+      {
+        "id": "b3d445b6-cdf3-46c6-b088-d41d45e8d226",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 9,
+        "will_fail": false,
+        "probability": 0.20324156405611962
+      },
+      {
+        "id": "8cb71d18-64eb-44c8-b87e-d281ee8898a5",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 10,
+        "will_fail": false,
+        "probability": 0.20234173776506487
+      },
+      {
+        "id": "d82e687e-b9e5-4415-9046-2ea15c4d7093",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 11,
+        "will_fail": false,
+        "probability": 0.20397324521075322
+      },
+      {
+        "id": "dba4dbc0-f9f4-4e4b-bde9-01e0750403b6",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 12,
+        "will_fail": false,
+        "probability": 0.20338881328913336
+      },
+      {
+        "id": "8c90507b-5962-4703-96f0-788c26809a96",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 13,
+        "will_fail": false,
+        "probability": 0.20321422239426074
+      },
+      {
+        "id": "a4569029-6c78-4dac-b9c2-82097a3637f2",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 14,
+        "will_fail": false,
+        "probability": 0.20321422239426074
+      },
+      {
+        "id": "9e21702a-44e0-478b-872e-855ab797aa8c",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 15,
+        "will_fail": false,
+        "probability": 0.20352506335393603
+      },
+      {
+        "id": "eb29f467-960f-4f96-9604-c3d8eaf9d164",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 16,
+        "will_fail": false,
+        "probability": 0.20263400797383768
+      },
+      {
+        "id": "6906168e-857e-4c39-969d-9b42c6186694",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 17,
+        "will_fail": false,
+        "probability": 0.2022138030953449
+      },
+      {
+        "id": "da11d121-b52c-43c0-b1a8-c856464775b7",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 18,
+        "will_fail": false,
+        "probability": 0.20717802028774782
+      },
+      {
+        "id": "8ee1559c-d8d7-4f80-9e51-9d22440a1942",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 19,
+        "will_fail": false,
+        "probability": 0.22670604542237638
+      },
+      {
+        "id": "3e5a17ef-0e79-4051-98a7-35e0906a0937",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 20,
+        "will_fail": false,
+        "probability": 0.2433401343328041
+      },
+      {
+        "id": "6cb050cc-7df0-4aea-b624-fdaf88fa6483",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 21,
+        "will_fail": false,
+        "probability": 0.2394468540111214
+      },
+      {
+        "id": "1f1e3ae7-e15c-4a0a-a776-f855c2584465",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 22,
+        "will_fail": false,
+        "probability": 0.21211763721041424
+      },
+      {
+        "id": "d425c052-2f4b-45e0-9cff-11d96e327c2e",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 23,
+        "will_fail": false,
+        "probability": 0.21378421514123933
+      },
+      {
+        "id": "1bd38942-2a6a-42d6-8f56-215c39055e83",
+        "run_id": "248624d2-80fb-49c4-897b-2e1d43d96fe3",
+        "station_code": "LUZ",
+        "platform": "P2",
+        "door_number": 24,
+        "will_fail": false,
+        "probability": 0.21378421514123933
+      }
+    ]
+  },
+  "completedInspection": {
+    "id": "c3cc559b-52de-4153-a560-09b4fb7b61af",
+    "station_code": "FAL",
+    "platform": "P1",
+    "door_number": 4,
+    "status": "completed",
+    "notes": "Inspeção manual do fluxo E2E",
+    "completed_at": "2026-10-06 03:53:17",
+    "created_at": "2026-10-06T03:53:16.950298Z",
+    "updated_at": "2026-10-06T03:53:17.497891Z"
+  },
+  "dashboard": {
+    "total_doors": 528,
+    "doors_at_risk": 0,
+    "pending_inspections": 0,
+    "completed_inspections": 1,
+    "critical_stations": []
+  },
+  "baseCommit": "8774f6768fc3752456878c738601cd76b7e371c5",
+  "fileHashes": {
+    "tests/e2e/browser.mjs": "bd58744d3b8acb884cdd73f9d9eaeb7885c03e783343c2c52ff7e9c66540bc80",
+    "tests/e2e/compose.yml": "cff9b60942dd42f831b5a1148261adf071d9363e3bafc07cccd05558040358de",
+    "tests/e2e/verify_model.py": "7b324f71d1366f210938a02d0db4b5e710ad1f77da51f81bd7e8da414fca1305",
+    "src/frontend/src/lib/runUpload.js": "1fa39ce673567cabee283e68e4995c838779ac5c5aee29d590eda6f2a4bd81f1",
+    "src/frontend/src/components/UploadStatus.jsx": "2c3ab7b118c92424042923a816bb15fe1bba217eeafb51056f3b27643e16d4c4",
+    "src/frontend/src/pages/Alarmes.jsx": "bbe007328300ac8840d5078b6db3993d4c3a7f1955f82cd7a776481f1150db68",
+    "src/frontend/src/pages/Manutencoes.jsx": "617aa19a3c33440a71f8e99e4a7ab0934674d904d121f616ef1c309977c18f48",
+    "src/frontend/src/pages/Inspecoes.jsx": "740d5dba19d2e53459fa79ad98e60dc69dd000fb1c75f0078373f82bf047271a"
+  },
+  "initialFailures": [
+    "Upload completed no backend permanecia em Processando na interface por comparação com códigos numéricos.",
+    "Cadastro de inspeção retornava HTTP 400 porque door_number era enviado como string."
+  ],
+  "limitations": [
+    "No risky doors with the seeded threshold: inspection lifecycle tested through a manually created inspection.",
+    "Local storage and local model registry; no S3/MinIO or multi-host deployment.",
+    "No model-quality evaluation, full Python suite, race detector or remote pipeline."
+  ]
+}

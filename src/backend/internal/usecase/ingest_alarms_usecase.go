@@ -233,24 +233,27 @@ func (uc *IngestAlarmsUseCase) ProcessJob(ctx context.Context, job port.Ingestio
 	if err != nil {
 		return fmt.Errorf("falha ao abrir arquivo: %w", err)
 	}
-	defer rc.Close()
-	err = uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
-		if err := store.Alarms().DeleteByUploadID(ctx, job.UploadID); err != nil {
-			return fmt.Errorf("falha ao preparar nova tentativa de alarmes: %w", err)
-		}
-		processed, inserted, err := consumeBatches(ctx,
-			func(yield func(port.RawAlarmRecord) error) error {
-				return uc.alarmParser.StreamAlarms(ctx, rc, job.FileName, yield)
-			},
-			func(batch []port.RawAlarmRecord) (int, error) {
-				records, _ := convertRawAlarms(batch, job.UploadID, job.FileName)
-				return insertAlarmBatches(ctx, store, records, 500)
-			})
-		if err != nil {
-			return err
-		}
-		return finalizeAlarmUpload(ctx, store, job.UploadID, processed, inserted)
-	})
+	// Close the input before final cleanup; Windows cannot delete an open file.
+	err = func() error {
+		defer rc.Close()
+		return uc.uow.Do(ctx, func(store port.UnitOfWorkStore) error {
+			if err := store.Alarms().DeleteByUploadID(ctx, job.UploadID); err != nil {
+				return fmt.Errorf("falha ao preparar nova tentativa de alarmes: %w", err)
+			}
+			processed, inserted, err := consumeBatches(ctx,
+				func(yield func(port.RawAlarmRecord) error) error {
+					return uc.alarmParser.StreamAlarms(ctx, rc, job.FileName, yield)
+				},
+				func(batch []port.RawAlarmRecord) (int, error) {
+					records, _ := convertRawAlarms(batch, job.UploadID, job.FileName)
+					return insertAlarmBatches(ctx, store, records, 500)
+				})
+			if err != nil {
+				return err
+			}
+			return finalizeAlarmUpload(ctx, store, job.UploadID, processed, inserted)
+		})
+	}()
 	if err != nil {
 		var permanentErr *permanentIngestionError
 		if !errors.As(err, &permanentErr) {

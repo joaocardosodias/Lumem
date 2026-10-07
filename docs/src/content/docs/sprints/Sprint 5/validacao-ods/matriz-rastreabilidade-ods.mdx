@@ -1,0 +1,133 @@
+---
+title: "Matriz de rastreabilidade ODS × requisitos × testes"
+description: "Cruzamento das metas ODS 9.1, 11.2, 8.2 e 4.4 com os requisitos do sistema e com os testes automatizados existentes, com a lista de lacunas."
+sidebar:
+  order: 2
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div id="1-objetivo-e-método" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 1. Objetivo e método
+
+  </div>
+</div>
+
+A [Atualização do alinhamento com os ODS](/sprints/sprint-4/ods-atualizacao) da Sprint 4 vinculou o Lumem às metas **9.1, 11.2 e 8.2** (contribuições do produto) e **4.4** (contribuição complementar da formação). Esta matriz verifica, para cada meta, **quais requisitos sustentam a afirmação** e **quais testes automatizados exercitam esses requisitos**.
+
+Para cada requisito dos [Requisitos do Sistema](/sprints/sprint-3/requisitos), foram localizados os testes que chamam o código correspondente e verificadas as asserções feitas. Os caminhos são relativos à raiz do repositório; os testes Go estão em `src/backend/` e os testes Python em `src/modelo/tests/`.
+
+### 1.1. Critérios de status
+
+| Status | Critério |
+| --- | --- |
+| **Coberto** | Há ao menos um teste automatizado que exercita o comportamento descrito no requisito e verifica o resultado esperado. |
+| **Parcial** | Há teste, mas ele cobre só uma parte do requisito, depende de infraestrutura que pode não estar disponível (ex.: Postgres) ou verifica um comportamento divergente do requisito. |
+| **Sem teste** | Nenhum teste automatizado verifica o comportamento. A funcionalidade pode existir, mas não há evidência automatizada. |
+
+Um status **Coberto** indica que o comportamento implementado é verificado em ambiente de teste. Ele **não** demonstra efeito operacional sobre a meta ODS: confiabilidade, produtividade ou continuidade do transporte só podem ser medidas pelos indicadores I1–I8 da Sprint 4.
+
+<div id="2-matriz-de-rastreabilidade" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 2 Matriz de rastreabilidade
+
+  </div>
+</div>
+
+### 2.1. ODS 9 — Indústria, Inovação e Infraestrutura (meta 9.1)
+
+Afirmação da Sprint 4: o Lumem apoia a confiabilidade das portas ao reunir históricos, estimar risco e gerar inspeções.
+
+| ODS | Meta | Requisito | Arquivo de teste | Status |
+| --- | --- | --- | --- | --- |
+| 9 | 9.1 | **RF07** — iniciar rodada de predição para as portas ativas | `tests/unit/usecase/dashboard_usecase_test.go` (`TestDashboardUseCase_TriggerPredictions`, `_NoActiveDoors`, `TestTriggerPredictionsUseCase_Errors`); `tests/unit/http/handlers_test.go` (`TestDashboardHandler_Predictions`); `tests/integration/workflow_integration_test.go` (etapa 6); `tests/unit/adapter/mlclient_test.go` | **Coberto** |
+| 9 | 9.1 | **RF08** — informar horizonte, com sete dias como padrão | `tests/unit/usecase/dashboard_usecase_test.go` (`TestDashboardUseCase_TriggerPredictions_FixedHorizon`) | **Parcial** — o teste solicita 14 dias e verifica que a rodada usa **7**. O horizonte é fixo; o requisito prevê que o usuário possa informá-lo. |
+| 9 | 9.1 | **RF09** — classificar cada porta como estável ou em risco (porta **com** predição) | `src/modelo/tests/test_predict.py` (`test_v1_retorna_apenas_probabilidade_e_versao`, `test_v1_rejeita_threshold_e_campos_extras`, `test_v1_rejeita_numero_de_porta_invalido`); `tests/unit/usecase/dashboard_usecase_test.go` (limiar padrão 0,5, limiar de experimento 0,35, `_RejectsInvalidThreshold`) | **Coberto** |
+| 9 | 9.1 | **RF09** — porta **sem** predição publicada (risco R2) | — | **Sem teste** — `GetStationDoorsStatus` usa `COALESCE(..., FALSE)` e devolve `will_fail = false`; nenhum teste distingue “sem avaliação” de “estável”. |
+| 9 | 9.1 | **RNF05** — integridade durante predições | `tests/unit/usecase/dashboard_usecase_test.go` (`_WithUnitOfWork`, `_UnitOfWorkRollbackOnInspectionFailure`, `TriggerPredictionsForModelRejectsStaleInferenceService`); `tests/unit/usecase/unit_of_work_test.go`; `tests/unit/usecase/promote_model_usecase_test.go` | **Coberto** |
+| 9 | 9.1 | **RNF09** — versão e procedência do modelo | `src/modelo/tests/test_predict.py` (`test_metadata_e_metricas_possuem_procedencia`, `test_promocao_nao_altera_ponteiro_antes_de_validar_candidata`, `test_healthchecks_distinguem_processo_e_modelo`) | **Coberto** |
+
+### 2.2. ODS 11 — Cidades e Comunidades Sustentáveis (meta 11.2)
+
+Afirmação da Sprint 4: contribuição **indireta**, por meio do apoio às equipes que mantêm as portas do transporte metroviário.
+
+| ODS | Meta | Requisito | Arquivo de teste | Status |
+| --- | --- | --- | --- | --- |
+| 11 | 11.2 | **RF10** — indicadores de portas monitoradas, em risco, inspeções e estações críticas | `tests/unit/usecase/dashboard_usecase_test.go` (`GetSummary`, `GetStationDoorsStatus`); `tests/unit/http/handlers_test.go` (`TestDashboardHandler_Summary`, `_StationDoorsStatus`); `tests/integration/workflow_integration_test.go` (etapa 10); `tests/integration/postgres_repository_test.go` | **Coberto** — o teste em Postgres só executa com `TEST_DATABASE_URL`. |
+| 11 | 11.2 | **RF11** — destacar portas críticas e gerar inspeções prioritárias vinculadas à predição | `tests/unit/usecase/inspection_usecase_test.go` (9 testes); `tests/integration/workflow_integration_test.go` (etapas 7 e 8: inspeção pendente gerada com `prediction_id`); `tests/unit/domain/domain_test.go` (`TestInspection_StatusTransitions`); `tests/unit/http/handlers_test.go` (`TestInspectionHandler_*`) | **Coberto** |
+| 11 | 11.2 | **RF09 / RNF07** — estado exibido ao usuário para porta sem predição (“Estável”) e sem data (“Recente”) em `src/frontend/src/pages/Portas.jsx` | — | **Sem teste** — o frontend não tem testes automatizados. |
+| 11 | 11.2 | **RNF05** — dados ausentes na inferência (risco R4, `src/modelo/ml_service/domain/feature_builder.py`) | — | **Sem teste** — nenhum teste importa `feature_builder`; `test_predict.py` usa um repositório falso com dados completos para uma porta. |
+| 11 | 11.2 | **RNF04** — disponibilidade do serviço de IA e comportamento sob falha | `tests/unit/usecase/circuit_breaker_test.go`; `tests/unit/adapter/mlclient_test.go` (`_NonOKStatus`, `_NetworkError`, `_BadJSON`); `tests/unit/http/health_test.go` | **Coberto** — cobre resiliência da chamada; não cobre exibição de falha de atualização na interface. |
+
+### 2.3. ODS 8 — Trabalho Decente e Crescimento Econômico (meta 8.2)
+
+Afirmação da Sprint 4: centralização dos registros e organização das inspeções como apoio tecnológico à produtividade da manutenção.
+
+| ODS | Meta | Requisito | Arquivo de teste | Status |
+| --- | --- | --- | --- | --- |
+| 8 | 8.2 | **RF03** — importar CSV/XLSX de alarmes | `tests/unit/adapter/parser_test.go` (`TestAlarmParser_*`, `TestParser_Excel`); `tests/unit/usecase/ingest_alarms_usecase_test.go` (`_ValidCSV`, `_ValidXLSX`, `_EnqueuesDurableJob`); `internal/adapter/parser/streaming_test.go`; `tests/integration/workflow_integration_test.go` (etapas 3 e 4) | **Coberto** |
+| 8 | 8.2 | **RF04** — importar manutenções corretivas, programadas e preventivas | `tests/unit/adapter/parser_test.go` (`TestMaintenanceParser_*`); `tests/unit/usecase/ingest_maintenance_usecase_test.go` (`_ValidCSV`, `_ValidXLSX`) | **Coberto** |
+| 8 | 8.2 | **RNF05** — sem duplicidade ou perda nas importações | `tests/unit/usecase/ingest_alarms_usecase_test.go` (`_IdempotencyDuplicate`, `_ConcurrentDuplicateUploads`, `_RollbackOnBatchFailure`); `tests/unit/usecase/ingest_maintenance_usecase_test.go` (equivalentes); `internal/usecase/ingestion_batches_test.go`; `internal/usecase/ingest_record_failure_test.go`; `tests/unit/usecase/ingestion_retry_test.go`; `tests/integration/streaming_ingestion_test.go` | **Coberto** — o teste de streaming em Postgres só executa com `TEST_DATABASE_URL`. |
+| 8 | 8.2 | **RNF06** — validar formato, colunas obrigatórias e tipo de arquivo | `tests/unit/adapter/parser_test.go` (`_EmptyError`, `_OnlyHeaderError`, `_MissingRequiredColumns`, `_MissingStartDateError`, `_CorruptedExcel`, `TestParser_PanicRecovery`); `internal/adapter/storage/s3_storage_test.go` (`TestS3StorageAcceptsXLSXAndRejectsOtherTypes`); `tests/unit/domain/domain_test.go`; `tests/unit/usecase/ingest_coverage_extra_test.go` (33 testes de caminhos de erro) | **Coberto** |
+| 8 | 8.2 | **RF05** — cadastro manual e consulta de manutenções | `tests/unit/usecase/create_maintenance_usecase_test.go`; `tests/unit/http/handlers_test.go` (`TestMaintenanceHandler`); `tests/integration/workflow_integration_test.go` (etapa 5) | **Coberto** |
+| 8 | 8.2 | **RF06** — filtrar por estação, período, prioridade ou status | `tests/unit/http/alarm_handler_test.go` (`station_code`, `platform`); `tests/integration/workflow_integration_test.go` (`status=pending`); `tests/unit/usecase/list_alarms_usecase_test.go` | **Parcial** — estação e status são testados; período e prioridade não. |
+| 8 | 8.2 | **RNF05 / R1** — no máximo uma inspeção aberta por porta (migração `000015`) | `tests/integration/postgres_repository_test.go` (`testInspectionRepo`: a segunda inspeção pendente reutiliza o ID da primeira) | **Parcial** — depende de Postgres; não testa criação concorrente nem o limite de portas distintas sinalizadas por janela. |
+
+### 2.4. ODS 4 — Educação de Qualidade (meta 4.4)
+
+Afirmação da Sprint 4: prática orientada de competências técnicas pelos estudantes durante o desenvolvimento. Não é uma funcionalidade do produto.
+
+| ODS | Meta | Requisito | Arquivo de teste | Status |
+| --- | --- | --- | --- | --- |
+| 4 | 4.4 | **RNF09** — código modular e testável, com verificação contínua | `.gitlab-ci.yml`: `lint_format` (gofmt), `lint_vet`, `test_suite` (`go test -race` com cobertura e Postgres), `test_migrations`, `test_modelo` (pytest e `validate_manifest.py`), `security_audit` (govulncheck), `trivy_scan*`; `sonar-project.properties` | **Coberto** para backend e modelo. |
+| 4 | 4.4 | **RNF09** — testabilidade do frontend | — | **Sem teste** — não há testes nem job de CI para `src/frontend/`. |
+| 4 | 4.4 | Ganho de competência individual (indicador I8) | — | **Sem teste** — fora do alcance de testes de software; requer rubrica e avaliação individual. |
+
+### 2.5. Requisitos sem vínculo direto com as metas
+
+Os requisitos de acesso e segurança não sustentam nenhuma meta ODS diretamente, mas fazem parte da base de requisitos e foram verificados para completar a rastreabilidade.
+
+| Requisito | Arquivo de teste | Status |
+| --- | --- | --- |
+| **RF01 / RNF01** — login por e-mail e senha, perfis | `tests/unit/usecase/login_usecase_test.go` (7 testes); `tests/unit/adapter/security_test.go`; `tests/unit/http/auth_middleware_test.go` (`TestRequireRole_*`); `tests/integration/api_test.go` (`TestIntegration_FullAuthFlow`) | **Coberto** |
+| **RF02 / RNF02** — somente usuários autenticados acessam dados | `tests/unit/http/auth_middleware_test.go`; `tests/integration/workflow_integration_test.go` (`TestIntegration_SecurityAndProblemDetailsRFC7807`: 401 sem token) | **Coberto** |
+| **RNF03** — LGPD | — | **Sem teste** |
+| **RNF04** — conexões seguras | `internal/adapter/telemetry/telemetry_test.go` (`TestInitEnabledSecure`); `tests/unit/config/config_test.go` | **Parcial** — cobre configuração; não verifica TLS entre os serviços. |
+| **RNF08** — escalabilidade | `tests/unit/usecase/ingest_coverage_extra_test.go` (lotes acima de 500 registros); `tests/unit/http/rate_limiter_test.go` | **Parcial** — não há teste de carga. |
+
+<div id="3-lacunas-identificadas" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 3 Lacunas identificadas
+
+  </div>
+</div>
+
+| ID | Lacuna | ODS / meta | Requisito | Risco da Sprint 4 | Encaminhamento |
+| --- | --- | --- | --- | --- | --- |
+| L1 | Porta sem predição publicada é devolvida como `will_fail = false` e exibida como “Estável”; nenhum teste verifica essa distinção. | 9.1, 11.2 | RF09, RNF07 | R2 | Caso de teste especificado na página de casos de teste (CT-R2). |
+| L2 | Nenhum teste exercita o preenchimento de dados ausentes em `feature_builder.py` (ex.: `dias_desde = 9999`, `intervalo_medio_zm01 = 30`, `fillna(0)`). | 11.2 | RNF05, RF09 | R4 | Caso de teste especificado (CT-R4). |
+| L3 | A deduplicação de inspeções abertas só é testada com Postgres e sem concorrência. | 8.2 | RNF05 | R1 | Caso de teste especificado (CT-R1). |
+| L4 | O horizonte de previsão é fixo em sete dias; o teste confirma o valor fixo, divergindo do requisito. | 9.1 | RF08 | — | Atualizar o requisito ou permitir horizonte configurável. |
+| L5 | Filtros por período e prioridade não são testados. | 8.2 | RF06 | — | Adicionar testes de handler para os parâmetros de período e prioridade. |
+| L6 | O frontend não tem testes nem job de CI; os estados “Estável” e “Recente” de `Portas.jsx` não são verificados. | 11.2, 4.4 | RNF07, RNF09 | R2 | Avaliar testes de componente para `Portas.jsx`. |
+| L7 | O job `test_modelo` só roda quando há mudanças em `src/modelo/**`. | 4.4 | RNF09 | — | Registrar como limitação do CI. |
+| L8 | Os testes verificam a implementação, não o efeito nas metas. Não há medição de indisponibilidade (I3), produtividade (I1, I2) ou competências (I8). | 8.2, 9.1, 11.2, 4.4 | — | — | Permanece como limitação; ver indicadores I1–I8 na Sprint 4. |
+
+### 3.1. Síntese por meta
+
+| ODS / meta | Coberto | Parcial | Sem teste |
+| --- | --- | --- | --- |
+| 9 / 9.1 | 4 | 1 | 1 |
+| 11 / 11.2 | 3 | 0 | 2 |
+| 8 / 8.2 | 5 | 2 | 0 |
+| 4 / 4.4 | 1 | 0 | 2 |
+
+As metas **8.2** e **9.1** têm a base funcional mais verificada (ingestão, validação e rodada de predição). A meta **11.2** concentra as lacunas, porque depende de como a ausência de dados e de previsão é apresentada à equipe — exatamente os riscos R2 e R4. A meta **4.4** tem evidência de processo (CI), mas não de aprendizagem.

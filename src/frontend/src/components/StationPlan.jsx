@@ -226,7 +226,7 @@ function StationPlan({
         <span><i className="station-plan__key station-plan__key--risk" />Em risco</span>
         <span><i className="station-plan__key station-plan__key--selected" />Selecionada</span>
         <span><i className="station-plan__key station-plan__key--missing" />Sem registro</span>
-        <span><i className="station-plan__safety-key" />Linha de segurança</span>
+        <span className="station-plan__decorative-legend"><i className="station-plan__safety-key" />Linha de segurança</span>
       </div>
 
       {loading ? (
@@ -246,7 +246,7 @@ function StationPlan({
             </div>
           )}
           <div className="station-plan__platforms">
-            <div className="station-plan__scroll" tabIndex={0} role="region" aria-label={`Planta de ${station.name}; role horizontalmente para ver todas as portas`}>
+            <div className="station-plan__scroll" tabIndex={0} role="region" aria-label={`Portas da estação ${station.name}`}>
               <div className="station-plan__map" style={{ '--car-count': carCount }}>
                 {platformPairs.map((pair) => (
                   <div className="station-plan__pair" key={pair[0]}>

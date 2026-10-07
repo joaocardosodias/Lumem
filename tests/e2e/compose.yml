@@ -1,0 +1,65 @@
+name: g04-rf-browser
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rf_browser
+      POSTGRES_PASSWORD: rf_browser_local_only
+      POSTGRES_DB: rf_browser
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U rf_browser -d rf_browser"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  model:
+    build: ../../src/modelo
+    environment:
+      ENV: development
+      ML_DATABASE_URL: postgresql://rf_browser:rf_browser_local_only@postgres:5432/rf_browser
+      MODEL_REGISTRY_DRIVER: local
+      TRAINING_EXECUTION_MODE: external
+    depends_on:
+      postgres:
+        condition: service_healthy
+  backend:
+    build:
+      context: ../../src/backend
+      target: api
+    environment: &backend-env
+      ENV: development
+      DATABASE_URL: postgres://rf_browser:rf_browser_local_only@postgres:5432/rf_browser?sslmode=disable
+      JWT_SECRET: rf-browser-isolated-test-signing-key
+      VPS_MODEL_URL: http://model:8000
+      STORAGE_DRIVER: local
+      RUN_MIGRATIONS: "true"
+      MIGRATIONS_PATH: /app/migrations
+      OTEL_ENABLED: "false"
+      RIVER_POLL_ONLY: "true"
+    volumes:
+      - uploads:/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+  worker:
+    build:
+      context: ../../src/backend
+      target: worker
+    environment:
+      <<: *backend-env
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - uploads:/tmp
+    depends_on:
+      backend:
+        condition: service_healthy
+  frontend:
+    build: ../../src/frontend
+    ports:
+      - "127.0.0.1:54173:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  uploads:

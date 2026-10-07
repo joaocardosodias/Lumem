@@ -913,6 +913,60 @@
   }
 }
 
+@media (max-width: 480px) {
+  :is(.manutencoes__metrics, .alarmes__metrics) {
+    grid-template-columns: 1fr;
+  }
+
+  :is(.manutencoes__metric, .alarmes__metric) {
+    border-left: 0;
+    border-top: 1px solid #e8edf4;
+  }
+
+  :is(.manutencoes__metric, .alarmes__metric):first-child {
+    border-top: 0;
+  }
+
+  :is(.card-manutencao, .card-inspecao, .card-alarme, .card-predicao) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+    margin-inline: 4px;
+  }
+
+  .maintenance-record__details {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 0 14px;
+    padding: 14px 0 18px;
+  }
+
+  .card-alarme-actions,
+  .card-predicao-actions,
+  .card-inspecao-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid #e8edf4;
+  }
+
+  .card-manutencao .maintenance-record__toggle {
+    justify-content: flex-end;
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px solid #e8edf4;
+  }
+
+  .btn-alarme-action,
+  .btn-predicao-action {
+    width: 100% !important;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   .alarmes__head,
   .alarmes__metrics,

@@ -1,0 +1,160 @@
+---
+title: "Casos de teste dos riscos ODS R1, R2 e R4"
+description: "Especificação dos casos de teste para as ameaças aos ODS identificadas no código na Sprint 4: inspeções duplicadas (R1), porta sem predição exibida como estável (R2) e preenchimento de dados ausentes (R4)."
+sidebar:
+  order: 3
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div id="1-escopo-e-convenções" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 1. Escopo e convenções
+
+  </div>
+</div>
+
+A seção 4.2 da [Atualização do alinhamento com os ODS](/sprints/sprint-4/ods-atualizacao) apontou, no código, três riscos que podem ser verificados por testes automatizados:
+
+| Risco | Ameaça | ODS e metas | Ponto do código |
+| --- | --- | --- | --- |
+| **R1** | Sobrecarga da equipe por inspeções duplicadas ou excessivas. | 8 (8.2; 8.8 sob sobrecarga) | `src/backend/migrations/000015_prevent_duplicate_open_inspections.up.sql` e `PostgresInspectionRepository.Create` |
+| **R2** | Porta sem predição tratada como estável, levando ao adiamento de inspeção. | 9 (9.1) e 11 (11.2) | `src/backend/internal/adapter/repository/dashboard_repository.go` e `src/frontend/src/pages/Portas.jsx` |
+| **R4** | Dados ausentes preenchidos com valores substitutos, gerando estimativas menos informativas para algumas estações. | 11 (11.2); 10 (10.2, 10.3) condicionalmente | `src/modelo/ml_service/domain/feature_builder.py` e `src/modelo/ml_service/adapters/postgres_feature_repository.py` |
+
+Os riscos R3 e R5 dependem de processos de manutenção e de medição de infraestrutura que não estão no código e, por isso, ficam fora desta especificação.
+
+Os casos complementam as lacunas L1, L2 e L3 da [Matriz de rastreabilidade](/sprints/sprint-5/validacao-ods/matriz-rastreabilidade-ods). Os requisitos citados são os dos [Requisitos do Sistema](/sprints/sprint-3/requisitos).
+
+### 1.1. Situação de cada caso
+
+| Situação | Significado |
+| --- | --- |
+| **Coberto** | Um teste existente já verifica o resultado esperado. O nome do teste é indicado. |
+| **Parcial** | Um teste existente percorre o caminho, mas não verifica todo o resultado esperado. |
+| **A implementar** | Não há teste. O caso será automatizado. |
+| **A implementar — falha esperada** | Não há teste, e o código atual **não** atende ao resultado esperado. O teste deve falhar até a correção, servindo como critério de aceite da mitigação proposta na Sprint 4. |
+
+Os casos de **caracterização** registram o comportamento atual sem julgá-lo. Eles detectam mudanças inadvertidas e documentam o que o modelo recebe quando faltam dados.
+
+<div id="2-r1--uma-inspeção-aberta-por-porta" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 2. R1 — Uma inspeção aberta por porta
+
+  </div>
+</div>
+
+**Comportamento atual.** A migração `000015` cancela inspeções abertas duplicadas e cria o índice único parcial `idx_inspections_one_open_per_door` em `(station_code, platform, door_number)` para os status `pending` e `in_progress`. O repositório usa `INSERT ... ON CONFLICT ... DO UPDATE SET updated_at = inspections.updated_at`. Com isso, uma nova inspeção automática para uma porta que já tem uma inspeção aberta **devolve a inspeção existente**, que mantém o `prediction_id` da rodada que a criou.
+
+**Requisitos:** RF11 e RNF05. **ODS:** 8 (meta 8.2). **Risco:** R1.
+
+**Ambiente comum:** Postgres com todas as migrações aplicadas (`TEST_DATABASE_URL`), como no job `test_migrations` do CI.
+
+| ID | Pré-condição | Passos | Resultado esperado | Requisito | ODS / risco | Situação |
+| --- | --- | --- | --- | --- | --- | --- |
+| **CT-R1-01** | Porta `PIN/P1/1` sem inspeção aberta. | 1. Criar inspeção `pending` para a porta. 2. Criar segunda inspeção `pending` para a mesma porta, com outro ID. | A segunda chamada devolve o ID da primeira. Existe uma única inspeção aberta para a porta. | RF11, RNF05 | ODS 8 / R1 | **Coberto** — `tests/integration/postgres_repository_test.go` (`testInspectionRepo`). Só executa com Postgres. |
+| **CT-R1-02** | Porta com inspeção em `in_progress`. | 1. Criar nova inspeção `pending` para a mesma porta. | A inspeção `in_progress` é devolvida, sem alteração de status. Nenhuma linha nova é criada. | RF11, RNF05 | ODS 8 / R1 | **A implementar** — o teste atual só usa `pending`. |
+| **CT-R1-03** | Duas portas ativas. ML falso devolve probabilidade acima do limiar para a porta A nas duas chamadas. | 1. Executar `TriggerPredictions`. 2. Executar `TriggerPredictions` de novo. 3. Contar inspeções abertas da porta A. | Uma inspeção aberta para a porta A. O `prediction_id` aponta para a **primeira** rodada (comportamento atual, documentado). Duas rodadas registradas. | RF07, RF11, RNF05 | ODS 8 / R1 | **A implementar** — os testes de caso de uso usam repositório em memória sem o índice. |
+| **CT-R1-04** | Porta sem inspeção aberta. | 1. Disparar 10 goroutines que criam inspeção `pending` para a mesma porta ao mesmo tempo. 2. Aguardar todas. | Todas as chamadas terminam sem erro e devolvem o mesmo ID. Exatamente uma linha aberta no banco. | RNF05 | ODS 8 / R1 | **A implementar** |
+| **CT-R1-05** | Porta com inspeção A `completed` e inspeção B `pending`. | 1. Chamar `PATCH /api/v1/inspections/{A}/status` com `status = pending`. | Resposta **409 Conflict** em formato RFC 7807, informando que já existe inspeção aberta. A inspeção A permanece `completed`. | RF11, RNF05 | ODS 8 / R1 | **A implementar — falha esperada.** O domínio permite `completed → pending`, mas a violação `23505` do índice não é mapeada para erro de domínio. `RespondDomainError` cai no `default` e responde 500, com a mensagem do banco no corpo. |
+| **CT-R1-06** | Porta com inspeção `completed` ou `canceled`. | 1. Criar nova inspeção `pending` para a porta. | Uma inspeção nova é criada, com ID diferente do anterior. | RF11 | ODS 8 / R1 | **Parcial** — `testInspectionRepoEdgeCases` cria a nova inspeção após concluir a anterior, mas só verifica que o ID não é vazio. |
+| **CT-R1-07** | Banco na migração `000014` com três inspeções abertas para a mesma porta: uma `in_progress` e duas `pending`. | 1. Aplicar `000015`. 2. Consultar as inspeções da porta. | A `in_progress` permanece aberta. As duas `pending` ficam `canceled`, com a nota “Ordem duplicada encerrada automaticamente durante a reconciliacao.” O índice existe. | RNF05 | ODS 8 / R1 | **A implementar** — `test_migrations` aplica as migrações em banco vazio. |
+
+**Limite.** Esses casos verificam a deduplicação **por porta**. Eles não verificam a quantidade de **portas distintas** sinalizadas por rodada nem a capacidade da equipe, que dependem do indicador I2 (ocupação da capacidade) e de decisão de processo.
+
+<div id="3-r2--porta-sem-predição-exibida-como-estável" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 3. R2 — Porta sem predição exibida como “Estável”
+
+  </div>
+</div>
+
+**Comportamento atual.**
+
+- `GetStationDoorsStatus` usa `COALESCE((SELECT p.will_fail ...), FALSE)`. Uma porta ausente da última rodada publicada recebe `will_fail = false`.
+- `GetDoorTimeline` ignora o erro da consulta de predição (`_ = r.db.QueryRowContext(...).Scan(...)`). Sem linha ou com falha no banco, `will_fail` fica `false` e `last_evaluated_at` fica nulo.
+- `Portas.jsx` traduz `will_fail = false` em “Estável” e “Operação estável”. Sem `last_evaluated_at`, exibe “Avaliação: Recente”. O modal afirma que a “telemetria [está] dentro dos padrões nominais de vibração, corrente do atuador e tempo de ciclo de manobra”, grandezas que o Lumem não mede.
+- O filtro “Estáveis” (`filter === 'ok'`) inclui portas sem avaliação.
+- O contrato não tem campo que distinga “sem avaliação”, “avaliação expirada” e “risco abaixo do limiar”.
+
+**Requisitos:** RF09, RF10 e RNF07. **ODS:** 9 (meta 9.1) e 11 (meta 11.2). **Risco:** R2.
+
+Os resultados esperados abaixo usam um campo `evaluation_status`, com os valores `at_risk`, `below_threshold`, `not_evaluated` e `expired`. Ele é uma proposta de contrato para a mitigação da Sprint 4; o nome final pode mudar, desde que os quatro estados permaneçam distinguíveis.
+
+| ID | Pré-condição | Passos | Resultado esperado | Requisito | ODS / risco | Situação |
+| --- | --- | --- | --- | --- | --- | --- |
+| **CT-R2-01** | Estação `PIN` com portas 1 e 2 ativas. A última rodada publicada contém só a porta 1. | 1. Chamar `GetStationDoorsStatus("PIN")`. | A porta 2 vem com `evaluation_status = not_evaluated` e **sem** `will_fail = false`. | RF09, RF10 | ODS 9, 11 / R2 | **A implementar — falha esperada.** O `COALESCE` devolve `false`. |
+| **CT-R2-02** | Última rodada publicada contém a porta 1 com probabilidade abaixo do limiar (`will_fail = false`). | 1. Chamar `GetStationDoorsStatus("PIN")`. | A porta 1 vem com `evaluation_status = below_threshold`. Caso de controle: “estável” só aparece com avaliação real. | RF09 | ODS 9, 11 / R2 | **A implementar** |
+| **CT-R2-03** | Rodada publicada R1 sem a porta 2. Rodada experimental R2 posterior, não publicada, com a porta 2 em risco. | 1. Consultar o status das portas da estação. | O status exibido continua baseado em R1. A porta 2 continua `not_evaluated`, e não `at_risk`. | RF09 | ODS 9 / R2 | **Parcial** — `TestDashboardUseCase_PredictionExperimentIsIsolatedUntilPromotion` verifica o isolamento no caso de uso com repositório falso, não no SQL. |
+| **CT-R2-04** | Porta 145 cadastrada, sem predição em rodada publicada. | 1. Chamar `GetDoorTimeline(145)`. | `evaluation_status = not_evaluated`, `last_evaluated_at` nulo e `will_fail` ausente ou nulo. | RF09, RNF07 | ODS 9, 11 / R2 | **A implementar — falha esperada.** |
+| **CT-R2-05** | Porta com predição. A consulta de predição falha (contexto cancelado ou erro do driver), mas a consulta da porta funciona. | 1. Chamar `GetDoorTimeline`. | O erro é propagado ou o estado vem como `not_evaluated`. A resposta **nunca** indica estável. | RF09, RNF05 | ODS 9, 11 / R2 | **A implementar — falha esperada.** O erro é descartado com `_ =`. |
+| **CT-R2-06** | Última rodada publicada há mais de 7 dias (o horizonte do modelo), com a porta 1 abaixo do limiar. | 1. Consultar status da porta 1. | `evaluation_status = expired`, com a data da avaliação. | RF08, RF09 | ODS 9, 11 / R2 | **A implementar — falha esperada.** Não há verificação de validade. |
+| **CT-R2-07** | Frontend com resposta da API em que a porta não tem avaliação (`not_evaluated`, sem `last_evaluated_at`). | 1. Renderizar `Portas.jsx`. 2. Abrir o modal da porta. | A lista e o modal mostram “Sem avaliação”. Não aparecem “Estável”, “Operação estável”, “Recente” ou o texto sobre telemetria nominal. | RNF07 | ODS 11 / R2 | **A implementar — falha esperada.** Requer configurar testes no frontend (ex.: Vitest e Testing Library). |
+| **CT-R2-08** | Frontend com três portas: uma em risco, uma abaixo do limiar e uma sem avaliação. | 1. Aplicar o filtro “Estáveis”. 2. Aplicar o filtro “Em risco”. | “Estáveis” lista só a porta abaixo do limiar. A porta sem avaliação não aparece em nenhum dos dois filtros, ou aparece em filtro próprio. | RF06, RNF07 | ODS 11 / R2 | **A implementar — falha esperada.** |
+
+**Limite.** Mesmo com os estados corrigidos, o risco depende do uso da informação pela equipe. A contingência proposta na Sprint 4 (critérios técnicos de manutenção independentes do score) é de processo e não pode ser verificada por teste de software.
+
+<div id="4-r4--preenchimento-de-dados-ausentes" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 4. R4 — Preenchimento de dados ausentes
+
+  </div>
+</div>
+
+**Comportamento atual em `feature_builder.py`.**
+
+| Situação de dados | Valor atribuído |
+| --- | --- |
+| Porta sem alarmes nos últimos 60 dias | Todas as features de alarme recebem `0.0` (`get_empty_alarm_feats`). |
+| Plataforma sem alarmes de MDU | `n_mdu_7d = 0.0` |
+| Porta sem ordem ZM01 ou ZM02 anterior | `dias_desde_zm01` ou `dias_desde_zm02` = `9999.0` |
+| Menos de duas ZM01 | `intervalo_medio_zm01 = 30.0`. Portanto, `razao_atraso_zm01` = 9999 ÷ 30 ≈ 333,3 quando também não há ZM01. |
+| Estação fora das categorias do treino | `est_cod = -1` |
+| Qualquer valor restante ausente | `fillna(0)` na matriz final |
+
+Além disso, `PostgresFeatureRepository.obter_data_referencia` usa o **maior** `event_timestamp` entre todas as estações da requisição. Se esse máximo tiver mais de 60 dias, a data de referência recua para `max + 1 dia`. O serviço devolve `reference_date`, mas o backend em Go **não lê nem grava** esse campo. Nada no fluxo identifica uma estação sem dados enquanto outra estação tem dados atuais.
+
+**Requisitos:** RF09 e RNF05. **ODS:** 11 (meta 11.2) e, condicionalmente, 10 (metas 10.2 e 10.3). **Risco:** R4.
+
+**Ambiente comum:** `pytest` em `src/modelo/tests/`. `construir_features` recebe o repositório por parâmetro, então os casos usam um repositório falso e um `bundle` mínimo (`features` e `est_categorias`), sem banco e sem o artefato do modelo.
+
+| ID | Pré-condição | Passos | Resultado esperado | Requisito | ODS / risco | Situação |
+| --- | --- | --- | --- | --- | --- | --- |
+| **CT-R4-01** | Repositório falso sem alarmes nem manutenções para a porta `BUT/BUT1/99`. | 1. Chamar `construir_features` para a porta. | **Caracterização.** As features de alarme e `n_mdu_7d` são `0.0`; `dias_desde_zm01 = dias_desde_zm02 = 9999.0`; `intervalo_medio_zm01 = 30.0`; a matriz não contém `NaN`. | RNF05 | ODS 11 / R4 | **Parcial** — `test_v1_retorna_apenas_probabilidade_e_versao` envia a porta 99 sem dados, mas só verifica que a probabilidade está em [0, 1]. |
+| **CT-R4-02** | Porta com uma única ZM01, há 10 dias. | 1. Chamar `construir_features`. | **Caracterização.** `dias_desde_zm01 = 10`, `intervalo_medio_zm01 = 30.0` (substituto) e `razao_atraso_zm01 ≈ 0,333`. | RNF05 | ODS 11 / R4 | **A implementar** |
+| **CT-R4-03** | Portas de `PAU` (alias de `PTA`) e de `XYZ` (fora de `est_categorias`). | 1. Chamar `construir_features`. | `PAU` recebe o código de `PTA`. `XYZ` recebe `est_cod = -1`. | RF09 | ODS 11 / R4 | **A implementar** |
+| **CT-R4-04** | Mesma porta em dois cenários: (a) sem nenhum dado; (b) com dados completos e baixa atividade. | 1. Gerar as features e as probabilidades dos dois cenários. | A saída do serviço diferencia os cenários com um indicador de completude dos dados (ex.: `data_quality = insufficient`). Probabilidades próximas não podem ser apresentadas como equivalentes. | RF09, RNF05 | ODS 11 / R4 | **A implementar — falha esperada.** A saída só contém `probability`. |
+| **CT-R4-05** | Telemetria cuja data mais recente tem 90 dias. | 1. Chamar `obter_data_referencia`. 2. Executar `PredictUseCase.execute`. 3. Executar `TriggerPredictions` no backend com ML falso que devolve `reference_date`. | Passos 1 e 2: `reference_date = max + 1 dia`. Passo 3: a rodada gravada preserva `reference_date`, e a API do dashboard o expõe. | RF09, RNF05 | ODS 9, 11 / R2, R4 | **A implementar — falha esperada no passo 3.** O backend descarta `reference_date`. |
+| **CT-R4-06** | Requisição com as estações `BUT` (telemetria de ontem) e `FAL` (sem telemetria há 90 dias). | 1. Executar a predição para portas das duas estações. | A data de referência ou a cobertura é informada **por estação**. As portas de `FAL` são sinalizadas como dados defasados, e não avaliadas silenciosamente com zeros. | RF09, RNF05 | ODS 11 (10 condicional) / R4 | **A implementar — falha esperada.** O máximo global esconde a defasagem de `FAL`. |
+| **CT-R4-07** | Configuração com requisito mínimo de cobertura (ex.: telemetria nos últimos 7 dias). | 1. Executar a predição para porta abaixo do mínimo. | A porta é marcada como “não avaliada por cobertura insuficiente” e não gera inspeção automática nem aparece como estável. | RF09, RF11 | ODS 11 / R2, R4 | **A implementar — falha esperada.** Não há abstenção automática. |
+
+**Limite.** Esses casos verificam se a ausência de dados é **identificada e comunicada**. Eles não verificam se as diferenças entre estações afetam grupos sociais distintos, condição para o vínculo com o ODS 10. A Sprint 4 alerta que essa relação exige investigação própria, sem inferir características sociais pelo código da estação.
+
+<div id="5-resumo" class="ods-section-banner" style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <div style="position: relative; z-index: 1; color: white; margin: 0; --sl-color-white: white; --sl-color-text-accent: white;">
+
+## 5. Resumo
+
+  </div>
+</div>
+
+| Risco | Casos | Coberto | Parcial | A implementar | A implementar — falha esperada |
+| --- | --- | --- | --- | --- | --- |
+| R1 | 7 | 1 | 1 | 4 | 1 |
+| R2 | 8 | 0 | 1 | 1 | 6 |
+| R4 | 7 | 0 | 1 | 2 | 4 |
+| **Total** | **22** | **1** | **3** | **7** | **11** |
+
+O controle de **R1** está implementado e parcialmente testado. Os casos novos reforçam a verificação de concorrência, de reabertura e da migração.
+
+Os riscos **R2** e **R4** não têm controle no código. A maioria dos seus casos deve falhar com a implementação atual. Por isso, esses casos funcionam como **critérios de aceite** das mitigações propostas na Sprint 4: distinguir ausência de avaliação, mostrar a data real dos dados e sinalizar cobertura insuficiente por estação.

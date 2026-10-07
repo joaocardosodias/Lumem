@@ -116,6 +116,15 @@ export default defineConfig({
 	base,
 	redirects: {
 		'/': readmePath,
+		'/sprints/sprint-5/mapeamento-testes-rf': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#3-mapeamento-e-situação-atual-dos-requisitos`,
+		'/sprints/sprint-5/validacao-autenticacao-acesso': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#4-autenticação-e-acesso--rf01-e-rf02`,
+		'/sprints/sprint-5/validacao-importacao-dados': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#5-importação-de-dados--rf03-e-rf04`,
+		'/sprints/sprint-5/validacao-cadastro-consulta-filtros': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#6-cadastro-consulta-e-filtros--rf05-e-rf06`,
+		'/sprints/sprint-5/validacao-execucao-horizonte-predicao': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#7-execução-e-horizonte-da-predição--rf07-e-rf08`,
+		'/sprints/sprint-5/validacao-classificacao-portas': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#8-classificação-das-portas--rf09`,
+		'/sprints/sprint-5/validacao-dashboard-inspecoes': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#9-dashboard-e-inspeções--rf10-e-rf11`,
+		'/sprints/sprint-5/validacao-integracoes-fluxo-completo': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#10-integrações-e-fluxo-operacional`,
+		'/sprints/sprint-5/validacao-postgresql-regressao-completa': `${basePrefix}/sprints/sprint-5/implementacao-validacao-testes/#12-postgresql-real-e-regressão-completa`,
 	},
 	markdown: {
 		rehypePlugins: [rehypePrefixBase, rehypeNumberedTitles],
@@ -216,7 +225,13 @@ export default defineConfig({
 						{
 							label: 'Sprint 5',
 							collapsed: true,
-							items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }],
+							items: [
+								{
+									label: 'Validação do Alinhamento ODS',
+									collapsed: true,
+									items: [{ autogenerate: { directory: 'sprints/Sprint 5/validacao-ods' } }],
+								},
+							],
 						},
 					],
 				},
