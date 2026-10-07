@@ -216,7 +216,13 @@ export default defineConfig({
 						{
 							label: 'Sprint 5',
 							collapsed: true,
-							items: [{ autogenerate: { directory: 'sprints/Sprint 5' } }],
+							items: [
+								{
+									label: 'Validação do Alinhamento ODS',
+									collapsed: true,
+									items: [{ autogenerate: { directory: 'sprints/Sprint 5/validacao-ods' } }],
+								},
+							],
 						},
 					],
 				},
