@@ -305,7 +305,7 @@ O [GitLab CI](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/.g
 | 2 | Engenharia de features, treinamento e comparação de modelos. |
 | 3 | Backend, interface, contratos, integração preditiva e infraestrutura inicial. |
 | 4 | Evolução do laboratório, MLOps, treinamento, observabilidade e justificativas arquiteturais. |
-| 5 — em andamento | Verificações finais, testes e consolidação da entrega. |
+| 5 | Verificações finais, testes e consolidação da entrega. |
 
 Os documentos de cada sprint registram as decisões e evidências. A presença de uma funcionalidade ou configuração não comprova, por si só, desempenho, conformidade ou conclusão da validação em produção.
 
