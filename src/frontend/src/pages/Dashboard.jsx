@@ -5,6 +5,7 @@ import { useAuth } from '../context/Auth'
 import { stationLabel } from '../data/stations'
 import { api, asList, errorMessage, mergeDashboard } from '../lib/api'
 import { getCachedDashboard, setCachedDashboard } from '../lib/dashboardCache'
+import { dashboardHighlights } from '../lib/dashboardHighlights'
 import {
   getCachedPrediction,
   normalizePrediction,
@@ -109,11 +110,8 @@ function Dashboard({ onNavigate }) {
     return () => { cancelled = true }
   }, [])
 
-  const stations = [...(summary?.critical_stations || [])].sort((a, b) => b.doors_at_risk - a.doors_at_risk)
-  const maxRisk = Math.max(...stations.map((item) => item.doors_at_risk), 1)
-  const topStation = stations[0]
+  const { stations, maxRisk, topStation, prioritized, visiblePredictions } = dashboardHighlights(summary, predictions)
   const lastRun = predictions[0]?.last_evaluated_at
-  const prioritized = predictions.filter((item) => item.will_fail)
   const firstName = user?.name?.split(' ')[0] || 'Operador'
 
   return (
@@ -195,7 +193,7 @@ function Dashboard({ onNavigate }) {
             <PanelState loading={loading} error={predictionsError}>Nenhuma porta priorizada nesta rodada.</PanelState>
           ) : (
             <div className="overview-predictions">
-              {prioritized.slice(0, 5).map((item) => (
+              {visiblePredictions.map((item) => (
                 <button
                   key={item.door_id || item.sap_tag}
                   className="overview-prediction"

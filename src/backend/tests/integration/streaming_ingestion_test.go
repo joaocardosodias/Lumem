@@ -91,6 +91,9 @@ func TestStreamingIngestionCommitsAllBatchesOrRollsBack(t *testing.T) {
 				if err := uc.ProcessJob(ctx, port.IngestionJob{Type: kind, UploadID: id, StorageKey: key, FileName: "file.csv"}); err != nil {
 					t.Fatal(err)
 				}
+				if _, err := os.Stat(key); !os.IsNotExist(err) {
+					t.Fatalf("temporary file survived ingestion finalization: %v", err)
+				}
 				var count int
 				// table is selected only from the two constants above.
 				if err := db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE upload_id=$1", id).Scan(&count); err != nil {

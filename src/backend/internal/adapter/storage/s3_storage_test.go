@@ -180,7 +180,10 @@ func TestNewS3Storage(t *testing.T) {
 }
 
 func TestS3StorageStoreTempFileError(t *testing.T) {
-	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "diretorio-inexistente"))
+	missingDir := filepath.Join(t.TempDir(), "diretorio-inexistente")
+	for _, variable := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(variable, missingDir)
+	}
 
 	store := newS3Storage(newFakeS3API(), "ingestion-uploads", "ingestion")
 	_, _, err := store.Store(context.Background(), "alarmes.csv", strings.NewReader("dados"))

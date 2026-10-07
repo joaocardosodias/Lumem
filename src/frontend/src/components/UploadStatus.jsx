@@ -1,8 +1,8 @@
 import './UploadStatus.css'
 
 function statusLabel(status) {
-  if (status === 1) return 'Concluído'
-  if (status === 2) return 'Erro'
+  if (status === 'completed') return 'Concluído'
+  if (status === 'failed') return 'Erro'
   return 'Processando'
 }
 

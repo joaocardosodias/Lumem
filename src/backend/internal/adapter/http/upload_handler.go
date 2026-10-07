@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/g04/backend/internal/usecase"
@@ -20,6 +21,16 @@ func NewUploadHandler(ingestAlarmsUC *usecase.IngestAlarmsUseCase, ingestMaintUC
 	}
 }
 
+func validateUploadFileType(c *gin.Context, filename string) bool {
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".csv", ".xlsx":
+		return true
+	default:
+		RespondProblem(c, http.StatusUnsupportedMediaType, "ERR_UNSUPPORTED_FILE_TYPE", "Formato Nao Suportado", "Envie um arquivo CSV ou XLSX.")
+		return false
+	}
+}
+
 func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 	file, fileHeader, err := c.Request.FormFile("file")
 	if err != nil {
@@ -27,6 +38,9 @@ func (h *UploadHandler) UploadAlarms(c *gin.Context) {
 		return
 	}
 	defer file.Close()
+	if !validateUploadFileType(c, fileHeader.Filename) {
+		return
+	}
 
 	uploadID, err := h.ingestAlarmsUC.StartIngestion(c.Request.Context(), fileHeader.Filename, file)
 	if err != nil {
@@ -48,6 +62,9 @@ func (h *UploadHandler) UploadMaintenance(c *gin.Context) {
 		return
 	}
 	defer file.Close()
+	if !validateUploadFileType(c, fileHeader.Filename) {
+		return
+	}
 
 	orderType := c.DefaultPostForm("order_type", "")
 

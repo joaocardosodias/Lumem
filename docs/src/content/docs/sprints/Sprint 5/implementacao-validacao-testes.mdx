@@ -1,0 +1,323 @@
+---
+title: "Implementação e validação de testes"
+description: "Mapeamento dos RF01–RF11, cenários implementados, correções e resultados da Sprint 5."
+sidebar:
+  order: 1
+---
+
+## Objetivo e síntese dos resultados
+
+Este documento reúne o mapeamento dos requisitos funcionais, a implementação dos testes e os resultados obtidos na Sprint 5. A validação relaciona os comportamentos esperados às evidências do backend, das regras do frontend e das integrações com PostgreSQL.
+
+Os testes verificaram tanto o funcionamento esperado quanto a resposta do sistema a entradas inválidas e falhas de integração. Quando uma execução revelou um comportamento incorreto, a implementação foi ajustada e os testes foram repetidos. As seções por requisito apresentam o procedimento utilizado, o resultado observado e as alterações decorrentes dessa validação.
+
+| Frente | Último resultado registrado | Alcance |
+| --- | --- | --- |
+| Backend completo com PostgreSQL | **280 funções de teste aprovadas, zero falhas e zero testes ignorados**, em 14 pacotes. | Inclui os cinco testes de banco anteriormente ignorados e testes internos da fila River. |
+| Frontend | **40 testes aprovados**, sem falhas ou ignorados. | Funções de filtros e destaques utilizadas pelas telas. |
+| Fluxo operacional HTTP | **Oito cenários aprovados.** | Autenticação, importação, cadastro, predição, inspeção e recuperação de falhas, com persistência em memória e ML simulado. |
+| Fluxo no navegador | **14 cenários aprovados.** | Frontend, API, PostgreSQL, River/worker e modelo reais; armazenamento local compartilhado. |
+
+As contagens são de execuções diferentes e **não devem ser somadas**: os testes focados também participam das regressões. Os resultados correspondem aos cenários descritos, incluindo a caracterização do comportamento de converter o horizonte solicitado de 14 para sete dias.
+
+Referências: [Requisitos do Sistema](/sprints/sprint-3/requisitos/), [Arquitetura Técnica](/sprints/sprint-4/arquitetura-tecnica/) e [Testes Automatizados e CI](/sprints/sprint-3/backend/qualidade/testes-e-ci/).
+
+## Método e alcance arquitetural
+
+O mapeamento confrontou os RF01–RF11 com os testes existentes e orientou a criação de cenários de sucesso, entradas inválidas e falhas de integração. As correções foram verificadas por retestes e regressões, que executam novamente os testes para identificar efeitos sobre outras funcionalidades.
+
+Os testes de componentes e de integração HTTP usam implementações reais de autenticação, parsers e casos de uso, com dependências controladas. Os testes PostgreSQL verificam consultas, persistência e transações em banco isolado. No frontend, a suíte de funções é complementada por um roteiro no navegador com os serviços reais conectados. O artefato Python foi executado nesse fluxo.
+
+Os resultados são interpretados dentro desse alcance. Os caminhos de código citados são relativos à raiz do repositório.
+
+## Mapeamento e situação atual dos requisitos
+
+| RF | Testes mapeados e realizados | Resultado observado |
+| --- | --- | --- |
+| RF01 — Login por e-mail e senha | Login, bcrypt, JWT e consulta da identidade autenticada. | Login válido/inválido e persistência da sessão após recarregar aprovados também no navegador. |
+| RF02 — Restringir acesso | Rotas reais, JWT expirado, assinatura inválida e perfis. | API e navegador aprovados nos cenários de acesso direto sem sessão, expiração e logout. |
+| RF03 — Importar alarmes CSV/XLSX | Parser, status, campos, duplicidade, falhas e lotes. | CSV/XLSX enviados pelo navegador, processados pelo worker River e persistidos no PostgreSQL. |
+| RF04 — Importar tipos previstos | ZM01, ZM02 e ZM03 em CSV/XLSX e alarmes. | Matriz de tipos aprovada nos testes de componentes; navegador cobriu ZM01 e alarmes nos dois formatos. |
+| RF05 — Cadastrar e consultar manutenção | Campos, erros, consulta vazia e persistência. | Cadastro pelo formulário e consulta após recarregar aprovados. |
+| RF06 — Filtros | inclusão/exclusão, combinações, períodos, duração e parâmetros HTTP. | Filtros exercitados aprovados; no navegador, foram conferidos estação, tipo, busca e limpeza dos critérios. |
+| RF07 — Predição para portas ativas | Execução, falhas, consulta e seleção SQL de portas ativas. | Acionamento pela tela avaliou 528 portas com o modelo real e históricos no PostgreSQL. |
+| RF08 — Horizonte configurável | padrão sete e rejeição de entradas inválidas. | Horizonte observado de sete dias, inclusive quando solicitado 14; o teste caracteriza esse comportamento. |
+| RF09 — Classificar portas | Limites do limiar, identidade e resposta inválida. | Rodada real e probabilidades persistidas conferidas. |
+| RF10 — Indicadores operacionais | Contrato, erros, ranking, base vazia e totais SQL. | Cards conferidos com a API no navegador: zero em risco, zero pendentes e uma inspeção concluída. |
+| RF11 — Criticidade e inspeções prioritárias | Geração, vínculo, ciclo, destaques e deduplicação SQL. | Ciclo de inspeção manual aprovado no navegador; geração automática conferida nos testes com probabilidades controladas. |
+
+As seções seguintes explicam os procedimentos, os resultados e as mudanças por grupo de requisitos.
+
+## Autenticação e acesso — RF01 e RF02
+
+A autenticação foi exercitada enviando requisições de login com credenciais válidas, senha incorreta, usuário inexistente, usuário inativo, campos ausentes e JSON malformado. No caso válido, o teste conferiu a identidade e a expiração do token JWT e utilizou esse token para consultar o usuário autenticado. Nos casos inválidos, verificou os códigos de erro e a ausência de uma sessão na resposta.
+
+Os oito cenários de login passaram. O usuário ativo recebeu um token utilizável; senha incorreta e usuário desconhecido retornaram HTTP 401; usuário inativo recebeu HTTP 403; entradas incompletas ou malformadas retornaram HTTP 400. Esses resultados confirmaram o contrato de autenticação nos casos avaliados.
+
+O controle de acesso foi verificado nas 35 rotas protegidas da aplicação, nas configurações de produção e desenvolvimento. Cada rota recebeu quatro requisições: sem token, com token malformado, com token expirado e com assinatura inválida. As 280 combinações foram bloqueadas com HTTP 401. Os testes existentes de middleware e de autorização por perfil também passaram.
+
+A lógica de autenticação foi mantida. A mudança decorrente da regressão ocorreu na preparação do teste de indisponibilidade de armazenamento: foram configuradas as variáveis de diretório temporário utilizadas por Windows e Unix. Com isso, o teste passou a provocar a falha pretendida e a verificar corretamente a resposta HTTP 503 do serviço de saúde.
+
+### Implementação e alcance
+
+Os casos estão em `tests/integration/auth_requirements_test.go` e `cmd/api/auth_requirements_test.go`, dentro de `src/backend`. Essa bateria usa bcrypt e JWT reais, com usuários em memória. O roteiro complementar de navegador verifica login e sessão com usuários persistidos no PostgreSQL.
+
+## Importação de dados — RF03 e RF04
+
+Os testes enviaram arquivos CSV e XLSX pelos endpoints autenticados de alarmes e manutenção. Para cada formato, verificaram o recebimento do arquivo, o estado inicial de processamento e os registros disponíveis após a execução do job. A conferência comparou os campos importados com os dados de origem, incluindo identificação do ativo, tipo de manutenção, duração e vínculo com o upload.
+
+A bateria também repetiu arquivos e jobs para verificar duplicidade, enviou arquivos vazios ou corrompidos e combinou linhas válidas e inválidas. Os arquivos repetidos foram rejeitados com HTTP 409, e a reentrega de um job concluído não criou novos registros. Arquivos com conteúdo inválido terminaram em estado `failed`; arquivos com uma linha válida e outra inválida preservaram somente a válida, com contadores compatíveis com o processamento.
+
+Os 30 subcasos passaram após a correção da validação de extensões. A falha encontrada permitia receber um PDF cujo conteúdo era interpretável como CSV. Foi acrescentada uma verificação nos dois endpoints para aceitar somente `.csv` e `.xlsx`, retornando HTTP 415 para os demais formatos. O contrato OpenAPI foi atualizado para documentar esse comportamento. A validação complementar com PostgreSQL comprovou a gravação e a reversão de lotes nos cenários descritos na seção de banco de dados.
+
+### Implementação e alcance
+
+Os testes estão em `src/backend/tests/integration/import_requirements_test.go`. Os tipos avaliados foram ZM01 (corretiva emergencial), ZM02 (corretiva programada) e ZM03 (preventiva), além dos alarmes. Quando informado no formulário, `order_type` prevalece sobre o tipo da planilha; quando omitido, o tipo de cada linha é preservado.
+
+HTTP 202 confirma o recebimento; o resultado do processamento é consultado pelo ID do upload. Os testes usam parsers e armazenamento temporário reais, com fila controlada e persistência em memória. A deduplicação é pelo conteúdo do arquivo completo. O vínculo da manutenção ao ativo é conferido pela estação e localização textual.
+
+## Cadastro, consulta e filtros — RF05 e RF06
+
+O cadastro foi testado criando uma manutenção por HTTP e consultando o registro em seguida. A comparação verificou ordem SAP, tipo, estação, localização, início e fim, duração, descrição, sintoma, causa e ação. Também foram enviadas requisições com campos obrigatórios ausentes e tipos incompatíveis, conferindo que a rejeição não deixava registros persistidos no repositório de teste.
+
+Os 14 cenários do backend passaram. O cadastro válido retornou HTTP 201 e a consulta preservou os campos enviados, com as normalizações previstas. Entradas inválidas retornaram HTTP 400; a consulta de uma coleção vazia retornou uma lista vazia e total zero.
+
+No frontend, os testes aplicaram os filtros a coleções com registros que deveriam ser incluídos e excluídos. Foram comparados os identificadores retornados para filtros isolados, combinações, resultado vazio e limpeza dos critérios. As regras foram extraídas das páginas para funções compartilhadas, permitindo testar diretamente o código utilizado pela interface.
+
+A primeira execução aprovou 32 testes e revelou duas falhas: registros futuros apareciam em períodos recentes, e duração ausente era tratada como zero. Após ajustar os limites temporais e a verificação de valores ausentes, os 34 testes passaram. A seleção por duração passou a distinguir um zero informado de um campo sem valor, e os períodos recentes passaram a respeitar também o limite final do intervalo.
+
+### Implementação e alcance
+
+Os cenários HTTP estão em `src/backend/tests/integration/maintenance_requirements_test.go`; os testes de filtros, em `src/frontend/tests/recordFilters.test.js`. As funções usadas pelas páginas foram concentradas em `recordFilters.js`, com correções em `filters.js`. O comando `npm test` utiliza o executor nativo do Node.
+
+Foram cobertos estação, plataforma, período, tipo, origem, status, risco, duração e busca, conforme os critérios disponíveis em cada tela. Os testes de funções usam uma referência temporal fixa e verificam os limites do intervalo. No navegador, foram conferidos filtros de estação, tipo e busca, combinações, resultado vazio e limpeza.
+
+## Execução e horizonte da predição — RF07 e RF08
+
+A execução da predição foi verificada com um conjunto contendo portas ativas e inativas. O teste acompanhou a requisição autenticada, as identidades enviadas ao serviço de ML, a resposta recebida, a criação da rodada e a consulta posterior. A resposta controlada atribuiu risco a uma das portas, permitindo conferir também a geração da inspeção correspondente. Um teste adicional executou a consulta SQL real e confirmou a seleção das duas portas ativas, excluindo a inativa.
+
+As falhas de comunicação e de contrato foram simuladas por respostas HTTP 503, JSON malformado, ausência de versão ou previsão e identificação incorreta da porta. A API rejeitou essas respostas sem salvar rodada, previsão ou inspeção. O conjunto sem portas ativas retornou HTTP 400, e o acesso sem autenticação foi bloqueado antes da inferência.
+
+Os testes do horizonte revelaram que cinco entradas inválidas ainda iniciavam uma rodada. O handler foi alterado para tratar erros de leitura do JSON, distinguir ausência de valor de zero explícito e rejeitar zero e números negativos antes de chamar a inferência. Após a correção, os 18 cenários passaram; a seleção SQL também passou quando executada com PostgreSQL.
+
+Um desses cenários caracteriza o comportamento do horizonte: solicitar 14 dias produz uma rodada de sete dias. O padrão de sete dias e a rejeição das entradas inválidas foram verificados.
+
+### Implementação e alcance
+
+Os cenários estão em `src/backend/tests/integration/prediction_requirements_test.go`. A alteração de entrada foi implementada em `dashboard_handler.go` e documentada no OpenAPI. O cliente HTTP de ML é real, mas o servidor responde com probabilidades controladas.
+
+O padrão de sete dias é aplicado quando o campo está ausente, o corpo está vazio ou o valor é `null`.
+
+## Classificação das portas — RF09
+
+A classificação foi testada fornecendo probabilidades abaixo, exatamente no limite e acima do limiar de risco. Foram usados o valor de fallback 0,5 e os valores configurados 0,27 e 0,75, além de conjuntos com todas as portas estáveis ou todas em risco. As verificações compararam a classificação, a probabilidade e a identidade completa de cada porta, incluindo estação e plataforma, e conferiram as inspeções geradas.
+
+Os testes confirmaram que uma probabilidade igual ao limiar é classificada como risco e que a configuração prevalece sobre o fallback. Também confirmaram que somente portas classificadas em risco geram inspeções nos cenários avaliados. Respostas com identidades incompatíveis, duplicadas ou em ordem diferente foram rejeitadas, preservando a rodada válida anterior.
+
+Na primeira execução, 13 cenários passaram e dois falharam: probabilidade ausente e probabilidade nula eram interpretadas como zero. O campo de leitura da resposta de ML passou a usar um tipo opcional, permitindo reconhecer a ausência do valor e rejeitar a resposta. Após a alteração, os 15 cenários passaram. Zero explicitamente informado continuou válido. Essa correção evita classificar uma porta como estável quando o serviço não forneceu a probabilidade necessária.
+
+### Implementação e alcance
+
+Os testes estão em `src/backend/tests/integration/classification_requirements_test.go`. A leitura opcional da probabilidade foi implementada em `src/backend/internal/adapter/mlclient/client.go`, usando `*float64`.
+
+O serviço de ML fornece a probabilidade, e o backend aplica o limiar configurado. A classificação é estável abaixo do limiar e em risco quando igual ou superior. A bateria inclui os extremos zero e um, rejeita valores fora desse intervalo e confere a identidade por estação, plataforma e porta. As probabilidades são controladas nesses testes.
+
+## Dashboard e inspeções — RF10 e RF11
+
+O dashboard foi validado com conjuntos de dados cujos totais eram conhecidos. Os testes conferiram portas ativas, portas em risco, inspeções pendentes e concluídas, ranking de estações e comportamento de uma base vazia. A execução com PostgreSQL também incluiu rodadas antigas, experimentais e não publicadas, verificando que os indicadores consideravam a rodada oficial correspondente.
+
+Foram provocadas falhas nas consultas e na leitura dos resultados. Seis subcasos revelaram que o repositório ignorava erros e podia devolver zeros ou um ranking incompleto como se a consulta tivesse sido bem-sucedida. O repositório foi ajustado para propagar esses erros; o fluxo HTTP passou a usar o tratamento existente de HTTP 500 nesses casos. A ausência legítima de uma rodada continuou produzindo zero portas em risco.
+
+Para as inspeções, os testes partiram de uma previsão em risco e acompanharam a geração automática, o vínculo com a porta e a previsão, as mudanças de status e a consulta posterior. Entradas inválidas preservaram o estado anterior. No PostgreSQL, a repetição reutilizou a inspeção aberta, enquanto uma nova inspeção pôde ser criada depois da conclusão da anterior.
+
+As quatro funções principais do backend, com seus 15 subcasos, passaram, assim como o cenário complementar de PostgreSQL. Seis novos testes das funções de destaque do dashboard também passaram, elevando a suíte do frontend a 40 testes. A extração dessas funções permitiu conferir ranking, empate, lista vazia e limite de cinco portas em atenção.
+
+### Implementação e alcance
+
+Os testes estão em `dashboard_requirements_test.go`, no diretório `src/backend/tests/unit/adapter`, e em `dashboard_inspection_requirements_test.go` e `dashboard_postgres_requirements_test.go`, no diretório de integração. As regras do frontend são exercitadas por `src/frontend/tests/dashboardHighlights.test.js`.
+
+Na base SQL controlada, o resumo retornou oito portas ativas, quatro em risco, três inspeções pendentes e duas concluídas, com ranking FAL/PIN. A base vazia retornou indicadores zero. A reutilização de uma inspeção aberta preservou seu vínculo e suas observações originais.
+
+## Integrações e fluxo operacional
+
+Os testes de integração conectaram as etapas já verificadas separadamente: login, upload, processamento, cadastro manual, predição, inspeção e consulta dos indicadores. As chamadas usaram um cliente HTTP e tokens emitidos pelo login. O perfil de operador foi impedido de iniciar a predição, enquanto o perfil de engenharia conseguiu executar a rodada.
+
+No fluxo bem-sucedido, dois alarmes e duas manutenções foram importados, uma manutenção foi cadastrada manualmente e duas portas foram avaliadas pelo serviço simulado. O resultado apresentou uma porta em risco e gerou uma inspeção, posteriormente concluída. As consultas confirmaram três manutenções, uma inspeção concluída e os indicadores esperados no dashboard.
+
+Os cenários de recuperação provocaram indisponibilidade e resposta inválida do ML, além de falha de importação. Os dados já válidos foram preservados, as tentativas malsucedidas não criaram uma rodada parcial e uma nova tentativa válida permitiu concluir o fluxo. Os oito cenários passaram. Essa etapa acrescentou testes autenticados e verificações nas rotas reais da aplicação; não exigiu alteração do código de produção. O uso de persistência em memória e ML simulado limita a conclusão à integração entre os componentes descritos abaixo.
+
+### Implementação e alcance
+
+Os testes estão em `src/backend/tests/integration/authenticated_workflow_test.go` e `src/backend/cmd/api/workflow_routes_test.go`. O primeiro conecta handlers, casos de uso, parsers e cliente HTTP; o segundo verifica a autorização no roteador real, em produção e desenvolvimento. O perfil de engenharia utiliza o identificador `enginner` já existente no sistema.
+
+Essa primeira bateria utiliza fila controlada, repositórios em memória e respostas fixas do ML. Seus resultados são complementados pela execução integrada descrita a seguir.
+
+### Diagrama SVG
+
+O diagrama registra a primeira bateria de integração HTTP com substitutos. A execução real no navegador é apresentada na próxima seção.
+
+<img src={import.meta.env.BASE_URL.replace(/\/$/, '') + '/evidencias/rf-fluxo-completo.svg'} alt="Fluxo operacional HTTP com componentes reais, substitutos controlados e resultados verificados" />
+
+[Abrir ou baixar o SVG](/evidencias/rf-fluxo-completo.svg).
+
+## Teste do fluxo completo do sistema no navegador
+
+Esta etapa exercitou cenários relacionados aos RF01 a RF11 no fluxo de uso da aplicação, desde a autenticação até a consulta do dashboard e a conclusão de uma inspeção. Os resultados abaixo descrevem os comportamentos observados em cada grupo de requisitos.
+
+### Ambiente e resultado geral
+
+O roteiro em `tests/e2e/browser.mjs` foi executado no Microsoft Edge, controlado pelo Playwright, com frontend compilado, API Go, PostgreSQL, worker River e serviço Python em contêineres isolados. Os uploads utilizaram arquivos reais em um volume compartilhado entre API e worker. O modelo carregou o artefato local `v1.0.0` e consultou as views do banco. As requisições não foram interceptadas ou substituídas por respostas simuladas.
+
+Os **14 cenários passaram**, sem erro JavaScript de página na execução final. O roteiro reuniu autenticação, expiração de sessão, uploads, cadastro, filtros, predição, inspeções, dashboard e logout. As verificações da interface foram complementadas por consultas à API e ao banco para conferir a persistência dos resultados.
+
+### RF01 e RF02 — Autenticação e acesso
+
+O acesso direto a uma rota protegida exigiu login. Credenciais inválidas produziram HTTP 401 e mensagem na tela; credenciais válidas permitiram entrar e manter a sessão após recarregar a página. Para testar expiração sem aguardar um dia, a sessão recebeu um JWT assinado com a chave exclusiva do ambiente de teste e validade já encerrada. O backend retornou 401, a interface removeu a sessão e voltou ao login. Ao final do fluxo, o logout também removeu a sessão e um novo acesso direto a inspeções exigiu autenticação.
+
+### RF03 e RF04 — Importação de dados
+
+O worker processou CSV e XLSX de alarmes e manutenção ZM01, resultando em **quatro alarmes e quatro manutenções importadas**. Um arquivo de alarmes inválido terminou em `failed`, sem linhas inseridas, e a interface permitiu uma nova tentativa. Foram confirmados o envio pela tela, o processamento assíncrono e a apresentação do resultado.
+
+### RF05 e RF06 — Cadastro, consulta e filtros
+
+O cadastro manual de uma manutenção ZM03 retornou HTTP 201 e elevou o total para **cinco manutenções**, conferidas após recarregar a página. Os filtros reduziram a lista de cinco para três registros de FAL, depois para uma ordem ZM03; a busca sem correspondência retornou vazio e a limpeza restaurou os cinco registros. O filtro de alarmes de PIN retornou dois registros. Esses resultados confirmaram cadastro, consulta e combinação dos filtros exercitados.
+
+### RF07, RF08 e RF09 — Execução, horizonte e classificação da predição
+
+A análise acionada pela tela avaliou **528 portas**. A conferência complementar em `tests/e2e/verify_model.py` comprovou que os atributos das portas FAL/P1/4 e PIN/P2/8 continham os dois alarmes importados para cada porta. As probabilidades recalculadas com o mesmo artefato coincidiram com as gravadas no banco, respeitando a precisão de armazenamento. Essa verificação confirma a passagem dos dados pelo fluxo.
+
+O fluxo utilizou o horizonte fixo de **sete dias** disponível no sistema. Nenhuma das 528 portas ultrapassou o limiar de risco nessa base, confirmando a apresentação do resultado sem portas em risco.
+
+### RF10 e RF11 — Dashboard e inspeções
+
+Como a predição não identificou risco, o roteiro criou uma inspeção manual pela interface e a passou por `pending`, `in_progress` e `completed`. A consulta confirmou uma inspeção concluída com registro de conclusão. O dashboard apresentou **528 portas, zero portas em risco, zero inspeções pendentes e uma concluída**, de acordo com a API.
+
+### Correções reveladas pelo navegador
+
+O primeiro bloqueio ocorreu após um upload concluído no banco: a tela continuava em “Processando” até expirar a espera. A API retornava os estados textuais `completed` e `failed`, enquanto o frontend comparava códigos numéricos. Foram alinhados `runUpload.js`, `UploadStatus.jsx` e as páginas de alarmes e manutenções ao contrato textual. O reteste confirmou conclusão dos uploads válidos e apresentação de erro para conteúdo inválido.
+
+O segundo bloqueio ocorreu no cadastro de inspeção: a interface enviava `door_number` como texto e recebia HTTP 400. Em `Inspecoes.jsx`, o valor passou a ser enviado como número. O reteste criou a inspeção com HTTP 201 e concluiu as mudanças de status. Após as correções, o roteiro completo passou, os 40 testes de funções do frontend continuaram aprovados e o build foi concluído.
+
+As [evidências do navegador](/evidencias/rf-navegador.json) e a [conferência do modelo e da persistência](/evidencias/rf-navegador-modelo.json) registram os resultados. Capturas: [manutenções](/evidencias/rf-navegador-manutencoes.png), [predições](/evidencias/rf-navegador-predicoes.png), [inspeção concluída](/evidencias/rf-navegador-inspecao.png) e [dashboard](/evidencias/rf-navegador-dashboard.png).
+
+## PostgreSQL real e regressão completa
+
+A validação com banco real executou os testes que dependiam de PostgreSQL e haviam sido ignorados nas regressões sem esse serviço. Foram utilizados bancos isolados para verificar migrations, repositórios, seleção de portas, agregação de indicadores e prevenção de inspeções abertas duplicadas. A ingestão foi exercitada em lotes de 500 registros: o sucesso deveria gravar 501 linhas, e uma falha após o primeiro lote deveria reverter todas as inserções.
+
+Os quatro subcasos de ingestão inicialmente falharam porque o processamento tentava remover o arquivo temporário enquanto seu leitor ainda estava aberto no Windows. O fechamento foi reposicionado para ocorrer antes da limpeza. O teste também passou a verificar explicitamente a remoção do arquivo. No reteste, os cenários de alarmes e manutenção confirmaram tanto a gravação ou reversão dos dados quanto a limpeza correta.
+
+A regressão completa encontrou ainda um ajuste necessário na preparação de um teste de armazenamento S3: as variáveis de diretório temporário foram configuradas para funcionar em Windows e Unix. Após os ajustes, os 280 testes de nível superior do backend passaram, distribuídos em 14 pacotes, sem falhas ou testes ignorados. Os testes internos de River acrescentaram evidências de migrations e consumo de um job persistido por um worker separado.
+
+### Implementação e alcance
+
+O ambiente utilizou Go 1.26.0 em Windows amd64 e PostgreSQL 16.15 em contêiner temporário, com bancos isolados. Os pacotes foram executados sequencialmente com `-p 1` para evitar migrations simultâneas.
+
+Passaram `TestPostgresRepositories`, `TestStreamingIngestionCommitsAllBatchesOrRollsBack`, `TestCheckDatabaseConnection_AndMigrations`, `TestRF07_PostgresActiveDoorSelection` e `TestRF10_PostgresIndicatorsAndInspectionDeduplication`. Os dois últimos usam tabelas temporárias com repositórios reais.
+
+A correção do fechamento do leitor foi aplicada em `ingest_alarms_usecase.go` e `ingest_maintenance_usecase.go`. A preparação dos testes de armazenamento passou a configurar `TMPDIR`, `TMP` e `TEMP`, com restauração automática. O teste S3 utiliza um serviço simulado.
+
+A suíte completa também aprovou as migrations River e o consumo de um job de limpeza persistido por um worker separado. O teste de enfileiramento transacional usa um inseridor River simulado. Os oito pacotes sem arquivos de teste não foram contados como testes ignorados.
+
+## Resultados históricos e evidências
+
+Cada arquivo JSON preserva o ambiente, a versão de referência, os resultados e, quando disponíveis, os hashes dos arquivos testados. As versões com alterações locais são descritas nos próprios registros. A tabela reúne o resultado de cada etapa e permite acompanhar a ampliação da validação até a regressão completa com PostgreSQL.
+
+| Etapa | Resultado focado após correções | Regressão Go daquela etapa | Evidência |
+| --- | --- | --- | --- |
+| RF01/RF02 | Oito subcasos de login; 35 rotas × quatro entradas × dois ambientes = 280 subcasos de acesso. | 166 funções aprovadas; uma ignorada. | [rf01-rf02.json](/evidencias/rf01-rf02.json) |
+| RF03/RF04 | 30 subcasos aprovados. | 213 funções aprovadas; três ignoradas. | [rf03-rf04.json](/evidencias/rf03-rf04.json) |
+| RF05/RF06 | 14 cenários HTTP e 34 testes de filtros aprovados. | 180 funções aprovadas; três ignoradas. | [rf05-rf06.json](/evidencias/rf05-rf06.json) |
+| RF07/RF08 | 18 cenários aprovados, incluindo a caracterização do horizonte divergente; SQL inicialmente ignorado. | 222 funções aprovadas; quatro ignoradas. | [rf07-rf08.json](/evidencias/rf07-rf08.json) |
+| RF09 | 15 cenários aprovados; 34 testes existentes do frontend reexecutados. | 232 funções aprovadas; quatro ignoradas. | [rf09.json](/evidencias/rf09.json) |
+| RF10/RF11 | Quatro funções com 15 subcasos aprovados; frontend chegou a 40 testes; SQL inicialmente ignorado. | 236 funções aprovadas; cinco ignoradas. | [rf10-rf11.json](/evidencias/rf10-rf11.json) |
+| Integrações | Oito cenários e 40 testes do frontend aprovados. | 239 funções aprovadas; cinco ignoradas. | [rf-integracoes.json](/evidencias/rf-integracoes.json) |
+| PostgreSQL e backend completo | Cinco testes antes ignorados aprovados, incluindo quatro subcasos de ingestão em lotes. | **280 funções aprovadas; zero falhas e zero testes ignorados.** | [rf-postgresql.json](/evidencias/rf-postgresql.json) |
+| Navegador com serviços reais | 14 cenários aprovados; quatro uploads válidos, 528 previsões e uma inspeção manual concluída. | Sem nova execução Go; 40 testes do frontend aprovados. | [rf-navegador.json](/evidencias/rf-navegador.json) |
+
+As regressões finais de cada etapa terminaram sem falhas. A seleção de pacotes variou entre etapas; por isso, diferenças de contagem não representam apenas testes novos. Os 280 subcasos de acesso de RF02 e as 280 funções da regressão completa são contagens distintas.
+
+Além das correções descritas acima, a autenticação revelou uma fixture incompatível com Windows em `TestHealthHandler_Ready_StorageDown`: configurar somente `TMPDIR` não simulava indisponibilidade. O teste passou a configurar `TMPDIR`, `TMP` e `TEMP`, com restauração automática, e o reteste passou. O handler de produção não mudou.
+
+O frontend teve build concluído e lint sem erros, com avisos existentes nos componentes/páginas e sobre tamanho do bundle. O SVG foi validado como XML e possui título e descrição acessíveis. Os builds da documentação anteriores também foram concluídos.
+
+## Como reproduzir a validação
+
+Ambiente das execuções: Go 1.26.0, Windows amd64 e Node 22.15.0. Para testes SQL, foi utilizado PostgreSQL 16.15 em Docker. Instalar as dependências conforme os manifests do projeto. Utilizar dados e credenciais exclusivos de teste.
+
+### Seleções por requisito
+
+Na pasta `src/backend`, executar a seleção desejada com `-count=1`, que desativa o cache de resultados:
+
+```sh
+go test -count=1 -json ./tests/unit/usecase ./tests/unit/http ./tests/integration ./cmd/api -run '^(TestLoginUseCase_.*|TestAuthHandler_Login|TestAuthMiddleware_.*|TestRequireRole_.*|TestIntegration_FullAuthFlow|TestRF01_LoginContract|TestRF02_AllProtectedRoutesRejectUnauthorizedAccess)$'
+go test -count=1 -json ./tests/integration -run '^TestRF0[34]'
+go test -count=1 -json ./tests/integration -run '^TestRF0[56]_'
+go test -count=1 -json ./tests/integration -run '^TestRF0[78]_'
+go test -count=1 -json ./tests/integration -run '^TestRF09_'
+go test -count=1 -json ./tests/unit/adapter ./tests/integration -run '^TestRF1[01]_'
+go test -count=1 -json ./tests/integration ./cmd/api -run '^TestRFIntegration_'
+```
+
+As seleções RF07 e RF10 incluem testes SQL e exigem `TEST_DATABASE_URL` para executá-los. Variável ausente pode produzir `skip`; esse evento não conta como aprovação.
+
+### Frontend e documentação
+
+Na pasta `src/frontend`:
+
+```sh
+npm test
+npm ci --no-audit --no-fund
+npm run lint
+npm run build
+```
+
+`npm test` utiliza módulos nativos do Node; a instalação é necessária para lint/build. Na pasta `docs`, executar `npm ci` quando as dependências não estiverem instaladas e `npm run build` para validar a documentação.
+
+### Backend completo com PostgreSQL
+
+Executar em PowerShell com Docker iniciado e Go 1.26 disponível. Usar um nome de contêiner e uma porta livres. Os valores abaixo são credenciais exclusivas de teste local:
+
+```powershell
+docker run --detach --rm --name g04-rf-postgres-test `
+  --env POSTGRES_USER=rf_test --env POSTGRES_PASSWORD=rf_local_only `
+  --env POSTGRES_DB=rf_test --publish 127.0.0.1:55439:5432 `
+  postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+
+docker exec g04-rf-postgres-test pg_isready -U rf_test -d rf_test
+```
+
+Aguardar `accepting connections`. Na pasta `src/backend`, executar:
+
+```powershell
+$previousTestDsn = $env:TEST_DATABASE_URL
+try {
+  $env:TEST_DATABASE_URL = 'postgres://rf_test:rf_local_only@127.0.0.1:55439/rf_test?sslmode=disable'
+  go test -p 1 -count=1 -json ./... > postgres-full-results.json
+  if ($LASTEXITCODE -ne 0) { throw 'A regressão falhou; consultar o arquivo de resultados.' }
+} finally {
+  $env:TEST_DATABASE_URL = $previousTestDsn
+  docker stop g04-rf-postgres-test
+}
+```
+
+Para reproduzir somente os cinco testes anteriores, trocar o comando Go por:
+
+```sh
+go test -p 1 -count=1 -json ./tests/integration ./cmd/api -run '^(TestPostgresRepositories|TestStreamingIngestionCommitsAllBatchesOrRollsBack|TestCheckDatabaseConnection_AndMigrations|TestRF07_PostgresActiveDoorSelection|TestRF10_PostgresIndicatorsAndInspectionDeduplication)$'
+```
+
+Usar um contêiner/banco novo para cada repetição completa. Os testes executam migrations e alteram registros; não utilizar banco compartilhado ou operacional. O código de saída e a ausência de eventos `skip` com campo `Test` devem ser conferidos, pois alguns testes antigos ainda ignoram indisponibilidade de banco.
+
+### Registro e interpretação dos resultados
+
+Guardar o commit e os hashes dos arquivos com alterações locais, o comando, as versões das ferramentas, o código de saída e as contagens de aprovados, falhos e ignorados. Contar funções de nível superior separadamente dos subtestes. Eventos Go `skip` sem campo `Test` indicam pacotes sem testes.
+
+### Reprodução do fluxo no navegador
+
+O arquivo `tests/e2e/README.md` descreve a preparação, as contas fictícias, a limpeza controlada dos dados e o encerramento do ambiente. Usar Docker Compose, Node 22 e Microsoft Edge. O ambiente é iniciado por `docker compose -f tests/e2e/compose.yml up -d --build`; após preparar o banco conforme o README, executar `npm ci` e `npm test` em `tests/e2e`. Os resultados e capturas são gravados em `tests/e2e/output`. A conferência complementar do modelo é executada no contêiner Python, conforme as instruções do mesmo arquivo.
+
+## Diagnóstico inicial e rastreabilidade dos testes existentes
+
+O levantamento inicial encontrou testes de login, middleware, parsers, casos de uso e repositórios. A análise identificou a necessidade de ampliar as verificações de token expirado, tipos de importação, preservação de campos, combinações de filtros, seleção de portas, limites de classificação e totais dos indicadores.
+
+Esse levantamento orientou as baterias descritas por requisito. Os arquivos de teste citados nas respectivas seções e os registros JSON mantêm a rastreabilidade entre implementação e resultados. A matriz consolidada reúne os cenários realizados e os comportamentos observados.

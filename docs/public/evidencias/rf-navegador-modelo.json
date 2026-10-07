@@ -1,0 +1,44 @@
+{
+  "model_version": "v1.0.0",
+  "model_sha256": "6d1708a6a29941f0a25c649c435b5b03d18e55cf658d5ef539c7128bfbfd0235",
+  "features_count": 72,
+  "doors": [
+    {
+      "station_code": "FAL",
+      "platform": "P1",
+      "door_number": 4,
+      "alarms_7d": 2,
+      "probability": 0.39434098332847517,
+      "saved_probability": 0.394341,
+      "will_fail": false
+    },
+    {
+      "station_code": "PIN",
+      "platform": "P2",
+      "door_number": 8,
+      "alarms_7d": 2,
+      "probability": 0.3704735106333413,
+      "saved_probability": 0.3704735,
+      "will_fail": false
+    }
+  ],
+  "counts": {
+    "telemetry_alarms": 4,
+    "maintenance_events": 5,
+    "predictions": 528,
+    "prediction_runs": 1,
+    "inspections": 1
+  },
+  "jobs": [
+    {
+      "kind": "delete_ingestion_file",
+      "state": "completed",
+      "total": 5
+    },
+    {
+      "kind": "process_ingestion_upload",
+      "state": "completed",
+      "total": 5
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="800" viewBox="0 0 1160 800" role="img" aria-labelledby="title desc">
+  <title id="title">RF [8] — Fluxo operacional e alcance dos testes</title>
+  <desc id="desc">Seis etapas executadas por HTTP local: login, importação, cadastro de manutenção, predição, inspeção e consulta do dashboard. O cliente HTTP e os handlers são reais. Banco, fila e serviço de modelo são controlados. Oito cenários aprovados, incluindo recuperação de falhas.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#44708b"/></marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #16364a; }
+      .heading { font-size: 29px; font-weight: 700; }
+      .subtitle { font-size: 16px; fill: #526977; }
+      .label { font-size: 19px; font-weight: 700; }
+      .body { font-size: 16px; }
+      .small { font-size: 14px; }
+      .node { fill: #fff; stroke: #7aa1b6; stroke-width: 2; }
+      .link { fill: none; stroke: #44708b; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1160" height="800" rx="18" fill="#f3f7fa"/>
+  <text x="40" y="49" class="heading">RF [8] · Integrações e fluxo operacional</text>
+  <text x="40" y="79" class="subtitle">Execução automatizada local · 05/10/2026 · Evidência complementar, sem validação completa de produção</text>
+
+  <rect x="40" y="115" width="320" height="120" rx="12" class="node"/>
+  <text x="60" y="148" class="label">1. Login e permissões</text>
+  <text x="60" y="179" class="body">Senha → bcrypt → JWT</text>
+  <text x="60" y="205" class="body">Operador: operação · Engenharia: ML</text>
+  <path d="M363 175H407" class="link"/>
+  <rect x="420" y="115" width="320" height="120" rx="12" class="node"/>
+  <text x="440" y="148" class="label">2. Importação de CSV</text>
+  <text x="440" y="179" class="body">Alarmes e manutenções</text>
+  <text x="440" y="205" class="body">202 → processing → completed</text>
+  <path d="M743 175H787" class="link"/>
+  <rect x="800" y="115" width="320" height="120" rx="12" class="node"/>
+  <text x="820" y="148" class="label">3. Cadastro e consulta</text>
+  <text x="820" y="179" class="body">Manutenção manual: HTTP 201</text>
+  <text x="820" y="205" class="body">Importação + cadastro na mesma base</text>
+  <path d="M960 238V265H200V282" class="link"/>
+
+  <rect x="40" y="295" width="320" height="120" rx="12" class="node"/>
+  <text x="60" y="328" class="label">4. Predição via HTTP</text>
+  <text x="60" y="359" class="body">2 portas · horizonte de 7 dias</text>
+  <text x="60" y="385" class="body">Probabilidades controladas: 0,8 e 0,2</text>
+  <path d="M363 355H407" class="link"/>
+  <rect x="420" y="295" width="320" height="120" rx="12" class="node"/>
+  <text x="440" y="328" class="label">5. Inspeção automática</text>
+  <text x="440" y="359" class="body">Vínculo com previsão e porta em risco</text>
+  <text x="440" y="385" class="body">pending → in_progress → completed</text>
+  <path d="M743 355H787" class="link"/>
+  <rect x="800" y="295" width="320" height="120" rx="12" class="node"/>
+  <text x="820" y="328" class="label">6. Consolidação consultada</text>
+  <text x="820" y="359" class="body">Dashboard e linha do tempo</text>
+  <text x="820" y="385" class="body">2 portas · 1 em risco · 1 concluída</text>
+
+  <rect x="40" y="445" width="1080" height="66" rx="10" fill="#e5eef5"/>
+  <text x="60" y="472" class="label">Falhas e recuperação verificadas</text>
+  <text x="60" y="496" class="body">Sem token: 401 · Sem perfil: 403 · CSV duplicado: 409 · ML inválido/indisponível: 503 · Nova tentativa válida</text>
+
+  <rect x="40" y="540" width="320" height="174" rx="12" fill="#e5f3ef" stroke="#35725d"/>
+  <text x="60" y="571" class="label">Componentes reais executados</text>
+  <text x="60" y="602" class="body">Login, JWT, handlers e casos de uso</text>
+  <text x="60" y="628" class="body">Parsers CSV e arquivos temporários</text>
+  <text x="60" y="654" class="body">Clientes e servidores HTTP locais</text>
+  <text x="60" y="680" class="body">Permissões nas rotas da aplicação*</text>
+  <rect x="420" y="540" width="320" height="174" rx="12" fill="#fff4df" stroke="#a77524" stroke-dasharray="6 4"/>
+  <text x="440" y="571" class="label">Substitutos controlados</text>
+  <text x="440" y="602" class="body">Repositórios em memória</text>
+  <text x="440" y="628" class="body">Fila drenada pelo próprio teste</text>
+  <text x="440" y="654" class="body">Servidor ML com respostas fixas</text>
+  <text x="440" y="680" class="body">Unidade de trabalho sem transação SQL</text>
+  <rect x="800" y="540" width="320" height="174" rx="12" fill="#f0edf7" stroke="#7d7195"/>
+  <text x="820" y="571" class="label">Resultados verificados</text>
+  <text x="820" y="602" class="body">Oito cenários HTTP aprovados</text>
+  <text x="820" y="628" class="body">Três manutenções consultadas</text>
+  <text x="820" y="654" class="body">Uma inspeção concluída</text>
+  <text x="820" y="680" class="body">Recuperação após falhas simuladas</text>
+
+  <text x="40" y="749" class="small">* Teste separado usa buildRouter/registerRoutes; o fluxo HTTP principal usa um roteador de teste com proteção equivalente.</text>
+  <text x="40" y="775" class="small">Resultados reproduzíveis: implementacao-validacao-testes.mdx · evidencias/rf-integracoes.json</text>
+</svg>

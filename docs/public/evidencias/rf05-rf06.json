@@ -1,0 +1,1306 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-05",
+  "timezone": "America/Sao_Paulo",
+  "baseCommit": "2155cddb5205c55e495930147050f2de45a28001",
+  "environment": "Go 1.26.0 windows/amd64; Node 22.15.0; in-memory backend repositories; frontend pure functions; no browser or PostgreSQL",
+  "fileHashes": [
+    {
+      "path": "src/backend/tests/integration/maintenance_requirements_test.go",
+      "sha256": "37eb3a93158aaf7968b0f4c10d9f473b451d182a00bbd84942ac6e1824b7ec0c"
+    },
+    {
+      "path": "src/frontend/tests/recordFilters.test.js",
+      "sha256": "eff13ed749d5c5aaefb6cdcf6eafa0753a47ab91f0cc8cd1f7b2513f8c329ac4"
+    },
+    {
+      "path": "src/frontend/src/lib/filters.js",
+      "sha256": "9380fe692a53b9186813c3cba3d4e436db58045987e9954736ee8eeebbeca6f2"
+    },
+    {
+      "path": "src/frontend/src/lib/recordFilters.js",
+      "sha256": "83ae9faba205c3b485f537ed26f677467c92c721ec452fbdaeebdb5231c9ceae"
+    },
+    {
+      "path": "src/frontend/src/data/stationCatalog.js",
+      "sha256": "28314f35b80f0f60586654cc1f790f40a2f1c2f745b5ffacd0aa4a7754be8c7d"
+    },
+    {
+      "path": "src/frontend/src/data/stations.js",
+      "sha256": "1e8da2a1802b62b4ba2c9b9c0dead93931611d9a0a77176b64c31e68005fca25"
+    },
+    {
+      "path": "src/frontend/src/pages/Manutencoes.jsx",
+      "sha256": "1b4b1577d378ca81937daeb24520a25dfccd0175ef4a0ac5c6729d5ff35a38dd"
+    },
+    {
+      "path": "src/frontend/src/pages/Alarmes.jsx",
+      "sha256": "84161f8eae1bea99059dfdd63d5ac6e5511c176605df75063234fab8073c1284"
+    },
+    {
+      "path": "src/frontend/src/pages/Inspecoes.jsx",
+      "sha256": "2cba3fb1d4b0470bff32d27496b24144615c374c9344ead6a5c081f116322911"
+    },
+    {
+      "path": "src/frontend/src/pages/Predicoes.jsx",
+      "sha256": "e2d2e285a6ae11a9dcb78b905065de305865e70cde2cd5b97b3efdd0fa38afe6"
+    },
+    {
+      "path": "src/frontend/package.json",
+      "sha256": "915e55b4a111bc82ce6b4aea1db4df4f474729ec777c772e957c5aa7406e3532"
+    }
+  ],
+  "frontend": {
+    "initialTap": "TAP version 13\r\n# Subtest: RF06 maintenance station\r\nok 1 - RF06 maintenance station\r\n  ---\r\n  duration_ms: 2.6799\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance period boundary\r\nok 2 - RF06 maintenance period boundary\r\n  ---\r\n  duration_ms: 0.2189\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance type\r\nok 3 - RF06 maintenance type\r\n  ---\r\n  duration_ms: 1.1358\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance source\r\nok 4 - RF06 maintenance source\r\n  ---\r\n  duration_ms: 0.1318\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance duration inclusive\r\nok 5 - RF06 maintenance duration inclusive\r\n  ---\r\n  duration_ms: 0.1009\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance combined\r\nok 6 - RF06 maintenance combined\r\n  ---\r\n  duration_ms: 0.1145\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance no results\r\nok 7 - RF06 maintenance no results\r\n  ---\r\n  duration_ms: 0.1037\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance reset\r\nok 8 - RF06 maintenance reset\r\n  ---\r\n  duration_ms: 0.0743\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm station\r\nok 9 - RF06 alarm station\r\n  ---\r\n  duration_ms: 0.2762\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm period\r\nok 10 - RF06 alarm period\r\n  ---\r\n  duration_ms: 0.2499\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm open\r\nok 11 - RF06 alarm open\r\n  ---\r\n  duration_ms: 0.1555\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm normalized\r\nok 12 - RF06 alarm normalized\r\n  ---\r\n  duration_ms: 0.0736\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm type\r\nok 13 - RF06 alarm type\r\n  ---\r\n  duration_ms: 0.0513\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm combined\r\nok 14 - RF06 alarm combined\r\n  ---\r\n  duration_ms: 0.0554\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm no results\r\nok 15 - RF06 alarm no results\r\n  ---\r\n  duration_ms: 0.0399\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm reset\r\nok 16 - RF06 alarm reset\r\n  ---\r\n  duration_ms: 0.0413\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection station\r\nok 17 - RF06 inspection station\r\n  ---\r\n  duration_ms: 0.2937\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection period\r\nok 18 - RF06 inspection period\r\n  ---\r\n  duration_ms: 0.0765\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection AI\r\nok 19 - RF06 inspection AI\r\n  ---\r\n  duration_ms: 0.1394\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection manual\r\nok 20 - RF06 inspection manual\r\n  ---\r\n  duration_ms: 0.0692\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection status\r\nok 21 - RF06 inspection status\r\n  ---\r\n  duration_ms: 0.0579\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection combined\r\nok 22 - RF06 inspection combined\r\n  ---\r\n  duration_ms: 0.0625\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection no results\r\nok 23 - RF06 inspection no results\r\n  ---\r\n  duration_ms: 0.0501\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection reset\r\nok 24 - RF06 inspection reset\r\n  ---\r\n  duration_ms: 0.0431\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts risk\r\nok 25 - RF06 predictive alerts risk\r\n  ---\r\n  duration_ms: 0.0754\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts stable\r\nok 26 - RF06 predictive alerts stable\r\n  ---\r\n  duration_ms: 0.0326\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts combined\r\nok 27 - RF06 predictive alerts combined\r\n  ---\r\n  duration_ms: 0.0423\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts no results\r\nok 28 - RF06 predictive alerts no results\r\n  ---\r\n  duration_ms: 0.0338\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts reset\r\nok 29 - RF06 predictive alerts reset\r\n  ---\r\n  duration_ms: 0.1278\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 station aliases apply to all record filters\r\nok 30 - RF06 station aliases apply to all record filters\r\n  ---\r\n  duration_ms: 0.1083\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 filtering does not mutate the source collection\r\nok 31 - RF06 filtering does not mutate the source collection\r\n  ---\r\n  duration_ms: 0.9705\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 custom date range includes both endpoints\r\nok 32 - RF06 custom date range includes both endpoints\r\n  ---\r\n  duration_ms: 0.543\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 recent period excludes future and missing dates\r\nnot ok 33 - RF06 recent period excludes future and missing dates\r\n  ---\r\n  duration_ms: 0.7328\r\n  type: 'test'\r\n  location: 'C:\\\\Users\\\\Inteli\\\\Downloads\\\\EC-M7\\\\g04\\\\src\\\\frontend\\\\tests\\\\recordFilters.test.js:76:1'\r\n  failureType: 'testCodeFailure'\r\n  error: |-\r\n    Expected values to be strictly equal:\r\n    \r\n    true !== false\r\n    \r\n  code: 'ERR_ASSERTION'\r\n  name: 'AssertionError'\r\n  expected: false\r\n  actual: true\r\n  operator: 'strictEqual'\r\n  stack: |-\r\n    TestContext.<anonymous> (file:///C:/Users/Inteli/Downloads/EC-M7/g04/src/frontend/tests/recordFilters.test.js:77:67)\r\n    Test.runInAsyncScope (node:async_hooks:214:14)\r\n    Test.run (node:internal/test_runner/test:1047:25)\r\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\r\n    Test.postRun (node:internal/test_runner/test:1173:19)\r\n    Test.run (node:internal/test_runner/test:1101:12)\r\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\r\n  ...\r\n# Subtest: RF06 duration filter excludes missing values when a bound is set\r\nnot ok 34 - RF06 duration filter excludes missing values when a bound is set\r\n  ---\r\n  duration_ms: 0.2154\r\n  type: 'test'\r\n  location: 'C:\\\\Users\\\\Inteli\\\\Downloads\\\\EC-M7\\\\g04\\\\src\\\\frontend\\\\tests\\\\recordFilters.test.js:79:1'\r\n  failureType: 'testCodeFailure'\r\n  error: |-\r\n    Expected values to be strictly equal:\r\n    \r\n    true !== false\r\n    \r\n  code: 'ERR_ASSERTION'\r\n  name: 'AssertionError'\r\n  expected: false\r\n  actual: true\r\n  operator: 'strictEqual'\r\n  stack: |-\r\n    TestContext.<anonymous> (file:///C:/Users/Inteli/Downloads/EC-M7/g04/src/frontend/tests/recordFilters.test.js:80:64)\r\n    Test.runInAsyncScope (node:async_hooks:214:14)\r\n    Test.run (node:internal/test_runner/test:1047:25)\r\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\r\n    Test.postRun (node:internal/test_runner/test:1173:19)\r\n    Test.run (node:internal/test_runner/test:1101:12)\r\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\r\n  ...\r\n1..34\r\n# tests 34\r\n# suites 0\r\n# pass 32\r\n# fail 2\r\n# cancelled 0\r\n# skipped 0\r\n# todo 0\r\n# duration_ms 105.1286\r\n",
+    "finalTap": "\r\n> frontend@0.0.0 test\r\n> node --test tests/*.test.js\r\n\r\nTAP version 13\r\n# Subtest: RF06 maintenance station\r\nok 1 - RF06 maintenance station\r\n  ---\r\n  duration_ms: 1.5742\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance period boundary\r\nok 2 - RF06 maintenance period boundary\r\n  ---\r\n  duration_ms: 0.272\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance type\r\nok 3 - RF06 maintenance type\r\n  ---\r\n  duration_ms: 0.1335\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance source\r\nok 4 - RF06 maintenance source\r\n  ---\r\n  duration_ms: 0.8194\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance duration inclusive\r\nok 5 - RF06 maintenance duration inclusive\r\n  ---\r\n  duration_ms: 0.141\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance combined\r\nok 6 - RF06 maintenance combined\r\n  ---\r\n  duration_ms: 0.1354\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance no results\r\nok 7 - RF06 maintenance no results\r\n  ---\r\n  duration_ms: 0.155\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 maintenance reset\r\nok 8 - RF06 maintenance reset\r\n  ---\r\n  duration_ms: 0.0921\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm station\r\nok 9 - RF06 alarm station\r\n  ---\r\n  duration_ms: 0.2981\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm period\r\nok 10 - RF06 alarm period\r\n  ---\r\n  duration_ms: 0.2916\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm open\r\nok 11 - RF06 alarm open\r\n  ---\r\n  duration_ms: 0.1921\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm normalized\r\nok 12 - RF06 alarm normalized\r\n  ---\r\n  duration_ms: 0.0815\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm type\r\nok 13 - RF06 alarm type\r\n  ---\r\n  duration_ms: 0.0513\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm combined\r\nok 14 - RF06 alarm combined\r\n  ---\r\n  duration_ms: 0.057\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm no results\r\nok 15 - RF06 alarm no results\r\n  ---\r\n  duration_ms: 0.0399\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 alarm reset\r\nok 16 - RF06 alarm reset\r\n  ---\r\n  duration_ms: 0.041\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection station\r\nok 17 - RF06 inspection station\r\n  ---\r\n  duration_ms: 0.3618\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection period\r\nok 18 - RF06 inspection period\r\n  ---\r\n  duration_ms: 0.081\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection AI\r\nok 19 - RF06 inspection AI\r\n  ---\r\n  duration_ms: 0.1613\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection manual\r\nok 20 - RF06 inspection manual\r\n  ---\r\n  duration_ms: 0.071\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection status\r\nok 21 - RF06 inspection status\r\n  ---\r\n  duration_ms: 0.0602\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection combined\r\nok 22 - RF06 inspection combined\r\n  ---\r\n  duration_ms: 0.087\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection no results\r\nok 23 - RF06 inspection no results\r\n  ---\r\n  duration_ms: 0.0518\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 inspection reset\r\nok 24 - RF06 inspection reset\r\n  ---\r\n  duration_ms: 0.0491\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts risk\r\nok 25 - RF06 predictive alerts risk\r\n  ---\r\n  duration_ms: 0.0819\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts stable\r\nok 26 - RF06 predictive alerts stable\r\n  ---\r\n  duration_ms: 0.0347\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts combined\r\nok 27 - RF06 predictive alerts combined\r\n  ---\r\n  duration_ms: 0.0419\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts no results\r\nok 28 - RF06 predictive alerts no results\r\n  ---\r\n  duration_ms: 0.0375\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 predictive alerts reset\r\nok 29 - RF06 predictive alerts reset\r\n  ---\r\n  duration_ms: 0.152\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 station aliases apply to all record filters\r\nok 30 - RF06 station aliases apply to all record filters\r\n  ---\r\n  duration_ms: 0.1248\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 filtering does not mutate the source collection\r\nok 31 - RF06 filtering does not mutate the source collection\r\n  ---\r\n  duration_ms: 0.1562\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 custom date range includes both endpoints\r\nok 32 - RF06 custom date range includes both endpoints\r\n  ---\r\n  duration_ms: 0.1472\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 recent period excludes future and missing dates\r\nok 33 - RF06 recent period excludes future and missing dates\r\n  ---\r\n  duration_ms: 0.1217\r\n  type: 'test'\r\n  ...\r\n# Subtest: RF06 duration filter excludes missing values when a bound is set\r\nok 34 - RF06 duration filter excludes missing values when a bound is set\r\n  ---\r\n  duration_ms: 0.0608\r\n  type: 'test'\r\n  ...\r\n1..34\r\n# tests 34\r\n# suites 0\r\n# pass 34\r\n# fail 0\r\n# cancelled 0\r\n# skipped 0\r\n# todo 0\r\n# duration_ms 94.9771\r\n",
+    "build": "npm run build: exit 0; chunk-size warning",
+    "lint": "npm run lint: exit 0; warnings reported"
+  },
+  "documentation": {
+    "build": "npm run build: exit 0; warnings reported"
+  },
+  "backend": {
+    "firstEvent": "2026-10-05T22:05:59.5823208-03:00",
+    "lastEvent": "2026-10-05T22:06:06.9466412-03:00",
+    "packages": [
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Action": "pass",
+        "Elapsed": 1.851
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Action": "pass",
+        "Elapsed": 2.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Action": "pass",
+        "Elapsed": 1.565
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Action": "pass",
+        "Elapsed": 0.779
+      }
+    ],
+    "topLevelTests": [
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_CacheHitAndInvalidate",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_StationDoorsStatusCacheHit",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_GetDoorTimeline",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCachedDashboardRepository_Errors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCircuitBreaker_StateTransitions",
+        "Action": "pass",
+        "Elapsed": 0.88
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_MissingOrderType",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_MissingStationCode",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_RepoCreateError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestCreateMaintenanceUseCase_List",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetSummary",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetDoorTimeline",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetStationDoorsStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_WithUnitOfWork",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictionsForModelRejectsStaleInferenceService",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_UnitOfWorkRollbackOnInspectionFailure",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_NoActiveDoors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_NoPredictions",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetDoorPredictionHistory",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_AsyncEventPublishingDoesNotFail",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_GetLatestPredictions_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetDashboardSummaryUseCase_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetDoorTimelineUseCase_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestGetStationDoorsStatusUseCase_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestTriggerPredictionsUseCase_Errors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_TriggerPredictions_FixedHorizon",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_PredictionExperimentIsIsolatedUntilPromotion",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestDashboardUseCase_PredictionExperimentRejectsInvalidThreshold",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestEventBus_PublishAndSubscribe",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_DoorRiskAlertReceived",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_CacheInvalidationOnPredictionRun",
+        "Action": "pass",
+        "Elapsed": 0.11
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestSubscribers_FileUploadCompleted",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAlarmHandler_List",
+        "Action": "pass",
+        "Elapsed": 0.09
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_ValidToken",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_MissingHeader",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_InvalidFormat",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_WrongSecret",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthMiddleware_UnexpectedSigningMethod",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_AllowedRole",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_ForbiddenRole",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRequireRole_MissingRole",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestCorrelationIDMiddleware_GeneratesNewID",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestCorrelationIDMiddleware_PreservesExistingID",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_LogsJSON",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestGetRequestID_NilAndEmpty",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_WarnAndErrorLogs",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestStructuredLoggerMiddleware_WithTraceSpan",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestAuthHandler_Login",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_Alarms",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_Maintenance",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestUploadHandler_GetStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Summary",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Timeline",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_StationDoorsStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_Predictions",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDashboardHandler_PredictionExperimentLifecycle",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_Create",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_UpdateStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestInspectionHandler_ListAndGetByID",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestMaintenanceHandler",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestMetricsMiddlewareAndHandler",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Live",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_DatabaseDown",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_NilDatabase",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestHealthHandler_Ready_StorageDown",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_OpenAPISpec",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_SwaggerUI",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestDocsHandler_OpenAPISpec_NotFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondProblem_RFC7807Structure",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_DuplicateUpload",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_NotFoundErrors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_ValidationErrors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRespondDomainError_RemainingErrors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRateLimiterMiddleware_AllowsUnderBurst",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInMemoryEventBus_EdgeBranches",
+        "Action": "pass",
+        "Elapsed": 0.05
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_EnqueuesDurableJob",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ValidCSV",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ValidXLSX",
+        "Action": "pass",
+        "Elapsed": 0.03
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ShortRowNoPanic",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_UnknownPlatformNoFallback",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_RollbackOnBatchFailure",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_IdempotencyDuplicate",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestAlarmRepo_ReconcileStaleUploads",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_FailUploadErrorLogged",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_ConcurrentDuplicateUploads",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_CreateUploadGeneralError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_CreateUploadDuplicateError_HashFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarmsUseCase_GetStatus_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_CheckDuplicateHash_DeleteError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_HandleCreateUploadError_DeleteErrorAndHashNotFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_HandleCreateUploadError_DuplicateFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_StorageOpenError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_ParserError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ReadAndParse_EmptyRecords",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ConvertRaw_FallbackSourceAndInvalidAlarm",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_BatchInsertion_Over500AndBatchInsertError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FinalizeUpload_GetByID_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FinalizeUpload_Update_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FailUpload_GetUploadByID_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_FailUpload_UpdateUpload_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessFileAsync_StorageDeleteError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_CheckDuplicateHash_DeleteError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_HandleCreateUploadError_DeleteErrorAndHashNotFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_HandleCreateUploadError_DuplicateFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_StorageOpenError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_ParserError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ReadAndParse_EmptyRecords",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ConvertRaw_FallbackSourceAndInvalidEvent",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_BatchInsertion_Over500",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FinalizeUpload_GetByID_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FinalizeUpload_Update_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FailUpload_GetUploadByID_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_FailUpload_UpdateUpload_Error",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessFileAsync_StorageDeleteError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_And_FailJob",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessJob_And_FailJob",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_WithQueue_SuccessAndError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_WithQueue_SuccessAndError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_BatchInsertError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenance_ProcessJob_DeleteByUploadIDError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestAlarms_ProcessJob_DeleteByUploadIDError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ValidCSV",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ValidXLSX",
+        "Action": "pass",
+        "Elapsed": 0.04
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ShortRowNoPanic",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_RollbackOnBatchFailure",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_FailUploadErrorLogged",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_ConcurrentDuplicateUploads",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_CreateUploadGeneralError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestIngestMaintenanceUseCase_CreateUploadDuplicateError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestTerminalUploadRetryOnlyCleansUp",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_Create",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_ValidationErrors",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_InvalidStatus",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_GetByID_NotFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_ReopenFromCompletedClearsCompletedAt",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_UpdateStatus_InvalidTransitions",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_ErrorPaths",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestInspectionUseCase_List_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestListAlarmsUseCase_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_Success",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_WrongPassword",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_UserNotFound",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_InactiveUser",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_EmptyFields",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_DBError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestLoginUseCase_TokenGenError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_GetAndBuildConfig",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_UpdatePredictionSchedule",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_TriggerRetrainAndDrift",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_ResumeTrainingFromFailedStage",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_ResumeTrainingFromCancelledStage",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_CancelTrainingPersistsTerminalState",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestMLOpsUseCase_PromoteValidatesCandidateBeforeExternalActivation",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestPromoteModelAndPublishUseCasePublishesOfficialRun",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestPromoteModelAndPublishUseCaseRestoresPreviousModelWhenRunFails",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestUnitOfWork_CommitOnSuccess",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/usecase",
+        "Test": "TestUnitOfWork_RollbackOnError",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_HealthEndpoint",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_FullAuthFlow",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF01_LoginContract",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_ImportFormatsAndTypes",
+        "Action": "pass",
+        "Elapsed": 0.26
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_InvalidFiles",
+        "Action": "pass",
+        "Elapsed": 0.1
+      },
+      {
+        "Package": "github.com/g04/backend/tests/unit/http",
+        "Test": "TestRateLimiterMiddleware_BlocksOverBurst",
+        "Action": "pass",
+        "Elapsed": 1.1
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF03RF04_InvalidRowsAreNotPersisted",
+        "Action": "pass",
+        "Elapsed": 0.11
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF04_OrderTypesFromFile",
+        "Action": "pass",
+        "Elapsed": 0.08
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_AlarmFilterParameters",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_CreateAndQueryAllFields",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_QueryEmptyCollection",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestPostgresRepositories",
+        "Action": "skip",
+        "Elapsed": 0.06
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestStreamingIngestionCommitsAllBatchesOrRollsBack",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_CompleteOperationalPipeline",
+        "Action": "pass",
+        "Elapsed": 0.04
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestIntegration_SecurityAndProblemDetailsRFC7807",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestRF02_AllProtectedRoutesRejectUnauthorizedAccess",
+        "Action": "pass",
+        "Elapsed": 0.09
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckLiveness",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestWaitForUploads",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckDatabaseConnection_AndMigrations",
+        "Action": "skip",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestBuildRouter_AndRoutes",
+        "Action": "pass",
+        "Elapsed": 0
+      }
+    ],
+    "newCases": [
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_AlarmFilterParameters",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery/status=pending",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery/status=in_progress",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery/status=completed",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery/status=",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF06_InspectionStatusQuery",
+        "Action": "pass",
+        "Elapsed": 0.01
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_CreateAndQueryAllFields",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/missing_type",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/missing_station",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/missing_start",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/blank_type",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/empty_body",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/malformed_json",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist/duration_wrong_type",
+        "Action": "pass",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_InvalidRegistrationDoesNotPersist",
+        "Action": "pass",
+        "Elapsed": 0.02
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestRF05_QueryEmptyCollection",
+        "Action": "pass",
+        "Elapsed": 0
+      }
+    ],
+    "skipped": [
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestPostgresRepositories",
+        "Action": "skip",
+        "Elapsed": 0.06
+      },
+      {
+        "Package": "github.com/g04/backend/tests/integration",
+        "Test": "TestStreamingIngestionCommitsAllBatchesOrRollsBack",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/g04/backend/cmd/api",
+        "Test": "TestCheckDatabaseConnection_AndMigrations",
+        "Action": "skip",
+        "Elapsed": 0.01
+      }
+    ]
+  }
+}

@@ -28,16 +28,23 @@ func (r *PostgresDashboardRepository) GetSummary(ctx context.Context) (*domain.D
 	}
 
 	var doorsAtRisk int
-	_ = r.db.QueryRowContext(ctx, `
+	err = r.db.QueryRowContext(ctx, `
 		SELECT COALESCE(total_doors_at_risk, 0)
 		FROM prediction_runs
 		WHERE is_experiment = FALSE AND published_at IS NOT NULL
 		ORDER BY published_at DESC LIMIT 1
 	`).Scan(&doorsAtRisk)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
 
 	var pendingInspections, completedInspections int
-	_ = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM inspections WHERE status = 'pending'").Scan(&pendingInspections)
-	_ = r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM inspections WHERE status = 'completed'").Scan(&completedInspections)
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM inspections WHERE status = 'pending'").Scan(&pendingInspections); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM inspections WHERE status = 'completed'").Scan(&completedInspections); err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT s.code, COUNT(p.id)
@@ -54,14 +61,19 @@ func (r *PostgresDashboardRepository) GetSummary(ctx context.Context) (*domain.D
 		LIMIT 5
 	`)
 	var criticalStations []domain.StationRiskSummary
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var item domain.StationRiskSummary
-			if err := rows.Scan(&item.StationCode, &item.DoorsAtRisk); err == nil {
-				criticalStations = append(criticalStations, item)
-			}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item domain.StationRiskSummary
+		if err := rows.Scan(&item.StationCode, &item.DoorsAtRisk); err != nil {
+			return nil, err
 		}
+		criticalStations = append(criticalStations, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return &domain.DashboardSummary{
