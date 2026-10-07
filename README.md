@@ -1,4 +1,4 @@
-# Lumen — Manutenção preditiva de portas de plataforma
+# Lumem — Manutenção preditiva de portas de plataforma
 
 <p align="center">
   <a href="https://www.inteli.edu.br/"><img src="https://res.cloudinary.com/dwewomj84/image/upload/v1761355911/inteli_lfuayp.png" alt="Inteli — Instituto de Tecnologia e Liderança" width="320"></a>
@@ -6,7 +6,7 @@
 
 Projeto acadêmico do **Grupo 4 — Subway Surfers**, desenvolvido no Inteli em parceria com a **Motiva**, para apoiar a manutenção das portas de plataforma (*Platform Screen Doors*, PSDs) da **Linha 4–Amarela**.
 
-A Lumen reúne alarmes e ordens de manutenção, estima risco de falha e apresenta os resultados por estação, plataforma e porta. O objetivo é ajudar a equipe a priorizar inspeções e intervenções, aproveitando os dados históricos da operação. Uma classificação de risco indica uma necessidade de avaliação; não determina o dia exato de uma quebra nem substitui o diagnóstico em campo.
+O Lumem reúne alarmes e ordens de manutenção, estima risco de falha e apresenta os resultados por estação, plataforma e porta. O objetivo é ajudar a equipe a priorizar inspeções e intervenções, aproveitando os dados históricos da operação. Uma classificação de risco indica uma necessidade de avaliação; não determina o dia exato de uma quebra nem substitui o diagnóstico em campo.
 
 [Documentação completa](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) · [Serviço de ML](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/modelo/README.md) · [Frontend](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/frontend/README.md) · [Ambientes Python](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/docs/dependencias-python.md)
 
@@ -338,4 +338,16 @@ Os documentos de cada sprint registram as decisões e evidências. A presença d
 
 ## Licença
 
-<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/">GRUPO 4 by [Inteli](https://www.inteli.edu.br/), [Joseph Mansur](https://www.linkedin.com/in/joseph-marcelo-mansur/), [João Pedro Gonçalves Corrêa Araujo](https://www.linkedin.com/in/jo%C3%A3o-pedro-gon%C3%A7alves-corr%C3%AAa-araujo/), [Maria Vitória dos Santos](https://www.linkedin.com/in/maria-vit%C3%B3ria-dos-santos/), [Maria Arielly](https://www.linkedin.com/in/maria-arielly/), [Kaian Moura](https://www.linkedin.com/in/kaian-moura-56b8871b4/), [Leandro Precaro Barankiewicz Filho](https://www.linkedin.com/in/leandro-precaro-barankiewicz-filho/), [João Cardoso Dias](https://www.linkedin.com/in/jo%C3%A3ocardosodias/) is licensed under <a href="http://creativecommons.org/licenses/by/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">Attribution 4.0 International</a>.</p>
+O projeto **Lumem**, desenvolvido pelo **Grupo 4** no **Inteli — Instituto de Tecnologia e Liderança**, é disponibilizado sob a licença [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
+### Créditos
+
+- [Joseph Mansur](https://www.linkedin.com/in/joseph-marcelo-mansur/)
+- [João Pedro Gonçalves Corrêa Araujo](https://www.linkedin.com/in/jo%C3%A3o-pedro-gon%C3%A7alves-corr%C3%AAa-araujo/)
+- [Maria Vitória dos Santos](https://www.linkedin.com/in/maria-vit%C3%B3ria-dos-santos/)
+- [Maria Arielly](https://www.linkedin.com/in/maria-arielly/)
+- [Kaian Moura](https://www.linkedin.com/in/kaian-moura-56b8871b4/)
+- [Leandro Precaro Barankiewicz Filho](https://www.linkedin.com/in/leandro-precaro-barankiewicz-filho/)
+- [João Cardoso Dias](https://www.linkedin.com/in/jo%C3%A3ocardosodias/)
+
+Na medida permitida por lei, os autores identificados acima dedicam este trabalho ao domínio público, renunciando aos direitos autorais e direitos conexos sobre ele conforme a declaração CC0 1.0 Universal. O [texto legal completo](https://creativecommons.org/publicdomain/zero/1.0/legalcode) está disponível no site da Creative Commons.
