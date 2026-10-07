@@ -10,6 +10,14 @@ O Lumem reúne alarmes e ordens de manutenção, estima risco de falha e apresen
 
 [Documentação completa](https://graduacao.pages.git.inteli.edu.br/2026-2a/t16/g04/) · [Serviço de ML](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/modelo/README.md) · [Frontend](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/frontend/README.md) · [Ambientes Python](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/docs/dependencias-python.md)
 
+## Vídeo
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=lpjSriKm7sA"><img src="https://img.youtube.com/vi/lpjSriKm7sA/maxresdefault.jpg" alt="Vídeo do projeto Lumem no YouTube" width="640"></a>
+</p>
+
+<p align="center"><a href="https://www.youtube.com/watch?v=lpjSriKm7sA">Assistir no YouTube</a></p>
+
 ## O que a plataforma oferece
 
 | Área | Funcionalidades |
