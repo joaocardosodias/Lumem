@@ -1,0 +1,152 @@
+services:
+  model-minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: model-minio-linha4
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?defina MINIO_ROOT_USER no .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+    expose:
+      - "9000"
+      - "9001"
+    volumes:
+      - model-minio-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  model-minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: model-minio-init-linha4
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?defina MINIO_ROOT_USER no .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD no .env}
+      MINIO_APP_USER: ${MINIO_APP_USER:?defina MINIO_APP_USER no .env}
+      MINIO_APP_PASSWORD: ${MINIO_APP_PASSWORD:?defina MINIO_APP_PASSWORD no .env}
+    volumes:
+      - ../backend/minio/app-policy.json:/config/app-policy.json:ro
+    entrypoint: >-
+      /bin/sh -c '
+      until mc alias set local http://model-minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do sleep 2; done;
+      mc mb --ignore-existing local/training-data;
+      mc mb --ignore-existing local/artefacts;
+      mc anonymous set none local/training-data;
+      mc anonymous set none local/artefacts;
+      mc admin user add local "$${MINIO_APP_USER}" "$${MINIO_APP_PASSWORD}" || true;
+      mc admin policy create local g04-app /config/app-policy.json || true;
+      mc admin policy attach local g04-app --user "$${MINIO_APP_USER}";
+      '
+    depends_on:
+      - model-minio
+
+  model-registry-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: model-registry-init-linha4
+    restart: "no"
+    env_file:
+      - .env
+    environment: &ml-environment
+      ENV: ${ENV:-development}
+      MODEL_REGISTRY_DRIVER: ${MODEL_REGISTRY_DRIVER:-s3}
+      MODEL_S3_ENDPOINT: ${MODEL_S3_ENDPOINT:-http://model-minio:9000}
+      MODEL_S3_REGION: ${MODEL_S3_REGION:-us-east-1}
+      MODEL_S3_BUCKET: ${MODEL_S3_BUCKET:-artefacts}
+      MODEL_S3_ACCESS_KEY_ID: ${MODEL_S3_ACCESS_KEY_ID:-${MINIO_APP_USER}}
+      MODEL_S3_SECRET_ACCESS_KEY: ${MODEL_S3_SECRET_ACCESS_KEY:-${MINIO_APP_PASSWORD}}
+      MODEL_S3_PREFIX: ${MODEL_S3_PREFIX:-models/random-forest}
+      MODEL_MANIFEST_KEY: ${MODEL_MANIFEST_KEY:-models/random-forest/active/manifest.json}
+      MODEL_TRAINING_BUCKET: ${MODEL_TRAINING_BUCKET:-training-data}
+      MODEL_PANEL_S3_KEY: ${MODEL_PANEL_S3_KEY:-datasets/current/painel.parquet}
+      MODEL_MAINTENANCE_S3_KEY: ${MODEL_MAINTENANCE_S3_KEY:-datasets/current/ZM01_limpa.xlsx}
+    command: ["python", "seed_local_registry.py"]
+    volumes:
+      - ml-model-artifacts:/app/artifacts
+      - ../../models/modelo-5/painel.parquet:/bootstrap-training/painel.parquet:ro
+      - ../../data/Corretiva Emergencial/processados/ZM01_limpa.xlsx:/bootstrap-training/ZM01_limpa.xlsx:ro
+    depends_on:
+      model-minio-init:
+        condition: service_completed_successfully
+
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-linha4
+    restart: unless-stopped
+    ports:
+      - "${ML_BIND_ADDRESS:-127.0.0.1}:${ML_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      <<: *ml-environment
+      TRAINING_JOB_DIR: /var/lib/g04/training-jobs
+      TRAINING_EXECUTION_MODE: external
+    volumes:
+      - ml-training-jobs:/var/lib/g04/training-jobs
+      - ml-model-artifacts:/app/artifacts
+    depends_on:
+      model-registry-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      default:
+        aliases:
+          - ml-service
+          - ml-linha4
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  ml-training-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-training-worker-linha4
+    restart: unless-stopped
+    command: ["python", "training_worker.py"]
+    env_file:
+      - .env
+    environment:
+      <<: *ml-environment
+      TRAINING_JOB_DIR: /var/lib/g04/training-jobs
+      TRAINING_EXECUTION_MODE: external
+      TRAINING_WORKER_POLL_SECONDS: ${TRAINING_WORKER_POLL_SECONDS:-1}
+      MODEL_TRAIN_TIMEOUT_SECONDS: ${MODEL_TRAIN_TIMEOUT_SECONDS:-3600}
+    volumes:
+      - ml-training-jobs:/var/lib/g04/training-jobs
+      - ml-model-artifacts:/app/artifacts
+    depends_on:
+      model-registry-init:
+        condition: service_completed_successfully
+    healthcheck:
+      disable: true
+    cpus: ${ML_TRAINING_CPUS:-1.50}
+    mem_limit: ${ML_TRAINING_MEMORY:-2g}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  default:
+    name: backend-network
+    external: true
+
+volumes:
+  model-minio-data:
+  ml-training-jobs:
+  ml-model-artifacts:

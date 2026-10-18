@@ -1,0 +1,46 @@
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 4px 6px;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.paginacao span {
+  color: var(--muted, #52647f);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.paginacao button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #dfe6f0;
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-weight: 700;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.paginacao button:disabled {
+  border-color: #edf1f6;
+  background: #f7f9fc;
+  color: #9aa8ba;
+  cursor: default;
+}
+
+.paginacao button:not(:disabled):hover {
+  border-color: var(--interactive-border, #d7dffd);
+  background: var(--interactive, #f0f3ff);
+  color: var(--brand, #3f00ff);
+  transform: translateY(-1px);
+}
+
+.paginacao button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #3f00ff) 20%, transparent);
+  outline-offset: 2px;
+}

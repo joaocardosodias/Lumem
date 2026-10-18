@@ -1,0 +1,83 @@
+---
+title: "Resumo para Prova: Sprint 1 e Modelo 1"
+description: "Guia de revisão rápida — o que cada hipótese testou e concluiu, o pipeline de limpeza de dados, o catálogo de features candidatas e o resultado do Modelo 1."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. O Projeto em Uma Frase</h2>
+</div>
+
+Manutenção preditiva das Portas de Plataforma (PSDs) da Linha 4, em parceria com a **Motiva**: usar o histórico de alarmes e ordens de manutenção (ZM01/ZM02/ZM03) para antecipar falhas antes que aconteçam, em vez de só reagir a elas. A Sprint 1 testou 7 hipóteses exploratórias sobre o que se relaciona com falha; a Sprint 2 construiu o primeiro modelo preditivo em cima do que sobrou de pé.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. As 7 Hipóteses, em uma Tabela</h2>
+</div>
+
+| # | Hipótese | Resultado | O que ficou |
+| :---: | :--- | :---: | :--- |
+| **H1** | Anomalias críticas (`> 30s`) se concentram nos horários de pico. | ✅ Sustentada | 51,47% das 668.987 anomalias críticas ocorrem nas 8h de pico (29,38% tarde, 22,09% manhã). |
+| **H2** | Dias de semana (seg–sáb) têm mais alarmes que domingo. | ✅ Sustentada | Média de 1.040/dia (seg–sáb) vs. 681/dia (domingo) — **52,7% a mais** em dia de operação plena. |
+| **H3** | Estações mais movimentadas (catraca) têm mais alarmes de obstrução. | ❌ Refutada | Spearman rho = −0,067, p = 0,865 — sem correlação, mesmo com dado real de catraca da Linha 4. |
+| **H4** | Alarmes não-OBS aumentam **antes** de uma manutenção corretiva. | ❌ Refutada | Só `BUT` tem alarme técnico registrado; na janela de 14 dias, o volume é **maior depois** (55,4% das ordens), não antes. |
+| **H5** | Certas estações demoram mais para normalizar alarmes `OBS`. | ✅ Sustentada (parcial) | `FRA` e `BUT` têm chance significativamente maior de `OBS` ficar ativo por mais de 24h (qui-quadrado + V de Cramér). |
+| **H6** | Portas no centro da estação têm mais alarmes que nas extremidades. | 🟡 Suporte fraco | Diferença agregada de só 1,74%; sem `OBS`, o efeito quase some; nenhum pico central simétrico nas posições 01–24. |
+| **H7** | Mais de 50% das corretivas são de origem mecânica. | ✅ Sustentada | 56,61% das 11.655 ordens (cenário conservador) são mecânicas; causas dominantes: desgaste, vibração/fixação, desajuste. |
+
+**Padrão geral:** os fatores de *contexto* (horário, dia da semana, estação) explicam bem a distribuição de alarmes — mas os fatores testados como *aviso antecipado de falha específica* (H3, H4, H6) não se sustentaram com força. Isso é o fio condutor que a Sprint 2 herda.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Limpeza de Dados</h2>
+</div>
+
+Cada base (Alarmes, `ZM01`, `ZM02`, `ZM03`) passou por um pipeline próprio antes de entrar em qualquer hipótese ou modelo — parsing de datas, remoção de duplicatas, filtro de alarmes `OBS` curtos (`≤ 30s`, sem impacto mecânico) e padronização de texto. Detalhes completos em **Limpeza de dados** (menu lateral).
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Features Candidatas → Modelo Real</h2>
+</div>
+
+O catálogo de **[Features Candidatas](/sprints/sprint-1/features-candidatas)** reavaliou as 7 hipóteses e propôs um primeiro conjunto de atributos, descartando de cara `vol_passageiros_catraca` (H3), `vol_alarmes_acumulados_ante_corretiva` bruto (H4) e `posicao_centro_vs_extremidade` (H6) por falta de evidência.
+
+O **[Modelo 1](/sprints/sprint-2/modelos/modelo-1/)**, já na Sprint 2, implementou uma versão adaptada dessas ideias (`dias_desde_ultima_manutencao`, `alarmes_ultimas_24h/7d`, `tendencia_alarmes`, `numero_manutencoes_anteriores`, features de preventiva, entre outras) e testou de novo, com dados reais, tanto a movimentação de passageiros quanto o volume de alarme `OBS` como sinal de degradação — **os dois continuaram sem mostrar efeito prático relevante**, confirmando H3 e H4 por um segundo ângulo, agora contra o alvo de falha real, não só contra taxa de alarme.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Modelo 1: o Número que Importa</h2>
+</div>
+
+Alvo: `falha_proximos_7d` (a estação vai ter manutenção corretiva nos próximos 7 dias?). XGBoost, split temporal (80/20 por data), `balanced_accuracy` como métrica de busca por causa do desbalanceamento extremo.
+
+| | Classe `1` (falha) | Classe `0` (sem falha) |
+| :--- | :---: | :---: |
+| Proporção da base | 98,4% | 1,6% (190 de 11.694) |
+| Precisão (teste) | 0,99 | 0,05 |
+| Recall (teste) | 0,94 | 0,26 |
+
+**Acurácia balanceada no teste: 59,83%** — acima de um classificador aleatório (50%), mas ainda um sinal fraco. O diagnóstico treino-vs-teste (77,57% → 59,83%) mostra que o modelo generaliza pior do que o treino sugere, e nenhuma feature testada — dentro ou fora do modelo — teve correlação forte com o alvo. Detalhes completos, incluindo tudo que foi testado e descartado no caminho, em **[Modelo 1: Previsão de Falha em 7 Dias](/sprints/sprint-2/modelos/modelo-1/)**.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Se Só Puder Lembrar de 5 Coisas</h2>
+</div>
+
+1. **Contexto explica volume, não risco individual.** Horário de pico e dia de semana (H1, H2) preveem *quanto* alarme vai ter — não *qual* porta vai quebrar.
+2. **"Aviso antes da falha" não apareceu nos dados.** Nem alarme técnico (H4), nem movimentação de passageiros (H3), nem posição da porta (H6) — e o Modelo 1 confirmou de novo com o alvo real.
+3. **A base de alarmes técnicos é desigual entre estações** — só `BUT` tem cobertura completa (achado que limitou a H4 e reaparece como cuidado em qualquer análise por estação).
+4. **O alvo do Modelo 1 é extremamente desbalanceado** (1,6% de classe rara) — isso, mais que a escolha do modelo, é o principal fator limitando o desempenho.
+5. **Descartar é resultado, não fracasso.** Cada feature/hipótese refutada com evidência estatística poupa retrabalho futuro e é documentada, não escondida.

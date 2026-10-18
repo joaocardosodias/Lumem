@@ -1,0 +1,406 @@
+@font-face {
+  font-family: 'Manrope';
+  src: url('./fonts/manrope-variable.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --brand: #3f00ff;
+  --brand-soft: color-mix(in srgb, var(--brand) 5%, white);
+  --paper: #f6f3ee;
+  --white: #ffffff;
+  --text: #3f00ff;
+  --nav-width: 248px;
+  --nav-collapsed: 74px;
+  --font: 'Manrope', 'Segoe UI', sans-serif;
+  --grad-brand: linear-gradient(145deg, #6a28ff 0%, #3f00ff 100%);
+  --status-red: #ff003b;
+  --status-red-bg: #fff0f3;
+  --status-red-border: #ffb8c6;
+  --status-red-text: #d90032;
+  --status-yellow: #ffaa00;
+  --status-yellow-bg: #fff9e6;
+  --status-yellow-border: #ffe299;
+  --status-yellow-text: #b86200;
+  --status-green: #00c853;
+  --status-green-bg: #eafff2;
+  --status-green-border: #9cf2bd;
+  --status-green-text: #008a38;
+  --status-blue: #3f00ff;
+  --status-blue-bg: #f0f3ff;
+  --status-blue-border: #c5d0ff;
+  --status-blue-text: #3f00ff;
+  --status-gray: #64748b;
+  --status-gray-bg: #f8fafc;
+  --status-gray-border: #e2e8f0;
+  --status-gray-text: #475569;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--paper);
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-radius: 99px;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+select option {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: var(--ink, #172e52);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font);
+}
+
+h1 {
+  margin: 0;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.page-head h1 {
+  color: var(--ink, #172e52);
+  font-size: clamp(28px, 2.6vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1.2px;
+  line-height: 1.15;
+}
+
+.dashboard__kicker {
+  margin: 0 0 8px;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+
+.dashboard__lead {
+  margin: 10px 0 0;
+  max-width: 48rem;
+  color: var(--muted, #52647f);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.page-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.app-boot {
+  height: 100%;
+  background: var(--paper);
+}
+
+.page-status,
+.page-empty {
+  margin: 0 0 18px;
+  color: #6b4fe0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.page-status.is-error,
+.page-empty.is-error {
+  color: #d12b3a;
+}
+
+.form-modal__head,
+.alarmes-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e8edf4;
+}
+
+:is(.alarmes-modal, .manutencoes-modal, .inspecoes-modal) form.form-modal {
+  gap: 16px;
+  width: min(560px, 100%);
+  padding: 28px 30px 26px;
+  border: 1px solid #dfe6f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(23, 46, 82, .22);
+}
+
+:is(.alarmes-modal, .manutencoes-modal, .inspecoes-modal) .form-modal__head h2,
+.alarmes-modal .alarmes-modal-head h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.alarmes-modal .alarmes-modal-head .alarmes-modal-desc {
+  margin: 7px 0 0;
+  font-size: 13px;
+}
+
+.form-modal__head > div,
+.alarmes-modal-head > div {
+  min-width: 0;
+}
+
+.form-modal__eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted, #52647f);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.form-modal__head h2,
+.alarmes-modal-head h2 {
+  margin: 0;
+  color: var(--ink, #172e52);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.65px;
+  line-height: 1.2;
+}
+
+.form-modal__head p,
+.alarmes-modal-head p {
+  max-width: 46ch;
+  margin: 7px 0 0;
+  color: var(--muted, #52647f);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.form-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  border: 1px solid #dfe6f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted, #52647f);
+  font-size: 14px;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.form-modal__close:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: var(--ink, #172e52);
+  transform: translateY(-1px);
+}
+
+.form-modal__close:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.form-modal__close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand, #3f00ff) 20%, transparent);
+  outline-offset: 2px;
+}
+
+.form-modal__actions,
+.alarmes-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid #e8edf4;
+}
+
+.form-modal .form-modal__actions .ui-button,
+.form-modal .alarmes-modal-actions .ui-button {
+  align-self: auto;
+  width: auto;
+  min-width: 0;
+  min-height: 42px;
+  margin-top: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.form-modal .form-modal__actions .ui-button--secondary,
+.form-modal .alarmes-modal-actions .ui-button--secondary {
+  border: 1px solid var(--brand, #3f00ff);
+  background: #ffffff;
+  color: var(--brand, #3f00ff);
+}
+
+@media (max-width: 520px) {
+  :is(.alarmes-modal, .manutencoes-modal, .inspecoes-modal) {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  :is(.alarmes-modal, .manutencoes-modal, .inspecoes-modal) form.form-modal {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 24px 20px 22px;
+    border-radius: 16px 16px 0 0;
+    overflow-y: auto;
+  }
+
+  .form-modal__actions,
+  .alarmes-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-modal .form-modal__actions .ui-button,
+  .form-modal .alarmes-modal-actions .ui-button {
+    width: 100%;
+  }
+}
+
+
+.alertas__list .page-empty,
+.manutencoes__list .page-empty,
+.inspecoes__list .page-empty {
+  padding: 18px 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dashboard__tiles button {
+    transition: transform 0.28s ease, box-shadow 0.28s ease;
+  }
+
+  .dashboard__tiles button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 34px rgba(47, 0, 180, 0.14);
+  }
+
+  .dashboard__tiles button {
+    cursor: pointer;
+  }
+
+  .card-inspecao,
+  .dashboard__prediction,
+  .dashboard__station,
+  .portas__related,
+  .portas__row:not(.portas__row--head) {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    border-radius: 12px;
+  }
+
+  .card-inspecao:hover,
+  .dashboard__prediction:hover,
+  .dashboard__station:hover,
+  .portas__related:hover,
+  .portas__row:not(.portas__row--head):hover {
+    background: color-mix(in srgb, var(--brand) 6%, transparent);
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card,
+  .kpi-card__mark,
+  .manutencoes__chart,
+  .alertas__chart,
+  .dashboard__panel,
+  .dashboard__tiles button,
+  .dashboard__tiles article,
+  .portas__cards article,
+  .portas__panel,
+  .inspecoes__list,
+  .card-manutencao,
+  .card-alerta,
+  .card-inspecao,
+  .dashboard__prediction,
+  .dashboard__station,
+  .alertas__bar,
+  .manutencoes__bar {
+    transition: none;
+  }
+
+  .kpi-card:hover,
+  .manutencoes__chart:hover,
+  .alertas__chart:hover,
+  .dashboard__panel:hover,
+  .dashboard__tiles button:hover,
+  .dashboard__tiles article:hover,
+  .portas__cards article:hover,
+  .portas__panel:hover,
+  .alertas__bar:hover,
+  .manutencoes__bar:hover {
+    transform: none;
+  }
+}

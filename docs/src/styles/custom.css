@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Inter:wght@300..700&display=swap');
+
+:root {
+	/* Dark mode (default) primary accent colors - vibrant blue */
+	--sl-color-accent-low: #101e47;
+	--sl-color-accent: #2b66ff;
+	--sl-color-accent-high: #cedbff;
+	
+	/* Font Overrides */
+	--sl-font-sans: 'Inter', sans-serif;
+	--sl-font-display: 'Plus Jakarta Sans', sans-serif;
+}
+
+:root[data-theme='light'] {
+	/* Light mode primary accent colors - original purple-blue */
+	--sl-color-accent-low: #f4f0ff;
+	--sl-color-accent: #5e22f3;
+	--sl-color-accent-high: #250587;
+}
+
+/* --- Custom Premium Styling --- */
+
+/* Efeito Glassmorphism no Header e Sidebar */
+header.header {
+	background-color: rgba(10, 10, 10, 0.7) !important;
+	backdrop-filter: blur(16px);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme='light'] header.header {
+	background-color: rgba(255, 255, 255, 0.7) !important;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.sidebar-pane {
+	background-color: rgba(10, 10, 10, 0.5) !important;
+	backdrop-filter: blur(12px);
+}
+[data-theme='light'] .sidebar-pane {
+	background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Estilo Premium dos Cartões (Cards) */
+.card {
+	border: 1px solid rgba(255, 255, 255, 0.05) !important;
+	background: radial-gradient(circle at top left, rgba(43, 102, 255, 0.04), transparent 70%), rgba(20, 20, 20, 0.45) !important;
+	backdrop-filter: blur(8px);
+	border-radius: 14px !important;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2) !important;
+}
+[data-theme='light'] .card {
+	border: 1px solid rgba(0, 0, 0, 0.05) !important;
+	background: radial-gradient(circle at top left, rgba(94, 34, 243, 0.04), transparent 70%), rgba(255, 255, 255, 0.8) !important;
+	box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03) !important;
+}
+
+.card:hover {
+	border-color: var(--sl-color-accent) !important;
+	transform: translateY(-5px);
+	box-shadow: 0 16px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(43, 102, 255, 0.15) !important;
+}
+[data-theme='light'] .card:hover {
+	box-shadow: 0 16px 35px rgba(0, 0, 0, 0.08), 0 0 25px rgba(94, 34, 243, 0.1) !important;
+}
+
+/* Efeito de Destaque no Gradiente do Título Hero */
+.hero-section h1 {
+	background: linear-gradient(135deg, #ffffff 40%, var(--sl-color-accent) 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	text-shadow: 0 0 40px rgba(43, 102, 255, 0.1);
+}
+[data-theme='light'] .hero-section h1 {
+	background: linear-gradient(135deg, #101010 40%, var(--sl-color-accent) 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Customização de Botões de Ação */
+.actions a.primary {
+	background: linear-gradient(135deg, var(--sl-color-accent) 0%, #1e4bd6 100%) !important;
+	border: none !important;
+	box-shadow: 0 4px 15px rgba(43, 102, 255, 0.3) !important;
+	transition: all 0.2s ease-in-out !important;
+}
+.actions a.primary:hover {
+	transform: scale(1.03);
+	box-shadow: 0 6px 20px rgba(43, 102, 255, 0.4) !important;
+}
+
+/* Indicador ativo no menu lateral */
+a[aria-current="page"] {
+	border-left: 2px solid var(--sl-color-accent) !important;
+	background-color: rgba(43, 102, 255, 0.08) !important;
+	color: var(--sl-color-accent-high) !important;
+}
+[data-theme='light'] a[aria-current="page"] {
+	background-color: rgba(94, 34, 243, 0.06) !important;
+	color: var(--sl-color-accent-high) !important;
+}
+
+/* --- Novas Melhorias Estéticas --- */
+
+/* 1. Barra de Rolagem (Scrollbar) Minimalista */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--sl-color-accent);
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+	background: rgba(0, 0, 0, 0.1);
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+	background: var(--sl-color-accent);
+}
+
+/* 2. Fundo de Malha Quadriculada (Grid Background) */
+body {
+	background-image: 
+		linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+	background-size: 40px 40px;
+	background-position: center top;
+}
+[data-theme='light'] body {
+	background-image: 
+		linear-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
+}
+
+/* 3. Micro-animações em Links do Conteúdo */
+.content a:not(.button) {
+	position: relative;
+	text-decoration: none !important;
+	color: var(--sl-color-accent) !important;
+	transition: color 0.3s ease;
+}
+.content a:not(.button)::after {
+	content: '';
+	position: absolute;
+	width: 100%;
+	transform: scaleX(0);
+	height: 1px;
+	bottom: -2px;
+	left: 0;
+	background-color: var(--sl-color-accent);
+	transform-origin: bottom center;
+	transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.content a:not(.button):hover::after {
+	transform: scaleX(1);
+}
+
+/* 4. Efeito Glow em Blocos de Código */
+.expressive-code {
+	border: 1px solid rgba(255, 255, 255, 0.05) !important;
+	border-radius: 10px !important;
+	overflow: hidden;
+	transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+[data-theme='light'] .expressive-code {
+	border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+.expressive-code:focus-within,
+.expressive-code:hover {
+	border-color: rgba(43, 102, 255, 0.3) !important;
+	box-shadow: 0 0 20px rgba(43, 102, 255, 0.1) !important;
+}
+[data-theme='light'] .expressive-code:focus-within,
+[data-theme='light'] .expressive-code:hover {
+	border-color: rgba(94, 34, 243, 0.2) !important;
+	box-shadow: 0 0 20px rgba(94, 34, 243, 0.05) !important;
+}
+
+/* 5. Destaque de Seleção de Texto Customizada */
+::selection {
+	background-color: var(--sl-color-accent);
+	color: #ffffff;
+}
+
+/* --- Ajuste de Tamanho do Menu Lateral "On this page" (TOC) --- */
+starlight-toc {
+	font-size: 0.8rem !important;
+}
+
+starlight-toc h2 {
+	font-size: 0.85rem !important;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+starlight-toc a {
+	font-size: 0.78rem !important;
+	line-height: 1.3 !important;
+	padding-top: 0.2rem !important;
+	padding-bottom: 0.2rem !important;
+}
+
+/* Limita linhas longas e preserva o índice lateral nas páginas técnicas. */
+.sl-markdown-content {
+	max-width: 58rem;
+}
+
+/* Sprint 1 pattern: numbered main sections with a banner, plain subheadings. */
+.sl-markdown-content > .group-numbered-title,
+.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) {
+	box-sizing: border-box;
+	background: #3500e8 var(--group-title-background) center / cover no-repeat;
+	border-radius: 8px;
+	padding: 2rem;
+	color: #fff;
+	letter-spacing: 0;
+	overflow-wrap: anywhere;
+}
+
+.sl-markdown-content > .sl-heading-wrapper > .group-numbered-title {
+	color: inherit;
+	margin: 0;
+	min-width: 0;
+	font-size: 1.5rem;
+	line-height: 1.4;
+	letter-spacing: 0;
+}
+
+.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) .sl-anchor-link {
+	color: #fff;
+}
+
+@media (max-width: 50rem) {
+	.sl-markdown-content > .group-numbered-title,
+	.sl-markdown-content > .sl-heading-wrapper:has(> .group-numbered-title) {
+		padding: 1.5rem;
+	}
+}

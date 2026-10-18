@@ -1,0 +1,359 @@
+---
+title: "Modelo 3"
+description: "Documentação das etapas 1 a 5 do CRISP-DM aplicadas ao Modelo 3, que estima falhas em portas de plataforma nos sete dias seguintes."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Visão Geral e CRISP-DM</h2>
+</div>
+
+Esta página documenta o desenvolvimento do **Modelo 3 — Árvore de Decisão para Predição de Falhas em PSDs**, construído exclusivamente com os dados disponibilizados pelo parceiro. O código reproduzível está no notebook `models/modelo-3/modelo_3.ipynb`.
+
+O desenvolvimento segue as cinco primeiras fases da metodologia [CRISP-DM](https://www.datascience-pm.com/crisp-dm-2/): entendimento do negócio, entendimento dos dados, preparação dos dados, modelagem e avaliação. A sexta fase, implantação, não faz parte do escopo desta entrega.
+
+| Fase CRISP-DM | Resultado nesta implementação |
+| :--- | :--- |
+| 1. Entendimento do negócio | Definição da previsão semanal de falha por PSD |
+| 2. Entendimento dos dados | Inspeção das bases de alarmes e corretivas ZM01 |
+| 3. Preparação dos dados | Limpeza, associação por PSD, criação do target e das features |
+| 4. Modelagem | Treinamento, seleção de features e ajuste da Árvore de Decisão |
+| 5. Avaliação | Validação temporal, teste final e análise das limitações |
+
+---
+
+## 1. Entendimento do negócio
+
+### 1.1 Problema
+
+As Portas de Plataforma (PSDs) geram alarmes durante sua operação e também possuem ordens de manutenção corretiva registradas no SAP. O modelo busca transformar esse histórico em um alerta antecipado que ajude a priorizar portas para análise ou inspeção.
+
+A pergunta respondida pelo modelo é:
+
+> **Uma determinada PSD apresentará uma falha corretiva nos próximos sete dias?**
+
+O modelo não prevê o dia nem o componente exato da quebra. Ele realiza uma classificação binária semanal:
+
+- `0`: não há ordem corretiva para a PSD nos sete dias seguintes;
+- `1`: há pelo menos uma ordem corretiva para a PSD nos sete dias seguintes.
+
+Cada previsão é realizada ao final do domingo e cobre os sete dias posteriores.
+
+### 1.2 Objetivo analítico
+
+O objetivo é construir uma Árvore de Decisão interpretável que identifique o maior número possível de falhas sem gerar uma quantidade inviável de alertas falsos.
+
+Como o parceiro ainda não definiu um custo operacional para falsos alertas e falhas não detectadas, não foi estabelecido um valor mínimo obrigatório de precisão ou recall. Para a seleção técnica do modelo, foi adotado o **F1 na validação**, pois essa métrica equilibra:
+
+- **Precisão:** entre os alertas emitidos, quantos realmente antecederam uma falha;
+- **Recall:** entre as falhas existentes, quantas foram encontradas pelo modelo.
+
+A acurácia comum não foi usada como critério principal porque apenas cerca de 8% das observações são positivas. Nesse cenário, prever sempre “sem falha” produziria acurácia elevada, mas não encontraria nenhuma falha.
+
+### 1.3 Restrições conhecidas
+
+- A ordem corretiva ZM01 é usada como aproximação de falha, mas não comprova necessariamente uma quebra física;
+- O histórico de alarmes utilizado por previsão está limitado a 30 dias;
+- A previsão ocorre uma vez por semana, e não continuamente;
+- O resultado deve apoiar uma análise humana, não substituir a decisão da equipe de manutenção.
+
+---
+
+## 2. Entendimento dos dados
+
+### 2.1 Dados fornecidos pelo parceiro
+
+| Base | Arquivo utilizado | Finalidade no modelo |
+| :--- | :--- | :--- |
+| Alarmes tratados | `data/Alarmes/alarmes_trata_limpos_consolidado.csv` | Construção das features históricas de cada PSD |
+| Corretivas emergenciais | `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx` | Construção do target de falha e do histórico de corretivas |
+
+Não foram usadas fontes externas para treinar o modelo.
+
+### 2.2 Base de alarmes
+
+A base contém a TAG, o instante do alarme, sua duração, estação, plataforma, posição da porta e tipo do evento.
+
+| Verificação | Resultado |
+| :--- | ---: |
+| Registros recebidos | 742.506 |
+| Registros atribuídos a uma PSD individual | 742.336 |
+| Estações identificadas | 11 |
+| PSDs identificadas | 526 |
+| Período observado | 27/02/2023 a 12/05/2026 |
+
+Os componentes `PDM` e `MDU` de uma mesma estação, via e posição foram associados à mesma PSD. Registros gerais, sem identificação de porta individual, foram descartados para não atribuir um alarme sistêmico a uma porta específica.
+
+### 2.3 Base ZM01
+
+A ZM01 contém ordens corretivas emergenciais, o início da avaria, o local de instalação e informações de sintoma, objeto, defeito e causa.
+
+| Verificação | Resultado |
+| :--- | ---: |
+| Ordens recebidas | 10.543 |
+| Ordens atribuídas a uma PSD individual | 9.260 |
+| Ordens com PSD também observada nos alarmes | 9.228 |
+| Eventos em combinações distintas de PSD e dia | 7.907 |
+| Período observado | 01/01/2023 a 01/04/2026 |
+
+A coluna `falha_flag` não foi usada como filtro. Na base limpa, o valor `False` também representa campos originalmente vazios; portanto, interpretá-lo automaticamente como ausência de falha excluiria ordens corretivas potencialmente válidas.
+
+### 2.4 Problemas de qualidade identificados
+
+- As bases possuem períodos de cobertura diferentes entre estações e vias;
+- Nem todas as ordens informam uma PSD individual no local de instalação;
+- Ordens registradas em dias diferentes podem pertencer ao mesmo incidente;
+- Interrupções internas da telemetria podem parecer períodos sem alarmes;
+- A quantidade de PSDs cobertas cai no início de 2026.
+
+Esses pontos foram considerados tanto na preparação quanto na interpretação dos resultados.
+
+---
+
+## 3. Preparação dos dados
+
+### 3.1 Identificação da unidade analisada
+
+Cada PSD foi identificada pela combinação de estação, via e posição. Por exemplo, `FAL_V2_PSD09` representa a porta 09 da via 2 da estação FAL. O mesmo identificador foi extraído do local de instalação das ordens ZM01, permitindo relacionar alarmes e corretivas da mesma porta.
+
+### 3.2 Filtro de duração dos alarmes
+
+Alarmes com duração observável menor que 30 segundos foram tratados como ruído e removidos antes das agregações.
+
+| Resultado do filtro | Quantidade |
+| :--- | ---: |
+| Alarmes removidos | 244.910 |
+| Alarmes mantidos | 497.426 |
+
+Para evitar vazamento temporal, o filtro usa somente a duração que já seria conhecida até o final do dia de início do alarme. Assim, um alarme ainda ativo não utiliza antecipadamente sua duração final.
+
+### 3.3 Cobertura temporal
+
+A cobertura foi calculada por estação e via. Uma ausência de alarmes em uma porta não foi interpretada automaticamente como falta de monitoramento quando outras portas da mesma via continuavam gerando registros.
+
+Para cada previsão foram exigidos:
+
+- 30 dias anteriores completos para calcular as features;
+- 7 dias posteriores completos para observar o target.
+
+### 3.4 Construção das features
+
+Foi criada uma grade diária intermediária para representar também os dias sem alarmes. Sobre essa grade foram calculadas contagens e medidas de recência nas janelas de 1, 7 e 30 dias. Depois, foram mantidas apenas as referências de domingo para produzir uma previsão semanal.
+
+Inicialmente, 47 features numéricas foram disponibilizadas ao processo de seleção. Uma árvore auxiliar, ajustada somente no treino, ordenou as variáveis por importância e manteve as 13 mais relevantes:
+
+| Feature selecionada | Significado |
+| :--- | :--- |
+| `dias_desde_ultima_corretiva_30d` | Dias desde a última corretiva, limitado a 30 dias |
+| `horas_desde_ultimo_alarme` | Tempo desde o último alarme conhecido |
+| `qtd_dias_com_alarme_7d` | Dias com pelo menos um alarme nos últimos 7 dias |
+| `qtd_corretivas_30d` | Quantidade de dias com corretiva nos últimos 30 dias |
+| `qtd_fc_7d` | Quantidade de alarmes `FC` nos últimos 7 dias |
+| `qtd_pdm_7d` | Quantidade de alarmes do componente `PDM` nos últimos 7 dias |
+| `qtd_fc_30d` | Quantidade de alarmes `FC` nos últimos 30 dias |
+| `qtd_dias_com_alarme_30d` | Dias com pelo menos um alarme nos últimos 30 dias |
+| `qtd_pdm_30d` | Quantidade de alarmes do componente `PDM` nos últimos 30 dias |
+| `qtd_lsd_30d` | Quantidade de alarmes `LSD` nos últimos 30 dias |
+| `qtd_csd_30d` | Quantidade de alarmes `CSD` nos últimos 30 dias |
+| `qtd_alarmes_30d` | Volume total de alarmes nos últimos 30 dias |
+| `qtd_oa_30d` | Quantidade de alarmes `OA` nos últimos 30 dias |
+
+As variáveis de estação, via, posição, calendário e duração agregada foram removidas por não melhorarem o equilíbrio entre precisão e recall na validação ou por aumentarem a dependência de contextos específicos. A estação permaneceu apenas como metadado para auditoria.
+
+Não foi aplicada normalização com `StandardScaler` ou `MinMaxScaler`, pois a Árvore de Decisão escolhe cortes por valor e não depende da escala das variáveis.
+
+### 3.5 Construção do target
+
+Para uma PSD e um domingo de referência, o target é igual a `1` quando existe uma ordem corretiva entre o dia seguinte e os sete dias posteriores. Uma ordem ocorrida no próprio domingo não entra no target.
+
+| Informação disponível | Data de referência | Período previsto |
+| :--- | :---: | :--- |
+| Alarmes e corretivas dos 30 dias anteriores | Domingo | Segunda-feira até o domingo seguinte |
+
+As features de histórico corretivo usam somente eventos estritamente anteriores à referência. Dessa forma, nenhuma informação futura é utilizada na previsão.
+
+### 3.6 Separação temporal
+
+Os dados foram divididos cronologicamente, sem embaralhamento. Também foi aplicada uma purga de sete dias entre os conjuntos, impedindo que o horizonte futuro de uma amostra atravesse a fronteira do conjunto seguinte.
+
+| Conjunto | Período | Linhas | PSDs | Positivos | Taxa positiva |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| Treino | 02/04/2023 a 23/03/2025 | 35.240 | 526 | 2.739 | 7,77% |
+| Validação | 06/04/2025 a 21/09/2025 | 11.950 | 478 | 1.041 | 8,71% |
+| Teste | 05/10/2025 a 22/03/2026 | 9.646 | 478 | 765 | 7,93% |
+
+O treino foi usado para ajustar as árvores, a validação para selecionar configuração e limiar, e o teste apenas para a avaliação final.
+
+---
+
+## 4. Modelagem
+
+### 4.1 Escolha da técnica
+
+Foi utilizado o `DecisionTreeClassifier` por três motivos:
+
+1. produz regras interpretáveis por limiares;
+2. trabalha diretamente com features numéricas sem exigir normalização;
+3. permite controlar complexidade, peso das classes e tamanho mínimo das folhas.
+
+Essa escolha favorece a explicabilidade, importante para uma prova de conceito de manutenção preditiva. Como limitação, uma única árvore pode ter menor capacidade de generalização do que modelos de conjunto.
+
+### 4.2 Baseline
+
+O primeiro modelo usou profundidade máxima 8, mínimo de 250 exemplos por folha, mínimo de 500 exemplos para separar um nó e `class_weight="balanced"`.
+
+Na validação, o baseline obteve:
+
+| Precisão | Recall | F1 | PR-AUC | Acurácia balanceada |
+| ---: | ---: | ---: | ---: | ---: |
+| 13,83% | 42,46% | 20,86% | 13,51% | 58,60% |
+
+### 4.3 Seleção e ajuste
+
+A seleção foi realizada sem consultar o teste:
+
+1. uma árvore auxiliar foi ajustada no treino para selecionar as 13 features;
+2. foram avaliadas 60 configurações na validação;
+3. para cada configuração, o limiar foi escolhido pelo maior F1;
+4. a configuração com maior F1 de validação foi selecionada.
+
+| Parâmetro avaliado | Valores testados |
+| :--- | :--- |
+| `max_depth` | 6, 8, 10 e 12 |
+| `min_samples_leaf` | 100, 200, 500, 750 e 1.000 |
+| Peso de classe | sem peso, peso 3 para falha e balanceado |
+
+A configuração final foi:
+
+| Parâmetro | Valor escolhido |
+| :--- | :--- |
+| `criterion` | `gini` |
+| `max_depth` | 8 |
+| `min_samples_leaf` | 500 |
+| `min_samples_split` | 1.000 |
+| `class_weight` | `{0: 1, 1: 3}` |
+| `random_state` | 42 |
+| Limiar de alerta | 0,2088 |
+
+### 4.4 Evidência para a escolha
+
+| Modelo na validação | Precisão | Recall | F1 | PR-AUC | Acurácia balanceada |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 13,83% | 42,46% | 20,86% | 13,51% | 58,60% |
+| Árvore selecionada | **14,50%** | 42,27% | **21,60%** | **13,60%** | **59,24%** |
+
+A árvore selecionada manteve recall semelhante ao baseline e apresentou ganhos em precisão, F1, PR-AUC e acurácia balanceada. Por isso, foi escolhida para a abertura do conjunto de teste.
+
+---
+
+## 5. Avaliação
+
+### 5.1 Métricas do teste final
+
+Depois de congelar features, hiperparâmetros e limiar, o modelo foi aplicado ao teste temporal.
+
+| Métrica | Resultado |
+| :--- | ---: |
+| Precisão | **12,42%** |
+| Recall | **31,63%** |
+| F1 | 17,84% |
+| PR-AUC | 10,65% |
+| ROC-AUC | 57,13% |
+| Acurácia balanceada | 56,21% |
+| Acurácia | 76,89% |
+
+Em termos operacionais:
+
+- de cada 100 alertas, aproximadamente 12 antecederam uma falha registrada;
+- de cada 100 falhas, aproximadamente 32 foram encontradas;
+- foram emitidos, em média, 77,9 alertas de PSD por semana.
+
+### 5.2 Relatório por classe
+
+| Classe real | Significado | Precisão | Recall | F1 | Support |
+| :---: | :--- | ---: | ---: | ---: | ---: |
+| 0 | Sem falha nos sete dias seguintes | 93,21% | 80,79% | 86,56% | 8.881 |
+| 1 | Com falha nos sete dias seguintes | **12,42%** | **31,63%** | **17,84%** | 765 |
+
+O `support` representa a quantidade real de exemplos de cada classe no teste. A classe relevante para o objetivo do modelo é a classe `1`.
+
+### 5.3 Matriz de confusão
+
+| Classe real | Previsto sem falha | Previsto com falha |
+| :--- | ---: | ---: |
+| Sem falha | 7.175 | 1.706 |
+| Com falha | 523 | 242 |
+
+O modelo encontrou 242 das 765 observações positivas e deixou de detectar 523. Ao mesmo tempo, gerou 1.706 falsos alertas.
+
+### 5.4 Avaliação por evento
+
+Também foi verificado se cada evento corretivo diário recebeu ao menos um alerta semanal entre um e sete dias antes:
+
+| Eventos avaliados | Eventos detectados | Taxa de detecção | Antecedência média |
+| ---: | ---: | ---: | ---: |
+| 888 | 293 | 33,00% | 3,6 dias |
+
+Essa análise confirma que o modelo antecipa aproximadamente um terço dos eventos avaliáveis, mas não prevê o dia exato da falha.
+
+### 5.5 Estabilidade temporal
+
+No início de 2026, quatro estações deixam de aparecer e a cobertura cai de 478 para 286 PSDs. O desempenho também varia entre os períodos:
+
+| Período do teste | PSDs | Precisão | Recall | F1 | PR-AUC |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Out–Dez/2025 | 478 | 11,88% | 32,07% | 17,34% | 10,84% |
+| Jan–Mar/2026 | 286 | 13,66% | 30,80% | 18,93% | 10,20% |
+
+A mudança de cobertura exige cautela: parte da variação pode refletir quais estações permaneceram disponíveis, e não apenas mudança no comportamento das falhas.
+
+### 5.6 Interpretação das principais features
+
+As cinco maiores importâncias da árvore final foram:
+
+| Feature | Importância |
+| :--- | ---: |
+| `dias_desde_ultima_corretiva_30d` | 38,62% |
+| `horas_desde_ultimo_alarme` | 18,21% |
+| `qtd_dias_com_alarme_7d` | 9,50% |
+| `qtd_fc_7d` | 8,82% |
+| `qtd_pdm_7d` | 6,39% |
+
+Essas importâncias mostram quais variáveis mais orientaram as divisões da árvore, mas não demonstram causalidade.
+
+### 5.7 Conclusão da avaliação
+
+O modelo apresentou sinal preditivo superior a uma referência aleatória, mas a precisão de 12,42% ainda implica muitos falsos alertas. Portanto, o resultado é classificado como **prova de conceito** e não está aprovado para uso autônomo em manutenção.
+
+As principais limitações são:
+
+- a ordem ZM01 é uma aproximação de falha e precisa ser validada com especialistas;
+- mais de uma ordem pode representar o mesmo incidente;
+- a telemetria e a cobertura das estações não são constantes;
+- hiperparâmetros e limiar foram escolhidos na mesma validação, o que pode tornar essa estimativa otimista;
+- o score da árvore não é uma probabilidade calibrada.
+
+Como próximos passos, recomenda-se validar o target com o parceiro, verificar interrupções da telemetria, definir o custo de falsos alertas e falhas não detectadas e comparar a árvore com outros algoritmos.
+
+---
+
+## Verificação dos requisitos da entrega
+
+| Requisito | Atendimento | Evidência nesta página |
+| :--- | :---: | :--- |
+| Uso dos dados fornecidos pelo parceiro | Atendido | Seção 2.1 identifica as duas bases utilizadas |
+| Aplicação do CRISP-DM | Atendido | Seções 1 a 5 correspondem às cinco fases exigidas |
+| Etapas 1 a 5 bem caracterizadas | Atendido | Cada fase apresenta atividades, decisões e resultados |
+| Explicação das escolhas | Atendido | Filtro de duração, target, divisão temporal, features, algoritmo e limiar estão justificados |
+| Métricas sustentando a escolha | Atendido | Comparação de validação e avaliação final estão nas seções 4.4 e 5 |
+| Documentação fora do notebook | Atendido | Esta página integra a documentação navegável do projeto |
+
+## Referências e evidências
+
+- [CRISP-DM — Data Science Process Alliance](https://www.datascience-pm.com/crisp-dm-2/);
+- Notebook reproduzível: `models/modelo-3/modelo_3.ipynb`;
+- Limpeza da ZM01: `eda/cleaning/limpeza-dados-ZM01.ipynb`;
+- Limpeza dos alarmes: `eda/cleaning/limpeza_dados_alarmes.ipynb`.

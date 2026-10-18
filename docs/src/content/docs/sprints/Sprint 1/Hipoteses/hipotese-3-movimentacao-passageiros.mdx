@@ -1,0 +1,116 @@
+---
+title: "Hipótese 3: Movimentação de Passageiros e Volume de Alarmes por Estação"
+description: "Análise exploratória sobre se estações com maior movimentação de passageiros apresentam mais alarmes de obstrução nas Portas de Plataforma (PSDs)."
+---
+
+import { Image } from 'astro:assets';
+import graficoAlarmesEstacao from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-3/grafico-alarmes-por-estacao.png';
+import graficoMovimentacaoReal from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-3/grafico-movimentacao-real-vs-alarmes.png';
+import graficoBaseAmpliada from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-3/grafico-movimentacao-base-ampliada.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e Fundamentação Teórica</h2>
+</div>
+
+As Portas de Plataforma (PSDs - *Platform Screen Doors*) são equipamentos eletromecânicos submetidos a ciclos contínuos de abertura e fechamento para permitir o embarque e desembarque de passageiros.
+
+A hipótese central fala que o desgaste mecânico das portas está ligado ao volume de pessoas que passam por elas; estações com maior movimentação de passageiros deveriam mostrar mais interferências humanas e consequentemente, mais alarmes.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
+
+* **H3.1 (Movimentação vs. Alarmes):** Estações com maior movimentação de passageiros apresentam uma taxa mais alta de alarmes de obstrução (`OBS`), normalizada por porta e por dia ativo.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
+
+A base de dados de alarmes do sistema de PSDs não tinha nenhuma medida direta de movimentação de passageiros. Por isso a análise foi feita de forma onde :
+
+1. **Caracterização dos dados:** antes de comparar estações, foi verificado se a base é de fato comparável, olhando marcadores de tempo, uniformidade da instrumentação e consistência do tempo de normalização.
+2. **Proxy de movimentação:** Porque não havia uma medida direta para quantidade de pessoas, foi construido um proxy ordinal (Alta/Média/Baixa), construido a partir do papel estrutural de cada estação na rede (integração com outras linhas/terminais, densidade do entorno).
+3. **Teste:** comparar a taxa de alarmes `OBS`, pois foi o único tipo de alarme reportado de forma consistente entre todas as estações, por porta e por dia ativo, contra o nível do proxy, usando correlação de Spearman.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Resultados</h2>
+</div>
+
+### 4.1 Achado nº 1 — falta de marca de tempo
+
+Mais ou menos 25% dos registros não tem horário de alarme, apesar de o horário de normalização estar completo. Isso é provavelmente perda de exportação, não ausência do evento. A perda é desigual entre estações, Oscar Freire perde 90% dos registros e Faria Lima 65%, enquanto Fradique Coutinho e Luz perdem menos de 6%. Comparar volumes brutos nesse contexto mediria qualidade de exportação, não movimentação.
+
+### 4.2 Achado nº 2 — instrumentação diferente entre estações
+
+O cruzamento entre estação e tipo de alarme mostra que apenas Butantã informa todos os tipos de alarme monitorados pelo sistema. Isso limita a comparação entre estações ao alarme `OBS` (obstrução), o único tipo registrado de forma consistente em todas elas.
+
+### 4.3 Critério de recorte, o `OBS` mistura dois fenômenos
+
+A duração entre o disparo e a normalização do alarme `OBS` foi explorada, onde*34% dos registros duram até 30 segundos e 57% duram mais de um dia. Os eventos curtos são considerados como obstrução momentânea (ex.: uma mochila na porta); os longos são um ponto travado em alarme, o que de fato mostra ser uma falha acionável. Por isso, o teste considera apenas alarmes `OBS` com duração acima de 30 segundos.
+
+### 4.4 Proxy de movimentação
+
+Porque não havia uma medida direta de movimentação, as estações foram classificadas por proxy ordinal:
+
+| Nível | Critério | Estações da amostra |
+|---|---|---|
+| **3 — Alta** | Integração com outra linha de metrô/CPTM ou terminal de ônibus | Luz, Butantã |
+| **2 — Média** | Sem integração, porém em polo empresarial de alta densidade | Faria Lima |
+| **1 — Baixa** | Estação de bairro, sem integração modal | Fradique Coutinho, Oscar Freire, Higienópolis-Mackenzie |
+
+### 4.5 Teste — alarmes de obstrução por porta e por dia ativo
+
+Limitando ao alarme `OBS` com duração acima de 30 segundos e normalizando por 48 portas e por dia efetivamente ativo, foi obtida a métrica que a hipótese prevê crescente com a movimentação:
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoAlarmesEstacao} alt="Gráfico de Alarmes de Obstrução Acionáveis por Porta e por Dia Ativo, por Estação" width={800} format="png" />
+</div>
+
+A correlação de Spearman entre o nível do proxy de movimentação e a taxa de alarmes acionáveis é rho = +0,062 (p = 0,908), estatisticamente não significativa. O ranking observado (Fradique Coutinho > Butantã > Faria Lima > Higienópolis-Mackenzie > Luz > Oscar Freire) não acompanha o proxy, Fradique Coutinho, classificada como baixa movimentação, lidera a taxa de alarmes, enquanto Luz, classificada como alta movimentação, aparece entre as mais baixas.
+
+### 4.6 Verificação com dados reais de catraca
+
+Depois desse teste, foi enviado uma tabela com os contadores de catraca da Linha 4 (entrada + saída por estação e por dia), o que permitiu trocar o proxy por uma medida real da movimentação. Porém o resultado não mudou, com rho = +0,314 (p = 0,544), ainda sem significância estatística. A estação Fradique Coutinho constinua sendo o outlier que quebra a relação (movimentação moderada, maior taxa de alarmes). A coluna de catraca da Luz conta só as catracas da própria estação. Quem troca com a Linha 1 usa um corredor de integração pago à parte, então a movimentação real ali é maior do que esses números sugerem. Isso sugere que essas medidas também são imperfeitas, mas não mudam a conclusão.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoMovimentacaoReal} alt="Gráfico de dispersão entre movimentação real de catraca e taxa de alarmes de obstrução, por estação" width={700} format="png" />
+</div>
+
+### 4.7 Ampliação da base de alarmes (Histórico 2023-2026)
+
+Foi enviada uma segunda tabela de alarmes (`Histórico de alarmes 23-26.xlsx`), de toda a Linha 4. Ela foi juntada com a base original e removendo duplicatas, o volume de OBS das 6 estações originais não mudou muito, parece ser os mesmos registros, só reexportados. A prinicpal diferença é a cobertura, onde a base unida traz 5 estações novas (Pinheiros, Paulista, República, São Paulo-Morumbi e Vila Sônia), onde 3 têm catraca própria no arquivo de movimentação (Pinheiros, Paulista, Vila Sônia).
+
+Com quase o dobro de estações (9), o resultado continuou praticamente igual, na verdade pareceu mais fraco. Com rho = -0,067 (p = 0,865), Pinheiros entra como um segundo outlier no mesmo sentido de Fradique Coutinho (movimentação baixa/média, taxa de alarme alta), enquanto Vila Sônia é o oposto (a maior movimentação da amostra, mas taxa baixa). Morumbi não tinha nenhum alarme `OBS` na base, o que parece ser mais um caso de instrumentação inconsistente entre estações, igual ao achado nº 2. Por ultimo República ficou de fora do teste porque a planilha de catraca só tem o corredor de integração com a Linha 3 ali, não as catracas da própria estação.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoBaseAmpliada} alt="Gráfico de dispersão entre movimentação real de catraca e taxa de alarmes de obstrução, base ampliada com 9 estações" width={700} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
+
+### 5.1 Validação da Hipótese
+
+A hipótese H3.1 não foi fundamentada pelos dados. Mesmo após o recorte que isola os eventos acionáveis, o ranking de estações por taxa de alarmes de obstrução não acompanha a movimentação de passageiros, nem pelo proxy ordinal, nem pelos dados reais de catraca, nem depois de ampliar a base de 6 para 9 estações.
+
+### 5.2 Limitações que restringem a conclusão
+
+* **Medida de movimentação ainda imperfeita:** os dados de catraca cobrem só as catracas da própria estação. Na Luz isso deixa de fora quem troca de linha pelo corredor de integração pago, reduzindo a movimentação real ali; na República, nem existe coluna própria, só a de integração.
+* **Perda de dados desigual:** a ausência de marca de tempo e o recorte de eventos curtos afetam as estações em proporções diferentes, o que reduz a confiança em comparações diretas de volume bruto.
+
+---

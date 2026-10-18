@@ -1,0 +1,162 @@
+---
+title: "Análise de Valor e da Solução"
+description: "Análise exploratória avançada focando na identificação e comportamento temporal das anomalias de longa duração (> 10s) que sinalizam degradação real das Portas de Plataforma."
+---
+
+import { Image } from 'astro:assets';
+import CanvaEmpresa from '../../../../assets/sprints/sprint1/Empresa.png';
+import CanvaSolucao from '../../../../assets/sprints/sprint1/Solucao.png';
+import Canva from '../../../../assets/sprints/sprint1/Canva.png';
+import Noticia from '../../../../assets/sprints/sprint1/noticia.avif'
+import Logo from '../../../../assets/sprints/sprint1/logo.png'
+import Background from '../../../../assets/sprints/sprint1/background_title.png'
+
+
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Quem é a Motiva?</h2>
+</div>
+
+&ensp; A Motiva é a maior empresa de infraestrutura de mobilidade do Brasil, responsável pela gestão e operação de milhares de quilômetros de rodovias, sistemas de transporte urbano sobre trilhos e aeroportos. 
+
+&ensp; Historicamente, o setor de concessões e infraestrutura de transporte opera sob um modelo de Gestão Reativa de Ocorrências e Inspeções: a concessionária depende de rondas físicas contínuas e acionamento de agentes terceirizados apenas após a ocorrência de incidentes, acidentes, obstruções na via ou falhas na infraestrutura.
+
+&ensp; Este projeto propõe uma virada de chave para a empresa: sair de uma empresa que funciona quase que 100% de forma analógica, para, transicionar para o modelo digital e automatizar processos que eram realizados de forma totalmente manual.
+
+### 1.1. Motiva X Inteli
+
+&ensp; Com esse objetivo, a Motiva firmou uma parceria com o Inteli para solucionar um gargalo operacional de difícil rastreamento: a manutenção das PSDs (Platform Screen Doors), as portas de plataforma instaladas nas Linhas 4-Amarela e 5-Lilás do Metrô de São Paulo.
+
+&ensp; O foco do projeto é implementar um modelo de manutenção preditiva capaz de antecipar exatamente quando e qual componente apresentará falha. Dessa forma, a Motiva visa reduzir o alto volume de manutenções corretivas emergenciais entre as revisões preventivas, evitando atrasos, paralisações na operação e impactos diretos no fluxo diário de passageiros.
+
+### 1.2. O caso que parou o Brasil.
+
+&ensp; Em 06/05/2025, um passageiro chamado Lourivaldo Ferreira Silva morreu após ficar preso entre as portas do trem e da plataforma na estação Campo Limpo, na Linha 5-Lilás da ViaMobilidade, tinha 35 anos e faria aniversário no próximo domingo, 11 de maio, Dia das Mães.
+
+&ensp; Apesar de não ter sido um erro dos sensores da porta, o passageiro ficou em um ponto cego entre as portas, onde faltavam sensores para identificar se há passageiros entre as portas.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={Noticia} alt="Notícia passageiro Linha 5" width={800} format="png" />
+</div>
+
+&ensp; Como resposta a esse problema, a Motiva (que na época se chamava Via Mobilidade) anunciou a instalação de sensores de movimento no vão entre a plataforma e o trem em suas estações, evitando que o trem parta caso haja qualquer objeto ou pessoa presa naquele espaço.
+
+&ensp; Mesmo que não tenha sido um erro na manutenção dos sensores, essa nova exigência por segurança reforçou a urgência em manter todo o sistema de portas de plataforma operando com máxima confiabilidade. A união entre novas tecnologias de detecção e a manutenção preditiva busca eliminar ao máximo as falhas operacionais, garantindo que imprevistos sejam antecipados e que a segurança do passageiro seja sempre prioridade absoluta.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Solução</h2>
+</div>
+
+&ensp; Para transformar o modelo de gestão e elevar a confiabilidade das Portas de Plataforma (PSDs) ao nível exigido pela operação, a nossa equipe decidiu desenvolver o **Lumem**, uma plataforma de manutenção preditiva que integra os alarmes operacionais das PSDs ao histórico de ordens de manutenção corretiva e preventiva registradas em SAP.
+
+<div style="display: flex; flex-direction: row; margin: 2rem 0; text-align: center; width: 100%; justify-content: center">
+  <Image src={Logo} alt="Canva Proposta de Valor Empresa" width={400} format="png" />
+</div>
+
+&ensp; Em vez de depender de rondas físicas e do acionamento reativo das equipes após a falha já ter ocorrido, o Lumem aplica técnicas de Machine Learning e análise estatística sobre esse histórico para identificar, por estação, porta e tipo de alarme, os padrões de comportamento que costumam anteceder uma parada não planejada. A plataforma se apoia em três pilares: um motor de análise preditiva que aponta quais equipamentos apresentam sinais de degradação; um dashboard de monitoramento que centraliza indicadores como frequência, duração e recorrência de alarmes por estação e por período; e uma camada de integração entre os alarmes do sistema PSD e as ordens de manutenção do SAP, que relaciona cada evento operacional à intervenção que o resolveu.
+
+&ensp; O objetivo não é determinar com exatidão a data em que uma falha ocorrerá, mas fornecer à equipe de manutenção evidências suficientes para priorizar inspeções, antecipar a substituição de componentes e reduzir o volume de manutenções corretivas emergenciais entre as revisões programadas.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top:40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Proposta de Valor</h2>
+</div>
+
+&ensp; Com o Lumem definido como a nossa solução, o próximo passo foi entender de forma prática como essa tecnologia se traduz em valor real para a operação da Motiva. Para isso, estruturamos a nossa Proposta de Valor, conectando as necessidades e dores do sistema de metrô aos benefícios diretos que a nossa plataforma entrega no dia a dia.
+
+&ensp; O Canva Proposta de Valor é uma ferramenta visual desenvolvida para garantir o "encaixe" entre o que o seu produto oferece e o que o seu cliente realmente precisa. Ele se
+
+Por isso, ele é dividido em duas áreas principais:
+- **Empresa**: Focada em identificar a realidade atual da empresa. Dividida em três áreas, Tarefas que foca no que o Cliente está tentando realizar; Dores, tudo que atrapalha o desenvolvimento das tarefas da empresa e gera custos e traz riscos à operação; e Ganhos, que é os resultados positivos e benefícios que o cliente busca.
+- **Solução**: Busca responder diretamente às necessidades da empresa. Dividida em três áreas, Produtos e Serviços que foca no que é entregue pela tecnologia; Aliviadores de Dores, tudo que elimina ou reduz os gargalos, custos e riscos da operação; e Criadores de Ganhos, que é os resultados positivos e benefícios gerados pelo produto.
+
+### 3.1. Solução
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={Canva} alt="Canva Proposta de Valor Empresa" width={800} format="png" />
+</div>
+
+#### 3.1.1. Produtos e Serviços
+
+- **Sistema de análise preditiva de falhas:** A solução utiliza os dados históricos provenientes dos alarmes das Portas de Plataforma e dos registros de manutenção para identificar padrões de comportamento associados a falhas, recorrências e condições anormais. A proposta é transformar dados operacionais já existentes em informações úteis para apoiar as equipes de manutenção, permitindo avaliar quais equipamentos, portas ou estações apresentam sinais que merecem maior atenção. O sistema não busca determinar com exatidão o momento de uma falha, mas fornecer evidências que contribuam para uma atuação mais antecipada e orientada por risco.
+
+- **Dashboard de monitoramento dos alarmes:** O dashboard centraliza os principais indicadores relacionados ao comportamento dos alarmes e das manutenções em uma interface visual de fácil interpretação. Por meio dele, as equipes podem acompanhar informações como quantidade de ocorrências, duração dos alarmes, tempo de normalização, recorrência de eventos, distribuição por estação e comportamento ao longo do tempo. A visualização desses indicadores facilita a identificação de padrões que poderiam passar despercebidos em análises manuais e permite comparar diferentes locais, períodos e equipamentos.
+
+- **Integração dos dados de alarmes e manutenção:** A solução propõe a consolidação dos registros de alarmes do sistema PSD com as informações provenientes das ordens de manutenção SAP. Essa integração permite relacionar eventos operacionais registrados pelas portas com intervenções realizadas posteriormente, incluindo informações como defeito, causa, localização e período da manutenção. Dessa maneira, os dados deixam de ser analisados de forma isolada e passam a compor uma visão mais completa do histórico operacional de cada equipamento.
+
+- **Indicadores para apoio à manutenção:** A partir dos dados integrados, são produzidas métricas capazes de auxiliar as equipes na priorização de inspeções e intervenções. Esses indicadores podem evidenciar, por exemplo, estações com maior concentração de alarmes persistentes, portas com recorrência elevada de ocorrências ou determinados comportamentos que se repetem ao longo do tempo. O objetivo é fornecer uma base quantitativa para apoiar a tomada de decisão e tornar o planejamento da manutenção mais direcionado.
+
+#### 3.1.2. Analgésicos
+
+- **Redução da análise manual dos dados:** Atualmente, a análise de grandes volumes de registros pode exigir consultas manuais, cruzamentos entre diferentes bases e uso extensivo de planilhas. A solução reduz esse esforço ao automatizar etapas de tratamento, consolidação e organização das informações. Isso diminui o tempo necessário para localizar ocorrências relevantes, reduz a possibilidade de erros durante o processamento manual e permite que a equipe concentre seus esforços na interpretação dos resultados e na tomada de decisão.
+
+- **Apoio ao diagnóstico de falhas:** A dificuldade de compreender a origem de uma ocorrência pode ser reduzida ao disponibilizar, em conjunto, o histórico de alarmes, defeitos registrados, intervenções realizadas e comportamento temporal dos equipamentos. Essa visão integrada ajuda a equipe técnica a investigar uma ocorrência com mais contexto, possibilitando identificar padrões recorrentes e relacionar eventos semelhantes que ocorreram anteriormente. A solução atua, portanto, como uma ferramenta de suporte ao diagnóstico, e não como substituta da avaliação técnica realizada pelos profissionais de manutenção.
+
+- **Priorização de equipamentos e estações críticas:** Nem todos os alarmes possuem a mesma relevância operacional. A solução permite identificar equipamentos ou estações que apresentam maior frequência de ocorrências, alarmes persistentes ou padrões significativamente diferentes das demais localidades. Essas informações podem ser utilizadas para definir prioridades de inspeção e investigação, direcionando a equipe para pontos que apresentam maior concentração de comportamentos anormais e evitando que os recursos sejam distribuídos de maneira uniforme quando existem locais que demandam maior atenção.
+
+- **Redução de substituições prematuras ou tardias:** A decisão de substituir componentes sem informações suficientes pode resultar tanto na retirada de peças ainda utilizáveis quanto na manutenção de componentes até que apresentem falhas. A solução fornece históricos e indicadores de comportamento que podem apoiar essa decisão com informações adicionais sobre recorrência de alarmes, anormalidades e intervenções anteriores. Com isso, a equipe passa a dispor de mais evidências para avaliar a necessidade de manutenção ou substituição, reduzindo a dependência exclusiva de periodicidade fixa ou percepção individual.
+
+- **Antecipação de situações de maior risco operacional:** A presença de eventos recorrentes ou alarmes que permanecem ativos por longos períodos pode indicar condições que merecem investigação. A solução permite identificar esses comportamentos e destacá-los para acompanhamento das equipes responsáveis. Dessa forma, situações potencialmente problemáticas podem ser analisadas antes que evoluam para ocorrências com maior impacto operacional, contribuindo para reduzir paradas inesperadas e apoiar ações preventivas.
+
+#### 3.1.3. Criadores de Ganhos
+
+- **Aumento da disponibilidade operacional:** Ao fornecer maior visibilidade sobre comportamentos anormais, recorrências e locais com maior concentração de alarmes, a solução auxilia a equipe a identificar pontos que necessitam de atenção antes que gerem impactos maiores na operação. Uma manutenção mais direcionada pode reduzir o tempo de indisponibilidade dos equipamentos e contribuir para a continuidade do funcionamento das portas durante o período de operação comercial.
+
+- **Redução dos custos de manutenção:** O uso de indicadores e dados históricos permite melhorar a alocação de recursos de manutenção, incluindo mão de obra, peças e tempo de inspeção. Ao direcionar esforços para equipamentos que apresentam maior evidência de comportamento anormal, a organização pode reduzir intervenções desnecessárias e diminuir a necessidade de ações emergenciais. Além disso, o melhor planejamento das atividades pode contribuir para uma utilização mais eficiente dos recursos disponíveis.
+
+- **Maior previsibilidade da manutenção:** A análise histórica dos alarmes e das intervenções possibilita reconhecer tendências, recorrências e mudanças de comportamento ao longo do tempo. Embora os dados analisados não permitam determinar com precisão o momento exato de uma futura falha, eles podem oferecer indícios que ajudem a identificar equipamentos ou locais com maior necessidade de acompanhamento. Isso permite que a manutenção passe de uma atuação predominantemente reativa para uma abordagem mais planejada e orientada por evidências.
+
+- **Redução de riscos operacionais:** Falhas e comportamentos anormais nas portas de plataforma podem afetar diretamente a operação das estações e a interação dos passageiros com o sistema. Ao destacar situações persistentes ou recorrentes, a solução ajuda as equipes a identificar condições que merecem investigação prioritária. Essa capacidade de direcionar atenção para eventos potencialmente mais críticos contribui para uma atuação preventiva e para a redução de condições que possam representar risco à operação ou aos passageiros.
+
+- **Tomada de decisão orientada por dados:** A integração de informações provenientes de diferentes sistemas cria uma visão mais completa do comportamento dos equipamentos. Em vez de depender apenas de experiências individuais, observações pontuais ou consultas isoladas, as equipes passam a contar com métricas e visualizações que permitem comparar períodos, estações, portas e tipos de ocorrência. Isso fortalece o processo de tomada de decisão, tornando as escolhas de manutenção mais justificáveis, rastreáveis e fundamentadas em evidências operacionais.
+
+- **Maior confiabilidade operacional:**Ao identificar padrões que antecedem falhas, o modelo pode ajudar a reduzir a ocorrência de problemas inesperados nas portas, contribuindo para uma operação mais estável e previsível ao longo do tempo.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={CanvaSolucao} alt="Canva Proposta de Valor Empresa" width={800} format="png" />
+</div>
+
+### 3.2. Empresa
+
+#### 3.2.1. Dores
+
+- **Substituição prematura ou tardia de peças:** Troca de componentes baseada em estimativas genéricas, resultando no descarte de itens ainda úteis por cautela ou na permanência excessiva até a quebra em operação.
+- **Risco à segurança dos passageiros:** Falhas inesperadas nas portas geram transtornos nas plataformas, expõem usuários a riscos de acidentes e causam forte insatisfação pública com o serviço.
+- **Coleta e análise manual de dados:** Processo baseado em papel e planilhas que consome tempo excessivo das equipes, é vulnerável a erros humanos e gera informações defasadas para tomada de decisão.
+- **Falta de precisão no diagnóstico:** Dificuldade em prever com exatidão o momento em que a falha irá acontecer, tornando a gestão de manutenção predominantemente reativa.
+- **Paradas não planejadas:** Quebras repentinas nos horários de pico causam atrasos na linha, geram efeito cascata em todo o sistema e acarretam multas operacionais contratuais.
+
+#### 3.2.2. Ganhos
+
+- **Aumento da disponibilidade da frota:** Redução drástica do tempo de trem parado na oficina ao substituir falhas inesperadas por intervenções previamente agendadas.
+- **Redução nos custos de manutenção:** Maximização do ciclo de vida útil das peças, diminuição do uso de insumos em caráter de emergência e otimização das horas de trabalho da equipe.
+- **Aumento da segurança operacional:** Mitigação proativa do risco de acidentes com portas em movimento, garantindo a integridade física dos passageiros e a fluidez do serviço.
+- **Previsibilidade das falhas:** Capacidade de antecipar a ocorrência de panes com dias ou semanas de antecedência, permitindo o planejamento prévio das intervenções.
+
+#### 3.2.3. Tarefas 
+
+- **Executar a manutenção preventiva e corretiva:** Substituir componentes desgastados e reparar falhas nas oficinas e pátios de forma otimizada e orientada por estimativas técnicas.
+- **Atender chamados de emergência durante a operação:** Agir com máxima agilidade para liberar composições retidas nas estações devido a travamentos de portas e desobstruir as vias.
+- **Analisar o histórico de falhas:** Avaliar dados operacionais passados para identificar padrões e planejar intervenções no sistema de portas.
+- **Garantir a continuidade da operação:** Assegurar o funcionamento contínuo e sem interrupções do sistema de abertura e fechamento durante toda a jornada comercial.
+- **Coletar e registrar dados de desempenho:** Capturar informações de funcionamento das portas para alimentar modelos preditivos e acionar alertas antecipados de falhas.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={CanvaEmpresa} alt="Canva Proposta de Valor Empresa" width={800} format="png" />
+</div>
+
+### 3.3. Conclusão do Canva
+
+&ensp; A leitura do Canva Proposta de Valor demonstra a relação entre o que a Motiva enfrenta hoje e o que o Lumem se propõe a entregar. As paradas não planejadas e a falta de precisão no diagnóstico, dores centrais da operação, são solucionadas pelo sistema de análise e manutenção preditiva de falhas e pelos indicadores de apoio à manutenção, que substituem a análise feita de forma manual do histórico operacional. Da mesma forma, o risco à segurança dos passageiros encontra resposta direta na antecipação de situações de maior risco operacional, permitindo que condições anormais sejam identificadas antes de evoluírem para incidentes.
+
+&ensp; No lado dos ganhos, a relação também se sustenta: a previsibilidade das falhas buscada pela empresa é viabilizada pela maior previsibilidade da manutenção oferecida pela plataforma, e o aumento da disponibilidade da frota depende diretamente do aumento da disponibilidade operacional gerado por uma manutenção mais direcionada. Já a redução dos custos de manutenção, presente nos dois lados do Canva, reforça que o valor entregue pelo Lumem não se limita a um ganho isolado, mas atravessa toda a proposta.
+
+&ensp; Esse alinhamento confirma que a solução não foi desenhada sem uma análise prévia, mas construída a partir das dores, das tarefas e dos ganhos específicos identificados na operação da Motiva, o que sustenta a decisão de avançar com o desenvolvimento do Lumem como resposta ao problema de manutenção preditiva das PSDs.
+
+## Referências
+
+- [G1 — Passageiro morto após ficar preso entre portas do metrô tinha dois filhos e faria aniversário neste domingo](https://g1.globo.com/sp/sao-paulo/noticia/2025/05/06/passageiro-morto-apos-ficar-preso-entre-portas-do-metro-tinha-dois-filhos-e-faria-aniversario-neste-domingo.ghtml) — G1 São Paulo, 06/05/2025.
+- [Motiva — Site oficial da concessionária](https://www.motiva.com.br/)

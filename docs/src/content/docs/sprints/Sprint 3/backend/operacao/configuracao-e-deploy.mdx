@@ -1,0 +1,142 @@
+---
+title: DevOps e Deploy
+description: Guia de orquestração com Docker Compose, build multi-stage, dependências de inicialização, migrações e rollout seguro.
+---
+
+import { Image } from 'astro:assets';
+import dockerBuildMultistage from '../../../../../../assets/backend/docker-build-multistage.png';
+import dockerComposePs from '../../../../../../assets/backend/docker-compose-ps.png';
+
+A estratégia de implantação (deploy) do backend foi desenhada para materializar em nível de infraestrutura a separação de responsabilidades definida na Clean Architecture: a API HTTP e o Worker assíncrono executam como **processos independentes**, orquestrados via Docker Compose.
+
+Esta página documenta a construção da imagem Docker multi-stage, a topologia do Compose, a execução ordenada de migrações de banco de dados e o roteiro de verificação operacional pós-deploy.
+
+## 1. Construção da imagem Docker multi-stage
+
+O arquivo [`Dockerfile`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/Dockerfile) utiliza o padrão **Multi-Stage Build** para manter as imagens finais sem compiladores ou ferramentas de desenvolvimento. Um único estágio `builder` compila os dois binários com `CGO_ENABLED=0`, `-trimpath` e remoção de símbolos e build ID. A partir de um runtime vazio (`scratch`) compartilhado, os targets `api` e `worker` recebem somente o executável e os artefatos necessários ao próprio processo.
+
+Essa separação reduziu o tamanho exibido pelo Docker de **243 MB por imagem** para **57 MB na API** e **38,6 MB no Worker**:
+
+| Imagem | Antes | Depois | Redução |
+|---|---:|---:|---:|
+| API | 243 MB | 57 MB | 76,5% |
+| Worker | 243 MB | 38,6 MB | 84,1% |
+
+O ganho não veio de compressão agressiva do executável. A camada `RUN chown -R /app`, que duplicava 75,8 MB de arquivos já copiados, foi eliminada porque binários e arquivos somente leitura podem continuar pertencendo ao `root` e ser executados pelo UID 10001. O runtime `scratch` também eliminou shell, gerenciador de pacotes e utilitários que não participam do serviço. Permaneceram somente o certificado de autoridades públicas para conexões TLS e um diretório `/tmp` com permissão `1777` para o streaming de uploads.
+
+Como `scratch` não possui `curl` ou `wget`, a API ganhou o comando `/app/api healthcheck`. Ele faz uma requisição com timeout para o endpoint de liveness e devolve ao Docker o código de saída adequado. Isso mantém o healthcheck funcional sem adicionar outro executável à imagem.
+
+Os dois targets continuam gerando imagens independentes, mas elas são construídas na VPS a partir do repositório. Cada contêiner carrega somente seu binário, reduzindo armazenamento e superfície de ataque. O cache BuildKit evita recompilar dependências inalteradas durante atualizações manuais.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={dockerBuildMultistage}
+    alt="Diagrama do Docker Multi-Stage Build: estágio Builder Go 1.24 e estágio Runtime Alpine com usuário appuser UID 10001."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Pipeline de compilação multi-stage da imagem Docker do backend.
+  </figcaption>
+</figure>
+
+## 2. Orquestração e dependências de inicialização
+
+No [`docker-compose.yml`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/docker-compose.yml), a ordem de subida dos serviços é controlada por **healthchecks encadeados**:
+
+```yaml
+services:
+  backend:
+    build:
+      context: .
+      target: api
+    healthcheck:
+      test: ["CMD", "/app/api", "healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      target: worker
+    depends_on:
+      backend:
+        condition: service_healthy
+```
+
+### Por que o Worker aguarda o Backend estar saudável?
+
+Ao iniciar, a API executa as migrações SQL da aplicação e do River (`RUN_MIGRATIONS=true`). Se o worker subisse concorrentemente no mesmo milissegundo, tentaria consultar tabelas do River (`river_job`) que ainda poderiam não existir ou estar em processo de migração. O condicional `service_healthy` garante que o worker só inicia seu loop de consumo após a API confirmar que o PostgreSQL está migrado e acessível.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={dockerComposePs}
+    alt="Captura de tela de terminal executando docker compose ps exibindo todos os serviços saudáveis e ativos."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Estado operacional dos contêineres da plataforma validados via docker compose ps.
+  </figcaption>
+</figure>
+
+### Topologia de rede externa e microsserviço de ML
+
+O backend e o microserviço de predição em Python (`src/modelo`) operam como pilhas desacopladas com arquivos Compose dedicados. Em desenvolvimento, ambos usam a bridge externa `backend-network`, e a API Go resolve `http://ml-service:8000`. Em produção, o backend permanece na VPS 1 e usa `http://10.50.0.2:8000`; esse endereço pertence ao túnel WireGuard que liga a VPS 1 à VPS 2 de ML.
+
+## 3. Gestão de migrações de banco de dados
+
+O backend opera com dois subsistemas de migração independentes:
+1. **Migrações de Negócio (`src/backend/migrations/`):** arquivos SQL versionados (`000001_create_initial_schema.up.sql`, etc.) gerenciados pela biblioteca `golang-migrate`;
+2. **Migrações da Fila River (`rivermigrate`):** esquema interno de controle de jobs gerenciado pelo driver oficial do River.
+
+A execução ocorre no startup da API quando `RUN_MIGRATIONS=true`. Em ambientes com múltiplas réplicas da API, a migração é habilitada apenas na primeira instância de deploy para evitar contenção de locks de DDL no PostgreSQL.
+
+## 4. Roteiro de rollout seguro (Passo a Passo)
+
+1. **Configuração de Ambiente:** copiar `.env.example` para `.env` dentro de `src/backend/` e preencher os segredos corporativos;
+2. **Criação da Rede Externa Compartilhada (feita uma única vez):**
+   ```bash
+   docker network create backend-network
+   ```
+3. **Auditoria de Configuração:** validar a sintaxe dos composes sem exibir valores sensíveis:
+   ```bash
+   docker compose -f src/backend/docker-compose.yml config --quiet
+   docker compose -f src/modelo/docker-compose.yml config --quiet
+   docker compose -f src/frontend/docker-compose.yml config --quiet
+   ```
+4. **Compilação e Subida dos Serviços:**
+   ```bash
+   docker compose -f src/modelo/docker-compose.yml up --build -d
+   docker compose -f src/frontend/docker-compose.yml up --build -d
+   docker compose -f src/backend/docker-compose.yml up --build -d
+   ```
+5. **Inspeção de Logs dos Serviços Principais:**
+   ```bash
+   docker compose -f src/backend/docker-compose.yml logs --tail=100 backend worker
+   docker compose -f src/modelo/docker-compose.yml logs --tail=100 ml-service
+   docker compose -f src/frontend/docker-compose.yml logs --tail=100 frontend
+   ```
+6. **Verificação de Healthchecks:**
+   ```bash
+   curl -f http://localhost/healthz/live
+   curl -f http://localhost/healthz/ready
+   curl -f http://localhost:8000/health
+   curl -f http://localhost/
+   ```
+
+## 5. Checklist de validação pós-deploy
+
+| Verificação | Comando / Rota | Critério de aceitação |
+|---|---|---|
+| **Frontend SPA** | `GET /` | Retorna HTTP 200 com a interface React compilada |
+| **Liveness** | `GET /healthz/live` | Retorna HTTP 200 `{"status":"live"}` |
+| **Readiness** | `GET /healthz/ready` | Retorna HTTP 200 `{"status":"ready","database":"connected","storage":"connected"}` |
+| **Microserviço ML** | `GET http://localhost:8000/health` | Retorna HTTP 200 `{"status":"ok"}` |
+| **Documentação** | `GET /docs` | Swagger UI renderizado com endpoints da v1 |
+| **Métricas Prometheus** | `curl -s localhost:9090/targets` | Target `backend-linha4` com status **UP** |
+| **Fluxo E2E Sintético** | Upload de CSV de teste | Status transiciona de `processing` para `completed` em menos de 5s |
+| **Rastreamento** | Grafana Tempo Explore | Trace completo correlacionando span HTTP da API e span consumer do Worker |
+
+## Deploy manual após verificação de segurança
+
+O pipeline separa `build` e `scan`. As imagens Go são exportadas temporariamente para que o Trivy audite exatamente os artefatos produzidos; a imagem Python é construída e analisada no ambiente Docker-in-Docker. Depois que o pipeline passa, o operador entra em cada VPS, atualiza o repositório e reconstrói os serviços com o Compose normal. Essa decisão elimina ACR e Watchtower e mantém explícito o momento em que uma versão passa a operar.

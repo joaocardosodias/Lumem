@@ -1,0 +1,41 @@
+# Modelagem e EDA: Python 3.14, Windows x86_64.
+# Modelo 4: models/modelo-4/requirements.txt (ambiente separado, XGBoost < 3).
+# Servico de inferencia: src/modelo/requirements.txt (Python 3.11).
+# Auditoria e instrucoes: docs/dependencias-python.md.
+
+# Dados, estatistica e formatos usados pelos notebooks/scripts.
+numpy==2.5.2
+pandas==3.0.5
+scipy==1.18.0
+joblib==1.5.3
+openpyxl==3.1.5
+pyarrow==25.0.1
+
+# Arvores, ensembles, explicabilidade e otimizacao.
+scikit-learn==1.9.0
+xgboost==3.4.0
+lightgbm==4.7.0
+catboost==1.2.10
+shap==0.52.0
+# Busca de hiperparametros da RNN otimizada (models/modelo-rnn-otimizado/).
+# O Modelo 4 usa optuna 3.6.1 no ambiente separado por restricao do FLAML.
+optuna==5.0.0
+
+# Redes recorrentes. Instale a build CPU a partir do indice do PyTorch, nao do PyPI
+# (pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu),
+# usada pelos notebooks de RNN em models/modelo-rnn/ e models/modelo-rnn-otimizado/
+torch==2.14.0
+
+# Visualizacao.
+matplotlib==3.11.1
+seaborn==0.13.2
+
+# Execucao dos notebooks, testes e auditoria.
+ipython==9.16.1
+ipykernel==7.3.0
+jupyterlab==4.6.4
+nbformat==5.11.1
+nbclient==0.11.0
+nbconvert==7.17.1
+pytest==9.1.1
+packaging==26.3

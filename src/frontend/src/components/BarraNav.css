@@ -1,0 +1,313 @@
+.barra-nav {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: var(--nav-width);
+  height: 100%;
+  padding: 36px 18px 20px;
+  border-right: 1px solid var(--brand-hover);
+  background: var(--brand);
+  color: white;
+  transition: width 320ms var(--ease-out), padding 320ms var(--ease-out);
+}
+
+.barra-nav.is-collapsed {
+  width: var(--nav-collapsed);
+}
+
+.barra-nav__brand {
+  min-height: 110px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.barra-nav__logo {
+  display: block;
+  width: 132px;
+  height: 36px;
+  object-fit: contain;
+  object-position: left;
+}
+
+.barra-nav__brand-caption {
+  display: block;
+  margin-top: 12px;
+  color: #eeeaff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.barra-nav__section-label {
+  margin: 0 12px 16px;
+  color: #e0d8ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.barra-nav nav {
+  position: relative;
+  flex: 1;
+}
+
+.barra-nav ul {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barra-nav li {
+  height: 46px;
+}
+
+.barra-nav li + li {
+  margin-top: 6px;
+}
+
+.barra-nav__indicator {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46px;
+  border: 1px solid #ffffff;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px #18006b20;
+  pointer-events: none;
+  transform: translateY(calc(var(--i, 0) * 52px));
+  transition: transform 320ms var(--ease-out);
+}
+
+.barra-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #f0ebff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.barra-nav li button {
+  height: 100%;
+}
+
+.barra-nav button.is-active {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.barra-nav button:hover:not(.is-active) {
+  color: white;
+  background: #ffffff1a;
+}
+
+.barra-nav button svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.barra-nav__label {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.barra-nav__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 6px;
+  margin-top: 28px;
+  border-top: 1px solid #ffffff1a;
+  overflow: hidden;
+}
+
+.barra-nav__user-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #ffffff40;
+  border-radius: 10px;
+  background: #ffffff1a;
+  color: white;
+  font-size: 13px;
+}
+
+.barra-nav__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.barra-nav__user-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.barra-nav__user-info small {
+  color: #eeeaff;
+  font-size: 12px;
+}
+
+.barra-nav__footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.barra-nav button.barra-nav__toggle {
+  order: 1;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #ffffff45;
+  background: #ffffff14;
+}
+
+.barra-nav__sair {
+  height: 36px;
+}
+
+.barra-nav.is-collapsed .barra-nav__brand {
+  padding-inline: 4px;
+}
+
+.barra-nav.is-collapsed .barra-nav__logo {
+  width: 34px;
+}
+
+.barra-nav.is-collapsed :is(.barra-nav__label, .barra-nav__brand-caption) {
+  display: none;
+}
+
+.barra-nav.is-collapsed .barra-nav__section-label {
+  visibility: hidden;
+  margin-inline: 0;
+}
+
+.barra-nav.is-collapsed button {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.barra-nav.is-collapsed .barra-nav__user {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.barra-nav.is-collapsed .barra-nav__footer {
+  flex-direction: column;
+}
+
+/* The shell keeps this footer visible while only the page content scrolls. */
+.barra-nav__mobile-label {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .barra-nav, .barra-nav.is-collapsed {
+    order: 2;
+    width: 100%;
+    height: auto;
+    padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border-right: 0;
+    border-top: 1px solid var(--brand-hover);
+    box-shadow: 0 -4px 16px #172e520c;
+  }
+
+  .barra-nav__brand,
+  .barra-nav__section-label,
+  .barra-nav__user,
+  .barra-nav.is-collapsed .barra-nav__user,
+  .barra-nav__footer,
+  .barra-nav.is-collapsed .barra-nav__footer,
+  .barra-nav__indicator {
+    display: none;
+  }
+
+  .barra-nav nav {
+    flex: initial;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .barra-nav nav::-webkit-scrollbar { display: none; }
+
+  .barra-nav ul {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+  }
+
+  .barra-nav li {
+    flex: 1 0 44px;
+    min-width: 0;
+    height: 56px;
+  }
+
+  .barra-nav li + li { margin-top: 0; }
+
+  .barra-nav li button, .barra-nav.is-collapsed li button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 2px;
+    border-radius: 8px;
+    font-size: 9px;
+    text-align: center;
+  }
+
+  .barra-nav li button svg { width: 21px; height: 21px; }
+
+  .barra-nav .barra-nav__label,
+  .barra-nav.is-collapsed .barra-nav__label { display: none; }
+
+  .barra-nav__mobile-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .barra-nav li button.is-active { background: white; }
+
+  .barra-nav li button:active { background: #ffffff30; }
+  .barra-nav li button.is-active:active { background: #eeeaff; }
+
+  .app-shell .barra-nav button:focus-visible { outline-offset: -3px; }
+}
+
+@media (max-width: 360px) {
+  .barra-nav, .barra-nav.is-collapsed {
+    padding-inline: max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-right));
+  }
+
+  .barra-nav ul { gap: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-nav, .barra-nav__indicator, .barra-nav button {
+    transition: none;
+  }
+}

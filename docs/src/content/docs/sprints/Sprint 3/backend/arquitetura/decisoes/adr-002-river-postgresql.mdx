@@ -1,0 +1,52 @@
+---
+title: ADR 002 — Fila River sobre PostgreSQL
+description: Registro formal da decisão de adotar mensageria persistente com River no PostgreSQL para garantia de durabilidade e sobrevivência a reinicializações.
+---
+
+## 1. Contexto e Forças de Decisão
+
+Ao planejar o pipeline de ingestão de telemetria na Sprint 3, a equipe identificou que confiar em processamento assíncrono puramente em memória (goroutines) apresentaria vulnerabilidades operacionais graves: se o contêiner reiniciasse durante um deploy ou pane, tarefas em andamento seriam perdidas silenciosamente.
+
+Para alcançar resiliência operacional, o sistema exigia:
+1. **Durabilidade absoluta de tarefas:** a intenção de processar um arquivo deve persistir mesmo se todos os servidores forem reiniciados;
+2. **Atomicidade com metadados de upload:** não pode existir cenário em que um registro de upload é criado sem o job correspondente, nem um job sem o registro de upload;
+3. **Simplicidade de infraestrutura:** evitar adicionar múltiplos contêineres de corretores de mensagens (brokers) externos que aumentariam a complexidade operacional da VPS.
+
+## 2. Decisão Arquitetural
+
+Adotar a biblioteca **River** (`github.com/riverqueue/river`) para prover mensageria transacional baseada em tabelas gerenciadas dentro da própria instância do **PostgreSQL 16**.
+
+### Parâmetros e garantias configuradas
+- **Fila dedicada:** `ingestion`;
+- **Identificador do job:** `process_ingestion_upload`;
+- **Unicidade de agendamento:** `UniqueOpts{ByArgs: true}` utilizando o `upload_id`, impedindo agendamentos duplicados concorrentes;
+- **Política de retentativas:** até 5 tentativas com backoff exponencial para falhas transitórias;
+- **Modo de consumo por polling (`RIVER_POLL_ONLY=true`):** os workers consultam a fila em intervalos controlados, mantendo compatibilidade com o pooler transacional do Supabase e consumo previsível de conexões;
+- **Atomicidade transacional (Evitando Outbox Pattern complexo):** a chamada `riverClient.InsertTx(ctx, tx, args, ...)` é executada na mesma transação `sql.Tx` que grava a linha em `file_uploads`.
+
+## 3. Matriz de Alternativas Avaliadas
+
+| Tecnologia avaliada | Prós | Contras | Veredito |
+|---|---|---|---|
+| **Goroutines em Memória** | Zero infraestrutura adicional; latência instantânea de disparo | Volátil; sem histórico; perda de jobs em restarts; acopla carga de CPU à API | **Rejeitada:** inaceitável para ambiente de produção |
+| **Redis + Asynq / BullMQ** | Baixíssima latência em memória; alta taxa de vazão (throughput) | Exige operar um contêiner Redis adicional; dual-write problem (falha entre gravar banco e enfileirar Redis exige padrão Outbox) | **Rejeitada:** adicionaria complexidade de persistência distribuída |
+| **RabbitMQ** | Broker AMQP maduro; roteamento avançado de mensagens | Requer cluster RabbitMQ na VPS; não compartilha transação ACID com o PostgreSQL | **Rejeitada:** custo operacional desproporcional para o volume da sprint |
+| **Apache Kafka** | Streaming de eventos particionado; capacidade para bilhões de eventos | Complexidade extrema de operação (Zookeeper/KRaft); overhead de recursos incompatível | **Rejeitada:** arquitetura superdimensionada para jobs de planilhas |
+| **River sobre PostgreSQL** | **Mesma transação ACID dos dados da aplicação; zero novos contêineres na VPS;** suporte nativo a Go | Compartilha conexões e CPU do banco PostgreSQL existente | **Aprovada:** máxima consistência com mínimo custo operacional |
+
+## 4. Consequências da Decisão
+
+### Consequências Positivas
+- **Eliminação do Dual-Write:** o upload e o job são inseridos sob o mesmo `tx.Commit()`. Não há risco de arquivos órfãos sem job;
+- **Resiliência a quedas:** se o worker falhar por timeout de rede ou reinicialização, o River libera o lock do job para nova tentativa automática;
+- **Observabilidade nativa:** as tabelas do River expõem o histórico exato de tentativas (`attempt`), data do agendamento e mensagens de erro de cada execução.
+
+### Trade-offs e Custos Aceitos
+- **Consumo de conexões no PostgreSQL:** cada réplica do worker consome conexões do pool para executar polling e processar lotes;
+- **Retenção de tabelas:** a tabela `river_job` armazena jobs concluídos e descartados, exigindo rotina de expurgo periódico (`river.Client.PeriodicJobs`).
+
+
+## 5. Evidências de Conformidade no Código
+
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L74-99): método `Enqueue` gerenciando a transação atômica entre `file_uploads` e `river_job`;
+- [`internal/adapter/jobqueue/river.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/jobqueue/river.go#L130-180): método `Work` no `IngestionWorker` processando jobs com propagação de telemetria e tratamento de erros.

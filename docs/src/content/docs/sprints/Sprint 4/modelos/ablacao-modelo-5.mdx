@@ -1,0 +1,251 @@
+---
+title: "Modelo 5.1 — Teste de ablação do número da porta"
+description: "Ablação de num_porta, seleção de atributos com SHAP e critérios para a escolha da versão do Modelo 5."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Objetivo</h2>
+</div>
+
+Na Sprint 4, foi realizado um teste de **ablação** no Modelo 5, baseado em `RandomForestClassifier`, para avaliar a contribuição da variável `num_porta`. O experimento foi registrado no notebook `models/modelo-5/modelo_5.1/modelo_5.1.ipynb`.
+
+Ablação significa retirar uma parte do modelo e comparar o desempenho com uma versão de controle. Neste caso, a pergunta foi: **o número da porta acrescenta informação útil à previsão de falhas ou pode ser removido sem uma perda relevante de desempenho?**
+
+A versão 5.1 foi criada para teste. Seus artefatos foram salvos separadamente, sem substituir o modelo da aplicação.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Motivação: identificação e capacidade de generalização</h2>
+</div>
+
+O feedback recebido solicitava justificar o uso da variável porta como preditor numérico ou testar sua remoção, investigando uma possível dependência de identificadores ou posições físicas.
+
+No Random Forest, um número de porta pode ser utilizado em divisões por intervalo, como `num_porta ≤ 12`. Em conjunto com estação e via, ele pode permitir que as árvores distingam equipamentos específicos. O algoritmo não pressupõe uma relação linear entre o número e o risco, mas pode aprender associações locais que não se repetem em outras instalações.
+
+Isso não torna a identificação necessariamente inadequada. Para prever o futuro das mesmas portas, diferenças persistentes de instalação, exposição ou utilização podem ser informativas. Entretanto, uma associação útil em portas conhecidas não demonstra que o modelo funcionará em novas portas, estações ou após a substituição de um equipamento.
+
+Por isso, o teste retirou apenas `num_porta`. Foram preservados:
+
+- `est_cod` e `via_cod`, para isolar o efeito da retirada do número;
+- os atributos de alarmes e histórico de manutenção, que descrevem o comportamento observado da porta;
+- `id_porta` como chave de junção e avaliação, sem utilizá-lo como preditor.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Protocolo experimental</h2>
+</div>
+
+### Variantes comparadas
+
+| Variante | Atributos | Alteração |
+|---|---:|---|
+| Controle com `num_porta` | 83 | Referência retreinada com todos os atributos candidatos. |
+| 5.1 sem `num_porta` | 82 | Ablação direta: retirada somente de `num_porta`. |
+| 5.1 sem `num_porta` + SHAP | 70 | Retirada do número e seleção adicional de atributos. |
+
+A comparação entre as duas primeiras variantes isola a retirada de `num_porta`. A terceira é uma etapa exploratória adicional: seus resultados também refletem a seleção de atributos, não apenas a ablação.
+
+### Dados e separação temporal
+
+O experimento utilizou o painel porta-dia `models/modelo-5/painel.parquet` e as ordens tratadas em `data/Corretiva Emergencial/processados/ZM01_limpa.xlsx`. O alvo indica a ocorrência de pelo menos uma corretiva nos próximos **1 a 7 dias**.
+
+| Etapa | Critério |
+|---|---|
+| Ajuste inicial | Registros até 23/01/2025. |
+| Validação do limiar | De 31/01/2025 até 23/04/2025. |
+| Retreinamento final | Todos os registros de treino até 23/04/2025: **232.992 linhas**. |
+| Teste | Registros a partir de 01/05/2025: **71.184 linhas**, das quais **6.202 positivas**. |
+
+Foram mantidos intervalos de sete dias entre ajuste e validação e entre treino e teste, evitando a sobreposição das respectivas janelas futuras do alvo. Os mesmos registros foram utilizados nas três variantes.
+
+### Parâmetros e limiar de decisão
+
+As três variantes utilizaram os mesmos parâmetros:
+
+```python
+RandomForestClassifier(
+    n_estimators=400,
+    max_depth=14,
+    min_samples_leaf=40,
+    class_weight='balanced',
+    n_jobs=-1,
+    random_state=42,
+)
+```
+
+Para cada variante, o limiar foi escolhido pelo maior F1 na validação. Em seguida, o classificador foi retreinado com o conjunto completo de treino e avaliado no teste, preservando o limiar escolhido. Portanto, a regra de seleção foi a mesma, mas os limiares numéricos foram diferentes. Não foi realizada busca de hiperparâmetros neste experimento.
+
+### Cuidados com a preparação e a seleção de atributos
+
+O intervalo médio entre corretivas sem histórico suficiente foi preenchido com **30 dias**, igualmente nas três variantes. Isso substituiu a imputação pela mediana da base inteira, que consultava também o período de teste. Por essa diferença de preparação, a referência adequada é o controle retreinado neste experimento, e não as métricas históricas de outra execução do Modelo 5.
+
+A seleção SHAP utilizou uma amostra de **400 registros do treino**, com semente 42. Foram mantidos os atributos cuja média do valor SHAP absoluto atingiu pelo menos 1% da maior importância observada. Dos 82 atributos disponíveis sem `num_porta`, 70 permaneceram. O conjunto de teste não foi utilizado para essa seleção.
+
+O notebook inclui verificações da separação temporal e da ausência de `num_porta` nas listas de atributos dos candidatos. Na execução do experimento, as 14 células de código concluíram sem erro, e os dois artefatos exportados foram recarregados para verificar a correspondência entre os atributos declarados e os utilizados pelos modelos.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Como o SHAP foi utilizado</h2>
+</div>
+
+### Origem dos 82 atributos
+
+Os atributos foram construídos a partir das bases de alarmes e das ordens de manutenção. Cada registro reúne informações de uma porta em uma data. O script `models/modelo-5/construir_painel.py` gera o painel, e o notebook 5.1 acrescenta indicadores derivados e define as colunas utilizadas no treinamento. **O SHAP não criou os atributos: ele avaliou a influência dos que já existiam.**
+
+| Grupo de atributos | Quantidade sem `num_porta` | Exemplos |
+|---|---:|---|
+| Contagens de alarmes em janelas temporais | 55 | `n_LSD_7d`, `n_total_30d`, `n_tecnicos_3d`. |
+| Duração dos alarmes | 2 | `dur_max_7d`, `dur_max_30d`. |
+| Contagens ponderadas pela recência | 5 | `n_total_decaido_h3`, `n_LSD_decaido_h7`. |
+| Alarmes do módulo da plataforma | 1 | `n_mdu_7d`. |
+| Histórico de ordens SAP | 8 | `dias_desde_zm01`, `zm02_90d`, `zm03_90d`. |
+| Calendário | 2 | `dia_semana`, `fim_de_semana`. |
+| Ciclo e recorrência de manutenção | 4 | `n_corretivas_historico_total`, `intervalo_medio_zm01`. |
+| Indicadores derivados de alarmes | 3 | `rampa_7d`, `razao_7d_30d`, `frac_tecnicos_30d`. |
+| Localização | 2 | `est_cod`, `via_cod`. |
+| **Total** | **82** | |
+
+As 55 contagens correspondem a **11 indicadores calculados em cinco janelas: 1, 3, 7, 14 e 30 dias**. Por exemplo, `n_LSD_1d` e `n_LSD_30d` descrevem o mesmo tipo de alarme em escalas diferentes, permitindo representar tanto alterações recentes quanto comportamentos persistentes. Os históricos de alarmes e manutenção consideram informações anteriores à data da previsão.
+
+Colunas de identificação e organização, como `id_porta` e `Data`, e o alvo futuro `y` não entram como preditores. A quantidade de colunas do painel, portanto, não é igual à quantidade de atributos de entrada.
+
+### Da explicação de uma previsão à seleção de atributos
+
+SHAP significa *SHapley Additive exPlanations*. Neste experimento, foi utilizado `shap.TreeExplainer` para atribuir a cada atributo uma contribuição para a saída do Random Forest, em relação ao valor de referência do explicador. Foram consideradas as contribuições para a classe de falha.
+
+Uma contribuição positiva desloca a saída explicada em direção à classe de falha; uma contribuição negativa a desloca no sentido oposto. Por exemplo, o modelo pode atribuir contribuição positiva a uma duração elevada de alarmes em determinada previsão. Esse valor descreve uma associação aprendida pelo modelo, não prova que o atributo causou a falha e não precisa ter o mesmo sinal para todas as portas.
+
+A seleção seguiu estas etapas:
+
+1. Treinar o Random Forest sem `num_porta`, utilizando os **82 atributos**.
+2. Calcular os valores SHAP em **400 registros do treino**, selecionados com semente 42.
+3. Para cada atributo, calcular a **média dos valores absolutos de SHAP** nessa amostra. O valor absoluto evita que contribuições positivas e negativas se anulem ao medir influência.
+4. Manter os atributos com importância média de pelo menos **1% da importância do atributo mais influente**.
+5. Retreinar o Random Forest com os **70 atributos restantes** e escolher seu limiar pelo mesmo critério de F1 na validação.
+6. Avaliar o candidato no conjunto de teste reservado.
+
+O fluxo do experimento foi:
+
+```text
+83 atributos candidatos
+    → retirada de num_porta
+82 atributos
+    → seleção por importância SHAP no treino
+70 atributos
+    → retreinamento do Random Forest e avaliação
+```
+
+Como exemplo apenas ilustrativo, se a maior importância média fosse `0,04`, o corte seria `0,0004`. Esse corte é uma regra experimental de seleção, não um teste estatístico de relevância. Importância baixa na amostra não demonstra que um atributo nunca seja útil, especialmente em padrões raros ou quando há atributos correlacionados.
+
+**“Modelo com SHAP” designa, nesta documentação, o Random Forest retreinado com atributos selecionados por SHAP.** O SHAP não substitui o classificador, não adiciona um score à previsão e não precisa ser executado para cada nova inferência desse candidato.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Resultados</h2>
+</div>
+
+As métricas abaixo foram extraídas de `comparacao_modelos.csv`. Todas são calculadas por **registro porta-dia**. Um alerta representa uma classificação positiva em um dia, não necessariamente uma inspeção distinta ou uma falha independente.
+
+| Variante | Precisão | Recall | F1 | PR-AUC¹ | ROC-AUC | Limiar | Alertas |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Controle com `num_porta` | 16,10% | 53,26% | 0,2473 | 0,1849 | 0,6962 | 0,5260 | 20.513 |
+| Sem `num_porta` | 15,56% | 57,24% | 0,2447 | 0,1839 | 0,6955 | 0,5169 | 22.815 |
+| Sem `num_porta` + SHAP | 13,66% | 70,70% | 0,2290 | 0,1850 | 0,6967 | 0,4684 | 32.092 |
+
+¹ O campo `pr_auc` do experimento é calculado por `average_precision_score` (Average Precision), e não pela integração trapezoidal da curva precisão-recall.
+
+### Efeito isolado da retirada de `num_porta`
+
+Em relação ao controle, a ablação direta apresentou:
+
+- aumento de **3,98 pontos percentuais no recall**, de 53,26% para 57,24%;
+- redução de **0,54 ponto percentual na precisão**, de 16,10% para 15,56%;
+- **2.302 alertas adicionais**, aumento de aproximadamente 11,2%;
+- PR-AUC próxima da referência, de 0,1849 para 0,1839, com pequena redução de F1.
+
+O resultado mostra que, neste recorte temporal, retirar o número da porta não provocou uma grande queda nas métricas de ordenação. O ganho de recall veio acompanhado de mais alertas e menor precisão. Como os limiares foram ajustados separadamente, esse ganho não deve ser interpretado como uma melhora isolada da capacidade de distinguir falhas.
+
+### Resultado adicional da seleção SHAP
+
+O candidato com 70 atributos alcançou o maior recall, **70,70%**, mas também emitiu mais alertas: **32.092**, aproximadamente **56,4% acima do controle**. Sua precisão caiu para 13,66%, e o F1 ficou em 0,2290.
+
+A PR-AUC permaneceu próxima da referência. Assim, o recall maior não demonstra uma superioridade geral: a escolha depende da capacidade de inspeção e do custo operacional dos alertas. Também não é possível atribuir esse resultado somente à remoção de `num_porta`, pois houve uma segunda mudança na seleção de atributos.
+
+Em relação à ablação direta, o candidato selecionado por SHAP passou de **57,24% para 70,70% de recall**, de **15,56% para 13,66% de precisão** e de **22.815 para 32.092 alertas**. O limiar também mudou, de `0,5169` para `0,4684`. Como o modelo foi retreinado e a escala dos scores pode mudar, o efeito da seleção não foi isolado do efeito do limiar. Não se pode atribuir todo o aumento de recall ao SHAP.
+
+### Qual variante foi melhor?
+
+| Critério observado no teste | Variante com melhor resultado | Interpretação |
+|---|---|---|
+| Maior recall | Sem `num_porta` + SHAP: 70,70%. | Detectou a maior proporção de registros positivos, com maior volume de alertas. |
+| Maior precisão | Controle: 16,10%. | Teve a maior proporção de acertos entre seus alertas. |
+| Maior F1 | Controle: 0,2473. | Obteve o maior valor da combinação entre precisão e recall. |
+| PR-AUC e ROC-AUC | Valores próximos nas três variantes. | As pequenas diferenças numéricas não demonstram superioridade estatística. |
+| Menor volume de alertas | Controle: 20.513. | Demandaria menos encaminhamentos se cada alerta gerasse uma ação; o fluxo real precisa tratar repetições. |
+
+O candidato com seleção SHAP foi o melhor **no recall observado**, mas não foi um vencedor geral. Para a prioridade de reduzir falhas não antecipadas, ele é um candidato relevante à próxima avaliação, condicionado à capacidade de manutenção.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Limites da interpretação</h2>
+</div>
+
+O teste produziu candidatos sem `num_porta` com desempenho de ordenação próximo ao controle. Isso sustenta a possibilidade de retirar a variável, mas não demonstra que utilizá-la seja incorreto ou que sua contribuição seja irrelevante em qualquer cenário. A ablação foi mantida como experimento, sem promoção automática para o serviço de previsão.
+
+A interpretação está sujeita aos seguintes limites:
+
+- **Generalização:** a divisão foi temporal; não foram reservadas portas ou estações inéditas exclusivamente para teste.
+- **Identificação indireta:** estação, via e históricos individuais continuam presentes. A retirada do número não prova que toda dependência da identidade tenha sido eliminada.
+- **Incerteza:** foi utilizada uma semente e um recorte de teste. Não foram calculados intervalos de confiança nem demonstrada significância estatística das diferenças.
+- **Operação:** as variantes foram avaliadas com limiares próprios, sem impor o mesmo orçamento diário de inspeções.
+- **Unidade de avaliação:** os resultados desta comparação são por porta-dia; registros próximos podem se referir à mesma falha futura.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Direcionamento final</h2>
+</div>
+
+### Recomendação atual
+
+**Manter o modelo da aplicação e levar o candidato sem `num_porta` com seleção SHAP para uma comparação operacional controlada.** A ablação direta deve continuar como referência intermediária, permitindo distinguir o efeito da retirada do identificador do efeito adicional da seleção de atributos.
+
+Essa é uma recomendação de próximos passos, não uma promoção realizada. O recall de 70,70% justifica investigar o candidato, mas a precisão menor e o aumento de 56,4% nos alertas em relação ao controle impedem recomendar sua adoção apenas com os resultados atuais.
+
+### Protocolo proposto para a próxima decisão
+
+| Etapa | Ação proposta | Evidência esperada |
+|---|---|---|
+| 1. Definir a capacidade operacional | Estabelecer com a operação quantas portas podem ser inspecionadas por dia e como tratar alertas repetidos de uma mesma porta. | Um orçamento de inspeções **K**, aplicável às três variantes. |
+| 2. Comparar sob a mesma capacidade | Na validação, ordenar as portas pelo score de cada modelo e aplicar o mesmo limite K e a mesma regra de repetição. | Recall sob o mesmo orçamento, precisão e quantidade de encaminhamentos. Usar apenas o mesmo limiar numérico não garante uma comparação equivalente entre modelos. |
+| 3. Confirmar a estabilidade | Repetir a comparação em janelas temporais, preservando os intervalos do horizonte, e verificar a sensibilidade à semente e à amostra SHAP. | Consistência do resultado entre períodos e estimativas de incerteza que considerem a dependência dos registros. |
+| 4. Avaliar em período reservado | Fixar atributos, parâmetros e política de alertas antes de avaliar um período ainda não usado para orientar escolhas. | Evidência independente de ganho operacional; o teste já examinado não deve ser reutilizado para escolher a configuração. |
+| 5. Decidir sobre a adoção | Comparar os resultados com os critérios acordados antes da avaliação final. | Registro da decisão e da versão candidata, sem promoção automática por uma única métrica. |
+
+### Critérios para avançar ou manter a referência
+
+O candidato deve avançar somente se **antecipar mais falhas sob o mesmo orçamento operacional**, respeitar o piso de precisão acordado com a operação e apresentar desempenho consistente entre períodos. O valor de K, o piso de precisão e o ganho mínimo aceitável ainda precisam ser definidos; este experimento não estabeleceu esses requisitos.
+
+Se o ganho de recall desaparecer ao igualar a capacidade de inspeção, ou se não houver evidência suficiente de estabilidade, a recomendação é manter a referência em uso. O benefício esperado precisa ser demonstrado antes de uma troca de modelo.
+
+Para expansão a novas portas ou estações, acrescenta-se uma condição: avaliar equipamentos ou instalações não vistos durante o treinamento. O teste temporal realizado não sustenta, sozinho, essa generalização.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Evidências e artefatos</h2>
+</div>
+
+O notebook está em `models/modelo-5/modelo_5.1/modelo_5.1.ipynb`. Os arquivos abaixo ficam em `models/modelo-5/modelo_5.1/artefatos/modelo_5_1/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `comparacao_ablacao.csv` | Controle e ablação direta de `num_porta`. |
+| `comparacao_modelos.csv` | Comparação das três variantes. |
+| `experimento.json` | Datas de corte, semente, atributos e métricas. |
+| `modelo_5_1_sem_num_porta.joblib` | Artefato da ablação direta, com 82 atributos. |
+| `modelo_5_1_sem_num_porta_shap.joblib` | Artefato do candidato reduzido, com 70 atributos. |
+
+Essas evidências registram o teste de ablação realizado; os candidatos permanecem separados dos artefatos ativos da aplicação.

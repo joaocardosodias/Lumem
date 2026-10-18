@@ -1,0 +1,49 @@
+---
+title: ADR 003 — Armazenamento S3
+description: Registro da decisão de utilizar MinIO privado e compatível com S3 para desacoplar API, Worker e serviço de ML.
+---
+
+## 1. Contexto e Forças de Decisão
+
+A divisão do backend nos contêineres especializados `backend-linha4` (API) e `worker-linha4` (Processador River) exigiu uma estratégia compartilhada para transferência de arquivos brutos de telemetria.
+
+A opção de salvar os arquivos recebidos no diretório local `/tmp` do contêiner da API foi descartada durante o desenho da arquitetura na Sprint 3 por três motivos:
+1. **Sistemas de arquivos isolados:** o contêiner do worker possui seu próprio filesystem isolado (namespaces do Linux), não tendo acesso aos arquivos gravados pelo contêiner da API;
+2. **Volatilidade de contêineres:** se o contêiner da API sofresse recriação durante um deploy, arquivos em `/tmp` seriam apagados antes do processamento;
+3. **Inviabilidade de escalabilidade horizontal:** instâncias adicionais de workers executando em outros hosts físicos ou pods não conseguiriam ler dados de discos locais de outros contêineres.
+
+## 2. Decisão Arquitetural
+
+Adotar o **MinIO autocontido através da API compatível com Amazon S3** para armazenar ingestões, datasets e modelos. API, Worker e ML utilizam os SDKs S3 com endpoint interno `http://minio:9000`; o conteúdo permanece em volume Docker persistente.
+
+### Padrão de ciclo de vida do objeto
+1. **Nomeação determinística sem colisão:** a chave do objeto utiliza prefixo fixo e UUID v4 gerado pela API (ex: `ingestion/3b5d8434-d02d-45bf-a6d1-ec92ef943391.csv`), impossibilitando sobrescrita de arquivos com nomes idênticos;
+2. **Bucket estritamente privado:** o bucket não possui permissões públicas de leitura ou escrita. Todo acesso é autenticado via credenciais técnicas injetadas via variáveis de ambiente;
+3. **Expurgo definitivo pós-processamento:** o arquivo é mantido durante o processamento e tentativas de repetição. Ao atingir o estado terminal (`completed`, `failed` por erro permanente ou esgotamento de 5 tentativas), o worker persiste um job de limpeza no River. A exclusão ocorre em consumidor próprio, com novas tentativas a cada cinco minutos se o storage estiver indisponível.
+
+## 3. Matriz de Alternativas Avaliadas
+
+| Opção técnica | Prós | Contras | Veredito |
+|---|---|---|---|
+| **Disco Local (`/tmp`)** | Sem latência de rede; custo zero de infraestrutura | Isolado por contêiner; volátil; impede separação de API e Worker | **Rejeitada:** incompatível com arquitetura multi-processos |
+| **Volumes Docker Compartilhados (NFS / Bind Mounts)** | Acessível por múltiplos contêineres no mesmo host | Acopla fortemente a execução a um mesmo nó físico; permissões complexas de UID/GID | **Rejeitada:** limita escalabilidade e portabilidade em nuvem |
+| **Coluna Binária (`BYTEA`) no PostgreSQL** | Atomicidade total com as tabelas de banco; transação única | Causa inchaço massivo do banco (bloat); satura cache de memória RAM do PostgreSQL | **Rejeitada:** anti-padrão grave para planilhas de dezenas de megabytes |
+| **Object Storage S3 (MinIO)** | **API padrão, streaming, isolamento entre contêineres e ausência de cobrança externa** | A equipe assume backups, capacidade de disco e disponibilidade da VPS | **Aprovada:** mantém a abstração S3 com operação autocontida |
+
+## 4. Consequências da Decisão
+
+### Consequências Positivas
+- **Independência entre processos:** API, Worker e ML usam objetos por chave e não dependem do filesystem efêmero uns dos outros;
+- **Compatibilidade com testes:** a porta `IngestionStorage` permite usar `LocalTempStorage` sem iniciar o MinIO nas suítes unitárias;
+- **Consumo previsível de RAM:** CSV é lido por linha; XLSX usa arquivo temporário, `OpenFile` e o iterador `Rows`. O caso de uso converte e grava lotes de até 500 registros.
+
+### Trade-offs e Custos Aceitos
+- Dependência da disponibilidade do contêiner MinIO e do disco da VPS para aceitar uploads, treinar e carregar modelos;
+- A exclusão é eventual e depende de PostgreSQL e do consumidor da fila `ingestion_cleanup`. Falhas após registrar o job são repetidas automaticamente. Objetos criados antes de qualquer registro no banco continuam sujeitos à janela entre S3 e PostgreSQL, exigindo reconciliação em caso de queda nesse intervalo.
+
+
+## 5. Evidências de Conformidade no Código
+
+- [`internal/usecase/port/services.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/usecase/port/services.go): interface `IngestionStorage` com `Store`, `Open` e `Delete`;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go#L60-80): configuração do AWS SDK v2 com `UsePathStyle = true` e endpoint customizado;
+- [`internal/adapter/storage/s3_storage.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/adapter/storage/s3_storage.go#L102-144): implementação de `Store` com hashing SHA-256 e `PutObject`.

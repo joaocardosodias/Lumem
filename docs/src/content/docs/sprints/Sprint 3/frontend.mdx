@@ -1,0 +1,287 @@
+---
+title: "Frontend"
+description: "Documentação do frontend da plataforma de manutenção preditiva das portas de plataforma da Linha 4 Amarela."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import telaLogin from '../../../../assets/sprints/sprint3/frontend/Login.png';
+import telaCarregamento from '../../../../assets/sprints/sprint3/frontend/Carregamento.png';
+import telaDashboard from '../../../../assets/sprints/sprint3/frontend/dashboard.png';
+import telaManutencoes from '../../../../assets/sprints/sprint3/frontend/Manutencoes.png';
+import telaCadastrarManutencoes from '../../../../assets/sprints/sprint3/frontend/CadastrarManutencoes.png';
+import telaAlertas from '../../../../assets/sprints/sprint3/frontend/Alertas.png';
+import telaCadastrarAlarmes from '../../../../assets/sprints/sprint3/frontend/CadastrarAlarmes.png';
+import telaPortas from '../../../../assets/sprints/sprint3/frontend/Portas.png';
+import telaPortasEstacao from '../../../../assets/sprints/sprint3/frontend/PortasEstacao.png';
+import telaPortasEspec1 from '../../../../assets/sprints/sprint3/frontend/PortasEspec1.png';
+import telaPortasEspec2 from '../../../../assets/sprints/sprint3/frontend/PortasEspec2.png';
+import telaInspecoes from '../../../../assets/sprints/sprint3/frontend/Inspecoes.png';
+import telaAbrirInspecao from '../../../../assets/sprints/sprint3/frontend/AbrirOrdemInspec.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
+</div>
+
+Esta seção documenta a camada de implantação da solução preditiva: o frontend com o qual a operadora **Marta** interage para transformar as saídas do modelo e os registros operacionais em decisão. A interface foi desenvolvida em React 19, empacotada com Vite, e vive em `src/frontend`. Não há roteamento por URL; o `App.jsx` escolhe a tela a partir da sessão. Sem autenticação, só existe o Login. Com sessão válida, a barra de navegação passa a oferecer Dashboard, Alertas, Manutenções, Portas e Inspeções.
+
+A stack foi escolhida para cobrir três necessidades do produto. React e React DOM montam a interface e o contexto de autenticação. O Vite serve o ambiente de desenvolvimento, gera o build e, no `npm run dev`, encaminha `/api` ao host definido em `VITE_API_URL`. GSAP e OGL cuidam da camada visual em movimento: o primeiro anima o overlay de carregamento e a contagem dos indicadores; o segundo desenha o background animado em WebGL no Login e nesse overlay. A biblioteca SheetJS (`xlsx`) interpreta as planilhas CSV e XLSX no cadastro de alarmes e de ordens de manutenção, antes do envio à API. O lint de desenvolvimento fica a cargo do Oxlint.
+
+A identidade visual segue a Motiva (roxo `#3F00FF`, papel `#f6f3ee`, fonte Circular Std). As chamadas HTTP passam por `src/frontend/src/lib/api.js`. Este documento descreve as telas na ordem da jornada da Marta, começando pelo Login, e indica em cada uma o [requisito funcional](/sprints/sprint-3/requisitos) em que ela foi baseada.
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Login</h2>
+</div>
+
+O Login é o controle de acesso da plataforma e parte dos requisitos [RF01](/sprints/sprint-3/requisitos) e [RF02](/sprints/sprint-3/requisitos): o sistema deve permitir o acesso por e-mail e senha, e somente quem está autenticado deve ver os dados protegidos. Sem token, o restante do painel não é montado. A tela está em `Login.jsx` e a sessão em `Auth.jsx`.
+
+Visualmente, a tela se divide em duas colunas. À esquerda, o painel de marca usa o background animado nas cores da Motiva, com a logo no canto superior e o texto *Manutenção preditiva das portas de plataforma* e *Linha 4 Amarela* no inferior. À direita, sobre o papel claro, o formulário traz o kicker **Acesso à plataforma**, o título **Entrar**, os campos de e-mail e senha e o botão **Logar**, com a marca Motiva em marca d’água. Se as credenciais forem recusadas ou a rede falhar, o erro aparece acima do botão, sem sair da tela. O envio lê o `FormData` do formulário, de modo que o autofill do navegador também entre na requisição.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 1: Tela de Login</strong></figcaption>
+  <Image
+    src={telaLogin}
+    alt="Tela de login da plataforma Motiva, com painel de marca à esquerda e formulário Entrar à direita"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Ao clicar em **Logar**, o frontend envia `POST /api/v1/auth/login` com e-mail e senha. A API devolve um JWT, gravado em `sessionStorage` na chave `motiva.token` pelo restante da aba. O perfil do operador vem nessa resposta ou, se faltar, de `GET /api/v1/auth/me`. Enquanto isso acontece, o botão passa a **Entrando…** e um segundo envio é bloqueado. Um `401` em rota protegida apaga o token, limpa os caches de manutenção e inspeção e devolve o usuário a esta tela. Se a aba for recarregada com token ainda válido, `GET /api/v1/auth/me` restaura a sessão sem novo formulário.
+
+O Dashboard não abre no instante em que o token chega. O painel esquerdo se expande para tela cheia, a logo vai ao centro e um metrô percorre um trilho conforme o progresso. É o mesmo overlay usado depois em **Realizar Previsão** e **Re-treinar modelo**. Nesse intervalo, o frontend pré-carrega manutenções e inspeções em paralelo, para que os indicadores já reflitam o catálogo completo. Na reta final o status lê *Carregando as ordens de manutenção*. Se essas buscas falharem, o painel abre mesmo assim e as telas correspondentes mostram o erro. Ao chegar a 100%, o overlay some e a Marta entra no Dashboard autenticado.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 2: Overlay de carregamento após o login</strong></figcaption>
+  <Image
+    src={telaCarregamento}
+    alt="Overlay de carregamento da Motiva com logo, metrô no trilho, status das ordens de manutenção e percentual"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Dashboard</h2>
+</div>
+
+O Dashboard é a primeira tela autenticada e o resumo operacional da linha. Ele foi baseado no [RF10](/sprints/sprint-3/requisitos), que pede indicadores de portas monitoradas, portas em risco, inspeções e estações críticas, e também no [RF09](/sprints/sprint-3/requisitos) e no [RF11](/sprints/sprint-3/requisitos), que classificam cada porta e destacam as estações e PSDs críticas. A Marta entra aqui depois do overlay de login: a barra lateral já está visível (Dashboard, Alertas, Manutenções, Portas, Inspeções e **Sair**), o kicker *Linha 4 Amarela* identifica o contexto e a saudação combina o primeiro nome do operador com o volume de portas em risco na última rodada da IA, incluindo a data da inferência quando a API a envia.
+
+Os números vêm de três leituras em paralelo. `GET /api/v1/dashboard/summary` abastece o total de portas ativas, as portas em risco nos próximos sete dias e o ranking de estações críticas. `GET /api/v1/predictions/latest` devolve a última inferência, da qual a tela destaca só as portas com diagnóstico *vai falhar*. As inspeções pendentes e concluídas não usam o campo de inspeção do summary: saem do catálogo já pré-carregado no login, para o indicador bater com a tela de Inspeções.
+
+No topo, o card azul concentra o indicador principal, *Portas em risco nos próximos 7 dias*, com o total da linha no rodapé. O número sobe com animação GSAP. Ao lado, três tiles empilhados mostram inspeções pendentes, inspeções concluídas e a estação mais crítica (código, nome e quantidade de portas em risco). Os dois primeiros tiles levam à tela de Inspeções. Abaixo, dois painéis fecham a leitura: **Estações críticas** lista o ranking com barra proporcional ao volume de risco, e **Portas priorizadas pela IA** mostra TAG, estação, plataforma e diagnóstico de cada PSD sinalizada. Quando a rodada não aponta risco, os painéis exibem estado vazio, como na Figura 3.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 3: Tela de Dashboard</strong></figcaption>
+  <Image
+    src={telaDashboard}
+    alt="Dashboard da plataforma Motiva com card de portas em risco, tiles de inspeção e painéis de estações críticas e portas priorizadas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Manutenções</h2>
+</div>
+
+A tela de Manutenções é o catálogo operacional das ordens SAP da linha (ZM01 corretiva emergencial, ZM02 corretiva programada e ZM03 preventiva) e parte dos requisitos [RF04](/sprints/sprint-3/requisitos), [RF05](/sprints/sprint-3/requisitos) e [RF06](/sprints/sprint-3/requisitos): importar registros de manutenção, cadastrar e consultar ordens à mão, e filtrar por estação, período e tipo. A Marta usa essa visão para cruzar volume, tipo, estação e duração com o que o modelo prioriza no Dashboard. Os dados já entram no cache durante o overlay de login, via `GET /api/v1/maintenance` em páginas paralelas, para o card azul refletir o total real e não só a primeira página da API. Se o cache estiver vazio, a tela busca de novo.
+
+O recorte visível alimenta tudo ao mesmo tempo. O card *Ordens de manutenção* mostra a quantidade filtrada e destaca o tipo mais frequente. **Ordens por tipo** empilha as barras ZM; **Ordens por estação** parte as seis maiores à esquerda e o restante à direita. A barra de filtros vem em seguida: período (1d, 7d, 30d, 6 meses, 1 ano ou Tudo, o padrão), estação, tipo, origem (manual ou upload) e duração mínima e máxima em horas. A lista abaixo traz tipo, ordem SAP, estação, local de instalação, início, fim, duração, sintoma, descrição e origem, 50 linhas por página. Códigos SAP do tipo `SP04IFAL` são normalizados para as três letras da Linha 4 (FAL, PIN, OSC etc.).
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 4: Tela de Manutenções</strong></figcaption>
+  <Image
+    src={telaManutencoes}
+    alt="Tela de Manutenções com card de total, gráficos por tipo e estação, filtros e listagem de ordens"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+O botão **Cadastrar Manutenções +** abre um modal roxo sobre a própria tela, sem perder o contexto da lista, e cobre o cadastro do [RF05](/sprints/sprint-3/requisitos) e a importação do [RF04](/sprints/sprint-3/requisitos). Há duas abas. Em **Manual**, a Marta informa tipo da ordem, número SAP, estação, local de instalação, início, fim opcional, duração, sintoma e descrição. Preenchidas as datas de início e fim, a duração em horas é calculada sozinha. O envio faz `POST /api/v1/maintenance` e recarrega o catálogo. Em **CSV / XLSX**, ela escolhe o tipo ZM da planilha, anexa o arquivo (lido no cliente pelo SheetJS) e envia `POST /api/v1/uploads/maintenance`; a tela acompanha o processamento até a API concluir. Clique fora do modal, com o upload parado, fecha o cadastro.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 5: Modal de cadastro de manutenção</strong></figcaption>
+  <Image
+    src={telaCadastrarManutencoes}
+    alt="Modal Cadastrar manutenção sobre a tela de Manutenções, na aba Manual"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Alertas</h2>
+</div>
+
+A tela de Alertas herda o papel do Histórico do wireframe e foi baseada no [RF03](/sprints/sprint-3/requisitos), no [RF06](/sprints/sprint-3/requisitos) e no [RF09](/sprints/sprint-3/requisitos): importar o histórico de alarmes em CSV ou XLSX, filtrar o que está sinalizado e classificar cada porta como estável ou em risco. É o lugar para a Marta ver o que está sinalizado na linha e alimentar o modelo com planilha de telemetria. No estado atual da API, porém, **não existe listagem de alarmes**. O OpenAPI expõe `POST /api/v1/uploads/alarms` e as rotas de predição, mas nenhum `GET` de alarmes. Por isso a tela não mostra ocorrências de telemetria (código, horário do alarme, normalização). Ela mostra a **última inferência** (`GET /api/v1/predictions/latest`), mapeada para o visual de alerta: a TAG da porta, a data em que a IA avaliou, a estação, o diagnóstico *Vai falhar* ou *Estável* e, no lugar da normalização, a plataforma e o número da porta.
+
+O card azul *Alertas preditivos* conta só as portas com `will_fail`. Os gráficos partem o mesmo recorte por diagnóstico e por estação. Os filtros de período, estação, diagnóstico e plataforma atuam sobre essa lista, com 50 linhas por página. Se a API ainda não tiver rodada calculada, a tela fica no estado vazio da Figura 6: aviso em vermelho, card em zero e a mensagem *Nenhum alerta na última inferência.*
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 6: Tela de Alertas sem rodada de predição</strong></figcaption>
+  <Image
+    src={telaAlertas}
+    alt="Tela de Alertas da Motiva em estado vazio, com card de alertas preditivos em zero e filtros"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+**Cadastrar Alarmes +** abre o modal *Enviar planilha de alarmes*, que atende ao [RF03](/sprints/sprint-3/requisitos). O arquivo CSV ou XLSX segue para `POST /api/v1/uploads/alarms`; o frontend acompanha o processamento e, ao terminar, recarrega `predictions/latest`. O upload entra no pipeline da API, mas as linhas da planilha **não voltam como lista de alarmes**: o que a Marta vê depois continua sendo o resultado da inferência, não o histórico de telemetria. Quando existir um GET de alarmes, essa tela poderá passar a listar as ocorrências reais e deixar as predições no Dashboard e em Portas.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 7: Modal de envio de planilha de alarmes</strong></figcaption>
+  <Image
+    src={telaCadastrarAlarmes}
+    alt="Modal Enviar planilha de alarmes sobre a tela de Alertas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Portas</h2>
+</div>
+
+A tela de Portas é o recorte espacial da linha e parte dos requisitos [RF07](/sprints/sprint-3/requisitos), [RF08](/sprints/sprint-3/requisitos), [RF09](/sprints/sprint-3/requisitos) e [RF11](/sprints/sprint-3/requisitos): iniciar uma rodada de predição, usar sete dias como horizonte padrão, classificar cada porta como estável ou em risco e gerar inspeção prioritária a partir do dossiê. A Marta escolhe a estação, lê o risco por plataforma e entra no dossiê de uma PSD. O fluxo vive em `Portas.jsx` e tem três níveis, todos na mesma rota da sessão (mapa, estação e porta). O mapa em si não vem da API. As onze estações da Linha 4 Amarela, as fotos do tooltip e os códigos de três letras (VSO, MBI, BUT, PIN e as demais) estão no catálogo local `stations.js`. O que a API alimenta, neste nível, são os três cards do rodapé: estação mais crítica e portas em risco saem de `GET /api/v1/dashboard/summary`; as inspeções pendentes saem do mesmo catálogo pré-carregado no login, para o número bater com a tela de Inspeções. Sem ranking na última rodada, o primeiro card fica em travessão, como na Figura 8.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 8: Mapa da Linha 4 na tela de Portas</strong></figcaption>
+  <Image
+    src={telaPortas}
+    alt="Tela de Portas com o mapa amarelo da Linha 4 Amarela e três cards de resumo no rodapé"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Cada estação é um ponto no trilho amarelo, com o nome alternando acima e abaixo da linha. O clique abre um tooltip com o nome, a foto local e o botão **Acessar** (Figura 9). Trocar de estação fecha o cartão anterior antes de abrir o próximo. **Acessar** dispara `GET /api/v1/stations/{code}/doors/status`, some o mapa e monta a visão da estação.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 9: Tooltip da estação Pinheiros</strong></figcaption>
+  <Image
+    src={telaPortasEstacao}
+    alt="Mapa da Linha 4 com o tooltip da estação Pinheiros, foto e botão Acessar"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+Na estação, o título passa a ser o nome (Pinheiros, na captura) com um botão de voltar ao mapa. Dois cards azuis mostram o total de portas devolvidas pela API e quantas estão com `will_fail`. As abas de plataforma (P1, P2) seguem **só as portas da resposta**, não o catálogo local: Pinheiros, República e Luz têm P3 e P4 em `stations.js`, mas essas abas só aparecem se a API as enviar. O painel **Riscos por porta** empilha uma barra por PSD da plataforma ativa; a tabela **Portas de Estação** lista número, TAG SAP, barra de risco, status (*Em risco* ou *Estável*) e data da última avaliação. Clique na barra ou na linha abre o dossiê daquela porta.
+
+O percentual de risco, no estado atual, quase nunca vem da API. Se o payload não trouxer `risk`, o frontend inventa **0,82** para *vai falhar* e **0,22** para *estável*. Por isso a Figura 10 mostra todas as barras iguais e 22% com status Estável, e a coluna *Avaliado em* fica em travessão quando `last_evaluated_at` não veio.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 10: Detalhe da estação Pinheiros, plataforma P1</strong></figcaption>
+  <Image
+    src={telaPortasEspec1}
+    alt="Tela da estação Pinheiros com cards de total e risco, abas P1 e P2, gráfico de barras e tabela de portas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+No rodapé da mesma tela ficam **Realizar Previsão** e **Re-treinar modelo**. Os dois disparam o overlay do metrô (o mesmo do login) e, por baixo, o **mesmo** `POST /api/v1/predictions/trigger` com horizonte de sete dias. Não há endpoint separado de retreino: a diferença é só o texto do overlay e o carimbo local *Último disparo*, gravado no cliente quando o segundo botão conclui. Ao terminar, a tela recarrega o status das portas da estação aberta.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 11: Ações de previsão na tela da estação</strong></figcaption>
+  <Image
+    src={telaPortasEspec2}
+    alt="Rodapé da tela da estação Pinheiros com a tabela de portas e os botões Realizar Previsão e Re-treinar modelo"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+O terceiro nível é o dossiê da porta. A Marta chega nele pela barra ou pela linha da tabela. O título vira a TAG SAP (ou o número da porta), com estação, plataforma e número no subtítulo. Dois cards trazem o diagnóstico (*Vai falhar* ou *Estável*) e a data da última avaliação. O painel **Dossiê da porta** preenche id, estação, plataforma, número, TAG, status e o flag *vai falhar*, mesclando o item da lista com `GET /api/v1/doors/{id}/timeline`. **Manutenções relacionadas** usam as ordens que o timeline devolver; se a API não as mandar, o frontend busca `GET /api/v1/maintenance` e tenta casar o local de instalação com `PP` mais o número da porta e a plataforma. Sem casamento, mostra até oito ordens da mesma estação. O formulário **Abrir inspeção** envia data, hora e notas em `POST /api/v1/inspections`, com prioridade alta se a porta estiver em risco, invalida o cache de inspeções e leva a Marta para a tela de Inspeções.
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Inspeções</h2>
+</div>
+
+A tela de Inspeções é a fila de campo da Marta e parte dos requisitos [RF06](/sprints/sprint-3/requisitos) e [RF11](/sprints/sprint-3/requisitos): filtrar por estação, período, prioridade ou status, e acompanhar as inspeções geradas para os ativos em risco. Mostra o que está pendente, o que já entrou em execução e o que foi concluído. O catálogo inteiro entra no cache ainda no overlay de login, via `GET /api/v1/inspections` em páginas paralelas (`listAllInspections`), o mesmo recorte que alimenta os tiles do Dashboard e o card de pendentes em Portas. Se o cache já existir, a tela abre na hora; senão busca de novo. Depois de criar uma ordem no dossiê da porta, esse cache é invalidado para a lista nascer atualizada.
+
+Os três cards azuis (Pendentes, Em andamento e Concluídas) contam o recorte dos **filtros**, não da aba de status. Período (o padrão é Tudo), estação, plataforma e prioridade mudam os números; clicar em Pendentes na lista abaixo não zera os outros cards. A barra de filtros vem em seguida. As abas Todas, Pendentes, Em andamento e Concluídas recortam só a listagem, 50 linhas por página. Cada card mostra estação (código e nome), plataforma, porta, prioridade (Baixa, Normal, Alta ou Crítica), data agendada, notas e um seletor de status. Trocar o seletor dispara `PATCH /api/v1/inspections/{id}/status` e atualiza o cache na hora, sem recarregar a página. Códigos de estação passam por `resolveStation`, como nas manutenções.
+
+Na captura da Figura 12 o volume está concentrado em pendentes (quase três mil ordens de teste na API, zero em andamento e zero concluídas). Sem nenhum registro, a lista lê *Nenhuma inspeção retornada pela API*; com filtros demais, *Nenhuma inspeção com esses filtros.*
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 12: Tela de Inspeções</strong></figcaption>
+  <Image
+    src={telaInspecoes}
+    alt="Tela de Inspeções com cards de pendentes, em andamento e concluídas, filtros, abas de status e lista de ordens"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+**Abrir inspeção +** abre o modal da Figura 13, sobre a própria lista, e cobre a geração de inspeção prevista no [RF11](/sprints/sprint-3/requisitos). Não há aba de planilha: a ordem nasce só pelo formulário. A Marta informa estação (o padrão é Butantã), plataforma (as opções seguem o catálogo local da estação, inclusive P3 e P4 em Pinheiros, República e Luz), número da porta (1 a 24), prioridade, data, hora e notas. O envio faz `POST /api/v1/inspections` com `scheduled_for` montado a partir da data e da hora, recarrega o cache e fecha o modal. Clique fora cancela. O mesmo tipo de ordem também nasce no dossiê da porta, já preenchido com estação, plataforma, número e prioridade alta se a PSD estiver em risco; depois do POST a Marta cai nesta tela.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <figcaption style="margin-bottom: 0.75rem;"><strong>Figura 13: Modal Abrir inspeção</strong></figcaption>
+  <Image
+    src={telaAbrirInspecao}
+    alt="Modal Abrir inspeção sobre a tela de Inspeções, com campos de estação, plataforma, porta, prioridade, data, hora e notas"
+    width={1100}
+    format="png"
+  />
+  <p style="margin-top: 0.5rem;"><em>Fonte: desenvolvida pelos autores.</em></p>
+</figure>
+
+
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">8. Conclusão</h2>
+</div>
+
+O frontend documentado nesta seção é a interface entregue nesta sprint, com a qual a operadora Marta usa a plataforma na Linha 4 Amarela. A navegação começa no Login ([RF01](/sprints/sprint-3/requisitos) e [RF02](/sprints/sprint-3/requisitos)), passa pelo carregamento (o mesmo que aparece em **Realizar Previsão** e **Re-treinar modelo**) e abre no Dashboard ([RF10](/sprints/sprint-3/requisitos)). Dali ela acessa o que a última previsão sinalizou (Alertas, [RF03](/sprints/sprint-3/requisitos) e [RF09](/sprints/sprint-3/requisitos)), as ordens cadastradas (Manutenções, [RF04](/sprints/sprint-3/requisitos) e [RF05](/sprints/sprint-3/requisitos)), o mapa até a porta (Portas, [RF07](/sprints/sprint-3/requisitos) e [RF09](/sprints/sprint-3/requisitos)) e as ordens de campo (Inspeções, [RF11](/sprints/sprint-3/requisitos)). A interface foi feita em React e Vite, com GSAP e OGL na parte visual, e as chamadas passam por `api.js` para o host definido em `VITE_API_URL`.
+
+Nem tudo que a tela mostra já vem de verdade da API. A página de Alertas ainda não lista os alarmes cadastrados pelo import, e o cadastro manual nessa mesma tela ainda não existe. Na tela de Portas o botão de previsão já está no frontend, mas a integração com o modelo ainda não foi feita nesta sprint, e o risco de cada porta continua mockado. Manutenções e Inspeções, por outro lado, já leem e gravam no backend, com filtro, paginação e cadastro. O mapa da linha ainda usa estações mockadas em `stations.js`, porque a API não devolve essa lista e o banco ainda não tem tabela para isso.
+
+Em relação ao [protótipo de alta fidelidade](/sprints/sprint-3/prototipo-alta-fidelidade), a barra desta sprint trouxe Inspeções e não implementou Análise, Configurações e Usuários. O que o front deixou de entregar, em boa parte porque ainda não estava no backend, fica nos próximos passos.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">9. Próximos passos</h2>
+</div>
+
+Como próximos passos para a sprint seguinte do projeto, definimos algumas pontos interessantes, que o front deixou de entregar, já que ainda não estava no backend.
+
+O primeiro é a pagina de alertas, baseada no [RF03](/sprints/sprint-3/requisitos), que ainda não lista todos os alertas cadastrados, assim não permitindo que Marta, consiga visualizar os alarmes cadastrados a partir do Import. Outro problema é nessa mesma tela de alarmes, onde na parte de cadastrar alarmes, ainda não é possível adicionar manualmente, apenas pelo import de planilhas via CSV ou XLSX.
+
+Outra parte importante, é finalizar uma tela que o protótipo de Alta Fidelidade já havia desenhado, mas não foi implementado nessa sprint, que é a criação de um novo cargo de Administrador, que possa cadastrar novos usuários na plataforma. Essa é uma feature importantíssima para manter a usabilidade ao decorrer do tempo pela empresa parceira.
+
+Já na tela de portas, baseada no [RF07](/sprints/sprint-3/requisitos) e no [RF09](/sprints/sprint-3/requisitos), ainda não há integração real com as previsões do modelo preditivo. O botão para tal já está presente no frontend, mas a integração entre o backend e o modelo ainda não foi executado nessa sprint. Além disso, na tela de portas, a API não retorna uma lista de estações, e no banco ainda não há tabela para tal, ou seja, as estações estão sendo mockadas. Aparentemente, isso não é um problema por enquanto, mas quando novas estações forem adicionadas na Linha Amarela por exemplo, como a de "Taboão da Serra", o sistema não vai conseguir acompanhar essa demanda. Ou seja, além da tabela de estações, o sistema deve permitir cadastrar novas portas, estações e vinculá-las com sistema.
+
+Ainda na tela de portas, o risco de cada porta quebrada não é real, é mockado em 22%, principalmente por conta que o modelo preditivo ainda não está integrado. Essa decisão foi tomada para permitir a visualização durante o desenvolvimento do front, para depois ser integrado com o dado vindo do modelo real.
+
+

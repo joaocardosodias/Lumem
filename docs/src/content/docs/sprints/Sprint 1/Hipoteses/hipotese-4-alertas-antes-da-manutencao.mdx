@@ -1,0 +1,183 @@
+---
+title: "Hipótese 4: Aumento de Alarmes Antes da Manutenção Corretiva"
+description: "Análise exploratória pareada por estação, com teste estatístico, sobre a relação entre volume de alarmes não-OBS e o momento de ocorrência de ordens de manutenção corretiva."
+---
+
+import { Image } from 'astro:assets';
+import graficoMedianas from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-4/hipotese4-medianas-janelas.png';
+import graficoBoxplot from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-4/hipotese4-boxplot-14dias.png';
+import graficoTipos from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-4/hipotese4-tipos-alarme.png';
+import graficoCurvaHoras from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-4/hipotese4-curva-horas.png';
+import graficoPerfil24Portas from '../../../../../assets/sprints/sprint1/hipoteses/hipotese-4/hipotese4-perfil-24-portas.png';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto Teórico e Problematização</h2>
+</div>
+
+As Portas de Plataforma (PSDs) operam em ciclos intensivos de acionamento e estão sujeitas a falhas mecânicas, elétricas e de controle ao longo do tempo. Uma hipótese comum em manutenção preditiva é a de que, antes de uma falha que exige intervenção corretiva, o equipamento já vinha "avisando" o problema através de um volume crescente de alarmes.
+
+Para evitar ruído analítico, o estudo exclui os alarmes classificados como `OBS` (obstruções por passageiros/objetos), pois sua natureza é comportamental e não representa degradação funcional da porta.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Definindo a Questão Investigada</h2>
+</div>
+
+* **H4.1 (Aumento de alarmes antes da manutenção):** o volume de alarmes aumenta no intervalo imediatamente anterior à ordem de manutenção corretiva, em comparação ao intervalo equivalente posterior à intervenção.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Metodologia de Análise</h2>
+</div>
+
+Uma primeira versão desta análise comparava o volume de alarmes de **todo o sistema de PSD** contra a data de cada ordem de manutenção, sem considerar em qual estação a falha realmente ocorreu. Essa abordagem mistura o comportamento de portas que nada têm a ver com a ordem analisada e dilui qualquer sinal real de degradação local, por isso a metodologia foi refeita do zero.
+
+A investigação foi conduzida a partir de duas bases: as **ordens de manutenção corretiva (ZM01)**, que registram cada ocorrência de falha com data/hora de início da avaria e o local de instalação da porta afetada, e o **histórico de alarmes do sistema de PSD**, que traz estação, porta, tipo de alarme e horário de cada evento.
+
+O primeiro passo foi construir o timestamp da falha, concatenando `Início avaria` e `Hora início avaria` para cada ordem. A partir desse instante, o código da estação é extraído do campo `Local de Instalação` (por exemplo, `SP04-6-PSD-BUT-P1S1` resulta na estação `BUT`) e usado para filtrar **apenas os alarmes da mesma estação** da ordem, a mudança central em relação à primeira versão da análise. Sobre esse recorte, aplicam-se três filtros de qualidade: exclusão de todos os registros com `Alarme = OBS` (o ruído comportamental descrito acima); remoção de ordens com estação e timestamp de início idênticos, para não contar o mesmo evento de falha duas vezes no teste estatístico; e descarte de qualquer ordem cuja janela de comparação (antes e depois) não esteja totalmente contida no período coberto pela base de alarmes daquela estação, evitando subcontagem artificial nas bordas do dataset.
+
+Com o par "alarmes antes" / "alarmes depois" definido para cada ordem, a comparação é repetida em quatro janelas temporais (**1, 3, 7 e 14 dias**) para verificar se um eventual efeito é imediato, de curto prazo ou persistente. Como as duas medidas de cada par vêm da mesma unidade (a mesma ordem, a mesma porta), o teste estatístico apropriado é o **Wilcoxon signed-rank (pareado)**, complementado por um **teste binomial** sobre a proporção de ordens em que "antes" supera "depois".
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Achado Crítico: Cobertura Desigual de Alarmes por Estação</h2>
+</div>
+
+Antes de comparar antes/depois, foi feita uma checagem de cobertura: cruzando estação × tipo de alarme, verificou-se que **apenas a estação `BUT` possui alarmes técnicos (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`, `STS`) registrados na base atual**. As demais cinco estações monitoradas (`FAL`, `FRA`, `FRE`, `HIG`, `LUZ`) só têm eventos `OBS`, que já são removidos pela própria definição da hipótese.
+
+Isso significa que, fora de `BUT`, contar "alarmes não-OBS" resultaria sempre em zero, o que enviesaria qualquer comparação agregada. Por isso, **a análise a seguir é restrita às 765 ordens corretivas da estação `BUT`**, e essa limitação é retomada na conclusão.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Resultados e Interpretação</h2>
+</div>
+
+### 5.1 Resumo por janela temporal
+
+| Janela | Nº ordens | Mediana antes | Mediana depois | % ordens c/ mais alarmes antes | % ordens c/ mais alarmes depois | p-valor (Wilcoxon) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 dia | 620 | 7,0 | 8,0 | 37,1% | 42,7% | 0,389 (ns) |
+| 3 dias | 617 | 39,0 | 38,0 | 43,4% | 46,4% | 0,259 (ns) |
+| 7 dias | 613 | 143,0 | 142,0 | 49,3% | 47,6% | 0,626 (ns) |
+| 14 dias | 607 | 289,0 | 325,0 | 44,5% | 55,4% | **0,001** |
+
+*ns = não significativo (p ≥ 0,05).*
+
+O gráfico abaixo compara visualmente a mediana de alarmes antes e depois da manutenção em cada janela, com a significância estatística marcada:
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoMedianas} alt="Gráfico de mediana de alarmes não-OBS antes e depois da manutenção, por janela temporal" width={800} format="png" />
+</div>
+
+### 5.2 Distribuição completa (janela de 14 dias)
+
+As medianas e médias escondem a forma da distribuição. O boxplot a seguir mostra a dispersão completa de alarmes por ordem na janela de 14 dias, a única em que a diferença se mostrou estatisticamente significativa (Wilcoxon p ≈ 0,001; teste binomial p ≈ 0,008):
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoBoxplot} alt="Boxplot da distribuição de alarmes por ordem, antes e depois da manutenção, na janela de 14 dias" width={700} format="png" />
+</div>
+
+### 5.3 Quebra por tipo de alarme
+
+Para entender por que o volume "depois" supera o "antes" na janela de 14 dias, os alarmes foram decompostos por tipo:
+
+| Tipo de Alarme | Total Antes | Total Depois | Variação |
+| :---: | :---: | :---: | :---: |
+| STS | 92.180 | 90.876 | -1,4% |
+| FO | 31.385 | 37.661 | +20,0% |
+| LSD | 31.847 | 37.960 | +19,2% |
+| CSD | 27.641 | 32.692 | +18,3% |
+| CA | 28.148 | 33.260 | +18,2% |
+| FC | 30.496 | 35.930 | +17,8% |
+| OA | 29.348 | 34.229 | +16,6% |
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoTipos} alt="Gráfico de variação percentual por tipo de alarme, depois vs. antes da manutenção, na janela de 14 dias" width={800} format="png" />
+</div>
+
+### 5.4 Curva de tendência em janelas curtas (horas)
+
+As janelas das seções 5.1–5.3 usam recortes de dias (1, 3, 7 e 14) e a mediana, o que dá apenas quatro pontos de comparação, distantes entre si, e não deixa claro *como* o volume de alarmes evolui à medida que nos aproximamos do instante da manutenção. Para reforçar a evidência, a comparação antes/depois foi refeita em janelas muito mais curtas — **1h, 4h, 12h, 24h e 48h (2 dias)** —, usando a **média** de alarmes não-`OBS` por ordem e um gráfico de linha que acompanha a curva conforme a janela se expande. A metodologia (pareamento por estação, exclusão de `OBS`, restrição à cobertura completa da janela dentro do período de dados) é a mesma das seções anteriores, aplicada à estação `BUT`.
+
+| Janela | Nº ordens | Média antes | Média depois | % ordens c/ antes maior | % ordens c/ depois maior | Wilcoxon *p* | Binomial *p* |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1h | 620 | 2,94 | 4,99 | 15,3% | 19,7% | 0,0948 (ns) | 0,0773 (ns) |
+| 4h | 620 | 8,71 | 10,38 | 22,1% | 29,5% | 0,0561 (ns) | **0,0118** |
+| 12h | 620 | 19,89 | 21,71 | 32,3% | 38,2% | 0,1415 (ns) | 0,0849 (ns) |
+| 24h | 620 | 35,65 | 35,59 | 37,1% | 42,7% | 0,3895 (ns) | 0,1264 (ns) |
+| 48h | 618 | 65,66 | 68,28 | 43,0% | 45,1% | 0,4929 (ns) | 0,6073 (ns) |
+
+*ns = não significativo (p ≥ 0,05).*
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoCurvaHoras} alt="Curva da média de alarmes não-OBS antes vs. depois da manutenção, em janelas de 1h a 48h" width={800} format="png" />
+</div>
+
+A curva reforça, com resolução muito mais fina, a leitura das janelas em dias: em **quatro das cinco janelas horárias** (1h, 4h, 12h e 48h), a média de alarmes não-`OBS` **depois** da manutenção é maior do que **antes** — a linha azul (depois) fica acima da vermelha (antes) na maior parte do gráfico. A única exceção é a janela de **24h**, em que as duas médias praticamente se cruzam e a ordem se inverte por uma margem mínima (35,65 antes vs. 35,59 depois). Vale notar também que, olhando ordem a ordem, a maioria empata em janelas curtas (por exemplo, em 1h, 15,3% + 19,7% = 35%; os outros 65% empatam, geralmente com zero alarmes de ambos os lados) — comum em janelas de poucas horas.
+
+Nenhuma das cinco janelas atinge significância pelo teste de Wilcoxon (a mais próxima é 4h, com p = 0,056); o teste binomial, mais sensível apenas à direção do efeito, é significativo em 4h (p = 0,012). Ou seja: a evidência de que os alarmes aumentam *antes* da manutenção não aparece nem em escalas de poucas horas — pelo contrário, quando existe diferença perceptível, ela tende a apontar para "depois", reforçando o mesmo padrão contraintuitivo já visto na janela de 14 dias.
+
+### 5.5 Perfil por porta: as 24 portas de BUT, cada uma com seus próprios alarmes
+
+As seções 5.1–5.4 pareiam cada ordem contra **todos os alarmes da estação `BUT`** — o que ainda é generalista: uma ordem sobre uma porta específica (ex.: `PDM10`) é comparada com alarmes de outras 23 portas que nada têm a ver com aquela falha. Esta seção refaz a comparação **porta a porta**: para cada uma das 24 portas de Butantã, só entram na conta os **alarmes daquela porta especificamente** (extraídos do `TAG`, casados com a via/porta da ordem extraída de `Local de Instalação`), em quatro janelas — **1h, 12h, 1 dia e 1 semana**.
+
+A via 2 de `BUT` não tem nenhum alarme não-`OBS` registrado nesta base (nenhum tipo, não só os funcionais) — por isso, "as 24 portas de Butantã" usadas aqui são as 24 portas da **via 1**, onde 100% dos alarmes não-`OBS` da estação realmente existem.
+
+O gráfico final tem eixo X = as quatro janelas de tempo, e eixo Y = a **média entre todas as portas com dados** naquela janela — uma linha para "antes" e uma para "depois". Cada porta continua contribuindo só com os seus próprios alarmes; o que muda em relação a testar porta por porta isoladamente é que agora as ~22 portas com dados suficientes são resumidas numa única média por janela.
+
+<div style="margin: 2rem 0; text-align: center;">
+  <Image src={graficoPerfil24Portas} alt="Gráfico de linha com eixo X = janelas de tempo e eixo Y = média de alarmes entre as portas de BUT, antes e depois da manutenção" width={800} format="png" />
+</div>
+
+| Janela | Nº portas | Média antes (entre portas) | Média depois (entre portas) | % portas c/ depois maior | Wilcoxon *p* (porta como unidade) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 1h | 22 | 4,20 | 10,07 | 63,6% | **0,0129** |
+| 12h | 22 | 7,60 | 13,99 | 72,7% | **0,0158** |
+| 1 dia | 22 | 8,56 | 15,21 | 68,2% | **0,0196** |
+| 1 semana | 22 | 20,50 | 28,84 | 63,6% | 0,0586 (ns) |
+
+A linha azul (depois) fica **sempre acima** da vermelha (antes), nas quatro janelas, sem exceção. Tratando cada porta como unidade de comparação, o teste de Wilcoxon **é significativo em três das quatro janelas** (1h, 12h e 1 dia) — o resultado mais consistente de toda a Hipótese 4. Só a janela de 1 semana fica perto do limiar de 5% sem cruzá-lo (p = 0,059).
+
+**Conclusão desta seção:** olhando as portas de `BUT` uma a uma e agregando por janela de tempo, a média de alarmes **depois** da manutenção é maior do que **antes** em todas as quatro janelas testadas, com significância estatística em três delas. A hipótese H4.1 continua sem suporte — o achado consistente é o oposto do previsto: alarmes tendem a aumentar depois da intervenção corretiva, não antes, e esse padrão se sustenta estatisticamente quando cada porta é tratada como sua própria unidade de medição.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Síntese e Análise Detalhada dos Resultados</h2>
+</div>
+
+Diferentemente da formulação original, os dados **não confirmam** que o volume de alarmes relevantes cresce antes da manutenção corretiva:
+
+1. **Janelas de 1, 3 e 7 dias:** a diferença entre "antes" e "depois" não é estatisticamente significativa, e a proporção de ordens com mais alarmes antes fica sempre abaixo de 50%.
+2. **Janela de 14 dias:** há uma diferença estatisticamente significativa, mas na **direção oposta** à esperada, já que 55,4% das ordens registram mais alarmes *depois* da manutenção do que antes.
+
+Dessa forma, chegamos a conclusão que nenhuma das 4 janelas testadas evidenciam essa hipótese. 
+Mas afinal, surge uma dúvida ao analisar os dados, por que o volume para STS é menor depois?
+
+A quebra por tipo de alarme mostra um padrão consistente na janela de 14 dias: os seis tipos de alarme associados a falhas funcionais da porta (`CA`, `CSD`, `FC`, `FO`, `LSD`, `OA`) aumentam entre 16% e 20% depois da manutenção, enquanto o alarme de status (`STS`) permanece praticamente estável (-1,4%).
+
+Isso sugere duas leituras possíveis. Uma delas, é que a manutenção foi realizada de forma incompleta. A manutenção corretiva resolve o sintoma emergencial, mas não elimina a causa raiz, e a porta volta a gerar alarmes funcionais em volume igual ou maior nas semanas seguintes. Outra hipótese é que logo após o reparo, a porta volta a operar em plena carga (após período possivelmente degradado ou parcialmente isolado antes da ordem), o que pode elevar temporariamente a contagem de eventos.
+
+### 6.1 Limitações da análise
+
+Depois de analisar as tabelas, percebemos uma limitação técnica relevante nos dados disponibilizados inicialmente pelo parceiro, onde apenas a estação `BUT` possui alarmes técnicos (não-OBS) registrados na base atual; as demais cinco estações só registram `OBS`. A conclusão acima vale para a estação **Butantã** e não pode ser generalizada às demais estações sem uma base de alarmes mais completa.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">7. Conclusão</h2>
+</div>
+
+A hipótese de que **alarmes relevantes se intensificam antes de uma manutenção corretiva não encontrou suporte estatístico** nos dados da estação `BUT`, a única com cobertura de alarmes técnicos suficiente para o teste. Em três das quatro janelas avaliadas o resultado é estatisticamente nulo, e na janela mais longa (14 dias) o padrão observado é o **inverso**: alarmes funcionais aumentam depois da intervenção.
+
+Esse achado é relevante para a squad: contradiz a leitura inicial (baseada em uma comparação agregada e não pareada por estação) e aponta para uma questão diferente e mais acionável, se as ordens corretivas de `BUT` estão de fato eliminando a causa raiz das falhas ou apenas normalizando o sintoma temporariamente. Recomenda-se, como próximo passo, cruzar esse resultado com o campo `Causa`/`Ação` das ordens e, quando a cobertura de alarmes técnicos for expandida às demais estações, repetir esta mesma metodologia pareada por estação (e idealmente por porta).

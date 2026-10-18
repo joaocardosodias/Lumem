@@ -1,0 +1,111 @@
+.prediction-load {
+  position: fixed;
+  z-index: 80;
+  overflow: hidden;
+  background: var(--brand, #3f00ff);
+  color: var(--white);
+  pointer-events: auto;
+  opacity: 0;
+}
+
+.prediction-load__grainient {
+  position: absolute;
+  inset: 0;
+}
+
+.prediction-load__logo {
+  position: fixed;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+  will-change: transform, top, left, width, height, opacity;
+}
+
+.prediction-load__scene {
+  position: absolute;
+  top: 52%;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+  pointer-events: none;
+}
+
+.prediction-load__train {
+  width: min(520px, 82vw);
+}
+
+.prediction-load__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  text-align: center;
+}
+
+.prediction-load__copy span {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.prediction-load__copy strong {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.linha-train {
+  position: relative;
+  height: 72px;
+}
+
+.linha-train__rail {
+  position: absolute;
+  right: 0;
+  bottom: 10px;
+  left: 0;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.linha-train__progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  border-radius: inherit;
+  background: var(--white);
+}
+
+.linha-train__car {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  width: 120px;
+  will-change: transform;
+}
+
+.linha-train__car img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.login.is-loading {
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .prediction-load__copy strong {
+    font-size: 34px;
+  }
+}

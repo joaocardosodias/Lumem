@@ -1,0 +1,830 @@
+---
+title: "Comparação e Seleção dos Modelos"
+description: "Comparação das métricas e seleção do modelo do projeto."
+---
+
+# Comparação e Seleção dos Modelos
+
+## Visão geral
+
+Este documento registra o processo utilizado para comparar os modelos desenvolvidos pelo grupo e justificar a seleção final do **Modelo 7**.
+
+A análise mostrou que nem todos os modelos resolvem exatamente o mesmo problema preditivo. Em especial, os **Modelos 5 e 7 não são totalmente comparáveis**, pois possuem targets com granularidades diferentes:
+
+- **Modelo 5:** prevê se **uma porta específica** apresentará falha;
+- **Modelo 7:** prevê se **alguma porta de um sistema PSD (estação + plataforma)** apresentará falha.
+
+Por esse motivo, a seleção final não foi feita apenas pela comparação direta dos valores das métricas. Também foi considerada a aderência do target ao nível de decisão desejado.
+
+A comparação foi realizada a partir dos resultados já registrados nos experimentos originais de cada modelo.
+
+Nenhum modelo foi:
+
+- retreinado;
+- recalibrado;
+- ajustado novamente;
+- submetido a novas features;
+- submetido a novos hiperparâmetros;
+- submetido a novo threshold;
+- avaliado em dados diferentes dos utilizados originalmente.
+
+O objetivo foi comparar os modelos **como foram entregues**, utilizando somente as métricas disponíveis em seus respectivos experimentos.
+
+---
+
+# 1. Objetivo da comparação
+
+A etapa de comparação foi criada para responder à seguinte pergunta:
+
+> **Entre os modelos desenvolvidos pelo grupo, qual apresentou o melhor desempenho geral de acordo com as métricas registradas em seus experimentos?**
+
+A escolha não foi baseada apenas em uma única métrica.
+
+Foram considerados, sempre que disponíveis:
+
+- Accuracy;
+- Precision;
+- Recall;
+- F1-score;
+- ROC-AUC;
+- PR-AUC.
+
+Além dos valores numéricos, também foi considerada a interpretação das métricas em função da distribuição das classes e da **definição do target de cada experimento**.
+
+Isso é particularmente importante porque métricas obtidas em targets diferentes não representam necessariamente o mesmo nível de dificuldade ou a mesma pergunta de negócio.
+
+---
+
+# 2. Modelos analisados
+
+Os seguintes modelos foram incluídos na comparação:
+
+| Modelo | Algoritmo |
+|---|---|
+| Modelo 1 | XGBoost + HistGradientBoosting |
+| Modelo 2 | LightGBM |
+| Modelo 3 | Decision Tree |
+| Modelo 5 | Random Forest |
+| Modelo 6 | XGBoost |
+| Modelo 7 | CatBoost |
+| Modelo 8 | Extra Trees |
+
+O **Modelo 4 não foi incluído porque não havia um Modelo 4 entre os artefatos disponibilizados para análise**.
+
+---
+
+# 3. Regra adotada para a comparação
+
+A principal regra metodológica da comparação foi:
+
+> **Não recalcular métricas ausentes e não alterar os modelos originais.**
+
+Isso significa que, caso determinada métrica não estivesse registrada originalmente para um modelo, ela foi mantida como ausente.
+
+Essa decisão foi importante para evitar criar uma situação em que alguns modelos fossem avaliados com novos critérios ou novos dados enquanto outros permanecessem com seus resultados originais.
+
+## 3.1. Comparabilidade entre os targets
+
+Durante a análise foi identificado que os modelos não possuem necessariamente a mesma definição de target.
+
+A diferença mais importante para a decisão final ocorre entre os Modelos 5 e 7.
+
+### Modelo 5
+
+O target do Modelo 5 responde a uma pergunta mais específica:
+
+> **“Esta porta específica apresentará uma falha?”**
+
+Portanto, sua previsão está associada diretamente à identificação da porta individual com risco de falha.
+
+### Modelo 7
+
+O target do Modelo 7 responde, em essência:
+
+> **“Algum sistema PSD (conjunto de portas de uma plataforma) apresentará uma falha?”**
+
+Nesse caso, a previsão está associada à ocorrência de falha em alguma porta do sistema, não a uma porta específica.
+
+### Impacto na comparação
+
+Essa diferença significa que os valores de ROC-AUC, PR-AUC, Precision, Recall e F1 dos Modelos 5 e 7 **não devem ser interpretados como uma disputa direta em condições idênticas**.
+
+O Modelo 7 pode apresentar melhor desempenho em determinada métrica e, ainda assim, estar resolvendo um problema diferente e menos granular.
+
+O Modelo 5 possui uma tarefa mais específica: além de indicar risco de falha, precisa associar esse risco à porta correta.
+
+Por isso, as métricas continuam sendo apresentadas lado a lado como uma visão geral dos experimentos, mas a escolha final leva em consideração também **qual pergunta cada modelo efetivamente responde**.
+
+---
+
+# 4. Tabela consolidada de métricas
+
+A tabela utilizada como base para as análises foi:
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|---|---:|---:|---:|---:|---:|---:|
+| Modelo 1 | N/A | 0,1047 | 0,5361 | 0,1751 | 0,5235 | 0,0913 |
+| Modelo 2 | 0,5500 | 0,2060 | 0,6050 | 0,3080 | 0,6066 | N/A |
+| Modelo 3 | 0,7689 | 0,1242 | 0,3163 | 0,1784 | 0,5713 | 0,1065 |
+| Modelo 5 | N/A | 0,1590 | 0,5530 | 0,2470 | 0,6970 | 0,1850 |
+| Modelo 6 | 0,9295 | 0,9900 | 0,9400 | 0,9600 | N/A | N/A |
+| Modelo 7 | 0,5634 | 0,5463 | 0,9193 | 0,6853 | 0,5911 | 0,5874 |
+| Modelo 8 | 0,5904 | 0,0326 | 0,5824 | 0,0618 | 0,6075 | 0,0407 |
+
+---
+
+# 5. Primeira comparação: Precision, Recall e F1-score
+
+A primeira análise comparou as três métricas disponíveis para todos os modelos:
+
+- Precision;
+- Recall;
+- F1-score.
+
+## 5.1. Precision
+
+A Precision representa, entre os casos classificados como positivos pelo modelo, quantos realmente pertenciam à classe positiva.
+
+Os maiores valores observados foram:
+
+```text
+Modelo 6 = 0,9900
+Modelo 7 = 0,5463
+Modelo 2 = 0,2060
+Modelo 5 = 0,1590
+Modelo 3 = 0,1242
+Modelo 1 = 0,1047
+Modelo 8 = 0,0326
+```
+
+Visualmente, o Modelo 6 apresentou um valor muito superior aos demais.
+
+Entretanto, esse resultado precisou ser investigado com mais cuidado devido à distribuição de classes de seu experimento.
+
+---
+
+## 5.2. Recall
+
+O Recall representa a capacidade de encontrar os casos positivos existentes.
+
+Os resultados foram:
+
+```text
+Modelo 6 = 0,9400
+Modelo 7 = 0,9193
+Modelo 2 = 0,6050
+Modelo 8 = 0,5824
+Modelo 5 = 0,5530
+Modelo 1 = 0,5361
+Modelo 3 = 0,3163
+```
+
+O Modelo 7 apresentou um Recall muito alto, próximo ao Modelo 6 e claramente superior aos demais candidatos.
+
+Isso significa que, dentro de seu experimento, o Modelo 7 conseguiu identificar aproximadamente 91,9% dos casos positivos.
+
+---
+
+## 5.3. F1-score
+
+O F1-score combina Precision e Recall por meio da média harmônica.
+
+Os resultados foram:
+
+```text
+Modelo 6 = 0,9600
+Modelo 7 = 0,6853
+Modelo 2 = 0,3080
+Modelo 5 = 0,2470
+Modelo 3 = 0,1784
+Modelo 1 = 0,1751
+Modelo 8 = 0,0618
+```
+
+O Modelo 7 apresentou o segundo melhor F1-score e ficou muito acima dos demais modelos, com exceção do Modelo 6.
+
+---
+
+# 6. Análise crítica do Modelo 6
+
+O Modelo 6 inicialmente parecia ser o vencedor absoluto da comparação.
+
+Ele apresentou:
+
+```text
+Accuracy  = 0,9295
+Precision = 0,9900
+Recall    = 0,9400
+F1        = 0,9600
+```
+
+Entretanto, a distribuição de classes de seu experimento revelou uma característica crítica:
+
+> aproximadamente **98,85% das observações do conjunto de teste pertenciam à classe positiva**.
+
+Em outras palavras, a classe 1 era extremamente dominante.
+
+No conjunto de teste existiam aproximadamente:
+
+```text
+Classe 1: 2.312 observações
+Classe 0:    27 observações
+```
+
+Esse cenário torna as métricas da classe positiva naturalmente muito altas para um modelo que favorece essa classe.
+
+O próprio experimento mostrou que um baseline extremamente simples, que previsse sempre a classe majoritária, atingiria aproximadamente:
+
+```text
+Accuracy = 98,85%
+```
+
+Enquanto o Modelo 6 obteve:
+
+```text
+Accuracy = 92,95%
+```
+
+Portanto, sua Accuracy foi inferior à de um classificador que sempre previsse a classe majoritária.
+
+Além disso, o desempenho para a classe minoritária foi muito inferior:
+
+```text
+Precision classe 0 = 0,05
+Recall classe 0    = 0,26
+F1 classe 0        = 0,08
+```
+
+A Balanced Accuracy registrada foi aproximadamente:
+
+```text
+59,83%
+```
+
+Esses resultados mostram que os altos valores de Precision, Recall e F1 da classe positiva não representam necessariamente uma capacidade geral superior de discriminação entre as classes.
+
+Por esse motivo, o Modelo 6 foi mantido na comparação, mas suas métricas foram interpretadas com cautela.
+
+---
+
+# 7. Comparação de ROC-AUC
+
+A segunda análise focou em ROC-AUC.
+
+ROC-AUC mede a capacidade do modelo de discriminar positivos e negativos ao longo de diferentes thresholds.
+
+De forma geral:
+
+```text
+0,50 = comportamento próximo ao acaso
+1,00 = separação perfeita
+```
+
+Os resultados disponíveis foram:
+
+| Modelo | ROC-AUC |
+|---|---:|
+| Modelo 5 | 0,6970 |
+| Modelo 8 | 0,6075 |
+| Modelo 2 | 0,6066 |
+| Modelo 7 | 0,5911 |
+| Modelo 3 | 0,5713 |
+| Modelo 1 | 0,5235 |
+
+O principal destaque numérico foi o **Modelo 5**, com ROC-AUC de aproximadamente:
+
+```text
+0,6970
+```
+
+Esse foi o maior valor entre os modelos com a métrica registrada.
+
+Entretanto, após a revisão dos targets, esse resultado não deve ser interpretado como evidência de que o Modelo 5 supera diretamente o Modelo 7, pois os dois resolvem problemas diferentes. O Modelo 5 tenta identificar a falha de uma porta específica, enquanto o Modelo 7 prevê a ocorrência de falha em alguma porta de um sistema PSD.
+
+O Modelo 8 e o Modelo 2 ficaram praticamente empatados, com aproximadamente 0,607.
+
+O Modelo 7 obteve ROC-AUC de 0,5911.
+
+Embora não seja o melhor resultado nessa métrica, ele permaneceu acima do baseline aleatório de 0,50.
+
+## Modelos ausentes nessa análise
+
+O Modelo 6 não apareceu nessa visualização porque seu experimento original não registrou ROC-AUC.
+
+O Modelo 4 não aparece porque não existia entre os modelos disponibilizados.
+
+Nenhum valor adicional foi calculado para preencher essas ausências.
+
+---
+
+# 8. Comparação de PR-AUC
+
+A análise seguinte utilizou PR-AUC.
+
+PR-AUC é particularmente importante em problemas de classificação desbalanceados porque avalia a relação entre Precision e Recall ao longo de diferentes thresholds.
+
+Os resultados registrados foram:
+
+| Modelo | PR-AUC |
+|---|---:|
+| Modelo 7 | 0,5874 |
+| Modelo 5 | 0,1850 |
+| Modelo 3 | 0,1065 |
+| Modelo 1 | 0,0913 |
+| Modelo 8 | 0,0407 |
+
+O **Modelo 7 apresentou o maior PR-AUC registrado** entre os experimentos analisados.
+
+Seu PR-AUC foi:
+
+```text
+0,5874
+```
+
+Enquanto o segundo melhor resultado, do Modelo 5, foi:
+
+```text
+0,1850
+```
+
+A diferença numérica em relação ao Modelo 5 foi significativa.
+
+Contudo, essa diferença não deve ser lida como uma comparação direta de desempenho entre os dois, já que seus targets possuem granularidades diferentes.
+
+Ainda assim, dentro do problema específico resolvido pelo Modelo 7, o resultado foi importante porque mostra que seu bom desempenho em Precision e Recall não depende apenas de um threshold específico.
+
+O modelo mantém uma relação favorável entre essas duas métricas ao longo de diferentes limiares de decisão.
+
+## Modelos ausentes nessa análise
+
+Os Modelos 2 e 6 não possuem PR-AUC registrada em seus experimentos originais e, portanto, não foram incluídos nesse gráfico.
+
+---
+
+# 9. Comparação de Accuracy
+
+A Accuracy foi analisada apenas como métrica complementar.
+
+Os valores disponíveis foram:
+
+| Modelo | Accuracy |
+|---|---:|
+| Modelo 6 | 0,9295 |
+| Modelo 3 | 0,7689 |
+| Modelo 8 | 0,5904 |
+| Modelo 7 | 0,5634 |
+| Modelo 2 | 0,5500 |
+
+O Modelo 6 novamente apresentou o maior valor bruto.
+
+Entretanto, devido ao forte desbalanceamento de seu target, essa métrica não foi considerada suficiente para classificá-lo como o melhor modelo.
+
+A própria comparação com o baseline majoritário mostrou que sua Accuracy era inferior à de uma estratégia de prever sempre a classe dominante.
+
+Por isso, a Accuracy foi interpretada apenas em conjunto com as demais métricas.
+
+---
+
+# 10. Visão geral das métricas
+
+A análise conjunta mostrou diferentes perfis de desempenho.
+
+## Modelo 1
+
+Apresentou resultados modestos de forma geral.
+
+```text
+Precision = 0,1047
+Recall    = 0,5361
+F1        = 0,1751
+ROC-AUC   = 0,5235
+PR-AUC    = 0,0913
+```
+
+O ROC-AUC ficou pouco acima de 0,50.
+
+---
+
+## Modelo 2
+
+Apresentou um comportamento relativamente equilibrado entre os modelos intermediários.
+
+```text
+Accuracy  = 0,5500
+Precision = 0,2060
+Recall    = 0,6050
+F1        = 0,3080
+ROC-AUC   = 0,6066
+```
+
+Seu F1-score foi superior aos Modelos 1, 3, 5 e 8.
+
+---
+
+## Modelo 3
+
+Apresentou Accuracy relativamente alta, mas baixo Recall.
+
+```text
+Accuracy  = 0,7689
+Precision = 0,1242
+Recall    = 0,3163
+F1        = 0,1784
+ROC-AUC   = 0,5713
+PR-AUC    = 0,1065
+```
+
+---
+
+## Modelo 5
+
+O Modelo 5 apresentou resultados relevantes em seu próprio problema preditivo.
+
+```text
+Precision = 0,1590
+Recall    = 0,5530
+F1        = 0,2470
+ROC-AUC   = 0,6970
+PR-AUC    = 0,1850
+```
+
+Seu principal destaque foi o maior ROC-AUC entre os modelos avaliados nessa métrica.
+
+Também apresentou o segundo maior PR-AUC disponível.
+
+Entretanto, o Modelo 5 **não foi tratado como concorrente direto do Modelo 7**, pois seus targets são diferentes.
+
+O Modelo 5 busca prever se **uma porta específica** apresentará falha, enquanto o Modelo 7 busca prever se **alguma porta de um sistema PSD** apresentará falha.
+
+Assim, os bons resultados do Modelo 5 foram reconhecidos, mas não utilizados como evidência direta de superioridade ou inferioridade em relação ao Modelo 7.
+
+---
+
+## Modelo 6
+
+Apresentou as maiores métricas brutas de Precision, Recall e F1.
+
+```text
+Accuracy  = 0,9295
+Precision = 0,9900
+Recall    = 0,9400
+F1        = 0,9600
+```
+
+Entretanto, a classe positiva representava aproximadamente 98,85% do conjunto de teste.
+
+Dessa forma, seus resultados não foram considerados diretamente comparáveis aos demais sem levar em conta essa particularidade.
+
+---
+
+## Modelo 7
+
+O Modelo 7 apresentou um conjunto de métricas forte e consistente:
+
+```text
+Accuracy  = 0,5634
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+ROC-AUC   = 0,5911
+PR-AUC    = 0,5874
+```
+
+Os principais destaques foram:
+
+- segundo maior Recall bruto;
+- segundo maior F1 bruto;
+- Precision significativamente superior à maioria dos modelos;
+- maior PR-AUC da comparação;
+- desempenho elevado em diferentes métricas ao mesmo tempo.
+
+Ao desconsiderar a interpretação simplista do Modelo 6 devido ao forte desbalanceamento de sua classe positiva, o Modelo 7 se destacou como o candidato mais consistente.
+
+---
+
+## Modelo 8
+
+O Modelo 8 apresentou Recall competitivo, mas Precision muito baixa.
+
+```text
+Accuracy  = 0,5904
+Precision = 0,0326
+Recall    = 0,5824
+F1        = 0,0618
+ROC-AUC   = 0,6075
+PR-AUC    = 0,0407
+```
+
+O modelo conseguiu identificar uma parcela relevante dos casos positivos, mas produziu grande quantidade de falsos positivos.
+
+Isso foi refletido no baixo F1-score e no baixo PR-AUC.
+
+---
+
+# 11. Ranking dos modelos
+
+Foi criado um ranking geral a partir da posição de cada modelo em cada métrica disponível.
+
+Para cada métrica:
+
+```text
+maior valor = melhor posição
+```
+
+Em seguida, foi calculada a posição média de cada modelo considerando apenas as métricas disponíveis.
+
+Esse ranking foi utilizado como apoio visual e não como regra automática para a escolha.
+
+A razão é que uma média simples de posições não consegue representar particularidades importantes dos experimentos, como:
+
+- o forte desbalanceamento observado no Modelo 6;
+- a diferença de definição de target entre os Modelos 5 e 7;
+- diferentes granularidades de previsão.
+
+Assim, o ranking foi utilizado apenas como resumo visual das métricas e não como uma classificação absoluta de modelos equivalentes.
+
+---
+
+# 12. Por que o Modelo 7 foi escolhido
+
+A seleção do Modelo 7 como o modelo de nível sistema PSD/plataforma não foi baseada em uma única métrica.
+
+Ela foi resultado da combinação de vários fatores.
+
+## 12.1. Recall muito elevado
+
+O Modelo 7 apresentou:
+
+```text
+Recall = 0,9193
+```
+
+Isso significa elevada capacidade de identificação da classe positiva.
+
+Esse foi um dos melhores resultados entre todos os modelos.
+
+---
+
+## 12.2. Precision elevada em conjunto com Recall alto
+
+Um Recall muito alto pode ser obtido classificando grande parte da base como positiva.
+
+Entretanto, o Modelo 7 manteve:
+
+```text
+Precision = 0,5463
+```
+
+Isso representa um equilíbrio significativamente melhor do que o observado na maioria dos demais modelos.
+
+---
+
+## 12.3. F1-score forte
+
+O F1-score foi:
+
+```text
+0,6853
+```
+
+Esse valor mostra que o equilíbrio entre Precision e Recall permaneceu forte.
+
+Entre os modelos sem a particularidade extrema do Modelo 6, esse foi o maior F1-score da comparação.
+
+---
+
+## 12.4. Melhor PR-AUC
+
+O argumento mais forte a favor do Modelo 7 foi seu PR-AUC:
+
+```text
+0,5874
+```
+
+Esse resultado ficou muito acima dos demais.
+
+Comparação:
+
+```text
+Modelo 7 = 0,5874
+Modelo 5 = 0,1850
+Modelo 3 = 0,1065
+Modelo 1 = 0,0913
+Modelo 8 = 0,0407
+```
+
+Isso indica que o Modelo 7 preserva um bom equilíbrio entre Precision e Recall ao longo de diferentes thresholds.
+
+Assim, seu bom resultado não depende apenas do limiar específico utilizado na classificação final.
+
+---
+
+## 12.5. Consistência entre métricas
+
+O Modelo 7 não foi o melhor em todas as métricas.
+
+O Modelo 5, por exemplo, apresentou ROC-AUC numericamente superior, embora em um target diferente.
+
+O Modelo 7 apresentou desempenho forte em várias métricas simultaneamente dentro de sua formulação de previsão por sistema PSD:
+
+```text
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+ROC-AUC   = 0,5911
+PR-AUC    = 0,5874
+```
+
+Essa consistência foi considerada mais importante do que liderar apenas uma métrica.
+
+---
+
+## 12.6. Diferença entre os Modelos 5 e 7
+
+A revisão do grupo identificou que os Modelos 5 e 7 **não são totalmente comparáveis**, pois respondem a perguntas diferentes.
+
+### Target do Modelo 5
+
+O Modelo 5 busca responder:
+
+> **“Esta porta específica apresentará uma falha?”**
+
+Isso exige uma granularidade maior, pois o modelo precisa associar o risco à porta individual.
+
+### Target do Modelo 7
+
+O Modelo 7 busca responder:
+
+> **“Algum sistema PSD (conjunto de portas de uma plataforma) apresentará uma falha?”**
+
+Sua previsão está relacionada à ocorrência de uma falha em alguma porta do sistema, não a uma porta específica.
+
+### Consequência para as métricas
+
+O Modelo 5 apresentou:
+
+```text
+ROC-AUC = 0,6970
+PR-AUC  = 0,1850
+```
+
+O Modelo 7 apresentou:
+
+```text
+Precision = 0,5463
+Recall    = 0,9193
+F1        = 0,6853
+ROC-AUC   = 0,5911
+PR-AUC    = 0,5874
+```
+
+Esses números foram mantidos na mesma tabela para documentar os resultados originais, mas **não devem ser usados como se os dois modelos tivessem sido avaliados sobre exatamente a mesma tarefa**.
+
+O Modelo 5 apresenta uma tarefa mais específica, voltada à identificação do risco de falha de uma porta individual — é o único dos dois com essa granularidade.
+
+Já o maior PR-AUC e Recall do Modelo 7 refletem o desempenho dele em um problema mais agregado (sistema PSD), com uma taxa de positivos naturalmente mais alta, e não uma capacidade de identificação mais fina.
+
+Portanto, o Modelo 7 não "venceu" diretamente o Modelo 5 em uma disputa experimental idêntica — essa disputa idêntica não existe entre os dois.
+
+Por isso, a decisão do grupo foi manter os dois modelos como serviços separados: o parceiro escolhe qual usar de acordo com o nível de decisão que precisa — porta específica (Modelo 5) ou sistema PSD/plataforma (Modelo 7) — sem que um substitua o outro.
+
+---
+
+## 12.7. Comparação com o Modelo 6
+
+O Modelo 6 possui métricas nominais superiores:
+
+```text
+Precision = 0,9900
+Recall    = 0,9400
+F1        = 0,9600
+```
+
+Entretanto, seu conjunto de teste possui aproximadamente:
+
+```text
+98,85% de classe positiva
+```
+
+O baseline majoritário supera sua própria Accuracy.
+
+Por esse motivo, seus números elevados não foram considerados suficientes para caracterizar melhor capacidade de classificação geral.
+
+O Modelo 7 apresentou resultados mais equilibrados e mais informativos para a comparação.
+
+---
+
+# 13. Resultado final
+
+Após analisar:
+
+- Precision;
+- Recall;
+- F1-score;
+- Accuracy;
+- ROC-AUC;
+- PR-AUC;
+- distribuição das classes;
+- comportamento do Modelo 6;
+- diferenças de target entre os modelos;
+- granularidade da previsão;
+- consistência geral dos resultados;
+
+entre os candidatos avaliados para o nível de sistema PSD/plataforma, o modelo selecionado foi:
+
+# **Modelo 7 — CatBoost**
+
+As métricas que sustentam a escolha são:
+
+| Métrica | Resultado |
+|---|---:|
+| Accuracy | 0,5634 |
+| Precision | 0,5463 |
+| Recall | 0,9193 |
+| F1-score | 0,6853 |
+| ROC-AUC | 0,5911 |
+| PR-AUC | 0,5874 |
+
+Para o nível de porta específica, o modelo mantido é o **Modelo 5 — Random Forest**, já que é o único dos dois candidatos com essa granularidade. Os dois modelos são mantidos como serviços separados — ver seção 14.
+
+---
+
+# 14. Conclusão
+
+A comparação mostrou que selecionar um modelo apenas pela maior Accuracy, Precision, Recall, F1-score, ROC-AUC ou PR-AUC isoladamente pode produzir uma conclusão inadequada.
+
+O Modelo 6 é o principal exemplo de como a distribuição das classes altera a interpretação das métricas. Seus valores brutos são extremamente elevados, porém aproximadamente 98,85% de seu conjunto de teste pertence à classe positiva, e o baseline majoritário supera sua própria Accuracy.
+
+A revisão também revelou uma diferença metodológica importante entre os Modelos 5 e 7.
+
+O Modelo 5 busca prever se **uma porta específica** apresentará falha.
+
+O Modelo 7 busca prever se **alguma porta de um sistema PSD** apresentará falha.
+
+Portanto, os dois modelos não representam uma comparação direta sobre a mesma tarefa. O maior PR-AUC e Recall do Modelo 7 devem ser reconhecidos como um bom resultado dentro de seu próprio target — mais agregado e com uma taxa de positivos naturalmente maior —, não como evidência de que ele é superior ao Modelo 5 de forma geral.
+
+O Modelo 5, por sua vez, apresentou:
+
+```text
+Precision = 0,1590
+Recall    = 0,5530
+F1        = 0,2470
+ROC-AUC   = 0,6970
+PR-AUC    = 0,1850
+```
+
+Ele opera em uma granularidade mais específica, associando o risco de falha a uma porta individual — é o único dos dois modelos capaz disso.
+
+Isso o torna mais adequado para um cenário em que não basta saber que uma falha pode acontecer em algum lugar da plataforma: é necessário identificar **qual porta está sob risco**.
+
+Já o Modelo 7 é mais adequado quando a decisão é tomada em nível de sistema PSD/plataforma, com métricas mais fortes e consistentes dentro desse recorte.
+
+Por esse motivo, a decisão final foi:
+
+> **Os dois modelos foram mantidos, cada um como um serviço/endpoint separado. O parceiro escolhe qual usar de acordo com o nível de decisão que precisa: porta específica (Modelo 5) ou sistema PSD/plataforma (Modelo 7). Nenhum dos dois foi descartado.**
+
+Essa conclusão não significa que um modelo seja numericamente superior ao outro em uma tarefa idêntica, porque essa tarefa idêntica não existe entre os dois experimentos.
+
+A decisão de manter os dois resulta da combinação entre:
+
+- desempenho forte e consistente do Modelo 7 dentro do seu próprio recorte (sistema PSD);
+- granularidade em nível de porta específica, exclusiva do Modelo 5;
+- utilidades operacionais diferentes e complementares para o parceiro.
+
+Assim, a seleção final considera não apenas as métricas, mas também **o que cada modelo efetivamente prevê** e como isso serve a diferentes decisões operacionais.
+
+---
+
+## Resumo executivo
+
+```text
+Modelos avaliados:
+1, 2, 3, 5, 6, 7 e 8
+
+Modelos mantidos (endpoints separados):
+Modelo 5 e Modelo 7
+
+Modelo 5 (nível porta específica):
+Random Forest
+Precision = 0,1590 | Recall = 0,5530 | F1 = 0,2470
+ROC-AUC = 0,6970 | PR-AUC = 0,1850
+
+Modelo 7 (nível sistema PSD/plataforma):
+CatBoost
+Precision = 0,5463 | Recall = 0,9193 | F1 = 0,6853
+ROC-AUC = 0,5911 | PR-AUC = 0,5874
+
+Observação sobre comparabilidade:
+Modelo 5 e Modelo 7 não são diretamente comparáveis.
+O Modelo 5 prevê se uma porta específica apresentará falha,
+enquanto o Modelo 7 prevê se alguma porta de um sistema PSD apresentará falha.
+
+Principal ressalva:
+Modelo 6 apresenta métricas nominais muito altas,
+mas seu target possui aproximadamente 98,85% de classe positiva.
+
+Critério final:
+consistência das métricas dentro de cada target
+e complementaridade entre as granularidades (porta específica vs. sistema PSD),
+mantendo os dois como serviços separados para o parceiro escolher
+```

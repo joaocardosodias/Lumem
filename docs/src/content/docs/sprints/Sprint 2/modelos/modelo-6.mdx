@@ -1,0 +1,188 @@
+---
+title: "Modelo 6"
+description: "Documentação do modelo preditivo XGBoost com engenharia de features por estação (Modelo 6)."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import ImportanciaFeatures from '../../../../../assets/sprints/sprint2/modelo-6/importancia-features.png';
+import MapaCorrelacao from '../../../../../assets/sprints/sprint2/modelo-6/mapa-correlacao.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Entendimento do Negócio</h2>
+</div>
+
+### 1.1 Objetivo do experimento
+
+Depois de finalizar o levantamento de hipóteses, chegou na grande hora: criar o modelo preditivo para prever se a **estação** terá uma nova falha nos próximos 7 dias. O objetivo é que a equipe da Motiva consiga inserir novos dados de alarmes e o modelo avalie o risco agregado da estação. A identificação da porta específica é uma etapa posterior de busca e não faz parte da classificação principal.
+
+A partir dessa premissa, pegamos as tabelas um pré processamento iniciado, mas não finalizado e iniciamos o tratamento de dados e levantamento de novas features.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Entendimento dos Dados</h2>
+</div>
+
+### 2.1 Fontes utilizadas
+
+Para analise do modelo e levantamento de novas features, utilizamos as seguintes tabelas:
+- **Alarmes** (742.506 registros): o sistema de PSD registra automaticamente qualquer anomalia (obstrução, falha de comunicação, sensor destravado), com estação, porta e horário. É o "pulso" da operação, em tempo quase real.
+- **Corretiva Emergencial (ZM01)** e **Corretiva Programada (ZM02)**: as ordens de manutenção efetivamente abertas depois de uma falha, com data, estação, sintoma, causa e ação tomada. É a fonte da variável que se quer prever.
+- **Preventiva (ZM03)**: manutenção agendada (não motivada por falha), como troca de ar-condicionado do rack ou inspeção de rotina.
+
+Depois disso, a próxima decisão foi juntar `ZM01` e `ZM02` num único `zm01` (11.706 linhas). As duas são manutenções corretivas, a diferença entre elas é só a urgência com que a ordem foi tratada, não o tipo de evento. Isso importa porque o alvo do modelo tem uma classe extremamente rara (estação que **não** falha na semana seguinte a uma manutenção), e cada linha extra de corretiva ajuda a enxergar melhor os poucos casos "sem falha" que existem no meio de milhares de "com falha".
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Preparação dos Dados</h2>
+</div>
+
+### 3.1 Pré-processamento
+
+Antes de construir qualquer variável no modelo, é fundamental garantir que os dados estejam estruturados de forma a permitir comparações temporais confiáveis e o cruzamento de informações entre diferentes fontes. Essa preparação se apoia em três pilares fundamentais: padronização do tempo, remoção de ruídos e ordenação cronológica.
+
+O ponto de partida e elemento mais crítico de toda a análise é o tratamento adequado da coluna T, que registra o horário de início da avaria. Praticamente todas as variáveis criadas nas etapas seguintes buscam responder à mesma pergunta: o que aconteceu nesta mesma estação antes do instante T? Qualquer falha na formatação dessa data gera um efeito dominó, comprometendo a precisão de todos os cálculos e modelos construídos a partir dela.
+
+Com o tempo devidamente ajustado, o passo seguinte é filtrar o ruído dos dados. Nem todo alerta disparado pelo sistema indica uma degradação real do equipamento. Um alarme de obstrução OBS gerado por uma mochila presa na porta por alguns segundos durante o horário de pico reflete apenas o fluxo normal da estação, e não um defeito mecânico na porta de plataforma. Para evitar que esses eventos irrelevantes poluam a base e diluam o impacto dos problemas reais, descartamos qualquer alarme OBS com duração inferior a 30 segundos, mantendo o foco apenas nos sinais com real potencial analítico.
+
+Por fim, a base precisa passar por uma ordenação rigorosa, agrupada por estação e organizada no tempo. Toda a lógica de análise depende da capacidade de consultar o passado, como checar o histórico recente de manutenções ou contar a frequência de alarmes anteriores. Percorrer os dados em ordem cronológica exata dentro de cada estação é o que garante que a comparação de um evento com o seu momento anterior faça sentido prático e matemático.
+
+### 3.2 Features utilizadas
+
+Com os dados devidamente preparados, o passo seguinte é transformar o histórico em variáveis que o modelo consiga interpretar. Toda feature construída aqui segue uma regra rígida: só pode usar informação que já existia no momento T. O classificador utiliza dez sinais temporais e de contagem, calculados antes do evento previsto, sem fornecer diagnóstico ou informação registrada depois da falha.
+
+A primeira leva de variáveis nasce de uma intuição simples de manutenção preditiva: uma porta prestes a falhar normalmente já vem avisando, seja em mais alarmes, em manutenções mais recorrentes ou em reparos mais demorados. Dessa ideia nasceram:
+
+- **estacao**: extraída do campo local_de_instalacao, vira a chave usada para juntar informação entre as diferentes bases.
+- **alarmes_ultimas_24h e alarmes_ultimos_7d**: quantos alarmes a estação teve nas últimas 24 horas e nos últimos 7 dias, sempre antes de T. É a feature mais diretamente ligada à ideia de aviso antes da falha.
+- **tendencia_alarmes**: combina as duas janelas acima numa única razão, dividindo os alarmes das últimas 24h pela média diária dos últimos 7 dias. Um valor bem acima de 1 significa que a estação está mais barulhenta do que o seu normal recente, uma tentativa de capturar não só o volume de alarme, mas se ele está acelerando.
+- **dias_desde_ultima_manutencao**: intervalo desde o fim da manutenção anterior na estação, com `-1` quando não existe histórico.
+- **numero_manutencoes_anteriores**: quantidade de manutenções anteriores da estação, calculada em ordem cronológica.
+- **duracao_media_manutencoes_anteriores**: média da duração dos reparos anteriores, usando `shift(1)` para excluir a ocorrência atual.
+- **dia_semana e mes**: variáveis de sazonalidade extraídas do instante T.
+- **dias_desde_ultima_preventiva**: tempo desde a última preventiva anterior a T.
+- **preventivas_agendadas_prox_7d**: quantidade de preventivas já agendadas no intervalo entre T e os sete dias seguintes.
+
+`numero_alarmes` e `alarmes_antes_manu` permanecem disponíveis para análise exploratória, mas não entram no classificador final: o primeiro usa o total do período e o segundo depende do fim da avaria, ambos com risco de informação posterior ao momento da previsão.
+
+Os campos de manutenção, como `defeito`, `sintoma`, `objeto` e `indisponivel_flag`, são mantidos apenas para formar ou analisar o rótulo. Eles não entram no treinamento, pois só ficam disponíveis depois que o atendimento ocorre.
+
+---
+
+### 3.3 Definição do alvo e separação temporal
+
+#### Como nasce `falha_proximos_7d`
+
+Para cada evento de manutenção, olha-se qual é o próximo evento da mesma estação e quantos dias faltam até lá. Se for 7 dias ou menos, o alvo é 1; senão, 0. A última manutenção de cada estação não tem um "próximo evento" para comparar, então essas linhas são descartadas, já que não há como rotulá-las.
+
+O resultado dessa definição dá o tom para o resto do notebook: *11.504 exemplos de classe 1 contra apenas 190 de classe 0* (1,6% da base). Isso acontece porque, no histórico completo, a maioria das manutenções de uma estação é seguida por outra dentro de uma semana, ou seja, falhas tendem a se agrupar no tempo. A classe rara, a estação que "ficou bem" por 7 dias, é a mais interessante do ponto de vista prático, mas também a mais difícil de aprender, por ter poucos exemplos.
+
+#### Por que separar por tempo, e não aleatoriamente
+
+O corte de treino/teste é feito no percentil 80 da data T, não com amostragem aleatória. A razão é simular a situação real de uso do modelo: no dia a dia, ele vai prever o futuro a partir do passado, nunca o contrário. Um split aleatório deixaria eventos do "futuro" vazarem para o treino, o modelo aprenderia padrões indisponíveis no momento real da previsão, e a métrica de teste ficaria artificialmente otimista. Cortar por data mantém o teste honesto: o modelo só vê o passado (80% mais antigo) para tentar prever um período que, na prática, ele nunca viu (os 20% mais recentes), o que resulta em 9.355 exemplos de treino contra 2.339 de teste.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Modelagem</h2>
+</div>
+
+Com treino e teste separados, falta escolher e ajustar o modelo. Duas decisões guiam essa etapa.
+
+A primeira é o algoritmo. O XGBoost é um modelo baseado em árvores de decisão, o que combina bem com o tipo de variável construído até aqui: contagens, razões e categorias codificadas como inteiro, sem exigir normalização e lidando naturalmente com relações não lineares. Ele também tem suporte nativo a scale_pos_weight, o que importa muito neste problema específico.
+
+A segunda decisão nasce direto do desbalanceamento visto na seção anterior: 98,85% dos exemplos de teste são da classe 1. Um modelo preguiçoso que sempre prevê 1 já acerta quase 99% das vezes, e é essa a barra de comparação que torna a acurácia comum uma métrica enganosa aqui. Por isso a busca de hiperparâmetros foi montada assim:
+
+- **scoring="balanced_accuracy"**: essa métrica tira a média do recall das duas classes sem pesar pelo tamanho de cada uma, então um modelo que só acerta a classe majoritária pontua mal, mesmo tendo acurácia alta.
+- **scale_pos_weight na grade de busca**, incluindo o valor 1 (sem reponderação) ao lado da proporção real do desbalanceamento e do dobro dela, para deixar a própria busca decidir se vale a pena forçar mais atenção à classe rara.
+- **RandomizedSearchCV**, com 25 combinações amostradas em vez de testar a grade inteira, que seria cara computacionalmente para um ganho marginal.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Avaliação</h2>
+</div>
+
+### 5.1 Resultados do classificador
+
+O resultado atual, com as dez features temporais e de contexto descritas acima, mostra a dificuldade do problema de forma concreta:
+
+| Métrica (teste) | Classe 1 (falha) | Classe 0 (sem falha) |
+| :--- | :---: | :---: |
+| Precisão | 0,99 | 0,05 |
+| Recall | 0,95 | 0,22 |
+| F1 | 0,97 | 0,08 |
+| Suporte | 2.312 | 27 |
+
+A acurácia geral fica em 93,93%, ainda abaixo do baseline de sempre prever a classe majoritária (98,85%). A acurácia balanceada, 58,49%, é a métrica que de fato importa aqui: o modelo melhora pouco em relação ao acaso e continua com baixa capacidade de reconhecer a classe rara.
+
+O gráfico de importância das features reforça essa leitura. As variáveis mais relevantes são sinais de volume, recência e recorrência, mas o peso delas não é concentrado a ponto de produzir uma separação clara da classe rara. O modelo reconhece algum sinal de risco, mas não tem uma variável dominante e robusta para decidir quando a estação está realmente em um caminho de falha ou estabilidade.
+
+<Image src={ImportanciaFeatures} alt="Gráfico de importância das features no modelo XGBoost" width={900} />
+
+<p style="text-align: center; font-style: italic;">Importância das features calculada pelo XGBoost no notebook do Modelo 6.</p>
+
+### 5.2 Diagnóstico de generalização
+
+O número de teste sozinho não diz por que o modelo tem dificuldade com a classe rara. Podem ser duas coisas bem diferentes, que pedem soluções opostas:
+
+- **Overfitting de verdade**: o modelo decorou padrões específicos dos exemplos de classe 0 no treino, que não se repetem no teste. Nesse cenário, o desempenho seria ótimo no treino e ruim no teste, e a solução seria simplificar o modelo (menos profundidade, mais regularização).
+- **Desbalanceamento estrutural**: mesmo sem decorar nada, existe tão pouco exemplo da classe rara e tão pouca separação real nas features que nenhum modelo aprenderia essa classe direito. Nesse cenário, o problema não é o modelo, é a quantidade e a qualidade de dado disponível, e simplificar o modelo só pioraria as coisas.
+
+Comparar as métricas de treino e de teste lado a lado é o jeito mais direto de distinguir os dois cenários:
+
+| Métrica | Treino (n=9.355) | Teste (n=2.339) |
+| :--- | :---: | :---: |
+| Acurácia balanceada | 74,98% | 58,49% |
+| Recall, classe 0 | 0,79 | 0,22 |
+| Precisão, classe 0 | 0,05 | 0,05 |
+
+A queda é real, de 74,98% para 58,49% de acurácia balanceada, o que indica que o modelo generaliza pior do que sugere o resultado de treino. A classe 0 tem apenas 27 exemplos no teste; por isso, pequenas mudanças no número de acertos alteram bastante o recall. O resultado deve ser tratado como evidência de sinal fraco e instável, não como uma previsão operacional autônoma.
+
+O diagnóstico fica ainda mais claro no mapa de correlação construído no notebook. O heatmap compara as dez features com o alvo `falha_proximos_7d` e mostra relações lineares que, isoladamente, não formam um eixo decisivo. Isso não prova ausência de relações não lineares, mas reforça que a previsão depende de combinações fracas e difíceis de generalizar.
+
+<Image src={MapaCorrelacao} alt="Mapa de correlação entre as features e o alvo do Modelo 6" width={900} />
+
+<p style="text-align: center; font-style: italic;">Mapa de correlação entre as features e o alvo, reproduzido a partir do notebook.</p>
+
+### 5.3 Busca por portas e limite operacional
+
+A busca por portas não foi uma etapa isolada do modelo. Ela foi uma extensão natural do problema, e o resultado mostrou muito bem por que essa extensão é mais dura do que a previsão inicial.
+
+A lógica foi a seguinte:
+
+1. Primeiro, o modelo estimava se a estação teria falha nos próximos 7 dias.
+2. Em seguida, a análise tentava restringir o problema às portas da mesma estação, que são as candidatas mais plausíveis de falhar naquele mesmo contexto local.
+3. Por fim, o modelo tentava escolher a porta alvo entre as portas daquela estação, usando o mesmo histórico de alarmes e manutenção como sinal de decisão.
+
+O ponto crítico é que a segunda e a terceira etapas dependem de uma informação muito mais particular e muito mais rara. Em muitos casos, a estação inteira aparece como um risco local, mas a porta que de fato falha não é identificada com confiança a partir dos sinais disponíveis no histórico atual. A base não tem variação suficiente, nem repetição suficiente, para transformar esse problema em um ranking de portas estável e operacionalmente útil.
+
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais ficou em 12,85% (n = 2.312). Esse valor ficou abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+
+Em outras palavras, o Modelo 6 consegue apontar um risco agregador na estação, mas não consegue “mirar” com precisão a porta específica dentro do sistema. Isso não significa que o modelo seja inútil; significa que o problema de nível de detalhe é mais difícil do que o problema de risco geral, e que a base atual ainda não possui o grau de granularidade e de repetição necessário para aprender essa busca de forma robusta.
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Implantação e Próximos Ciclos</h2>
+</div>
+
+### 6.1 O que o Modelo 6 realmente trouxe
+
+O Modelo 6 cumpriu seu papel como uma etapa importante da jornada de desenvolvimento: ele mostrou que o histórico de alarmes, manutenção e recorrência de falhas em uma mesma estação contém sinal preditivo, mas também evidenciou uma limitação estrutural do problema. A classe de interesse, a estação que não falha nos próximos 7 dias, é extremamente rara, e a base que a sustenta é pequena demais para que uma árvore XGBoost, mesmo bem configurada, consiga separar essa classe com robustez operacional sem custo em falsa segurança.
+
+Em termos práticos, o modelo não deve ser lido como um decisor absoluto de manutenção, mas como um sistema de triagem e priorização. Ele funciona melhor quando responde à pergunta: “nesta estação, o que está acontecendo de forma anormal e recorrente o suficiente para merecer atenção imediata?” Isso é útil para apoiar inspeções, revisar eventos críticos e dar atenção ao histórico recente, mas não substitui uma leitura humana do contexto operacional.
+
+### 6.2 Leitura das métricas para uso operacional
+
+A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
+
+### 6.3 Conclusão e recomendação
+
+O Modelo 6 mostrou que o histórico de alarmes e manutenção por estação contém sinal preditivo para falha em 7 dias, mas também mostrou a fronteira real do problema. A pergunta “a estação vai falhar?” é muito mais tratável do que a pergunta “qual porta vai falhar?” e, para a segunda, a acurácia da busca por portas ainda ficou muito baixa para uso decisório direto.
+
+Esse resultado redefine a aplicação prática do modelo: ele funciona melhor como sistema de apoio à decisão, priorização de atenção e alerta de risco, e não como mecanismo de identificação exata da porta defeituosa. O valor do Modelo 6 está em indicar que há risco real e concentrado, mas o trabalho ainda precisa avançar em dados, granularidade e engenharia de features antes de transformar essa sinalização em uma busca operacional confiável por portas.
+A acurácia geral do modelo é enganosa neste problema, e isso ficou claro ao longo da análise. Como a maioria dos exemplos é da classe 1 e a base é fortemente desbalanceada, um classificador que prevê quase tudo como falha teria performance alta em acurácia, mas seria inútil para atender à necessidade real da operação. Por isso, a métrica central aqui foi a acurácia balanceada e o recall da classe rara.
+
+Além disso, o conjunto revela um limite importante da estratégia de busca por porta: quando o objetivo deixou de ser apenas prever se a estação falharia nos próximos 7 dias e passou a tentar dizer qual porta era a mais provável de quebrar, a acurácia condicionada às falhas reais ficou em 12,85% (n = 2.312). Esse valor fica abaixo do baseline de 15,39% da classe mais frequente, mostrando que o sinal disponível hoje é insuficiente para localizar a porta com confiabilidade operacional.
+
+Essa conclusão também está alinhada com a leitura dos novos gráficos do notebook: o gráfico de importância revela que o modelo usa vários fatores de risco, sem uma variável dominante; o mapa de correlação mostra que as features não convergem para um sinal linear único e forte. Quando o problema passa de "estação em risco" para "porta específica em risco", a informação disponível não é mais suficiente para sustentar uma decisão operativa confiável.
+

@@ -1,0 +1,113 @@
+---
+title: "Wireframe da Plataforma"
+description: "Wireframe de baixa fidelidade das telas da plataforma de manutenção preditiva de Portas de Plataforma (PSDs): Login, Dashboard, Estações, Manutenções e Histórico."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../assets/sprints/sprint1/background_title.png';
+import telaLogin from '../../../../assets/sprints/sprint2/wireframe/Login.png';
+import telaDashboard from '../../../../assets/sprints/sprint2/wireframe/Dashboard.png';
+import telaEstacoes from '../../../../assets/sprints/sprint2/wireframe/Estações.png';
+import telaEstacoesDetalhes from '../../../../assets/sprints/sprint2/wireframe/Estações - detalhes.png';
+import telaEstacoesAgendamento from '../../../../assets/sprints/sprint2/wireframe/Estações - agendamento.png';
+import telaManutencoesLista from '../../../../assets/sprints/sprint2/wireframe/Manutenções - Lista.png';
+import telaManutencoesCalendario from '../../../../assets/sprints/sprint2/wireframe/Manutenções - Calendário.png';
+import telaHistorico from '../../../../assets/sprints/sprint2/wireframe/Histórico.png';
+import telaNovosDados from '../../../../assets/sprints/sprint2/wireframe/Novos Dados.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Introdução</h2>
+</div>
+
+Um **wireframe** é um protótipo de **baixa fidelidade** de uma interface: um esqueleto visual composto por blocos, retângulos e textos genéricos (`Lorem Ipsum`), sem cores de marca, imagens finais ou detalhes de estilo. Sua função não é validar aparência, e sim **estrutura e fluxo**, onde ficam os elementos, como as informações se organizam na tela e como o usuário navega entre uma tela e outra.
+
+O wireframe é ideal para alinhar, ainda na fase de concepção do produto, o que cada tela precisa conter e como as telas se conectam, é a partir desse esqueleto que, nas próximas sprints, evoluimos para protótipos de média e alta fidelidade.
+
+Nesta seção estão documentadas as telas de baixa fidelidade da plataforma de manutenção preditiva de Portas de Plataforma (PSDs), pensada para o perfil da **Marta** (operadora/planejadora de manutenção), mapeado na sprint 1.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Desenvolvimento das Telas</h2>
+</div>
+
+Antes de detalhar cada tela, vale destacar um elemento estrutural comum a praticamente toda a plataforma: uma **barra lateral fixa à esquerda**, com a logo no topo, 5 abas de navegação (uma para cada fluxo principal — Dashboard, Estações, Manutenções, Histórico e Novos Dados) e, ao final, um botão de **sair**. Essa barra garante que o usuário nunca perca a referência de onde está nem o acesso rápido aos demais fluxos.
+
+### 2.1 Login
+
+Tela de autenticação, onde o usuário insere **e-mail e senha** para acessar a plataforma. É a única tela sem a barra lateral, já que antecede o acesso ao sistema.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaLogin} alt="Wireframe da tela de Login" width={750} format="png" />
+</div>
+
+### 2.2 Dashboard
+
+Tela inicial após o login. No topo, **cards macro** resumem informações agregadas de toda a operação, como o número de portas que necessitam manutenção nos próximos 7 dias. Abaixo dos cards, uma **linha de filtro** permite refinar a **tabela principal**, que apresenta um *ranking* das portas/estações priorizadas conforme o risco de falha previsto pelo modelo preditivo.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaDashboard} alt="Wireframe da tela de Dashboard" width={750} format="png" />
+</div>
+
+### 2.3 Estações
+
+Fluxo dedicado à visão por estação, composto por três telas.
+
+**Estações (lista):** começa com uma **linha de filtro** para localizar estações específicas, seguida por **cards**, um para cada estação, com botões de acesso a cada uma das portas daquela estação.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaEstacoes} alt="Wireframe da tela de Estações" width={750} format="png" />
+</div>
+
+**Estações — detalhes:** ao entrar em uma estação/porta específica, o usuário encontra **métricas de alarmes** daquela estação, seguidas do **histórico de alarmes** e do **histórico de manutenções** realizadas naquela porta.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaEstacoesDetalhes} alt="Wireframe da tela de Estações - Detalhes" width={750} format="png" />
+</div>
+
+**Estações — agendamento:** ao clicar no botão de **agendar manutenção** de uma porta na tela de detalhes, um **pop-up** é aberto sobre a própria tela, permitindo agendar uma manutenção para aquela porta sem sair do contexto em que o usuário está.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaEstacoesAgendamento} alt="Wireframe do pop-up de agendamento de manutenção em Estações" width={750} format="png" />
+</div>
+
+### 2.4 Manutenções — Lista / Calendário
+
+Tela de gestão das manutenções, com **cards macro** que resumem informações gerais sobre manutenções (como quantidade agendada, em atraso, realizada), uma **linha de filtro** e uma **tabela** com as manutenções agendadas e já realizadas. Uma seta no canto da tela alterna o modo de visualização entre a **lista** (tabela) e o **calendário**, permitindo enxergar as manutenções distribuídas ao longo dos dias.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoesLista} alt="Wireframe da tela de Manutenções - Lista" width={750} format="png" />
+</div>
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaManutencoesCalendario} alt="Wireframe da tela de Manutenções - Calendário" width={750} format="png" />
+</div>
+
+### 2.5 Histórico
+
+Tela dividida em **duas colunas**. Do lado esquerdo, cards macro, filtro e tabela com o **histórico de alarmes**; do lado direito, a mesma estrutura aplicada ao **histórico de manutenções**. Essa divisão lado a lado permite comparar alarmes e manutenções do mesmo período sem trocar de tela.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaHistorico} alt="Wireframe da tela de Histórico" width={750} format="png" />
+</div>
+
+### 2.6 Novos Dados
+
+Tela responsável pela ingestão de dados que alimentam o modelo preditivo. O usuário pode **subir uma planilha Excel** com novos dados ou **inserir novos registros manualmente**, dando flexibilidade para diferentes formas de entrada de informação.
+
+<div style="margin: 1.5rem 0; text-align: center;">
+  <Image src={telaNovosDados} alt="Wireframe da tela de Novos Dados" width={750} format="png" />
+</div>
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Conclusão</h2>
+</div>
+
+O conjunto de telas acima cobre os cinco fluxos centrais da plataforma — Dashboard, Estações, Manutenções, Histórico e Novos Dados — além da tela de Login, e materializa, em baixa fidelidade, a jornada completa do usuário: da priorização de portas em risco (Dashboard), passando pela investigação e agendamento de manutenção por estação (Estações), pelo acompanhamento das manutenções (Manutenções), pela consulta histórica de alarmes e manutenções (Histórico), até a alimentação contínua do modelo preditivo com novos dados (Novos Dados).
+
+Por ser um artefato de baixa fidelidade, este wireframe serve como base validada de **estrutura e navegação** para as próximas etapas do projeto, nas quais o time evoluirá o design para protótipos de média e alta fidelidade, já incorporando identidade visual, microinterações e testes de usabilidade.

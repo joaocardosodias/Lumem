@@ -1,0 +1,552 @@
+import { filterPredictions } from '../lib/recordFilters'
+import { useEffect, useMemo, useState } from 'react'
+import Button from '../components/Button'
+import DataPageSkeleton from '../components/DataPageSkeleton'
+import Filtros, { FiltroCampo } from '../components/Filtros'
+import Paginacao from '../components/Paginacao'
+import { usePredictionLoad } from '../components/PredictionLoad'
+import { useAuth } from '../context/Auth'
+import { useToast } from '../context/Toast'
+import { lineStations } from '../data/stations'
+import { api, asList, errorMessage } from '../lib/api'
+import { exportToCsv } from '../lib/exportCsv'
+import { PAGE_SIZE } from '../lib/filters'
+import { invalidateInspections } from '../lib/inspectionCache'
+import {
+  getCachedModelConfig,
+  getCachedPrediction,
+  normalizePrediction,
+  predictionRun,
+  setCachedModelConfig,
+  setCachedPrediction,
+} from '../lib/predictionCache'
+import './Predicoes.css'
+
+const emptyFilters = {
+  station: '',
+  platform: '',
+  search: '',
+}
+
+function Predicoes({ onNavigate, params }) {
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canRunPrediction = role === 'enginner'
+  const toast = useToast()
+  const { run, busy } = usePredictionLoad()
+  const initialCache = getCachedPrediction()
+  const [runData, setRunData] = useState(() => initialCache?.runData || null)
+  const [items, setItems] = useState(() => initialCache?.items || [])
+  const [loading, setLoading] = useState(() => !initialCache?.items?.length)
+  const [error, setError] = useState('')
+  const [statusTab, setStatusTab] = useState(() => (params?.status || 'all'))
+  const [filters, setFilters] = useState(() => ({
+    ...emptyFilters,
+    station: params?.station || '',
+  }))
+  const [modelConfig, setModelConfig] = useState(() => getCachedModelConfig())
+  const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    if (params?.station) {
+      setFilters((curr) => ({ ...curr, station: params.station }))
+    }
+    if (params?.status) {
+      setStatusTab(params.status)
+    }
+  }, [params?.station, params?.status])
+
+  async function load(isBackground = false) {
+    if (!isBackground && !getCachedPrediction()?.items?.length) {
+      setLoading(true)
+    }
+    setError('')
+    try {
+      const [response, cfg, active] = await Promise.all([
+        api.predictionsLatest(),
+        api.getMLConfig().catch(() => null),
+        api.getActiveModel().catch(() => null),
+      ])
+      if (cfg || active) {
+        const nextConfig = {
+          threshold: cfg?.threshold ?? 0.28,
+          defaultHorizon: cfg?.default_horizon_days ?? 7,
+          modelName: 'Random Forest',
+          version: active?.version || 'v1.0.0',
+          artifact: active?.artifact_path ? 'modelo_5.joblib' : 'modelo_5.joblib',
+          recall: active?.test_metrics?.recall ? `${(active.test_metrics.recall * 100).toFixed(1)}%` : '55,3%',
+          precision: active?.test_metrics?.precision ? `${(active.test_metrics.precision * 100).toFixed(1)}%` : '15,9%',
+        }
+        setModelConfig(nextConfig)
+        setCachedModelConfig(nextConfig)
+      }
+      if (response && typeof response === 'object') {
+        const nextRunData = predictionRun(response)
+        const list = asList(response.predictions || response)
+        const nextItems = list.map(normalizePrediction)
+        setRunData(nextRunData)
+        setItems(nextItems)
+        setCachedPrediction(nextRunData, nextItems)
+      }
+    } catch (err) {
+      if (!getCachedPrediction()?.items?.length) {
+        setError(errorMessage(err))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load(Boolean(initialCache?.items?.length))
+  }, [])
+
+  async function handleTriggerPrediction() {
+    if (busy) return
+    setError('')
+    try {
+      let result = null
+	  const officialHorizon = Number(modelConfig.defaultHorizon) || 7
+      await run({
+        variant: 'overlay',
+        mode: 'predict',
+        task: async () => {
+          result = await api.triggerPredictions(officialHorizon)
+        },
+      })
+
+      invalidateInspections()
+
+      if (result) {
+        const nextRunData = predictionRun(result, officialHorizon)
+        const list = asList(result.predictions || result)
+        const nextItems = list.map(normalizePrediction)
+        setRunData(nextRunData)
+        setItems(nextItems)
+        setCachedPrediction(nextRunData, nextItems)
+        if (nextRunData.total_doors_at_risk > 0) {
+          setStatusTab('fail')
+        }
+        api.getMLConfig().then((cfg) => {
+          if (cfg) {
+            setModelConfig((curr) => {
+              const next = curr
+                ? {
+                    ...curr,
+                    threshold: cfg.threshold ?? curr.threshold,
+                    defaultHorizon: cfg.default_horizon_days ?? curr.defaultHorizon,
+                  }
+                : curr
+              if (next) setCachedModelConfig(next)
+              return next
+            })
+          }
+        }).catch(() => null)
+      }
+
+      setPage(1)
+      toast.success(
+        `Predição executada com sucesso. ${result?.total_doors_at_risk || 0} portas em risco de falha.`,
+      )
+    } catch (err) {
+      const msg = errorMessage(err)
+      setError(msg)
+      toast.error(msg)
+    }
+  }
+
+  const platforms = useMemo(() => {
+    if (filters.station) {
+      return lineStations.find((s) => s.code === filters.station)?.platforms ?? []
+    }
+    return [...new Set(items.map((i) => i.platform).filter(Boolean))]
+  }, [items, filters.station])
+
+  const visible = useMemo(() => filterPredictions(items, filters, statusTab), [items, statusTab, filters])
+
+  const filtersDirty = Boolean(filters.station || filters.platform || filters.search)
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  const countRisk = items.filter((i) => i.will_fail).length
+  const countOk = items.length - countRisk
+
+  function handleExportCsv() {
+    if (!visible.length) {
+      toast.info('Não há registros para exportar com os filtros atuais.')
+      return
+    }
+    const columns = [
+      { label: 'Tag SAP', key: 'sap_tag' },
+      { label: 'Estação', key: 'station_code' },
+      { label: 'Nome da Estação', key: 'station_name' },
+      { label: 'Plataforma', key: 'platform' },
+      { label: 'Número da Porta', key: 'door_number' },
+      { label: 'Diagnóstico IA', value: (item) => (item.will_fail ? 'Falha Prevista' : 'Estável') },
+      { label: 'Em Risco', value: (item) => (item.will_fail ? 'Sim' : 'Não') },
+      { label: 'Rodada ID', value: () => runData?.id || '—' },
+      { label: 'Data da Execução', value: () => runData?.created_at || '—' },
+      { label: 'Horizonte (dias)', value: () => String(runData?.horizon_days || 7) },
+    ]
+    exportToCsv('predicoes_linha4.csv', columns, visible)
+    toast.success(`${visible.length} predições exportadas com sucesso.`)
+  }
+
+  function updateFilter(field) {
+    return (event) => {
+      const val = event.target.value
+      setFilters((curr) => {
+        const next = { ...curr, [field]: val }
+        if (field === 'station') next.platform = ''
+        return next
+      })
+      setPage(1)
+    }
+  }
+
+  return (
+    <section className="predicoes">
+      <div className="page-head predicoes-head">
+        <div>
+          <p className="dashboard__kicker">Última análise do modelo</p>
+          <h1>Predições</h1>
+          <p className="dashboard__lead">
+            Consulte as portas com risco previsto e encaminhe inspeções para a equipe de campo.
+          </p>
+        </div>
+        <div className="predicoes-actions">
+          <Button variant="secondary" onClick={handleExportCsv}>
+            Exportar CSV
+          </Button>
+          {canRunPrediction ? (
+            <button
+              type="button"
+              className="predicoes-trigger-btn"
+              onClick={handleTriggerPrediction}
+              disabled={busy}
+            >
+              <TriggerIcon />
+              <span>{busy ? 'Executando...' : 'Executar análise'}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {loading ? <DataPageSkeleton metrics={5} label="Carregando dados da última rodada preditiva" /> : null}
+      {error ? <p className="page-status is-error">{error}</p> : null}
+
+      {!loading ? (
+        <>
+      {runData ? (
+        <div className="predicoes-kpis">
+          <div className="predicoes-kpi-card is-run">
+            <span>Rodada Atual</span>
+            <strong title={runData.id}>{runData.id.slice(0, 8) || '—'}</strong>
+            <small>{runData.created_at || 'Data não informada'}</small>
+          </div>
+          <div className="predicoes-kpi-card is-total">
+            <span>Portas Avaliadas</span>
+            <strong>{runData.total_doors_evaluated || items.length}</strong>
+            <small>portas ativas analisadas</small>
+          </div>
+          <div className="predicoes-kpi-card is-risk">
+            <span>Em Risco de Falha</span>
+            <strong>{runData.total_doors_at_risk ?? countRisk}</strong>
+            <small>requerem manutenção preditiva</small>
+          </div>
+          <div className="predicoes-kpi-card is-ok">
+            <span>Portas Estáveis</span>
+            <strong>
+              {Math.max(0, (runData.total_doors_evaluated || items.length) - (runData.total_doors_at_risk ?? countRisk))}
+            </strong>
+            <small>operação regular</small>
+          </div>
+          <div className="predicoes-kpi-card is-horizon">
+            <span>Horizonte Preditivo</span>
+            <strong>{runData.horizon_days || 7} dias</strong>
+            <small>janela de antecipação</small>
+          </div>
+        </div>
+      ) : null}
+
+      {modelConfig ? (
+        <article className="predicoes-model-profile" aria-labelledby="model-profile-title">
+          <header className="predicoes-model-profile__header">
+            <div>
+              <h2 id="model-profile-title">Configuração do modelo preditivo</h2>
+              <p>Parâmetros aplicados às análises exibidas nesta página.</p>
+            </div>
+            {canRunPrediction && onNavigate ? (
+              <button
+                type="button"
+                className="predicoes-model-profile__link"
+                onClick={() => onNavigate('engenharia')}
+              >
+                Configurar em Engenharia
+                <span aria-hidden="true">→</span>
+              </button>
+            ) : null}
+          </header>
+
+          <dl className="predicoes-model-profile__grid">
+            <div className="predicoes-model-profile__item is-model">
+              <dt>Modelo</dt>
+              <dd>
+                <strong>{modelConfig.modelName}</strong>
+                <small>{modelConfig.version}</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-artifact">
+              <dt>Artefato</dt>
+              <dd>
+                <code title={modelConfig.artifact}>{modelConfig.artifact}</code>
+                <small>Arquivo serializado</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Limiar ativo</dt>
+              <dd>
+                <strong>{Number(modelConfig.threshold).toFixed(2).replace('.', ',')}</strong>
+                <small>Corte de classificação</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item">
+              <dt>Horizonte</dt>
+              <dd>
+                <strong>{modelConfig.defaultHorizon} dias</strong>
+                <small>Janela padrão</small>
+              </dd>
+            </div>
+
+            <div className="predicoes-model-profile__item is-performance">
+              <dt>Desempenho no teste (limiar 0.48)</dt>
+              <dd className="predicoes-model-profile__performance">
+                <span>
+                  <strong>{String(modelConfig.recall || '55,3%').replace('.', ',')}</strong>
+                  <small>Recall</small>
+                </span>
+                <span>
+                  <strong>{String(modelConfig.precision || '15,9%').replace('.', ',')}</strong>
+                  <small>Precisão</small>
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </article>
+      ) : null}
+
+      {runData && (runData.total_doors_at_risk > 0 || countRisk > 0) ? (
+        <aside className="predicoes-inspection-callout" aria-label="Inspeções preventivas abertas">
+          <div className="predicoes-inspection-callout__body">
+            <h2>Inspeções preventivas abertas</h2>
+            <p>
+              Foram abertas ordens de inspeção preventivas para todas as portas identificadas
+              com risco de quebra na Linha 4 Amarela.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="predicoes-inspection-callout__btn"
+            onClick={() => onNavigate?.('inspecoes', { origin: 'ai' })}
+          >
+            <span>Ver inspeções abertas</span>
+            <ArrowRightIcon />
+          </button>
+        </aside>
+      ) : null}
+
+      <div className="predicoes-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusTab === 'all'}
+          className={statusTab === 'all' ? 'is-active' : ''}
+          onClick={() => {
+            setStatusTab('all')
+            setPage(1)
+          }}
+        >
+          Todas as Portas ({items.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusTab === 'fail'}
+          className={`${statusTab === 'fail' ? 'is-active' : ''} ${countRisk > 0 ? 'has-risk' : ''}`}
+          onClick={() => {
+            setStatusTab('fail')
+            setPage(1)
+          }}
+        >
+          Em Risco de Falha ({countRisk})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusTab === 'ok'}
+          className={statusTab === 'ok' ? 'is-active' : ''}
+          onClick={() => {
+            setStatusTab('ok')
+            setPage(1)
+          }}
+        >
+          Estáveis ({countOk})
+        </button>
+      </div>
+
+      <Filtros
+        showPeriod={false}
+        dirty={filtersDirty}
+        onClear={() => {
+          setFilters(emptyFilters)
+          setPage(1)
+        }}
+      >
+        <FiltroCampo label="Busca">
+          <input
+            type="search"
+            value={filters.search}
+            onChange={updateFilter('search')}
+            placeholder="Buscar por TAG SAP, porta, estação..."
+          />
+        </FiltroCampo>
+        <FiltroCampo label="Estação">
+          <select value={filters.station} onChange={updateFilter('station')}>
+            <option value="">Todas as estações</option>
+            {lineStations.map((station) => (
+              <option key={station.code} value={station.code}>
+                {station.code} — {station.name}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+        <FiltroCampo label="Plataforma">
+          <select value={filters.platform} onChange={updateFilter('platform')}>
+            <option value="">Todas</option>
+            {platforms.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </FiltroCampo>
+      </Filtros>
+
+      <section className="predicoes-list" aria-labelledby="prediction-records-title">
+        <header className="predicoes-list-head">
+          <h2 id="prediction-records-title">Registros de predições</h2>
+          <span className="predicoes-record-count">
+            {visible.length.toLocaleString('pt-BR')} {visible.length === 1 ? 'registro' : 'registros'}
+          </span>
+        </header>
+
+        <div className="predicoes-table-head" aria-hidden="true">
+          <span>Identificação</span>
+          <span>Estação</span>
+          <span>Plataforma</span>
+          <span>Porta</span>
+          <span>Diagnóstico</span>
+          <span>Ação</span>
+        </div>
+
+        <div className="predicoes-records">
+        {visible.length ? (
+          paged.map((item) => (
+            <article
+              key={`${item.station_code}-${item.platform}-${item.door_number}`}
+              className={`card-predicao${item.will_fail ? ' is-fail' : ''}`}
+            >
+              <div>
+                <span>TAG SAP</span>
+                <strong>{item.sap_tag}</strong>
+              </div>
+              <div>
+                <span>Estação</span>
+                <strong>{item.station_code}</strong>
+                <em>{item.station_name}</em>
+              </div>
+              <div>
+                <span>Plataforma</span>
+                <strong>{item.platform}</strong>
+              </div>
+              <div>
+                <span>Porta</span>
+                <strong>{String(item.door_number).padStart(2, '0')}</strong>
+              </div>
+              <div>
+                <span>Diagnóstico</span>
+                <span className={`badge-status ${item.will_fail ? 'is-fail' : 'is-ok'}`}>
+                  {item.will_fail ? 'Falha Prevista' : 'Estável'}
+                </span>
+              </div>
+              <div className="card-predicao-actions">
+                {item.will_fail ? (
+                  <button
+                    type="button"
+                    className="btn-predicao-action is-inspection"
+                    onClick={() =>
+                      onNavigate?.('inspecoes', {
+                        station: item.station_code,
+                        door: item.door_number,
+                        origin: 'ai',
+                      })
+                    }
+                  >
+                    Ver Inspeção Aberta
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn-predicao-action"
+                  onClick={() =>
+                    onNavigate?.('portas', {
+                      station: item.station_code,
+                      platform: item.platform,
+                      door: item.door_number,
+                    })
+                  }
+                >
+                  Ver histórico
+                </button>
+              </div>
+            </article>
+          ))
+        ) : (
+          <p className="page-empty">
+            {items.length
+              ? 'Nenhuma porta encontrada com os filtros selecionados.'
+              : 'Nenhuma predição executada até o momento. Clique em "Executar Predição IA" para iniciar a inferência.'}
+          </p>
+        )}
+        </div>
+        <Paginacao page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onPage={setPage} />
+      </section>
+
+        </>
+      ) : null}
+
+    </section>
+  )
+}
+
+function TriggerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  )
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+export default Predicoes

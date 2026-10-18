@@ -1,0 +1,122 @@
+---
+title: Clean Architecture
+description: Detalhamento da regra de dependência, organização de pacotes Go, inversão de controle e composição no backend.
+---
+
+import { Image } from 'astro:assets';
+import cleanArchitectureCirculos from '../../../../../../assets/backend/clean-architecture-circulos.png';
+import dependenciasPacotes from '../../../../../../assets/backend/dependencias-pacotes.png';
+
+A adoção da **Clean Architecture** (Arquitetura Limpa) no backend teve como objetivo primordial desacoplar a lógica de negócio das tecnologias de infraestrutura e dos frameworks web. Esta separação permite que as regras operacionais da Linha 4 do Metrô evoluam de forma sustentável, que novos adaptadores sejam plugados sem quebras e que a suíte de testes unitários execute em milissegundos sem depender de banco de dados, storage ou serviços de rede.
+
+## 1. Por que a Clean Architecture foi a escolha fundacional
+
+Desde a concepção do backend na Sprint 3, a Clean Architecture foi adotada como o padrão arquitetural nativo da plataforma. O objetivo central foi garantir que as regras de negócio da Linha 4 do Metrô fossem modeladas de forma pura e independente de qualquer tecnologia de infraestrutura, framework ou banco de dados.
+
+Essa escolha foi motivada por quatro princípios fundamentais:
+
+1. **Independência de frameworks:** frameworks web (como Gin) e drivers de banco não devem ditar ou contaminar a modelagem de entidades de domínio como alarmes e inspeções;
+2. **Separação estrita de responsabilidades:** endpoints HTTP cuidam apenas da tradução de protocolos; regras operacionais pertencem aos casos de uso e às entidades;
+3. **Desacoplamento do formato de entrada:** mudanças de layout em planilhas CSV/XLSX não devem repercutir nas entidades centrais nem no modelo relacional;
+4. **Testabilidade nativa:** o núcleo da aplicação pode ser completamente exercitado por testes automatizados em microssegundos através de test doubles, sem necessidade de banco de dados ou rede.
+
+## 2. A Regra de Dependência em Go
+
+A regra fundamental da Clean Architecture determina que **o código em círculos internos não pode ter conhecimento algum dos círculos externos**. Na prática do compilador Go, isso significa que a árvore de imports deve ser estritamente unidirecional: do ponto de montagem externo passando pelos adaptadores e portas, até chegar às entidades de domínio centrais.
+
+Nenhum arquivo dentro de `internal/domain` ou `internal/usecase` contém `import "github.com/gin-gonic/gin"`, `import "database/sql"` ou `import "github.com/aws/aws-sdk-go-v2"`.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={cleanArchitectureCirculos}
+    alt="Diagrama dos círculos concêntricos da Clean Architecture com as 4 camadas: Domínio, Casos de Uso, Portas/Adaptadores e Frameworks/Drivers, com dependências apontando estritamente para o centro."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Regra de dependência da Clean Architecture mapeada para os pacotes Go do backend.
+  </figcaption>
+</figure>
+
+## 3. Mapeamento prático das camadas
+
+| Camada | Pacote Go | Responsabilidade | Exemplo prático |
+|---|---|---|---|
+| **Entidades** | `internal/domain` | Modelagem do negócio do metrô, cálculo de invariantes e validação estrutural | [`Alarm`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/alarm.go), [`Inspection`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/inspection.go), [`FileUpload`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/internal/domain/upload.go) |
+| **Casos de Uso** | `internal/usecase` | Coordenação de fluxos de trabalho, orquestração de regras e publicação de DTOs | `IngestAlarmsUseCase`, `CreateInspectionUseCase`, `TriggerPredictionUseCase` |
+| **Portas** | `internal/usecase/port` | Interfaces abstratas consumidas pelos casos de uso | `AlarmRepository`, `IngestionStorage`, `UnitOfWork`, `MLClient` |
+| **Adaptadores** | `internal/adapter` | Implementação tecnológica concreta dos contratos das portas | `GinHandler`, `PostgresAlarmRepository`, `S3Storage`, `RiverQueue` |
+| **Composição** | `cmd/api`, `cmd/worker` | Composition roots: leitura de configurações, instanciação de adaptadores e injeção de dependências | `cmd/api/main.go`, `cmd/worker/main.go` |
+
+## 4. Inversão de dependência na prática: Portas e Adaptadores
+
+O desacoplamento é alcançado definindo interfaces na camada de casos de uso e fornecendo implementações concretas na camada de adaptadores.
+
+### Exemplo: Armazenamento de Arquivos de Ingestão
+
+O caso de uso de ingestão precisa salvar o arquivo bruto para processamento posterior, mas não deve conhecer o SDK da AWS nem a implementação MinIO usada em produção.
+
+1. **A porta declara o contrato em `internal/usecase/port/services.go`:**
+```go
+type IngestionStorage interface {
+	Store(ctx context.Context, name string, r io.Reader) (storageKey, hash string, err error)
+	Open(ctx context.Context, storageKey string) (io.ReadCloser, error)
+	Delete(ctx context.Context, storageKey string) error
+}
+```
+
+2. **O adaptador implementa o contrato em `internal/adapter/storage/s3_storage.go`:**
+```go
+type S3Storage struct {
+	client s3API
+	bucket string
+	prefix string
+}
+
+func (s *S3Storage) Store(ctx context.Context, name string, r io.Reader) (string, string, error) {
+	return s.prefix + "/" + name, "mock-hash", nil
+}
+```
+
+3. **O teste unitário fornece uma implementação controlada (Test Double):**
+```go
+type fakeStorage struct {
+	files map[string][]byte
+}
+
+func (f *fakeStorage) Store(ctx context.Context, name string, r io.Reader) (string, string, error) {
+	f.files[name] = []byte("stored")
+	return name, "fake-hash", nil
+}
+```
+
+**Resultado:** O caso de uso pode ser completamente testado sem internet, sem credenciais de nuvem e sem riscos de custos adicionais de bucket.
+
+<figure style="margin: 2rem 0; text-align: center;">
+  <Image
+    src={dependenciasPacotes}
+    alt="Diagrama de inversão de dependência na prática: o caso de uso define a porta (IngestionStorage) e os adaptadores (S3Storage e LocalTempStorage) implementam o contrato."
+    style="display: block; margin: 0 auto; border-radius: 8px;"
+  />
+  <figcaption style="margin-top: 0.75rem;">
+    Inversão de Dependência: o caso de uso define a interface e a infraestrutura a implementa.
+  </figcaption>
+</figure>
+
+## 5. Composition Roots: O ponto de montagem
+
+Como os casos de uso não instanciam suas dependências, alguém precisa montá-los. Essa responsabilidade pertence exclusivamente aos **Composition Roots**:
+
+- [`cmd/api/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/api/main.go): lê as variáveis de ambiente, conecta ao pool de conexões do PostgreSQL, instancia o cliente S3, cria os repositórios, monta a `RiverQueue` e inicia as rotas HTTP com o framework Gin;
+- [`cmd/worker/main.go`](https://git.inteli.edu.br/graduacao/2026-2a/t16/g04/-/blob/main/src/backend/cmd/worker/main.go): instancia os mesmos repositórios e clientes de storage, configura os processadores de alarmes e manutenção (`IngestionProcessor`), registra os workers no River e inicia o loop de consumo assíncrono de jobs.
+
+Ao isolar a composição na borda extrema (`cmd/`), o restante do sistema permanece puro e reutilizável.
+
+## 6. Distinção entre Entidades de Domínio e DTOs
+
+Um dos erros mais comuns em arquitetura é reutilizar structs de banco de dados diretamente como payloads da API HTTP. No backend da Linha 4, foi adotada a separação rígida:
+
+1. **Entidades de Domínio (`domain.Inspection`):** contêm regras de negócio e validações de transição de status (ex: não é permitido transicionar de `completed` para `pending`);
+2. **Linhas de Banco (`repository.inspectionRow`):** structs internas com tags SQL para mapeamento com `database/sql`;
+3. **DTOs de Entrada e Saída (`http.InspectionResponseDTO`):** definem o contrato serializado em JSON devolvido ao operador web, omitindo campos internos ou formatando timestamps para RFC 3339.
+
+Essa separação impede que refatorações de schema no PostgreSQL quebrem o contrato com o frontend e vice-versa.

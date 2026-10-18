@@ -1,0 +1,120 @@
+---
+title: "Otimização do Modelo RNN"
+description: "Busca de hiperparâmetros, ablação com histórico de manutenção e avaliação final por evento da RNN, para testar se a falta de tuning explicava o desempenho abaixo do Modelo 5."
+---
+
+import { Image } from 'astro:assets';
+import Background from '../../../../../assets/sprints/sprint1/background_title.png';
+import ProgressoBusca from '../../../../../assets/sprints/sprint4/rnn-otimizacao/progresso_busca.png';
+import RecallLinhaEvento from '../../../../../assets/sprints/sprint4/rnn-otimizacao/recall_linha_vs_evento.png';
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px;">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">1. Contexto e hipótese</h2>
+</div>
+
+A [RNN (LSTM)](/sprints/sprint-3/modelos/modelo-rnn/) ficou abaixo do Random Forest do Modelo 5 em todas as métricas (PR-AUC 0,154 contra 0,185). A própria síntese do notebook já apontava a explicação mais provável: era uma LSTM de uma camada, 32 unidades, **sem nenhuma busca de hiperparâmetros**, enquanto o Random Forest já tinha passado por seleção de features via SHAP e por `RandomizedSearchCV`/`GridSearchCV`.
+
+Este trabalho testa essa hipótese em quatro etapas, cada uma isolando uma variável diferente:
+
+| Etapa | O que muda | Notebook |
+|---|---|---|
+| 0 — Baseline | nada; só reproduz o resultado original de forma reutilizável | `modelo_rnn_otimizado_0_baseline.ipynb` |
+| 1 — Tuning | busca de hiperparâmetros (Optuna), mesmas 12 features | `modelo_rnn_otimizado_1_busca_hiperparametros.ipynb` |
+| 2 — Mais informação | mesma arquitetura da Etapa 1, + histórico ZM01/02/03 e estação/via | `modelo_rnn_otimizado_2_ablacao_extras.ipynb` |
+| 3 — Avaliação final | os três modelos anteriores, medidos por evento/episódio (não por linha) | `modelo_rnn_otimizado_3_avaliacao_final.ipynb` |
+
+Notebooks e artefatos em `models/modelo-rnn-otimizado/`. A janela de 30 dias e as sequências (`models/modelo-rnn/sequencias.npz`) não mudaram em nenhuma etapa — a comparação com o Modelo 5 continua usando o mesmo alvo, a mesma partição temporal (treino até 23/04/2025, teste a partir de 01/05/2025) e o mesmo teste, usado uma única vez em cada avaliação final.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">2. Etapa 1 — busca de hiperparâmetros</h2>
+</div>
+
+Busca com [Optuna](https://optuna.org/) (amostrador TPE), otimizando o PR-AUC médio em 2 folds temporais expansivos dentro do treino — mesmo espírito do `TimeSeriesSplit` usado no Modelo 5, sem tocar no teste. Espaço de busca: célula (LSTM/GRU), unidades escondidas (16/32/64), camadas (1/2), dropout, learning rate, batch, weight decay e o multiplicador do `pos_weight`.
+
+<Image src={ProgressoBusca} alt="Progresso da busca Optuna ao longo dos trials" />
+
+**Configuração vencedora:** GRU de 2 camadas (em vez de LSTM de 1), 32 unidades, dropout 0,37, `pos_weight` 1,48× o balanceamento padrão. O resultado final (retreino completo, média de 5 sementes para garantir que não era sorte de inicialização) foi **PR-AUC 0,172 (±0,007)** no teste — acima do baseline (0,154), mas ainda abaixo do Random Forest (0,185).
+
+Achado adicional: com o limiar de decisão fixo, o recall variou de 0,584 a 0,654 entre as 5 sementes, e o número de alertas de 18.407 a 27.981. O Random Forest não tem essa variação, porque árvores não dependem de inicialização aleatória — é uma fragilidade prática da RNN nesta configuração.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">3. Etapa 2 — histórico de manutenção como entrada extra</h2>
+</div>
+
+A RNN só recebia 12 contadores de alarme por dia, sem o histórico de ordens de manutenção (ZM01/02/03) nem a identificação de estação/via — informação que o Random Forest usa, e que a própria seção 9 do `modelo_5.ipynb` credita como a principal responsável pelo ganho de recall dele.
+
+Esta etapa mantém a arquitetura e os hiperparâmetros da Etapa 1 sem nenhuma mudança, e adiciona 23 features conhecidas em `t0` (janela de ZM01/02/03, features de ciclo/recorrência, estação em one-hot e via), concatenadas ao estado escondido final da RNN antes da camada de saída — a sequência diária continua processada do mesmo jeito.
+
+**Resultado:** PR-AUC subiu para **0,179 (±0,0017)** — quase fechando a diferença para o Random Forest (0,185), e com desvio padrão entre sementes **4× menor** que na Etapa 1 (0,0017 contra 0,0070). Dar mais informação à rede não só melhorou a métrica, como estabilizou o modelo.
+
+| Modelo | Precisão | Recall | F1 | PR-AUC | ROC-AUC |
+|---|---|---|---|---|---|
+| RNN baseline (sem tuning) | 0,137 | 0,485 | 0,214 | 0,154 | 0,661 |
+| RNN otimizada, só tuning (Etapa 1) | 0,136 | 0,612 | 0,222 | 0,172 | 0,665 |
+| **RNN otimizada + extras (Etapa 2)** | 0,150 | 0,577 | 0,237 | **0,179** | 0,691 |
+| Random Forest (Modelo 5) | 0,159 | 0,553 | 0,247 | 0,185 | 0,697 |
+
+**Conclusão parcial:** o tuning sozinho recuperou cerca de 60% da distância até o Random Forest (+0,018 de PR-AUC); dar a mesma informação de histórico de manutenção recuperou o resto (+0,007). As duas etapas juntas fecham quase toda a diferença.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">4. Etapa 3 — avaliação por evento, não por linha</h2>
+</div>
+
+As etapas anteriores compararam os modelos por linha (porta-dia): cada dia previsto certo ou errado conta igual, mesmo que seja o primeiro ou o sétimo dia de um alerta sobre a mesma falha. O `modelo_5.ipynb` (seção 8) já usava uma métrica mais próxima da operação real: recall por evento (a falha real foi avisada em algum dos 7 dias antes?) e precisão por episódio (dias consecutivos de alerta na mesma porta, agrupados; o episódio acerta se uma falha real acontece até 7 dias depois do seu fim).
+
+Aplicando a mesma metodologia às três versões da RNN (uma semente fixa, 42, por causa do custo do cálculo por episódio):
+
+<Image src={RecallLinhaEvento} alt="Recall por linha vs. por evento, nas quatro versões comparadas" />
+
+| Modelo | Recall por evento | Precisão por episódio | F1 evento |
+|---|---|---|---|
+| RNN baseline (sem tuning) | 46,0% | 29,4% | 0,359 |
+| RNN otimizada, só tuning (Etapa 1) | 65,8% | 27,1% | 0,384 |
+| **RNN otimizada + extras (Etapa 2)** | **69,1%** | **29,8%** | **0,416** |
+| Random Forest (Modelo 5) | 65,0% | 26,0% | 0,372 |
+
+**A ordem muda em relação à métrica por linha.** Por PR-AUC, o Random Forest ainda vinha um pouco à frente. Por evento/episódio — mais próxima de como o modelo seria operado — a RNN otimizada + extras **supera o Random Forest nas três métricas**. O Random Forest gera mais episódios no total (1.905 contra 1.589), mas com uma taxa de acerto por episódio pior (26,0% contra 29,8%): a RNN agrupa os alertas em episódios mais certeiros.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">5. Random Forest de produção vs. RNN, e ensemble</h2>
+</div>
+
+O Random Forest servido pela [API de predição](/sprints/sprint-3/api/api-predicao) (`src/modelo/artifacts/modelo_5.joblib`) foi comparado com a RNN otimizada + extras no mesmo conjunto de teste, junto com duas combinações simples dos alertas de cada modelo — sem reajustar nenhum limiar, já que os dois usam o limiar que cada um já tinha escolhido na própria validação (combinar só os alertas finais não vaza informação do teste):
+
+- **Ensemble OR:** alerta se o Random Forest **ou** a RNN alertarem.
+- **Ensemble AND:** alerta só se os **dois** alertarem.
+
+Resultado por linha (porta-dia), no mesmo teste, com o Random Forest realmente exportado para produção (ligeiramente diferente do Random Forest do `modelo_5.ipynb` citado nas seções anteriores — mesmo caso documentado na página do [Modelo RNN](/sprints/sprint-3/modelos/modelo-rnn/), de retreino com a mesma metodologia):
+
+| Modelo | Precisão | Recall | F1 | Alertas |
+|---|---|---|---|---|
+| Random Forest (produção) | 0,153 | 0,592 | 0,243 | 24.019 |
+| RNN otimizada + extras | 0,146 | 0,625 | 0,237 | 26.492 |
+| Ensemble OR (RF ou RNN) | 0,139 | **0,711** | 0,232 | 31.747 |
+| Ensemble AND (RF e RNN) | **0,167** | 0,505 | **0,251** | 18.764 |
+
+**Nenhuma combinação simples domina nas duas métricas.** O ensemble AND tem a melhor precisão e o melhor F1, mas perde bastante recall (0,505, o pior dos quatro). O ensemble OR tem o melhor recall de longe (0,711), à custa da pior precisão — praticamente 1 em cada 7 alertas vira falha real. Como o recall é a prioridade de negócio (menos falhas perdidas, mais checagens à toa é um custo aceitável), o ensemble OR é o mais defensável dos dois **se** o volume de 31.747 alertas de teste (cerca de 45% de todas as linhas porta-dia) for operacionalmente viável — o que não foi avaliado aqui. Sem essa checagem de capacidade operacional, a RNN otimizada + extras sozinha já entrega recall parecido (0,625) com bem menos alertas.
+
+---
+
+<div style="position: relative; margin: 0 0 2rem 0; padding: 2rem; overflow: hidden; border-radius: 8px; margin-top: 40px">
+  <Image src={Background} alt="Banner Motiva" format="png" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;"/>
+  <h2 style="position: relative; z-index: 1; color: white; margin: 0;">6. Conclusão e o que não foi feito</h2>
+</div>
+
+A hipótese do início — "a RNN não performou bem porque não teve otimização nem tuning" — se confirmou como a explicação principal, mas só explicava parte do problema. O tuning (Etapa 1) foi o maior ganho isolado; dar à RNN a mesma informação de histórico de manutenção que o Random Forest já usava (Etapa 2) foi o que faltava para ela ultrapassar o Random Forest na métrica operacional (Etapa 3).
+
+**O que este trabalho não fez:** não substituiu o modelo em produção. A API (`src/modelo/`) hoje computa, ao vivo, as 83 features agregadas que o Random Forest usa — um pipeline bem mais simples do que o exigido pela RNN, que precisaria da sequência bruta de 30 dias por porta mais as 23 features extra desta etapa. Colocar a RNN em produção (ou um ensemble com os dois modelos) é uma decisão de arquitetura separada, que envolve reescrever esse pipeline de features, exportar e servir um modelo PyTorch em vez de um `.joblib` do scikit-learn, e validar latência.
