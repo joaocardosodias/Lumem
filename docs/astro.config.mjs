@@ -57,6 +57,9 @@ const pagesUrl = process.env.CI_PAGES_URL;
 const githubRepository = process.env.GITHUB_REPOSITORY;
 const [githubOwner, githubRepositoryName] = githubRepository?.split('/') ?? [];
 const isGitHubPages = process.env.GITHUB_ACTIONS === 'true' && githubOwner && githubRepositoryName;
+const projectRepositoryUrl = githubRepository
+	? `https://github.com/${githubRepository}`
+	: 'https://github.com/joaocardosodias/Lumem';
 const site = pagesUrl
 	? new URL(pagesUrl).origin
 	: isGitHubPages
@@ -158,7 +161,7 @@ export default defineConfig({
 			customCss: [
 				'./src/styles/custom.css',
 			],
-			social: [{ icon: 'github', label: 'GitHub do projeto', href: 'https://github.com/joaocardosodias/Motivados' }],
+			social: [{ icon: 'github', label: 'GitHub do projeto', href: projectRepositoryUrl }],
 			sidebar: [
 				{ label: 'Solução', slug: 'readme' },
 
